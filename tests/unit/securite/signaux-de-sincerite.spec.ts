@@ -92,7 +92,8 @@ function declaration(d: {
 }
 
 const CONTEXTE_LONG = 'Rencontre au salon régional, échange sur le renouvellement de leur parc.';
-const AUTRE_CONTEXTE_LONG = 'Appel entrant après une recommandation de leur expert-comptable habituel.';
+const AUTRE_CONTEXTE_LONG =
+  'Appel entrant après une recommandation de leur expert-comptable habituel.';
 
 /** Une déclaration neutre : aucun des cinq signaux n'y est présent. */
 const neutre = (id: string, apporteurId: string, siren: string, minute: number) =>
@@ -125,11 +126,16 @@ describe('REQ-SEC-017 — la liste FERMÉE des signaux : cinq signaux de CONTENU
   });
 
   it('REQ-SEC-017 REQ-JUR-031 : TÉMOIN — aucun signal de rythme, d’horaire ou de lieu n’entre dans la composition du score', () => {
-    const interdits = /rafale|nocturne|hors_?zone|rythme|horaire|heure|zone|secteur|delai|volume|nombre/i;
+    const interdits =
+      /rafale|nocturne|hors_?zone|rythme|horaire|heure|zone|secteur|delai|volume|nombre/i;
     expect(SIGNAUX_DE_SINCERITE.filter((s) => interdits.test(s))).toEqual([]);
     // Ils ne subsistent que comme critères de revue humaine, HORS du score : les deux listes sont
     // disjointes, et aucun critère de revue n'a de poids lisible dans le réglage.
-    expect(CRITERES_DE_REVUE_HUMAINE.filter((c) => (SIGNAUX_DE_SINCERITE as readonly string[]).includes(c))).toEqual([]);
+    expect(
+      CRITERES_DE_REVUE_HUMAINE.filter((c) =>
+        (SIGNAUX_DE_SINCERITE as readonly string[]).includes(c)
+      )
+    ).toEqual([]);
     for (const c of CRITERES_DE_REVUE_HUMAINE) {
       expect(() => lireReglageDeSincerite(`${TEXTE_DU_REGLAGE};poids.${c}=1`)).toThrow(
         ReglageDeSinceriteInvalide
@@ -138,7 +144,8 @@ describe('REQ-SEC-017 — la liste FERMÉE des signaux : cinq signaux de CONTENU
   });
 
   it('REQ-SEC-017 : TÉMOIN — la garde de nature rougit sur une liste où l’on aurait glissé « rafale »', () => {
-    const interdits = /rafale|nocturne|hors_?zone|rythme|horaire|heure|zone|secteur|delai|volume|nombre/i;
+    const interdits =
+      /rafale|nocturne|hors_?zone|rythme|horaire|heure|zone|secteur|delai|volume|nombre/i;
     const glissee = [...SIGNAUX_DE_SINCERITE, 'rafale'];
     expect(glissee.filter((s) => interdits.test(s))).toEqual(['rafale']);
   });
@@ -158,14 +165,22 @@ describe('REQ-SEC-017 — un témoin positif et un négatif par signal', () => {
   });
 
   it('REQ-SEC-017 : contact_generique — un contact qui ne nomme personne (« Service Accueil ») signale (positif)', () => {
-    const d = { ...neutre('a1', 'p1', '100000001', 0), nomContact: 'Accueil', prenomContact: 'Service' };
+    const d = {
+      ...neutre('a1', 'p1', '100000001', 0),
+      nomContact: 'Accueil',
+      prenomContact: 'Service',
+    };
     expect(signauxDeSincerite(d, [d], reglage())).toEqual(['contact_generique']);
     const seul = { ...d, nomContact: 'STANDARD', prenomContact: '' };
     expect(signauxDeSincerite(seul, [seul], reglage())).toEqual(['contact_generique']);
   });
 
   it('REQ-SEC-017 : contact_generique — une personne nommée, même au nom proche d’un mot générique, ne signale rien (négatif)', () => {
-    const d = { ...neutre('a1', 'p1', '100000001', 0), nomContact: 'Directeur', prenomContact: 'Paul' };
+    const d = {
+      ...neutre('a1', 'p1', '100000001', 0),
+      nomContact: 'Directeur',
+      prenomContact: 'Paul',
+    };
     expect(signauxDeSincerite(d, [d], reglage())).toEqual([]);
     const accueillant = { ...d, nomContact: 'Accueillant', prenomContact: 'Marie' };
     expect(signauxDeSincerite(accueillant, [accueillant], reglage())).toEqual([]);
@@ -178,7 +193,10 @@ describe('REQ-SEC-017 — un témoin positif et un négatif par signal', () => {
 
   it('REQ-SEC-017 : texte_court_ou_identique — le même contexte, à la casse et aux blancs près, sur deux déclarations du même apporteur signale (positif)', () => {
     const a = { ...neutre('a1', 'p1', '100000001', 0), contexte: CONTEXTE_LONG };
-    const b = { ...neutre('a2', 'p1', '200000002', 5), contexte: `  ${CONTEXTE_LONG.toUpperCase()} ` };
+    const b = {
+      ...neutre('a2', 'p1', '200000002', 5),
+      contexte: `  ${CONTEXTE_LONG.toUpperCase()} `,
+    };
     expect(signauxDeSincerite(a, [a, b], reglage())).toEqual(['texte_court_ou_identique']);
     expect(signauxDeSincerite(b, [a, b], reglage())).toEqual(['texte_court_ou_identique']);
   });
@@ -194,23 +212,53 @@ describe('REQ-SEC-017 — un témoin positif et un négatif par signal', () => {
   });
 
   it('REQ-SEC-017 REQ-SEC-036 : multi_identites — la même empreinte réseau ET le même navigateur, dans la même tranche, pour deux apporteurs distincts signale (positif)', () => {
-    const a = { ...neutre('a1', 'p1', '100000001', 0), ipHash: 'i'.repeat(16), agentHash: 'g'.repeat(64) };
-    const b = { ...neutre('a2', 'p2', '700000007', 10), ipHash: 'i'.repeat(16), agentHash: 'g'.repeat(64) };
+    const a = {
+      ...neutre('a1', 'p1', '100000001', 0),
+      ipHash: 'i'.repeat(16),
+      agentHash: 'g'.repeat(64),
+    };
+    const b = {
+      ...neutre('a2', 'p2', '700000007', 10),
+      ipHash: 'i'.repeat(16),
+      agentHash: 'g'.repeat(64),
+    };
     expect(signauxDeSincerite(a, [a, b], reglage())).toEqual(['multi_identites']);
     expect(signauxDeSincerite(b, [a, b], reglage())).toEqual(['multi_identites']);
   });
 
   it('REQ-SEC-036 : multi_identites — le même apporteur, un navigateur différent, ou une autre tranche ne signalent rien (négatif)', () => {
-    const a = { ...neutre('a1', 'p1', '100000001', 0), ipHash: 'i'.repeat(16), agentHash: 'g'.repeat(64) };
-    const memeApporteur = { ...neutre('a2', 'p1', '700000007', 10), ipHash: 'i'.repeat(16), agentHash: 'g'.repeat(64) };
+    const a = {
+      ...neutre('a1', 'p1', '100000001', 0),
+      ipHash: 'i'.repeat(16),
+      agentHash: 'g'.repeat(64),
+    };
+    const memeApporteur = {
+      ...neutre('a2', 'p1', '700000007', 10),
+      ipHash: 'i'.repeat(16),
+      agentHash: 'g'.repeat(64),
+    };
     expect(signauxDeSincerite(a, [a, memeApporteur], reglage())).toEqual([]);
-    const autreNavigateur = { ...neutre('a3', 'p2', '800000008', 10), ipHash: 'i'.repeat(16), agentHash: 'h'.repeat(64) };
+    const autreNavigateur = {
+      ...neutre('a3', 'p2', '800000008', 10),
+      ipHash: 'i'.repeat(16),
+      agentHash: 'h'.repeat(64),
+    };
     expect(signauxDeSincerite(a, [a, autreNavigateur], reglage())).toEqual([]);
-    const autreTranche = { ...neutre('a4', 'p2', '900000009', 60), ipHash: 'i'.repeat(16), agentHash: 'g'.repeat(64) };
+    const autreTranche = {
+      ...neutre('a4', 'p2', '900000009', 60),
+      ipHash: 'i'.repeat(16),
+      agentHash: 'g'.repeat(64),
+    };
     expect(signauxDeSincerite(a, [a, autreTranche], reglage())).toEqual([]);
     const sansEmpreinte = { ...a, ipHash: null };
-    const autreSansEmpreinte = { ...neutre('a5', 'p2', '910000009', 1), ipHash: null, agentHash: 'g'.repeat(64) };
-    expect(signauxDeSincerite(sansEmpreinte, [sansEmpreinte, autreSansEmpreinte], reglage())).toEqual([]);
+    const autreSansEmpreinte = {
+      ...neutre('a5', 'p2', '910000009', 1),
+      ipHash: null,
+      agentHash: 'g'.repeat(64),
+    };
+    expect(
+      signauxDeSincerite(sansEmpreinte, [sansEmpreinte, autreSansEmpreinte], reglage())
+    ).toEqual([]);
   });
 
   it('REQ-SEC-017 : siren_ordonnes — une suite de SIREN croissants, dans l’ordre des dépôts d’un apporteur, signale chacun de ses membres (positif)', () => {
@@ -219,7 +267,8 @@ describe('REQ-SEC-017 — un témoin positif et un négatif par signal', () => {
       { ...neutre('a2', 'p1', '322222222', 1), raisonSociale: 'Alpha' },
       { ...neutre('a3', 'p1', '333333333', 2), raisonSociale: 'Mu' },
     ];
-    for (const d of suite) expect(signauxDeSincerite(d, suite, reglage())).toEqual(['siren_ordonnes']);
+    for (const d of suite)
+      expect(signauxDeSincerite(d, suite, reglage())).toEqual(['siren_ordonnes']);
   });
 
   it('REQ-SEC-017 : siren_ordonnes — une suite de raisons sociales dans l’ordre alphabétique signale aussi (positif)', () => {
@@ -228,7 +277,8 @@ describe('REQ-SEC-017 — un témoin positif et un négatif par signal', () => {
       { ...neutre('a2', 'p1', '311111111', 1), raisonSociale: 'Bâtiments du Nord' },
       { ...neutre('a3', 'p1', '355555555', 2), raisonSociale: 'Cèdre et Cie' },
     ];
-    for (const d of suite) expect(signauxDeSincerite(d, suite, reglage())).toEqual(['siren_ordonnes']);
+    for (const d of suite)
+      expect(signauxDeSincerite(d, suite, reglage())).toEqual(['siren_ordonnes']);
   });
 
   it('REQ-SEC-017 : siren_ordonnes — une suite trop courte, rompue, ou partagée entre deux apporteurs ne signale rien (négatif)', () => {
@@ -270,7 +320,9 @@ describe('REQ-SEC-017 — le score : la somme des poids des signaux présents, b
   it('REQ-SEC-017 : TÉMOIN — le score ne dépasse jamais l’échelle tenue par la base (anomalies_score_sincerite)', () => {
     const r = lireReglageDeSincerite(
       'seuil=50;texte_min=20;tranche_minutes=60;suite_min=3;recul_heures=72;' +
-        SIGNAUX_DE_SINCERITE.map((s) => `poids.${s}=${s === 'multi_identites' ? 49 : 100}`).join(';')
+        SIGNAUX_DE_SINCERITE.map((s) => `poids.${s}=${s === 'multi_identites' ? 49 : 100}`).join(
+          ';'
+        )
     )!;
     expect(scoreDeSincerite([...SIGNAUX_DE_SINCERITE], r)).toBe(100);
   });
@@ -284,11 +336,23 @@ describe('REQ-SEC-017 REQ-SEC-036 — le réglage hors dépôt : lu, jugé, refu
   it.each([
     ['une clé inconnue', `${TEXTE_DU_REGLAGE};poids.inconnu=3`, 'poids.inconnu'],
     ['une clé en double', `${TEXTE_DU_REGLAGE};seuil=40`, 'seuil'],
-    ['une clé requise absente', 'seuil=50;texte_min=20;tranche_minutes=60;suite_min=3', 'recul_heures'],
+    [
+      'une clé requise absente',
+      'seuil=50;texte_min=20;tranche_minutes=60;suite_min=3',
+      'recul_heures',
+    ],
     ['un seuil nul', TEXTE_DU_REGLAGE.replace('seuil=50', 'seuil=0'), 'seuil'],
     ['un seuil hors de l’échelle', TEXTE_DU_REGLAGE.replace('seuil=50', 'seuil=101'), 'seuil'],
-    ['un poids hors de l’échelle', TEXTE_DU_REGLAGE.replace('contact_dirigeant=30', 'contact_dirigeant=101'), 'poids.contact_dirigeant'],
-    ['une suite trop courte pour être une suite', TEXTE_DU_REGLAGE.replace('suite_min=3', 'suite_min=1'), 'suite_min'],
+    [
+      'un poids hors de l’échelle',
+      TEXTE_DU_REGLAGE.replace('contact_dirigeant=30', 'contact_dirigeant=101'),
+      'poids.contact_dirigeant',
+    ],
+    [
+      'une suite trop courte pour être une suite',
+      TEXTE_DU_REGLAGE.replace('suite_min=3', 'suite_min=1'),
+      'suite_min',
+    ],
     ['une forme illisible', 'seuil:50', '(forme)'],
   ])('REQ-SEC-017 : TÉMOIN — %s est refusé, la clé nommée', (_cas, texte, cle) => {
     let refus: unknown;
@@ -376,7 +440,8 @@ describe('REQ-SEC-020 REQ-JUR-040 — les champs INATTEIGNABLES depuis le calcul
 });
 
 describe('REQ-SEC-017 REQ-SEC-038 REQ-DM-033 — le franchissement OUVRE une anomalie et ne pose AUCUN gel', () => {
-  const ECRITURES_DE_GEL = /depotsGelesDepuis|depots_geles_depuis|gele_fraude|revoqueAt|revoque_at|jetonDepot|jetons_depot/;
+  const ECRITURES_DE_GEL =
+    /depotsGelesDepuis|depots_geles_depuis|gele_fraude|revoqueAt|revoque_at|jetonDepot|jetons_depot/;
 
   it('REQ-SEC-038 : le module n’écrit ni gel ni révocation de jeton : il n’en nomme aucun', () => {
     expect(sansCommentairesNiChaines(SOURCE)).not.toMatch(ECRITURES_DE_GEL);

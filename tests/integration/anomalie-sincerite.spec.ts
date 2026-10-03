@@ -112,7 +112,9 @@ async function unDepot(d: {
     { nomContact: d.nomContact, prenomContact: d.prenomContact, contexte: d.contexte },
     CLES
   );
-  const dirigeantsJson = JSON.stringify(d.dirigeants.map((empreinte) => ({ empreinte, qualite: 'Président' })));
+  const dirigeantsJson = JSON.stringify(
+    d.dirigeants.map((empreinte) => ({ empreinte, qualite: 'Président' }))
+  );
   await base.prisma.$transaction(async (tx) => {
     await tx.$executeRawUnsafe(
       `INSERT INTO attributions (id, apporteur_id, statut, siren, canal, grille_commission_id,
