@@ -29,7 +29,6 @@ import { existsSync } from 'node:fs';
 import { ConsoleRole, type PrismaClient } from '@prisma/client';
 import { kidDe } from '../../../src/lib/env';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
-import { SEUILS } from '../../../src/domain/seuils/ssot';
 import {
   invitationOuverte,
   jugerChangementDeRole,
@@ -1532,8 +1531,9 @@ describe('REQ-DM-024 — SEC-30 : une invitation expire si le compte n’est pas
     inviteeAt: new Date(T0.getTime() - ilYA),
     activeeAt,
   });
-  // Texte de la sécurité (rattrapage 96) : INVITATION_CONSOLE_DUREE_H en SSOT, à valider par Williams.
-  const delai = SEUILS.INVITATION_CONSOLE_DUREE_H.valeur * 60 * 60 * 1000;
+  // Le nom tranché par la coordination (rattrapage 96) : `invitationConsoleMs`, dans `durees.ts`, à
+  // côté de `releveMs` ; 72 h exprimées en millisecondes, à valider par Williams.
+  const delai = DUREES_AUTH.invitationConsoleMs.valeur;
 
   it('REQ-DM-024 : TÉMOIN À DEUX FACES — non activée à l’échéance, l’invitation est expirée ; un instant avant, elle vaut encore ; activée, elle ne vieillit plus', () => {
     expect(invitationOuverte(invite(delai), T0)).toBe(false);
@@ -1541,9 +1541,8 @@ describe('REQ-DM-024 — SEC-30 : une invitation expire si le compte n’est pas
     expect(invitationOuverte(invite(delai * 10, new Date(T0.getTime() - delai)), T0)).toBe(true);
   });
 
-  it('REQ-DM-024 : le délai d’invitation est une constante en heures de la SSOT, à valider par Williams', () => {
-    expect(SEUILS.INVITATION_CONSOLE_DUREE_H.unite).toBe('heures');
-    expect(SEUILS.INVITATION_CONSOLE_DUREE_H.valeur).toBeGreaterThan(0);
-    expect(SEUILS.INVITATION_CONSOLE_DUREE_H.source).toMatch(/SEC-30/);
+  it('REQ-DM-024 : le délai d’invitation vient des durées de l’authentification, 72 h, à valider par Williams', () => {
+    expect(DUREES_AUTH.invitationConsoleMs.valeur).toBe(72 * 60 * 60 * 1000);
+    expect(DUREES_AUTH.invitationConsoleMs.source).toMatch(/SEC-30/);
   });
 });
