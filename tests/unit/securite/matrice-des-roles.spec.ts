@@ -102,6 +102,13 @@ describe('REQ-SEC-023 — les quatre rôles et la matrice unique', () => {
     }
   });
 
+  it('REQ-DM-034 : TÉMOIN — le rattachement manuel est au qualifieur et à l’admin, jamais au comptable ni au lecteur', () => {
+    expect(roleAutorise('action:rattacher_manuellement', 'qualifieur')).toBe(true);
+    expect(roleAutorise('action:rattacher_manuellement', 'admin')).toBe(true);
+    expect(roleAutorise('action:rattacher_manuellement', 'comptable')).toBe(false);
+    expect(roleAutorise('action:rattacher_manuellement', 'lecteur')).toBe(false);
+  });
+
   it('REQ-SEC-023 : le `comptable` voit l’IBAN, approuve le lot et produit le pain.001 — rien de plus', () => {
     const duComptable = SENSIBLES.filter((d) => roleAutorise(d, 'comptable'));
     expect(duComptable).toEqual([
