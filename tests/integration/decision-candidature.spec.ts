@@ -26,7 +26,8 @@ beforeAll(async () => {
   base = await demarrerBase();
   auteurId = (
     await base.prisma.utilisateurConsole.create({
-      data: { role: 'qualifieur', creeAt: MAINTENANT },
+      // Désactivé : un compte actif exige une adresse chiffrée (CHECK), sans rapport avec la décision.
+      data: { role: 'qualifieur', creeAt: MAINTENANT, desactiveAt: MAINTENANT },
       select: { id: true },
     })
   ).id;
