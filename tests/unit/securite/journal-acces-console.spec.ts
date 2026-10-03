@@ -244,14 +244,70 @@ function fichiers(racine: string): string[] {
   });
 }
 
+const LECTEUR = 'src/server/console/journal-des-acces.ts';
+
+/**
+ * Un fichier de l'application est SOUS LA CONSOLE si son chemin, une fois retirés les groupes de
+ * routes `(…)`, commence par `console/` : la console vit dans des groupes, comme
+ * `src/app/(connexion-console)/console/…`.
+ */
+function estSousLaConsole(chemin: string): boolean {
+  if (chemin.startsWith('src/server/console/')) return true;
+  if (!chemin.startsWith('src/app/')) return false;
+  const segments = chemin
+    .slice('src/app/'.length)
+    .split('/')
+    .filter((s) => !/^\(.*\)$/.test(s));
+  return segments[0] === 'console';
+}
+
+/**
+ * Ce qui déchiffre, ou apporte de quoi déchiffrer : `decryptPii` (appel ou import nommé), ou un
+ * import de TOUT le module des PII (`import * as …`). Les clés et les empreintes ne déchiffrent pas :
+ * la connexion de la console importe `clesPii` (SEC-29), et elle n'est pas fautive.
+ */
+const DECHIFFRE = /\bdecryptPii\b|import\s+\*\s+as\s+\w+\s+from\s+['"][^'"]*securite\/pii['"]/;
+
+/** Les fichiers du périmètre de la console qui déchiffrent hors du lecteur unique. */
+function fautifsSousLaConsole(chemins: readonly string[], lire: (f: string) => string): string[] {
+  return chemins
+    .filter((f) => estSousLaConsole(f) && f !== LECTEUR)
+    .filter((f) => DECHIFFRE.test(lire(f)));
+}
+
 describe('REQ-SEC-023 — aucune lecture ne contourne la trace, et rien ne supprime', () => {
-  it('REQ-SEC-023 : TÉMOIN — sous la console, seul le lecteur unique déchiffre', () => {
-    const LECTEUR = 'src/server/console/journal-des-acces.ts';
-    const fautifs = [...fichiers('src/server/console'), ...fichiers('src/app/console')]
-      .filter((f) => f !== LECTEUR)
-      .filter((f) => /\bdecryptPii\b/.test(readFileSync(f, 'utf8')));
-    expect(fautifs).toEqual([]);
+  it('REQ-SEC-023 : TÉMOIN — sous la console, groupes de routes compris, seul le lecteur unique déchiffre', () => {
+    const perimetre = [...fichiers('src/server/console'), ...fichiers('src/app')].filter(
+      estSousLaConsole
+    );
+    // Jamais vide sans bruit : le lecteur en fait partie, et les routes de la console y entrent
+    // d'elles-mêmes, sous n'importe quel groupe.
+    expect(perimetre.length).toBeGreaterThan(0);
+    expect(perimetre).toContain(LECTEUR);
+    expect(fautifsSousLaConsole(perimetre, (f) => readFileSync(f, 'utf8'))).toEqual([]);
     expect(readFileSync(LECTEUR, 'utf8')).toMatch(/\bdecryptPii\b/);
+  });
+
+  it('REQ-SEC-023 : CONTRE-TÉMOIN — une page sous un groupe de routes qui déchiffre est NOMMÉE ; hors de la console, elle n’est pas jugée ici', () => {
+    const contenus: Record<string, string> = {
+      'src/app/(console)/console/x.ts': 'const nom = decryptPii(ligne, bloc, cles);',
+      'src/app/(connexion-console)/console/fiche/page.tsx':
+        "import { decryptPii } from '../../../../server/securite/pii';",
+      'src/app/(espace)/connexion/page.tsx': 'decryptPii(ligne, bloc, cles);',
+      'src/app/(console)/console/propre.ts': 'export const rien = 1;',
+      // La connexion de la console (SEC-29) importe des CLÉS, pas le déchiffrement : non fautive.
+      'src/app/(connexion-console)/console/connexion/actions.ts':
+        "import { clesPii } from '../../../../server/securite/pii';",
+      'src/app/(console)/console/tout.ts': "import * as pii from '../../../server/securite/pii';",
+      [LECTEUR]: 'decryptPii(ligne, bloc, cles);',
+    };
+    expect(estSousLaConsole('src/app/(a)/(b)/console/y.ts')).toBe(true);
+    expect(estSousLaConsole('src/app/consoles/y.ts')).toBe(false);
+    expect(fautifsSousLaConsole(Object.keys(contenus), (f) => contenus[f]!)).toEqual([
+      'src/app/(console)/console/x.ts',
+      'src/app/(connexion-console)/console/fiche/page.tsx',
+      'src/app/(console)/console/tout.ts',
+    ]);
   });
 
   it('REQ-SEC-023 : TÉMOIN — aucun code ne supprime une trace : la purge vide, elle n’efface pas', () => {
