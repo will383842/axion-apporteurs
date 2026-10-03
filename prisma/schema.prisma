@@ -1355,7 +1355,7 @@ model EntrepriseConnue {
 /// Un devis d'axionia, projeté pour juger « entièrement facturé » devis par devis (art. 3.3, écart B-11) :
 /// le facturé HT, avoirs déduits, comparé au montant HT. Aucune donnée de personne.
 model DevisConnu {
-  devisRef            String    @id @map("devis_ref")
+  devisRef            String    @id @map("devis_ref") @db.VarChar(64)
   siren               String    @db.Char(9)
   emisAt              DateTime  @map("emis_at") @db.Timestamptz(3)
   signeAt             DateTime? @map("signe_at") @db.Timestamptz(3)

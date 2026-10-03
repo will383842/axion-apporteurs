@@ -35,7 +35,7 @@ ALTER TABLE "entreprises_connues" ADD CONSTRAINT "entreprises_connues_ordre" CHE
 -- « Entièrement facturé » (art. 3.3, écart B-11) se juge DEVIS PAR DEVIS : la somme HT facturée, avoirs
 -- déduits, comparée au montant HT du devis. Une ligne par devis d'axionia, sans aucune donnée de personne.
 CREATE TABLE "devis_connus" (
-    "devis_ref" TEXT NOT NULL,
+    "devis_ref" VARCHAR(64) NOT NULL,
     "siren" CHAR(9) NOT NULL,
     "emis_at" TIMESTAMPTZ(3) NOT NULL,
     "signe_at" TIMESTAMPTZ(3),
