@@ -22,6 +22,7 @@
 
 import { randomUUID } from 'node:crypto';
 import Redis, { type RedisOptions } from 'ioredis';
+import { SEUILS } from '../../domain/seuils/ssot';
 
 // ── Le vocabulaire fermé ────────────────────────────────────────────────────────────────────────
 
@@ -101,9 +102,10 @@ export const COMPTEURS = {
     ancre: 'par email au code',
     verifieLe: '2026-10-03',
   },
+  // SEC-12 : la valeur vit dans la SSOT (RM-10), confrontée par la garde au texte de REQ-SEC-016.
   'depot:ip': {
     prefixe: 'depot:',
-    limite: 20,
+    limite: SEUILS.DEPOT_DEBIT_TENTATIVES_MAX.valeur,
     fenetreSecondes: 600,
     surPanne: 'laisser-passer',
     source: 'REQ-SEC-016',
