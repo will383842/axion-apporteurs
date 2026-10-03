@@ -16,6 +16,10 @@ import {
 } from '../../../server/auth/lien-magique-production';
 import { seDeconnecter } from '../../../server/console/session';
 
+// Lue à chaque requête : la page lit le cookie de session et les secrets de l'environnement,
+// rien ne s'y pré-rend au build.
+export const dynamic = 'force-dynamic';
+
 export default async function PageAccueilConsole() {
   const d = dependancesDuProcessus({ apres: after, env: process.env });
   const jeton = (await cookies()).get(COOKIE_DE_SESSION_CONSOLE.nom)?.value;
