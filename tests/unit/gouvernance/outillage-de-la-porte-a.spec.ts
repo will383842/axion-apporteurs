@@ -64,6 +64,16 @@ function remplacerUneFois(texte: string, cherche: string, par: string): string {
   return texte.slice(0, i) + par + texte.slice(i + cherche.length);
 }
 
+/**
+ * GOV-142 : les étapes du socle se répètent dans chaque job de la porte A. Remplace la PREMIÈRE
+ * occurrence (celle du premier job, `forge`), et refuse si le texte n'y est pas.
+ */
+function remplacerLaPremiere(texte: string, cherche: string, par: string): string {
+  const i = texte.indexOf(cherche);
+  if (i < 0) throw new Error(`témoin mal posé : « ${cherche.slice(0, 60)} » est absent`);
+  return texte.slice(0, i) + par + texte.slice(i + cherche.length);
+}
+
 const CI_REEL = readFileSync(CI, 'utf8');
 const PKG_REEL = readFileSync('package.json', 'utf8');
 const CHARTE_REELLE = readFileSync(CHARTE, 'utf8');
@@ -147,13 +157,13 @@ const DESARMEMENTS: readonly Desarmement[] = [
   {
     quoi: '(4) une action tierce qui embarque sa propre image',
     famille: 'outillage_action_tierce',
-    ci: (t) => remplacerUneFois(t, INSTALL, `      - uses: docker://alpine:3\n${INSTALL}`),
+    ci: (t) => remplacerLaPremiere(t, INSTALL, `      - uses: docker://alpine:3\n${INSTALL}`),
   },
   {
     quoi: '(4) une action tierce hors du relevé',
     famille: 'outillage_action_tierce',
     ci: (t) =>
-      remplacerUneFois(
+      remplacerLaPremiere(
         t,
         '      - uses: actions/setup-node@v4\n',
         '      - uses: actions/setup-node@main\n'

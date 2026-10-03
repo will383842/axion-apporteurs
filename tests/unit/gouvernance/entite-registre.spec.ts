@@ -2703,26 +2703,29 @@ describe('REQ-GOV-031 — `ibanAvecSeparateur` vérifie son entrée au lieu de l
  * ⚠️ PÉRIMÈTRE : CE TÉMOIN EST ÉTROIT, ET C'EST DÉLIBÉRÉ. La dette `G-SEC-CI-BLOQUANTE` est
  * déclarée au registre des gardes avec le nom de la spec qui la soldera —
  * `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`, qui n'existe pas — et elle appartient
- * à **QA-T01, phase 0**. Ce cas-ci ne juge QUE le job `gate-a`, celui qui porte l'étape livrée par
- * `CPL-T01`. Il ne balaie ni les autres workflows ni les autres jobs : absorber le périmètre d'une
+ * à **QA-T01, phase 0**. Ce cas-ci ne juge QUE le job qui porte l'étape livrée par `CPL-T01` :
+ * `gate-a` jusqu'à GOV-142, `gardes` depuis que la porte A est découpée en jobs (la porte finale
+ * `gate-a` l'attend). Il ne balaie ni les autres workflows ni les autres jobs : absorber le périmètre d'une
  * tâche voisine au passage est un défaut que ce dépôt a déjà nommé. Ce qui est corrigé ici, c'est
  * seulement l'ORDRE — cette PR introduit la première étape bloquante du dépôt, et sa protection
  * était planifiée pour la phase d'après.
  */
-describe('REQ-GOV-031 — aucune étape de `gate-a` ne se désarme par `continue-on-error`', () => {
+describe('REQ-GOV-031 — aucune étape du job des gardes ne se désarme par `continue-on-error`', () => {
   const CI = readFileSync('.github/workflows/ci.yml', 'utf8');
+  /** GOV-142 : le job qui porte l'étape de cette tâche. */
+  const JOB = 'gardes';
 
   /**
-   * Les étapes du job `gate-a` qui portent `continue-on-error`. Elle LÈVE si le job est
+   * Les étapes du job `JOB` qui portent `continue-on-error`. Elle LÈVE si le job est
    * introuvable : un témoin qui ne trouve plus ce qu'il juge rendrait `[]` — c'est-à-dire vert —
    * et un vert produit par une absence de lecture est le défaut que toute cette tâche combat.
    */
   function etapesEnContinueOnError(yaml: string): string[] {
     const lignes = yaml.split('\n');
-    const debut = lignes.findIndex((l) => /^ {2}gate-a:\s*$/.test(l));
+    const debut = lignes.findIndex((l) => l === `  ${JOB}:`);
     if (debut < 0) {
       throw new Error(
-        'le job `gate-a` est introuvable dans `.github/workflows/ci.yml` : ce témoin ne mesure ' +
+        `le job \`${JOB}\` est introuvable dans \`.github/workflows/ci.yml\` : ce témoin ne mesure ` +
           'plus rien. Renomme-le ici en même temps que là-bas.'
       );
     }
@@ -2743,7 +2746,7 @@ describe('REQ-GOV-031 — aucune étape de `gate-a` ne se désarme par `continue
     return fautives;
   }
 
-  it('REQ-GOV-031 — le fichier RÉEL est sain : aucune étape de `gate-a` n’est désarmée', () => {
+  it('REQ-GOV-031 — le fichier RÉEL est sain : aucune étape du job des gardes n’est désarmée', () => {
     expect(etapesEnContinueOnError(CI)).toEqual([]);
   });
 
@@ -2762,7 +2765,7 @@ describe('REQ-GOV-031 — aucune étape de `gate-a` ne se désarme par `continue
     // Deux zéros indiscernables, encore : « aucune étape désarmée » et « je lis le mauvais bloc »
     // rendent la même liste vide. On vérifie donc que le bloc extrait contient l'étape jugée.
     const lignes = CI.split('\n');
-    const debut = lignes.findIndex((l) => /^ {2}gate-a:\s*$/.test(l));
+    const debut = lignes.findIndex((l) => l === `  ${JOB}:`);
     let fin = lignes.length;
     for (let i = debut + 1; i < lignes.length; i += 1) {
       if (/^ {2}\S/.test(lignes[i]!)) {

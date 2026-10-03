@@ -601,6 +601,7 @@ const MANUELS: Record<string, string[]> = {
   'INT-T46-P': [
     'packages/contracts/events.ts',
     'packages/contracts/contracts.v2.json',
+    'packages/contracts/contracts.v3.json',
     'packages/contracts/contracts.sha256',
     'src/server/integrations/axionia/reception.ts',
     'tests/integration/devis-emis.spec.ts',

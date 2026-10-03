@@ -61,6 +61,8 @@ const {
   urlDuRoleDExecution,
   verificateurScram,
 } = await import('../../../src/server/deploiement/role-d-execution');
+// SEC-50 : le nom du journal vient de son SEUL écrivain, et voyage en paramètre lié.
+const { TABLE_DU_JOURNAL } = await import('../../../src/server/evenement/journal');
 
 const SECRET = 'a'.repeat(40);
 const URL_PROPRIO = 'postgresql://proprio:mdp@hote:5432/partners';
@@ -73,9 +75,23 @@ const ETAT_SAIN = {
   journal: false,
   tables: 0,
   courant: false,
+  // SEC-50 : le journal appartient à partners_journal, et ni partners_execution ni le rôle ne peuvent
+  // le réécrire (UPDATE, DELETE ou TRUNCATE sur evenements).
+  possede: true,
+  groupe: false,
+  reecrit: false,
+  // SEC-57 : partners_journal ne possède rien d'autre que le journal et sa séquence.
+  etrangers: [] as string[],
 };
 /** Le constat d'un serveur sain. */
-const CONSTAT_SAIN = { superutilisateur: false, journal: false, execution: true, tables: 0 };
+const CONSTAT_SAIN = {
+  superutilisateur: false,
+  journal: false,
+  execution: true,
+  tables: 0,
+  possede: true,
+  reecrit: false,
+};
 
 beforeEach(() => {
   etat.urls.length = 0;
@@ -180,6 +196,26 @@ describe('REQ-DM-024 — le provisionnement : refus AVANT d’écrire, puis un l
       { tables: 1 },
       'le rôle d’exécution ne peut être propriétaire d’aucune table',
     ],
+    [
+      'un journal à un autre propriétaire',
+      { possede: false },
+      'le journal n’appartient pas à partners_journal',
+    ],
+    [
+      'SEC-57 : un objet de plus possédé par partners_journal',
+      { etrangers: ['function public.temoin()', 'table public.autre'] },
+      'partners_journal possède autre chose que le journal et sa séquence : function public.temoin(), table public.autre',
+    ],
+    [
+      'un journal que partners_execution peut réécrire',
+      { groupe: true },
+      'partners_execution peut réécrire le journal',
+    ],
+    [
+      'un journal que le rôle d’exécution peut réécrire',
+      { reecrit: true },
+      'le rôle d’exécution peut réécrire le journal',
+    ],
   ])('REQ-DM-024 : TÉMOIN — %s est refusé, et RIEN n’est écrit', async (_q, ecart, message) => {
     etat.reponses.push([{ ...ETAT_SAIN, ...ecart }]);
     const e = await refus(
@@ -196,16 +232,68 @@ describe('REQ-DM-024 — le provisionnement : refus AVANT d’écrire, puis un l
     await provisionnerRoleDExecution({ urlMigration: URL_PROPRIO, urlExecution: URL_SERVEUR });
     expect(etat.urls).toEqual([URL_PROPRIO]);
     expect(etat.requetes).toHaveLength(1);
-    expect(etat.requetes[0]!.valeurs.every((v) => v === 'partners_app')).toBe(true);
+    // Le nom du rôle, et celui du journal (SEC-50) : aucune autre valeur liée.
+    expect(
+      etat.requetes[0]!.valeurs.every((v) => v === 'partners_app' || v === TABLE_DU_JOURNAL)
+    ).toBe(true);
     expect(etat.transactions).toHaveLength(1);
     const lot = etat.transactions[0]!;
     const tous = JSON.stringify(lot);
     expect(tous).not.toContain(SECRET);
-    const parametre = lot.find((x) => x.sql.includes('set_config'));
+    const parametre = lot.find((x) =>
+      x.sql.includes("set_config('partners_execution.verificateur'")
+    );
     expect(String(parametre?.valeurs[0]).startsWith('SCRAM-SHA-256$4096:')).toBe(true);
     expect(tous).toContain('GRANT partners_execution TO partners_app');
     expect(tous).toContain('GRANT SELECT ON _prisma_migrations TO partners_execution');
     expect(etat.deconnexions).toBe(1);
+  });
+
+  it('REQ-DM-024 : TÉMOIN — la boucle des droits exclut le journal par son NOM, sans le déduire de son propriétaire', async () => {
+    etat.reponses.push([ETAT_SAIN]);
+    await provisionnerRoleDExecution({ urlMigration: URL_PROPRIO, urlExecution: URL_SERVEUR });
+    const lot = etat.transactions[0]!;
+    // Le NOM du journal, lié en paramètre AVANT la boucle, dans le même lot, et lu chez son écrivain.
+    expect(TABLE_DU_JOURNAL).toBe('public.evenements');
+    const nom = lot.findIndex((x) => x.sql.includes("set_config('partners_execution.journal'"));
+    expect(nom).toBeGreaterThanOrEqual(0);
+    expect(lot[nom]!.valeurs).toEqual([TABLE_DU_JOURNAL]);
+    const iBoucle = lot.findIndex((x) => x.sql.includes('FOR t IN'));
+    expect(nom).toBeLessThan(iBoucle);
+    const boucle = lot[iBoucle];
+    // La table ET sa séquence, exclues par ce nom ; la table de suivi des migrations, par le sien.
+    expect(boucle?.sql).toContain(
+      "c.oid IS DISTINCT FROM to_regclass(current_setting('partners_execution.journal'))"
+    );
+    expect(boucle?.sql).toContain(
+      "pg_get_serial_sequence(current_setting('partners_execution.journal'), 'id')::regclass"
+    );
+    expect(boucle?.sql).toContain("c.relname <> '_prisma_migrations'");
+    expect(boucle?.sql).not.toContain('relowner');
+  });
+
+  it('REQ-DM-024 : l’état du journal est lu AVANT tout lot, dans la même requête que celui du rôle', async () => {
+    etat.reponses.push([ETAT_SAIN]);
+    await provisionnerRoleDExecution({ urlMigration: URL_PROPRIO, urlExecution: URL_SERVEUR });
+    expect(etat.requetes).toHaveLength(1);
+    const lu = etat.requetes[0]!.sql;
+    expect(lu).toContain('to_regclass($::text)');
+    expect(etat.requetes[0]!.valeurs).toContain(TABLE_DU_JOURNAL);
+    expect(lu).toContain("'UPDATE, DELETE, TRUNCATE'");
+  });
+
+  it('REQ-DM-024 : TÉMOIN — SEC-57 : ce que possède partners_journal est lu dans pg_shdepend, hors du journal et de sa séquence désignés par le NOM lié', async () => {
+    etat.reponses.push([ETAT_SAIN]);
+    await provisionnerRoleDExecution({ urlMigration: URL_PROPRIO, urlExecution: URL_SERVEUR });
+    const lu = etat.requetes[0]!.sql;
+    // La propriété d'un objet, dans cette base ou partagée, et chaque objet nommé dans le refus.
+    expect(lu).toContain('FROM pg_shdepend');
+    expect(lu).toContain("d.deptype = 'o'");
+    expect(lu).toContain('pg_describe_object(d.classid, d.objid, d.objsubid)');
+    // Le journal et sa séquence, exclus par le nom de l'écrivain, jamais par un littéral.
+    expect(lu).toContain('d.objid IS DISTINCT FROM to_regclass($::text)');
+    expect(lu).toContain("pg_get_serial_sequence($::text, 'id')::regclass");
+    expect(lu).not.toContain('evenements');
   });
 });
 
@@ -220,6 +308,12 @@ describe('REQ-DM-024 — le constat, connecté comme le serveur', () => {
       'le serveur n’est pas membre de partners_execution',
     ],
     ['propriétaire de tables', { tables: 2 }, 'le serveur est propriétaire de tables'],
+    [
+      'un journal à un autre propriétaire',
+      { possede: false },
+      'le journal n’appartient pas à partners_journal',
+    ],
+    ['un journal réinscriptible', { reecrit: true }, 'le serveur peut réécrire le journal'],
   ])('REQ-DM-024 : TÉMOIN — %s : refus nommé', async (_q, ecart, message) => {
     etat.reponses.push(ecart === null ? [] : [{ ...CONSTAT_SAIN, ...ecart }]);
     const e = await refus(constaterRoleDExecution(URL_SERVEUR));

@@ -106,6 +106,7 @@ async function envoyerUnLien(d: DependancesDuLien) {
   await ports.emission.envoyer({
     a: COURRIEL,
     url: 'https://x.example/connexion/JETON-TEMOIN-SEC42',
+    code: '042137',
     expireAt: new Date(INSTANT),
   });
 }

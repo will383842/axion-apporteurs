@@ -543,6 +543,7 @@ describe('REQ-SEC-001 — l’émission du lien, après la réponse', () => {
       [
         'annuleAt',
         'apporteurId',
+        'codeHash',
         'consommeAt',
         'creeAt',
         'expireAt',

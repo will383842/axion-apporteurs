@@ -1972,7 +1972,7 @@
                     </p>
                     <div class="pile-serree">
                       <h4>Pourquoi</h4>
-                      <p>Personne ne suivait cette entreprise.</p>
+                      <p>Cette entreprise était disponible.</p>
                     </div>
                     <div class="pile-serree">
                       <h4>Et maintenant</h4>
@@ -2417,9 +2417,9 @@
             <section
               class="ecran"
               id="etat-issue-en_attente"
-              aria-label="État : En attente (déjà suivie)"
+              aria-label="État : En attente (déjà réservée)"
             >
-              <p class="sans-js-titre">État : En attente (déjà suivie)</p>
+              <p class="sans-js-titre">État : En attente (déjà réservée)</p>
               <div class="app">
                 <div class="app-principal">
                   <div class="barre-etat" aria-hidden="true">
@@ -2452,15 +2452,17 @@
                     <div class="pile-serree">
                       <h4>Pourquoi</h4>
                       <p>
-                        Un autre apporteur suit déjà cette entreprise. Votre dépôt est
+                        Cette entreprise est déjà réservée. Votre dépôt est
                         <b>le premier en attente</b>.
                       </p>
                     </div>
                     <div class="pile-serree">
                       <h4>Et maintenant</h4>
                       <p>
-                        Si ce suivi s’arrête, votre dépôt prend la suite, à l’heure où vous l’avez
-                        envoyé. Rien à faire de votre côté : vous serez prévenu.
+                        Si cette réservation prend fin alors que votre dépôt est le premier en
+                        attente, vous serez prévenu, et vous aurez quinze jours pour déposer à
+                        nouveau cette entreprise. Sans nouveau dépôt dans ce délai, votre dépôt en
+                        attente est effacé.
                       </p>
                     </div>
 
@@ -2510,8 +2512,8 @@
                     <div class="pile-serree">
                       <h4>Pourquoi</h4>
                       <p>
-                        Un autre apporteur suit cette entreprise et deux dépôts attendent déjà leur
-                        tour : c’est le maximum prévu par le contrat (article 3.3 bis).
+                        Cette entreprise est déjà réservée, et deux dépôts attendent déjà leur tour
+                        : c’est le maximum prévu par le contrat (article 3.3 bis).
                       </p>
                     </div>
                     <div class="pile-serree">
@@ -2810,8 +2812,8 @@
                     <div class="pile-serree">
                       <h4>Et maintenant</h4>
                       <p>
-                        Vous pouvez répondre à ce courrier, ou écrire à Axion-IA. Vos entreprises
-                        déjà suivies ne changent pas.
+                        Vous pouvez répondre à ce courrier, ou écrire à Axion-IA. Rien ne change
+                        pour vos entreprises en cours, ni pour vos commissions.
                       </p>
                     </div>
 
@@ -2958,7 +2960,7 @@
         <ul>
           <li><a href="#etat-issue-enregistree">Enregistré</a></li>
           <li><a href="#etat-issue-prioritaire">Enregistré, Axion-IA vous appelle d’abord</a></li>
-          <li><a href="#etat-issue-en_attente">En attente (déjà suivie)</a></li>
+          <li><a href="#etat-issue-en_attente">En attente (déjà réservée)</a></li>
         </ul>
         <p class="groupe">Après le dépôt (W20)</p>
         <ul>
@@ -3193,7 +3195,7 @@
           </p>
         </section>
         <section class="note" data-pour="etat-issue-en_attente">
-          <h2>En attente (déjà suivie)</h2>
+          <h2>En attente (déjà réservée)</h2>
           <p>
             Issue <code>en_attente</code> (enum <code>IssueDepot</code>, REQ-UX-002) : un titre, un
             « pourquoi », un « et maintenant », et la mention explicite de l’horodatage à son nom.
