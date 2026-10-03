@@ -10,7 +10,7 @@
  *   2. `deploy:coolify` — secrets absents : SAUTÉ, 0, et CHAQUE secret manquant est nommé dans une
  *      annotation `::warning::` (arbitrage -d7 sur délégation de Williams du 2026-09-29 : un `main`
  *      rouge en permanence finit désarmé) ; secrets présents et plateforme qui refuse : ROUGE.
- *      Secrets présents et plateforme qui accepte : l'étiquette `sha-<7>` est posée PUIS le
+ *      Secrets présents et plateforme qui accepte : l'EMPREINTE de l'image `sha-<7>` est posée PUIS le
  *      déploiement déclenché, dans cet ordre — la plateforme tire, elle ne construit rien.
  *   3. La structure : un job de déploiement après la publication, sur `main` seulement, une file
  *      par environnement qui n'annule jamais un déploiement commencé, sans droit d'écriture sur le
@@ -30,6 +30,9 @@ const SCRIPT = 'scripts/gates/deploy-verify.ts';
 const TSX = 'node_modules/tsx/dist/cli.mjs';
 const SHA = 'a'.repeat(40);
 const AUTRE = 'b'.repeat(40);
+/** QA-T65 : l'empreinte de l'image `sha-<7>` publiée, et l'étiquette que la plateforme reçoit pour elle. */
+const EMPREINTE = `sha256:${'c'.repeat(64)}`;
+const ETIQUETTE = `sha256-${'c'.repeat(64)}`;
 /**
  * Ce que sert une application ATTERRIE : le sha, et la politique de contenu de la configuration, avec
  * son propre nonce. `deploy:verify` compare aussi la politique servie à celle de la configuration :
@@ -76,6 +79,21 @@ async function serveur(
   return { url: `http://127.0.0.1:${adresse.port}`, recues };
 }
 
+/**
+ * QA-T65 : le registre factice, où l'image `sha-<7>` est publiée et rend son empreinte (lecture
+ * anonyme, comme sur ghcr.io). Les variables qu'il faut au déployeur pour le lire.
+ */
+async function registre(): Promise<Record<string, string>> {
+  const r = await serveur((q) =>
+    q.url.startsWith('/token')
+      ? { statut: 200, entetes: {}, corps: '{"token":"jeton-anonyme"}' }
+      : q.url === `/v2/proprio/depot/manifests/sha-${SHA.slice(0, 7)}`
+        ? { statut: 200, entetes: { 'docker-content-digest': EMPREINTE }, corps: '' }
+        : { statut: 404, entetes: {}, corps: '' }
+  );
+  return { PARTNERS_REGISTRE_URL: r.url, GITHUB_REPOSITORY: 'proprio/depot' };
+}
+
 /** Asynchrone : le serveur de test tourne dans CE processus, un appel synchrone le bloquerait. */
 function lancer(
   args: string[],
@@ -85,7 +103,12 @@ function lancer(
     // Aucune variable du poste ne fuit dans le témoin : ce que le test fait varier, il le pose (RM-11).
     const propre: NodeJS.ProcessEnv = { ...process.env };
     for (const k of Object.keys(propre)) {
-      if (/^(COOLIFY_|PARTNERS_URL_PUBLIQUE|GITHUB_SHA)/.test(k)) delete propre[k];
+      if (
+        /^(COOLIFY_|PARTNERS_URL_PUBLIQUE|PARTNERS_REGISTRE_URL|GITHUB_SHA|GITHUB_REPOSITORY)/.test(
+          k
+        )
+      )
+        delete propre[k];
     }
     const p = spawn(process.execPath, [TSX, SCRIPT, ...args], { env: { ...propre, ...env } });
     let sortie = '';
@@ -197,22 +220,29 @@ describe('deploy:coolify — la plateforme tire l’image, ou le saut est NOMMÉ
       COOLIFY_API_TOKEN: 'jeton-factice-de-test',
       COOLIFY_APP_UUID: 'uuid-factice',
       PARTNERS_URL_PUBLIQUE: 'http://127.0.0.1:1',
+      ...(await registre()),
     });
     expect(r.code).not.toBe(0);
     expect(r.sortie).toContain('401');
     expect(r.sortie).not.toContain('jeton-factice-de-test');
   });
 
-  it('secrets présents, plateforme qui accepte : étiquette sha-<7> posée PUIS déploiement, puis atterrissage vérifié', async () => {
+  it('secrets présents, plateforme qui accepte : EMPREINTE de l’image posée PUIS déploiement, puis atterrissage vérifié et empreinte relue', async () => {
     const coolify = await serveur((q) =>
       q.methode === 'PATCH'
         ? { statut: 200, entetes: {}, corps: '{"uuid":"uuid-factice"}' }
-        : {
-            statut: 200,
-            entetes: {},
-            corps:
-              '{"deployments":[{"message":"ok","resource_uuid":"uuid-factice","deployment_uuid":"d1"}]}',
-          }
+        : q.methode === 'GET'
+          ? {
+              statut: 200,
+              entetes: {},
+              corps: JSON.stringify({ docker_registry_image_tag: ETIQUETTE }),
+            }
+          : {
+              statut: 200,
+              entetes: {},
+              corps:
+                '{"deployments":[{"message":"ok","resource_uuid":"uuid-factice","deployment_uuid":"d1"}]}',
+            }
     );
     const app = await serveur(() => ({
       statut: 200,
@@ -225,15 +255,14 @@ describe('deploy:coolify — la plateforme tire l’image, ou le saut est NOMMÉ
       COOLIFY_API_TOKEN: 'jeton-factice-de-test',
       COOLIFY_APP_UUID: 'uuid-factice',
       PARTNERS_URL_PUBLIQUE: app.url,
+      ...(await registre()),
     });
     expect(r.sortie).not.toContain('jeton-factice-de-test');
     expect(r.code).toBe(0);
-    expect(coolify.recues.map((q) => q.methode)).toEqual(['PATCH', 'POST']);
+    expect(coolify.recues.map((q) => q.methode)).toEqual(['PATCH', 'POST', 'GET']);
     const [patch, post] = coolify.recues;
     expect(patch!.url).toBe('/api/v1/applications/uuid-factice');
-    expect(JSON.parse(patch!.corps)).toEqual({
-      docker_registry_image_tag: `sha-${SHA.slice(0, 7)}`,
-    });
+    expect(JSON.parse(patch!.corps)).toEqual({ docker_registry_image_tag: ETIQUETTE });
     expect(post!.url).toBe('/api/v1/deploy?uuid=uuid-factice&force=false');
     for (const q of coolify.recues) expect(q.auth).toBe('Bearer jeton-factice-de-test');
   });
@@ -255,6 +284,7 @@ describe('deploy:coolify — la plateforme tire l’image, ou le saut est NOMMÉ
       COOLIFY_API_TOKEN: 'jeton-factice-de-test',
       COOLIFY_APP_UUID: 'uuid-factice',
       PARTNERS_URL_PUBLIQUE: app.url,
+      ...(await registre()),
     });
     expect(r.code).not.toBe(0);
     expect(r.sortie).toContain(SHA);
