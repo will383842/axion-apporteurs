@@ -68,6 +68,7 @@ import * as ETATS_VIDES_DE_L_ESPACE from '../../src/content/micro-copy/espace/et
 import * as VOCABULAIRE_DE_L_ESPACE from '../../src/content/micro-copy/espace/vocabulaire';
 import * as TYPES_DE_LA_MICRO_COPIE from '../../src/content/micro-copy/types';
 import * as NOTIFICATIONS_DE_L_APPORTEUR from '../../src/content/micro-copy/courriels/notifications';
+import * as CONFIRMATION_DU_DEPOT from '../../src/content/micro-copy/espace/confirmation-du-depot';
 import { ETATS_VIDES_CONSOLE } from '../../src/content/micro-copy/console/etats-vides';
 import { GABARITS } from '../../src/server/notifications/table-ssot';
 import type { ActionEcran, EtatVide, TexteIssue } from '../../src/content/micro-copy/types';
@@ -97,6 +98,7 @@ const MICRO_COPIE_DE_L_ESPACE: Readonly<Record<string, unknown>> = {
   'espace/issues-depot.ts': ISSUES_DE_L_ESPACE,
   'espace/etats-vides.ts': ETATS_VIDES_DE_L_ESPACE,
   'espace/vocabulaire.ts': VOCABULAIRE_DE_L_ESPACE,
+  'espace/confirmation-du-depot.ts': CONFIRMATION_DU_DEPOT,
   // Hors d'`espace/`, mais importé par chaque module de l'espace : parcouru comme eux.
   'types.ts': TYPES_DE_LA_MICRO_COPIE,
   // UX-P1-10 : les notifications de l'apporteur (e-mail et espace), lues par lui : parcourues aussi.
@@ -114,6 +116,12 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
     'script de la console, lu par le qualifieur, jamais par l’apporteur',
   'courriels/information-article-14.ts':
     'courriel au prospect, hors de l’espace : couvert par le témoin information-article-14',
+  // W20 (UX-P1-41) : trois modules qu'aucun apporteur ne lit dans son espace.
+  'courriels/confirmation-contact.ts':
+    'courriel au contact rencontré, hors de l’espace : couvert par le témoin confirmation-par-courriel',
+  'public/confirmation-contact.ts':
+    'page publique du contact, hors de l’espace : couverte par le témoin confirmation-par-courriel',
+  'console/a-appeler.ts': 'lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
 };
 
 /**
@@ -199,6 +207,34 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   ],
   // La fin de SA réservation, choisie par la cause (A07) : la date où il pourra redéposer.
   'courriels/notifications.ts › CORPS_DE_LA_LIBERATION › demande_verifiee': ['dateRedepot'],
+  // W20 (UX-P1-41) : le contact que l'apporteur a LUI-MÊME saisi, son entreprise, l'heure de SON
+  // envoi ; deux délais venus de leur source unique (RM-10).
+  'espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › messageAvantLeBouton': [
+    'prenomContact',
+    'nomContact',
+    'entreprise',
+    'delaiAvantEnvoi',
+  ],
+  'espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › bouton': [
+    'prenomContact',
+    'nomContact',
+  ],
+  'espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › avantEnvoi': ['heure'],
+  'espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › envoye': ['prenomContact', 'nomContact'],
+  'espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › confirme': ['prenomContact', 'nomContact'],
+  // L'adresse qu'il a saisie lui-même, revenue en rebond : pour qu'il la corrige.
+  'espace/confirmation-du-depot.ts › CARTE_DU_DEPOT › rebond': [
+    'adresse',
+    'prenomContact',
+    'nomContact',
+  ],
+  // L'échéance de SA confirmation tacite, et la fin de SA carence.
+  'espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › enAttenteDatee': ['date'],
+  'espace/confirmation-du-depot.ts › AIDE_DU_BADGE': ['delaiTacite'],
+  'espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › reservationTermineeVerifiee': [
+    'dateRedepot',
+  ],
+  'espace/confirmation-du-depot.ts › CARENCE_DU_REDEPOT': ['dateRedepot'],
 };
 
 /**
