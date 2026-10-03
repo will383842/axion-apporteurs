@@ -253,7 +253,7 @@ describe('REQ-SEC-022 — l’art. 3.3 : refus tracé, motif distinct, issue ren
       data: { siren: cliente, origine: 'client', connueDepuisAt: T0, dernierContactAt: T0 },
     });
     await base.prisma.devisConnu.create({
-      data: { devisRef: `D-${hex(4)}`, siren: devis, emisAt: T0, montantTotalHtCents: 100_000n },
+      data: { devisRef: `D-${hex(4)}`, siren: devis, emisAt: T0, montantTotalHtCents: 100_000 },
     });
     const a = await apporteur('signe');
     const rc = await deposerOuEchouer(base.prisma, demande(a, cliente), PORTS);
@@ -455,7 +455,7 @@ describe('REQ-SEC-022 — le refus est notifié (`refus_declaration`)', () => {
       data: { siren: cliente, origine: 'client', connueDepuisAt: T0, dernierContactAt: T0 },
     });
     await base.prisma.devisConnu.create({
-      data: { devisRef: `D-${hex(4)}`, siren: devis, emisAt: T0, montantTotalHtCents: 100_000n },
+      data: { devisRef: `D-${hex(4)}`, siren: devis, emisAt: T0, montantTotalHtCents: 100_000 },
     });
     const a = await apporteur('signe');
     const { ports, envois } = portsQuiNotifient();

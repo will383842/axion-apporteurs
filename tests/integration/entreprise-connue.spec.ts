@@ -12,7 +12,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomInt, randomUUID } from 'node:crypto';
-import { PrismaClient, TypeEvenementRecu } from '@prisma/client';
+import { Prisma, PrismaClient, TypeEvenementRecu } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
 import {
   ROLE_D_EXECUTION,
@@ -53,10 +53,14 @@ function ilYA(mois: number): string {
 const unSiren = () => String(randomInt(100_000_000, 999_999_999));
 
 /** Pose un événement reçu, comme la réception le garde, puis le projette sous le rôle du serveur. */
+/** La séquence d'émission d'axionia, exigée par la base pour une source axionia. */
+let sequence = 1_000_000n;
+
 async function recevoir(type: TypeEvenementRecu, charge: Record<string, unknown>): Promise<void> {
   await base.prisma.evenementRecu.create({
     data: {
       source: 'axionia',
+      sequence: (sequence += 1n),
       eventId: randomUUID(),
       eventType: type,
       schemaVersion: 3,
@@ -115,22 +119,60 @@ async function refus(p: Promise<unknown>): Promise<string> {
   throw new Error('aucun refus');
 }
 
+/** Le SQLSTATE d'une erreur de la base, lu sur son code (le message de Prisma ne le garantit pas). */
+function codeSql(e: unknown): string | null {
+  const meta = (e as { meta?: { code?: string } } | null)?.meta?.code;
+  if (meta) return meta;
+  const m = /Code: `([0-9A-Z]{5})`/.exec(String((e as { message?: string } | null)?.message ?? ''));
+  return m?.[1] ?? null;
+}
+
+describe('REQ-DM-029 — la référence d’un devis est bornée à 64 caractères', () => {
+  it('REQ-DM-029 : TÉMOIN — une référence de 65 caractères est refusée par son TYPE, VARCHAR(64), SQLSTATE 22001, lu sur le code', async () => {
+    // En SQL brut : par le client typé, Prisma refuse AVANT la base (P2000, sans SQLSTATE), et le
+    // témoin ne prouverait plus que la COLONNE est bornée.
+    let erreur: unknown = null;
+    await app
+      .$executeRawUnsafe(
+        `INSERT INTO "devis_connus" ("devis_ref", "siren", "emis_at", "montant_total_ht_cents")
+         VALUES ($1, $2, $3::timestamptz, 0)`,
+        `${'d'.repeat(64)}1`,
+        unSiren(),
+        ilYA(2)
+      )
+      .catch((e: unknown) => {
+        erreur = e;
+      });
+    expect(codeSql(erreur)).toBe('22001');
+  });
+
+  it('REQ-DM-029 : TÉMOIN — la projection ne tronque pas : un devis à référence trop longue fait échouer le traitant, et rien n’est écrit', async () => {
+    const siren = unSiren();
+    const devisId = `${'r'.repeat(64)}1`;
+    await expect(devisEmis(devisId, siren, ilYA(2))).rejects.toBeTruthy();
+    expect(await base.prisma.devisConnu.count({ where: { siren } })).toBe(0);
+    expect(
+      await base.prisma.devisConnu.count({ where: { devisRef: { startsWith: 'r'.repeat(64) } } })
+    ).toBe(0);
+  });
+});
+
 describe('REQ-DM-029 — la forme des tables (A02)', () => {
   it('REQ-DM-029 : TÉMOIN — chaque CHECK est refusé sur son nom', async () => {
     const siren = unSiren();
-    const devis = (data: Record<string, unknown>) =>
-      app.devisConnu.create({
-        data: {
-          devisRef: randomUUID(),
-          siren,
-          emisAt: new Date(ilYA(2)),
-          montantTotalHtCents: 1n,
-          ...data,
-        } as never,
-      });
+    const devis = (ecart: Partial<Prisma.DevisConnuUncheckedCreateInput>) => {
+      const data: Prisma.DevisConnuUncheckedCreateInput = {
+        devisRef: randomUUID(),
+        siren,
+        emisAt: new Date(ilYA(2)),
+        montantTotalHtCents: 1,
+        ...ecart,
+      };
+      return app.devisConnu.create({ data });
+    };
     expect(await refus(devis({ siren: 'ABC' }))).toContain('devis_connus_siren_forme');
     expect(await refus(devis({ devisRef: '  ' }))).toContain('devis_connus_ref_non_vide');
-    expect(await refus(devis({ montantTotalHtCents: -1n }))).toContain(
+    expect(await refus(devis({ montantTotalHtCents: -1 }))).toContain(
       'devis_connus_montant_positif'
     );
     expect(await refus(devis({ signeAt: new Date(ilYA(3)) }))).toContain(
@@ -164,11 +206,13 @@ describe('REQ-DM-029 — la forme des tables (A02)', () => {
 
   it('REQ-DM-028 : TÉMOIN — la liste de la Société refuse un SIREN mal formé, sur son nom', async () => {
     const u = await base.prisma.utilisateurConsole.create({
-      data: { role: 'admin', creeAt: new Date(ilYA(1)) },
+      data: { role: 'admin', creeAt: new Date(ilYA(1)), desactiveAt: new Date(ilYA(1)) },
     });
     expect(
       await refus(
-        app.sirenListeNoire.create({ data: { siren: '1234', motif: 'opco', ajouteParId: u.id } })
+        app.sirenListeNoire.create({
+          data: { siren: '1234', motif: 'administration', ajouteParId: u.id },
+        })
       )
     ).toContain('sirens_liste_noire_siren_forme');
   });
@@ -184,12 +228,12 @@ describe('REQ-DM-029 — la forme des tables (A02)', () => {
       ).map((r) => r.v);
     expect(await valeurs('origine_entreprise_connue')).toEqual(['client', 'devis', 'financeur']);
     expect(await valeurs('origine_entreprise_connue')).not.toContain('demande_entrante');
+    // Les catégories de l'art. 3.3 bis (b), sans « autre » (exigence de la juriste, forme d'A02).
     expect(await valeurs('motif_liste_noire')).toEqual([
-      'opco',
-      'france_travail',
-      'region',
-      'of_partenaire',
-      'autre',
+      'administration',
+      'financeur_public',
+      'financeur_paritaire',
+      'organisme_de_formation_partenaire',
     ]);
   });
 
@@ -256,7 +300,7 @@ describe('REQ-DM-029 — l’antériorité projetée, sous le rôle du serveur (
       origine: 'devis',
     });
     const [ligne] = await base.prisma.devisConnu.findMany({ where: { devisRef: devisId } });
-    expect(ligne!.factureHtCents).toBe(9_999n);
+    expect(ligne!.factureHtCents).toBe(9_999);
   });
 
   it('REQ-DM-029 : TÉMOIN — le SIREN d’un devis signé se lit sur son client ; un rejeu ne compte rien deux fois', async () => {
@@ -273,11 +317,43 @@ describe('REQ-DM-029 — l’antériorité projetée, sous le rôle du serveur (
     });
     const [ligne] = await base.prisma.devisConnu.findMany({ where: { devisRef: devisId } });
     expect(ligne!.siren).toBe(siren);
-    expect(ligne!.factureHtCents).toBe(4_000n);
+    expect(ligne!.factureHtCents).toBe(4_000);
     expect(await anterioriteDe(app, siren, MAINTENANT)).toMatchObject({
       connue: true,
       origine: 'devis',
     });
+  });
+
+  it('REQ-DM-029 : TÉMOIN — une facture entièrement éteinte par un avoir ne rend pas l’entreprise cliente (remarque de la juriste)', async () => {
+    const siren = unSiren();
+    const factureId = randomUUID();
+    await factureEmise(factureId, siren, ilYA(2), 1_000, null);
+    expect(await anterioriteDe(app, siren, MAINTENANT)).toMatchObject({ origine: 'client' });
+    await recevoir(TypeEvenementRecu.avoir_emis, {
+      avoirId: randomUUID(),
+      numero: 'A-2',
+      avoirDeFactureId: factureId,
+      clientId: null,
+      siren,
+      montantHtCents: -1_000,
+      emisLe: ilYA(1),
+    });
+    expect(await anterioriteDe(app, siren, MAINTENANT)).toEqual({ connue: false });
+  });
+
+  it('REQ-DM-029 : TÉMOIN — une facture sans montant fait échouer la projection, nommée ; rien n’est lu comme zéro', async () => {
+    const siren = unSiren();
+    await expect(
+      recevoir(TypeEvenementRecu.facture_emise, {
+        factureId: randomUUID(),
+        numero: 'F-9',
+        clientId: null,
+        siren,
+        emiseLe: ilYA(2),
+        devisId: null,
+      })
+    ).rejects.toMatchObject({ name: 'ChargeIncomplete' });
+    expect(await base.prisma.entrepriseConnue.count({ where: { siren } })).toBe(0);
   });
 
   it('REQ-DM-029 : une facture annulée ne rend pas l’entreprise cliente, quel que soit l’ordre d’arrivée', async () => {
@@ -296,12 +372,35 @@ describe('REQ-DM-029 — l’antériorité projetée, sous le rôle du serveur (
   it('REQ-DM-028 : une entreprise inscrite sur la liste de la Société est connue (financeur)', async () => {
     const siren = unSiren();
     const u = await base.prisma.utilisateurConsole.create({
-      data: { role: 'admin', creeAt: new Date(ilYA(1)) },
+      data: { role: 'admin', creeAt: new Date(ilYA(1)), desactiveAt: new Date(ilYA(1)) },
     });
-    await base.prisma.sirenListeNoire.create({ data: { siren, motif: 'opco', ajouteParId: u.id } });
-    expect(await anterioriteDe(app, siren, MAINTENANT)).toMatchObject({
+    await base.prisma.sirenListeNoire.create({
+      data: { siren, motif: 'financeur_paritaire', ajouteParId: u.id },
+    });
+    expect(await anterioriteDe(app, siren, MAINTENANT)).toEqual({
       connue: true,
       origine: 'financeur',
+      depuis: null,
+      categorie: 'financeur_paritaire',
     });
+  });
+
+  it('REQ-DM-028 : TÉMOIN — « autre » et les anciens noms d’organisme sont refusés par la base', async () => {
+    const u = await base.prisma.utilisateurConsole.create({
+      data: { role: 'admin', creeAt: new Date(ilYA(1)), desactiveAt: new Date(ilYA(1)) },
+    });
+    for (const motif of ['autre', 'opco', 'france_travail', 'region', 'of_partenaire']) {
+      expect(
+        await refus(
+          base.prisma.$executeRawUnsafe(
+            `INSERT INTO "sirens_liste_noire" ("siren", "motif", "ajoute_par_id") VALUES ($1, $2::motif_liste_noire, $3::uuid)`,
+            unSiren(),
+            motif,
+            u.id
+          )
+        ),
+        motif
+      ).toMatch(/motif_liste_noire|invalid input value/i);
+    }
   });
 });

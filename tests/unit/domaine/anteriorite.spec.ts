@@ -12,9 +12,14 @@
  * montant HT du devis (écart B-11).
  */
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
+import { chargeConforme } from '../../../src/server/integrations/axionia/reception';
+import { SCHEMA_VERSION } from '../../../packages/contracts/events';
+import { ChargeIncomplete, montantRequis } from '../../../src/server/entreprise-connue/projection';
 import {
   evaluerAnteriorite,
+  estPrestationFacturee,
   factureHtDuDevis,
   type DevisConnu,
   type FaitsDUneEntreprise,
@@ -31,7 +36,7 @@ function ilYA(mois: number): Date {
   return d;
 }
 
-const RIEN: FaitsDUneEntreprise = { derniereFactureAt: null, devis: [], financeur: false };
+const RIEN: FaitsDUneEntreprise = { derniereFactureAt: null, devis: [], financeur: null };
 
 /** Un devis émis il y a `emis` mois, jamais signé. */
 const emis = (mois: number): DevisConnu => ({
@@ -120,10 +125,18 @@ describe('REQ-DM-029 — l’antériorité, évaluée localement (art. 3.3)', ()
     ).toMatchObject({ connue: true, origine: 'client' });
   });
 
-  it('REQ-DM-029 : une entreprise inscrite sur la liste de la Société est connue (financeur), avant toute autre origine', () => {
+  it('REQ-DM-029 : TÉMOIN — une entreprise inscrite sur la liste de la Société est connue (financeur), avant toute autre origine, et le refus rend sa CATÉGORIE', () => {
     expect(
-      evaluerAnteriorite({ ...RIEN, financeur: true, derniereFactureAt: ilYA(1) }, MAINTENANT)
-    ).toEqual({ connue: true, origine: 'financeur', depuis: null });
+      evaluerAnteriorite(
+        { ...RIEN, financeur: 'financeur_paritaire', derniereFactureAt: ilYA(1) },
+        MAINTENANT
+      )
+    ).toEqual({
+      connue: true,
+      origine: 'financeur',
+      depuis: null,
+      categorie: 'financeur_paritaire',
+    });
   });
 });
 
@@ -160,5 +173,59 @@ describe('REQ-DM-029 — « entièrement facturé », devis par devis (écart B-
         MAINTENANT
       )
     ).toMatchObject({ connue: true, origine: 'devis' });
+  });
+});
+
+describe('REQ-DM-029 — « prestation facturée » : une facture que rien n’éteint (remarque de la juriste)', () => {
+  it('REQ-DM-029 : TÉMOIN — une facture entièrement éteinte par des avoirs ne compte pas comme prestation facturée', () => {
+    const facture = { montantHtCents: 10_000, annulee: false };
+    expect(estPrestationFacturee(facture, [])).toBe(true);
+    expect(estPrestationFacturee(facture, [{ montantHtCents: -10_000 }])).toBe(false);
+    expect(
+      estPrestationFacturee(facture, [{ montantHtCents: 4_000 }, { montantHtCents: -6_000 }])
+    ).toBe(false);
+  });
+
+  it('REQ-DM-029 : TÉMOIN — un avoir partiel la laisse facturée ; une facture annulée ne l’est jamais', () => {
+    expect(
+      estPrestationFacturee({ montantHtCents: 10_000, annulee: false }, [
+        { montantHtCents: -9_999 },
+      ])
+    ).toBe(true);
+    expect(estPrestationFacturee({ montantHtCents: 10_000, annulee: true }, [])).toBe(false);
+  });
+});
+
+describe('REQ-DM-029 — un montant absent ferme la protection, il ne l’ouvre jamais (remarque de la juriste)', () => {
+  const PRODUCTEUR = JSON.parse(
+    readFileSync('tests/fixtures/axionia/fixtures-producteur.v1.json', 'utf8')
+  ) as { evenements: { event_type: string; payload: Record<string, unknown> }[] };
+  const charge = (type: string): Record<string, unknown> => {
+    const p = { ...PRODUCTEUR.evenements.find((x) => x.event_type === type)!.payload };
+    if (type === 'facture.emise') p.devisId = null;
+    return p;
+  };
+  const sansChamp = (c: Record<string, unknown>, champ: string) =>
+    Object.fromEntries(Object.entries(c).filter(([k]) => k !== champ));
+
+  it('REQ-DM-029 : TÉMOIN — à l’ENTRÉE, une charge sans montant est refusée par le contrat ; avec lui, elle passe', () => {
+    for (const [type, champ] of [
+      ['facture.emise', 'montantHtCents'],
+      ['devis.signe', 'montantTotalHtCents'],
+      ['avoir.emis', 'montantHtCents'],
+    ] as const) {
+      expect(chargeConforme(type, charge(type), SCHEMA_VERSION), type).toBe(true);
+      expect(chargeConforme(type, sansChamp(charge(type), champ), SCHEMA_VERSION), type).toBe(
+        false
+      );
+    }
+  });
+
+  it('REQ-DM-029 : TÉMOIN — dans la PROJECTION, un montant absent n’est jamais lu comme zéro : la lecture lève, nommée', () => {
+    expect(montantRequis({ montantHtCents: 1_000 }, 'montantHtCents')).toBe(1_000);
+    expect(() => montantRequis({}, 'montantHtCents')).toThrow(ChargeIncomplete);
+    expect(() => montantRequis({ montantHtCents: '1000' }, 'montantHtCents')).toThrow(
+      ChargeIncomplete
+    );
   });
 });
