@@ -82,7 +82,7 @@ Pour la console, Will regarde en plus :
 ## Ce que Will regarde
 
 1. **Le geste principal tient-il en 90 secondes**, sur un téléphone, sans lire de mode d'emploi ?
-2. Le vocabulaire est-il celui d'un apporteur (« votre entreprise », « ce que vous touchez ») et non
+2. Le vocabulaire est-il celui d'un apporteur (« votre entreprise », « ce qui vous revient ») et non
    celui du schéma (« attribution », « prorata », « déclaration non confirmée ») ?
 3. Chaque état bloqué dit-il **pourquoi** et **quoi faire** ?
 4. Y a-t-il quelque part un objectif, un classement, un compte à rebours de performance ? (Il ne doit

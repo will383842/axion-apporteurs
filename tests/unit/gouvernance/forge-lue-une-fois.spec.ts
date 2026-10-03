@@ -32,7 +32,7 @@ function ecrire(nom: string, contenu: string): string {
 function sansGh(extra: Record<string, string | undefined>): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
   for (const k of Object.keys(env))
-    if (/^(path|gov_etat_forge|gov_etat_gh)$/i.test(k)) delete env[k];
+    if (/^(path|gov_etat_forge|gov_etat_gh|gov_forge)$/i.test(k)) delete env[k];
   env['PATH'] = dirname(process.execPath);
   for (const [k, v] of Object.entries(extra)) if (v !== undefined) env[k] = v;
   return env;
@@ -59,7 +59,7 @@ describe('REQ-GOV-006 REQ-QA-013 — le run de tests lit la forge une fois', () 
       return '[]';
     });
     expect(appels).toEqual(LECTURES_DE_LA_FORGE.map((a) => a.join(' ')));
-    expect(new Set(appels).size).toBe(3);
+    expect(new Set(appels).size).toBe(LECTURES_DE_LA_FORGE.length);
     expect(Object.keys(instantane ?? {})).toEqual(appels);
   });
 
@@ -72,8 +72,12 @@ describe('REQ-GOV-006 REQ-QA-013 — le run de tests lit la forge une fois', () 
     expect(figerLaForge((a) => (a[0] === 'issue' ? 'pas du json' : '[]'))).toBeNull();
   });
 
-  it('REQ-GOV-006 REQ-QA-013 : GOV_ETAT_GH ou GOV_ETAT_FORGE déjà posé, ou vitest list : le setup ne lit rien et ne pose rien', () => {
-    const avant = { gh: process.env['GOV_ETAT_GH'], forge: process.env['GOV_ETAT_FORGE'] };
+  it('REQ-GOV-006 REQ-QA-013 : GOV_ETAT_GH, GOV_ETAT_FORGE ou GOV_FORGE déjà posé, ou vitest list : le setup ne lit rien et ne pose rien', () => {
+    const avant = {
+      gh: process.env['GOV_ETAT_GH'],
+      forge: process.env['GOV_ETAT_FORGE'],
+      porte: process.env['GOV_FORGE'],
+    };
     let lectures = 0;
     const compter: Lire = () => {
       lectures += 1;
@@ -81,6 +85,11 @@ describe('REQ-GOV-006 REQ-QA-013 — le run de tests lit la forge une fois', () 
     };
     try {
       delete process.env['GOV_ETAT_FORGE'];
+      // QA-T64 : la porte A a posé GOV_FORGE, le setup ne relit pas la forge.
+      process.env['GOV_FORGE'] = INSTANTANE_VIDE;
+      expect(preparer(compter, [])).toBeUndefined();
+      expect(process.env['GOV_ETAT_FORGE']).toBeUndefined();
+      delete process.env['GOV_FORGE'];
       process.env['GOV_ETAT_GH'] = 'faux-gh';
       expect(preparer(compter, [])).toBeUndefined();
       expect(process.env['GOV_ETAT_FORGE']).toBeUndefined();
@@ -94,15 +103,18 @@ describe('REQ-GOV-006 REQ-QA-013 — le run de tests lit la forge une fois', () 
       // Contre-témoin : rien de posé, un run qui exécute → une lecture par type, l'instantané posé.
       delete process.env['GOV_ETAT_FORGE'];
       const retirer = preparer(compter, ['node', 'vitest', 'run']);
-      expect(lectures).toBe(3);
+      expect(lectures).toBe(LECTURES_DE_LA_FORGE.length);
       const chemin = process.env['GOV_ETAT_FORGE'];
-      expect(Object.keys(JSON.parse(readFileSync(chemin ?? '', 'utf8')) as object)).toHaveLength(3);
+      expect(Object.keys(JSON.parse(readFileSync(chemin ?? '', 'utf8')) as object)).toHaveLength(
+        LECTURES_DE_LA_FORGE.length
+      );
       retirer?.();
       expect(process.env['GOV_ETAT_FORGE']).toBeUndefined();
     } finally {
       for (const [k, v] of [
         ['GOV_ETAT_GH', avant.gh],
         ['GOV_ETAT_FORGE', avant.forge],
+        ['GOV_FORGE', avant.porte],
       ] as const)
         if (v === undefined) delete process.env[k];
         else process.env[k] = v;
