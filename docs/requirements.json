@@ -6303,7 +6303,7 @@
     {
       "id": "REQ-JUR-065",
       "domaine": "juridique",
-      "texte": "**La page ouverte par le lien du courriel au contact permet TOUS ses droits** (accès, rectification, effacement, limitation, opposition), chacun distinct, sans compte et sans condition, avec DEUX actions distinctes : exercer un droit, et s'opposer. C'est le moyen électronique de l'art. 12 du RGPD, puisque `{adresseDroits}` est postale dans le courriel ; la clé `droits` de l'information de l'art. 14 (v5) y renvoie. Condition de mise en service d'A07 (2026-10-02), mot pour mot : « Aucun courriel en v5 ne doit partir tant que cette page n'offre pas ces droits, chacun distinct de l'opposition et sans compte. Sinon, l'information de l'art. 14 serait inexacte. »",
+      "texte": "**La page ouverte par le lien du courriel au contact permet TOUS ses droits** (accès, rectification, effacement, limitation, opposition), chacun distinct, sans compte et sans condition, avec DEUX actions distinctes : exercer un droit, et s'opposer. C'est le moyen électronique de l'art. 12 du RGPD, puisque `{adresseDroits}` est postale dans le courriel ; la clé `droits` de l'information de l'art. 14 (v5) y renvoie. Condition de mise en service d'A07 (2026-10-02), mot pour mot : « Aucun courriel en v5 ne doit partir tant que cette page n'offre pas ces droits, chacun distinct de l'opposition et sans compte. Sinon, l'information de l'art. 14 serait inexacte. » Et pas avant la réponse de Williams sur la durée de la trace des demandes de droits (art. 5.1.e ; demande d'A07, rattrapage 74).",
       "source": "Arbitrage de la coordination du 2026-10-02, accepté par A07 et la lentille sécurité ; condition de mise en service d'A07 (2026-10-02)",
       "statut": "active",
       "remplaceePar": null,
