@@ -41,6 +41,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
+      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
+      # la cle du verrou ; une action, donc avant toute commande.
+      - name: Cache des moteurs de Prisma
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
       # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
       # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
@@ -356,6 +363,12 @@ jobs:
         run: pnpm gov:conventions
       - name: La garde des conventions sait rougir
         run: pnpm gov:conventions:prove
+      # GOV-142, REQ-QA-013. Le decoupage de la porte A en jobs ne perd, ne double ni n altere aucune
+      # etape : le temoin confronte ce fichier a l « avant » fige (scripts/gates/ci-etapes-reference.json).
+      - name: Les etapes de la porte A sont celles d avant le decoupage
+        run: pnpm gov:ci-etapes
+      - name: La garde des etapes de la porte A sait rougir
+        run: pnpm gov:ci-etapes:prove
       # DM-01, REQ-DM-041. La charge d un evenement du journal ne porte aucune donnee personnelle :
       # le journal est append-only, une donnee personnelle qui y entrerait ne s effacerait jamais.
       # La garde juge les schemas Zod eux-memes et imprime le compte des types et champs confrontes.
@@ -439,6 +452,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
+      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
+      # la cle du verrou ; une action, donc avant toute commande.
+      - name: Cache des moteurs de Prisma
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
       # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
       # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
@@ -489,6 +509,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
+      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
+      # la cle du verrou ; une action, donc avant toute commande.
+      - name: Cache des moteurs de Prisma
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       # QA-T59. Le cache des navigateurs des passes d accessibilite, AVANT toute commande (une
       # action qui suit une commande peut reecrire l arbre que les gardes mesurent). Sa CLE derive
       # du verrou, qui epingle Playwright (RM-01) : aucune version ecrite ici, aucune commande pour
@@ -569,6 +596,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
+      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
+      # la cle du verrou ; une action, donc avant toute commande.
+      - name: Cache des moteurs de Prisma
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       # QA-T59. Le cache des navigateurs des passes d accessibilite, AVANT toute commande (une
       # action qui suit une commande peut reecrire l arbre que les gardes mesurent). Sa CLE derive
       # du verrou, qui epingle Playwright (RM-01) : aucune version ecrite ici, aucune commande pour
@@ -649,6 +683,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
+      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
+      # la cle du verrou ; une action, donc avant toute commande.
+      - name: Cache des moteurs de Prisma
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       # QA-T59. Le cache des navigateurs des passes d accessibilite, AVANT toute commande (une
       # action qui suit une commande peut reecrire l arbre que les gardes mesurent). Sa CLE derive
       # du verrou, qui epingle Playwright (RM-01) : aucune version ecrite ici, aucune commande pour
@@ -729,6 +770,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
+      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
+      # la cle du verrou ; une action, donc avant toute commande.
+      - name: Cache des moteurs de Prisma
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       # QA-T59. Le cache des navigateurs des passes d accessibilite, AVANT toute commande (une
       # action qui suit une commande peut reecrire l arbre que les gardes mesurent). Sa CLE derive
       # du verrou, qui epingle Playwright (RM-01) : aucune version ecrite ici, aucune commande pour
@@ -809,6 +857,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
+      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
+      # la cle du verrou ; une action, donc avant toute commande.
+      - name: Cache des moteurs de Prisma
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       # GOV-142 : l instantane de la forge, lu UNE fois par le job `gardes`, recu du run courant (ni
       # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
       - name: Reception de l instantane de la forge
@@ -924,6 +979,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
+      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
+      # la cle du verrou ; une action, donc avant toute commande.
+      - name: Cache des moteurs de Prisma
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
       # QA-T20 : construire puis mesurer, EN DERNIER. `next build` ecrit `.next/` et
       # `next-env.d.ts` ; pose plus haut, il faisait rougir `format:check` sur un fichier genere
@@ -986,6 +1048,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
+      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
+      # la cle du verrou ; une action, donc avant toute commande.
+      - name: Cache des moteurs de Prisma
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
       - name: Chaque job de la porte A a reussi
         run: pnpm ci:porte-finale

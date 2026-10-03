@@ -6,7 +6,10 @@
  * du temps. La couper en jobs parallèles est un gain de temps ; c'est aussi l'occasion idéale de
  * perdre une garde sans que rien ne rougisse : une étape oubliée dans la copie, une étape jouée deux
  * fois et dont l'une est désarmée, un `if:` glissé au passage. Ce témoin confronte les étapes de la
- * BASE (`origin/main` par défaut) à celles de la TÊTE.
+ * RÉFÉRENCE — l'« avant » FIGÉ, `scripts/gates/ci-etapes-reference.json` : les étapes du job unique,
+ * relevées dans `ci.yml` au commit qu'il nomme — à celles de la TÊTE. Une référence figée, et non
+ * `origin/main` : une fois le découpage fusionné, main serait la tête elle-même, et le témoin ne
+ * prouverait plus rien. `--base <ref>` confronte à une révision git, pour une lecture ponctuelle.
  *
  * LES RÈGLES.
  *  1. Chaque étape de la base SURVIT à l'identique (même contenu, clé par clé, nom compris) dans
@@ -37,6 +40,8 @@ import { fileURLToPath } from 'node:url';
 import { estObjet, lireYaml } from '../lib/lire-yaml';
 
 export const WORKFLOW = '.github/workflows/ci.yml';
+/** L'« avant » figé : les étapes du job unique de la porte A, au commit que le fichier nomme. */
+export const REFERENCE = 'scripts/gates/ci-etapes-reference.json';
 export const PORTE_FINALE = 'gate-a';
 export const GARDE_DE_FUSION = 'github.event.pull_request.merged != true';
 export const NOMBRE_D_ECLATS = 4;
@@ -507,9 +512,20 @@ const APPELE_DIRECTEMENT =
 
 async function principal(): Promise<number> {
   const i = process.argv.indexOf('--base');
-  const ref = i > 0 && process.argv[i + 1] ? process.argv[i + 1]! : 'origin/main';
-  const texteBase = execFileSync('git', ['show', `${ref}:${WORKFLOW}`], { encoding: 'utf8' });
-  const base = await lire(texteBase);
+  const revision = i > 0 && process.argv[i + 1] ? process.argv[i + 1]! : null;
+  let ref: string;
+  let base: Job[];
+  if (revision === null) {
+    const lu = JSON.parse(readFileSync(REFERENCE, 'utf8')) as { source?: unknown; jobs?: unknown };
+    if (typeof lu.source !== 'string') throw new Error(`${REFERENCE} ne nomme pas sa source`);
+    ref = lu.source;
+    base = lesJobs({ jobs: lu.jobs });
+  } else {
+    ref = revision;
+    base = await lire(
+      execFileSync('git', ['show', `${revision}:${WORKFLOW}`], { encoding: 'utf8' })
+    );
+  }
   const tete = await lire(readFileSync(WORKFLOW, 'utf8'));
   if (process.argv.includes('--prove')) {
     const v = prouver(base, tete);
