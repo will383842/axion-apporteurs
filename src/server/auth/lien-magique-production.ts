@@ -32,6 +32,7 @@ import { clesPii, empreinteAdresseReseau, empreinteRecherche, type ClesPii } fro
 import { signalerPotDeMiel } from '../securite/pot-de-miel';
 import { limiter, sujetDepuisEmpreinte } from '../securite/rate-limit';
 import { CONNEXION } from '../../content/micro-copy/espace/vocabulaire';
+import { CODE_DU_COURRIEL_DE_CONNEXION } from '../../content/micro-copy/courriels/notifications';
 import type { ConfigurationDuLien, PortsDeConsommation, PortsDeDemande } from './lien-magique';
 import { ecrituresDeLien, lectureDuCompte, transactionDeConsommation } from './lien-magique-depot';
 import {
@@ -86,6 +87,15 @@ export function empreinteReseauDeLaRequete(entetes: Headers, cles: ClesPii): str
   return adresse === null ? null : empreinteAdresseReseau(adresse, cles);
 }
 
+/**
+ * Le corps du courriel de connexion : la phrase du lien, l'URL, puis la phrase du code (SEC-54). Le
+ * code n'est écrit QUE là : ni au dépôt, ni au journal, ni au puits (qui n'écrit que la taille).
+ */
+export function corpsDuCourriel(url: string, code: string): string {
+  const { avant, apres } = CODE_DU_COURRIEL_DE_CONNEXION;
+  return `${CONNEXION.courriel.corps}\n\n${url}\n\n${avant}\n${code}\n${apres}`;
+}
+
 export function portsDeDemande(d: DependancesDuLien): PortsDeDemande {
   const cles = clesPii(d.env);
   const configuration = configurationDuLien(d.env);
@@ -108,12 +118,8 @@ export function portsDeDemande(d: DependancesDuLien): PortsDeDemande {
     emission: {
       ...lectureDuCompte(d.prisma, cles),
       ...ecrituresDeLien(d.prisma),
-      envoyer: ({ a, url }) =>
-        d.envoi.envoyer({
-          a,
-          sujet: CONNEXION.courriel.sujet,
-          corps: `${CONNEXION.courriel.corps}\n\n${url}`,
-        }),
+      envoyer: ({ a, url, code }) =>
+        d.envoi.envoyer({ a, sujet: CONNEXION.courriel.sujet, corps: corpsDuCourriel(url, code) }),
       signalerPotDeMiel: async ({ formulaire, adresseHash, survenuAt }) =>
         signalerPotDeMiel({ formulaire, adresseHash, survenuAt: survenuAt.getTime() }),
       signalerEchec: (motif) => d.journal.warn(`lien_magique_${motif}`),

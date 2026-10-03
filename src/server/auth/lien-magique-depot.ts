@@ -15,10 +15,13 @@
 
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { CHAMPS_PII, decryptPii, type ClesPii } from '../securite/pii';
-import type {
-  PortsDEmission,
-  PortsDeConsommation,
-  TransactionDeConsommation,
+import {
+  ESSAIS_DU_CODE_MAX,
+  type PortsDEmission,
+  type PortsDeConsommation,
+  type PortsDuCode,
+  type TransactionDeConsommation,
+  type TransactionDuCode,
 } from './lien-magique';
 
 /** Le nom du modèle dans la donnée authentifiée des blocs chiffrés d'un apporteur. */
@@ -97,4 +100,59 @@ export function transactionDeConsommation(
   prisma: PrismaClient
 ): PortsDeConsommation['transaction'] {
   return (travail) => prisma.$transaction((tx) => travail(consommationSur(tx)));
+}
+
+/**
+ * SEC-54 — la vérification du code, dans UNE transaction. L'essai est compté par UNE instruction
+ * conditionnelle (`UPDATE … WHERE tentatives_code < 5 … RETURNING`) : des essais concurrents ne
+ * dépassent jamais cinq, et la base le double (CHECK et déclencheur `liens_magiques_code_fige`).
+ */
+function codeSur(tx: Prisma.TransactionClient): TransactionDuCode {
+  const { statutApporteur, ouvrirSession } = consommationSur(tx);
+  return {
+    statutApporteur,
+    ouvrirSession,
+    async lienActifDe(emailHash, maintenant) {
+      const lien = await tx.lienMagique.findFirst({
+        where: {
+          apporteur: { emailHash },
+          consommeAt: null,
+          annuleAt: null,
+          expireAt: { gt: maintenant },
+          codeHash: { not: null },
+        },
+        orderBy: [{ creeAt: 'desc' }, { id: 'desc' }],
+        select: { id: true, apporteurId: true, kid: true },
+      });
+      return lien?.apporteurId == null
+        ? null
+        : { id: lien.id, apporteurId: lien.apporteurId, kid: lien.kid };
+    },
+    async compterEssai(lienId, maintenant) {
+      const [ligne] = await tx.$queryRaw<{ code_hash: string | null; tentatives_code: number }[]>`
+        UPDATE "liens_magiques" SET "tentatives_code" = "tentatives_code" + 1
+        WHERE "id" = ${lienId}::uuid AND "tentatives_code" < ${ESSAIS_DU_CODE_MAX}
+          AND "consomme_at" IS NULL AND "annule_at" IS NULL AND "expire_at" > ${maintenant}
+        RETURNING "code_hash", "tentatives_code"`;
+      return ligne ? { codeHash: ligne.code_hash, tentatives: ligne.tentatives_code } : null;
+    },
+    async annulerLien(lienId, maintenant) {
+      await tx.lienMagique.updateMany({
+        where: { id: lienId, consommeAt: null, annuleAt: null },
+        data: { annuleAt: maintenant },
+      });
+    },
+    async consommerParId(lienId, maintenant) {
+      const { count } = await tx.lienMagique.updateMany({
+        where: { id: lienId, consommeAt: null, annuleAt: null, expireAt: { gt: maintenant } },
+        data: { consommeAt: maintenant },
+      });
+      return count;
+    },
+  };
+}
+
+/** La transaction de la vérification du code : tout le travail de `verifierLeCode`. */
+export function transactionDuCode(prisma: PrismaClient): PortsDuCode['transaction'] {
+  return (travail) => prisma.$transaction((tx) => travail(codeSur(tx)));
 }
