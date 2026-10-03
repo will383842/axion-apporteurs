@@ -199,6 +199,33 @@ describe('REQ-DM-024 — le provisionnement', () => {
     }
     await expect(constaterRoleDExecution(url)).resolves.toBeUndefined();
   });
+
+  it('REQ-DM-024 : TÉMOIN — SEC-57 : un objet de plus possédé par partners_journal fait refuser le provisionnement ; le journal et sa séquence seuls passent', async () => {
+    const url = urlSous(ROLE_D_EXECUTION, secret());
+    // Le journal et sa séquence seuls : la base des migrations passe.
+    await expect(
+      provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: url })
+    ).resolves.toBeUndefined();
+    await base.prisma.$executeRawUnsafe(
+      `CREATE FUNCTION temoin_sec_57() RETURNS integer LANGUAGE sql AS 'SELECT 1'`
+    );
+    await base.prisma.$executeRawUnsafe(`ALTER FUNCTION temoin_sec_57() OWNER TO partners_journal`);
+    try {
+      const message = await refus(
+        provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: url })
+      );
+      expect(message).toMatch(
+        /^partners_journal possède autre chose que le journal et sa séquence : .*temoin_sec_57\(\)/
+      );
+      // Le journal et sa séquence ne sont jamais cités comme étrangers.
+      expect(message).not.toMatch(/evenements/);
+    } finally {
+      await base.prisma.$executeRawUnsafe(`DROP FUNCTION temoin_sec_57()`);
+    }
+    await expect(
+      provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: url })
+    ).resolves.toBeUndefined();
+  });
 });
 
 /** Le rôle est-il membre de partners_journal, lu par le propriétaire ? */

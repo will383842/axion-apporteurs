@@ -28,8 +28,16 @@
  * DEUX depuis que les quatre types entrants sont entrés au contrat (partners/ADR-0008, reste à faire
  * §5 ; partners/ADR-0023) : un consommateur de la version 1 refuse tout type qu'il ne connaît pas,
  * la bascule se publie donc des deux côtés dans la même fenêtre.
+ *
+ * TROIS depuis INT-T46-P (`HYP-ANTERIORITE-DEVIS`, décision de Williams du 2026-10-01) : le type `devis.emis`
+ * entre dans la liste fermée, `facture.emise` gagne `devisId`, et les montants en centimes portent
+ * `minimum: 0` hors de l'avoir, négatif par conception. Une seule montée pour les trois.
+ *
+ * C'EST LA SEULE DÉFINITION. `events.zod.ts` en porte une copie, mais GÉNÉRÉE par
+ * `scripts/contracts/export.ts` depuis celle-ci, et tenue par `pnpm contracts:hash` ; `events.ts`
+ * la ré-exporte sans la redéfinir.
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** Un fragment de JSON Schema — assez pour décrire un champ, sans dépendre d'une bibliothèque. */
 export type FragmentSchema = Record<string, unknown>;

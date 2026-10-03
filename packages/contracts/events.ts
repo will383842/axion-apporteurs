@@ -4,7 +4,7 @@
  * REQ-INT-003 (l'enveloppe), REQ-INT-004 (la nomenclature), REQ-INT-029 (ce qui ne traverse pas),
  * REQ-INT-032 (les charges manquantes), REQ-QA-007 (la transcription tenue par une empreinte).
  *
- * LA LISTE EST FERMÉE, ET ELLE FAIT ONZE, en `schema_version` 2. REQ-INT-004 énumère les onze types
+ * LA LISTE EST FERMÉE, ET ELLE FAIT DOUZE, en `schema_version` 3. REQ-INT-004 énumère les types
  * et les nomme sur les modèles RÉELS d'axionia — vérification rejouée dans
  * `docs/AFFIRMATIONS-AXIONIA.md`, repères `AFF-01` et `AFF-02` : les deux modèles anglais sur
  * lesquels quatre documents avaient bâti ce contrat n'existent plus, l'un n'a jamais eu de modèle et
@@ -16,6 +16,10 @@
  * candidature exigeait (`EXEMPTIONS_NOMMEES`). Ajouter un type est un changement en lockstep : le
  * consommateur d'une version refuse tout type qu'il ne connaît pas (partners/ADR-0008, reste à
  * faire §5).
+ *
+ * DOUZE EN VERSION 3 (INT-T46-P, `HYP-ANTERIORITE-DEVIS`, décision de Williams du 2026-10-01) : `devis.emis`, le
+ * devis ENVOYÉ, entre à la fin. C'est de lui que se lit l'antériorité « devis » (DM-10-P) ; il est
+ * d'avant-signature, il ne porte donc AUCUN montant (REQ-INT-029).
  */
 
 import { SCHEMA_VERSION, schemaEnveloppe, type FragmentSchema } from './enveloppe';
@@ -25,7 +29,8 @@ import { defsApi } from './api';
 export { SCHEMA_VERSION };
 
 /**
- * Les ONZE types, dans l'ordre de REQ-INT-004 — les quatre entrés en version 2 à la fin, parce que
+ * Les DOUZE types, dans l'ordre de REQ-INT-004 — les quatre entrés en version 2 puis celui de la
+ * version 3 à la fin, parce que
  * l'enum Postgres de la réception les reçoit par ajout, qui place une valeur en dernier, et que sa
  * correspondance avec cette liste est testée DANS L'ORDRE (partners/ADR-0022, point 10). C'est la
  * seule liste littérale de noms d'événements du dépôt : la garde `gov:termes-interdits` refuse tout
@@ -43,12 +48,16 @@ export const TYPES_EVENEMENT = [
   'financement.mis_a_jour',
   'facture.annulee',
   'client.fusionne',
+  'devis.emis',
 ] as const;
 
 export type TypeEvenement = (typeof TYPES_EVENEMENT)[number];
 
-/** Les types de la phase d'AVANT-signature — ceux dont REQ-INT-029 exclut tout montant. */
-export const TYPES_AVANT_SIGNATURE: readonly TypeEvenement[] = ['client.cree', 'client.mis_a_jour'];
+/**
+ * Les types de la phase d'AVANT-signature — ceux dont REQ-INT-029 exclut tout montant. Un devis
+ * ÉMIS n'est pas signé : le montant qu'il propose est négocié, il ne traverse pas.
+ */
+export const TYPES_AVANT_SIGNATURE: readonly TypeEvenement[] = ['client.cree', 'client.mis_a_jour', 'devis.emis'];
 
 // ── REQ-INT-029 : ce qui ne franchit JAMAIS la frontière ─────────────────────
 
