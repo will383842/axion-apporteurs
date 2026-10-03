@@ -1835,7 +1835,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
       'le harnais appartient à UX-P0-03 ; la phrase dit que QA-T16 rendra les gardes bloquantes sur les routes réelles.',
   },
   {
-    ou: 'docs/gates.json(tests/security/oracle.spec.ts).verifie',
+    ou: 'docs/gates.json(tests/unit/securite/verification-non-oracle.spec.ts).verifie',
     ligne: 1,
     id: 'UX-P1-01',
     nature: 'contexte',
