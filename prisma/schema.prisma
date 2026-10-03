@@ -1311,8 +1311,8 @@ model DevisConnu {
   siren               String    @db.Char(9)
   emisAt              DateTime  @map("emis_at") @db.Timestamptz(3)
   signeAt             DateTime? @map("signe_at") @db.Timestamptz(3)
-  montantTotalHtCents BigInt    @map("montant_total_ht_cents")
-  factureHtCents      BigInt    @default(0) @map("facture_ht_cents")
+  montantTotalHtCents Int       @map("montant_total_ht_cents")
+  factureHtCents      Int       @default(0) @map("facture_ht_cents")
   majAt               DateTime  @default(dbgenerated("clock_timestamp()")) @map("maj_at") @db.Timestamptz(3)
 
   @@index([siren])

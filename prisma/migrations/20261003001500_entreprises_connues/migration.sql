@@ -37,8 +37,8 @@ CREATE TABLE "devis_connus" (
     "siren" CHAR(9) NOT NULL,
     "emis_at" TIMESTAMPTZ(3) NOT NULL,
     "signe_at" TIMESTAMPTZ(3),
-    "montant_total_ht_cents" BIGINT NOT NULL,
-    "facture_ht_cents" BIGINT NOT NULL DEFAULT 0,
+    "montant_total_ht_cents" INTEGER NOT NULL,
+    "facture_ht_cents" INTEGER NOT NULL DEFAULT 0,
     "maj_at" TIMESTAMPTZ(3) NOT NULL DEFAULT clock_timestamp(),
     CONSTRAINT "devis_connus_pkey" PRIMARY KEY ("devis_ref")
 );

@@ -12,7 +12,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomInt, randomUUID } from 'node:crypto';
-import { PrismaClient, TypeEvenementRecu } from '@prisma/client';
+import { Prisma, PrismaClient, TypeEvenementRecu } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
 import {
   ROLE_D_EXECUTION,
@@ -118,19 +118,19 @@ async function refus(p: Promise<unknown>): Promise<string> {
 describe('REQ-DM-029 — la forme des tables (A02)', () => {
   it('REQ-DM-029 : TÉMOIN — chaque CHECK est refusé sur son nom', async () => {
     const siren = unSiren();
-    const devis = (data: Record<string, unknown>) =>
-      app.devisConnu.create({
-        data: {
-          devisRef: randomUUID(),
-          siren,
-          emisAt: new Date(ilYA(2)),
-          montantTotalHtCents: 1n,
-          ...data,
-        } as never,
-      });
+    const devis = (ecart: Partial<Prisma.DevisConnuUncheckedCreateInput>) => {
+      const data: Prisma.DevisConnuUncheckedCreateInput = {
+        devisRef: randomUUID(),
+        siren,
+        emisAt: new Date(ilYA(2)),
+        montantTotalHtCents: 1,
+        ...ecart,
+      };
+      return app.devisConnu.create({ data });
+    };
     expect(await refus(devis({ siren: 'ABC' }))).toContain('devis_connus_siren_forme');
     expect(await refus(devis({ devisRef: '  ' }))).toContain('devis_connus_ref_non_vide');
-    expect(await refus(devis({ montantTotalHtCents: -1n }))).toContain(
+    expect(await refus(devis({ montantTotalHtCents: -1 }))).toContain(
       'devis_connus_montant_positif'
     );
     expect(await refus(devis({ signeAt: new Date(ilYA(3)) }))).toContain(
@@ -256,7 +256,7 @@ describe('REQ-DM-029 — l’antériorité projetée, sous le rôle du serveur (
       origine: 'devis',
     });
     const [ligne] = await base.prisma.devisConnu.findMany({ where: { devisRef: devisId } });
-    expect(ligne!.factureHtCents).toBe(9_999n);
+    expect(ligne!.factureHtCents).toBe(9_999);
   });
 
   it('REQ-DM-029 : TÉMOIN — le SIREN d’un devis signé se lit sur son client ; un rejeu ne compte rien deux fois', async () => {
@@ -273,7 +273,7 @@ describe('REQ-DM-029 — l’antériorité projetée, sous le rôle du serveur (
     });
     const [ligne] = await base.prisma.devisConnu.findMany({ where: { devisRef: devisId } });
     expect(ligne!.siren).toBe(siren);
-    expect(ligne!.factureHtCents).toBe(4_000n);
+    expect(ligne!.factureHtCents).toBe(4_000);
     expect(await anterioriteDe(app, siren, MAINTENANT)).toMatchObject({
       connue: true,
       origine: 'devis',

@@ -157,8 +157,8 @@ export async function recalculerDevis(db: Client, devisRef: string): Promise<str
     siren: s,
     emisAt,
     signeAt,
-    montantTotalHtCents: BigInt(Math.max(montant, 0)),
-    factureHtCents: BigInt(facture),
+    montantTotalHtCents: Math.max(montant, 0),
+    factureHtCents: facture,
     majAt: new Date(),
   };
   await db.devisConnu.upsert({
@@ -332,8 +332,8 @@ export async function anterioriteDe(db: Client, s: string, maintenant: Date): Pr
       devis: devis.map((d): DevisConnu => ({
         emisAt: d.emisAt,
         signeAt: d.signeAt,
-        montantTotalHtCents: Number(d.montantTotalHtCents),
-        factureHtCents: Number(d.factureHtCents),
+        montantTotalHtCents: d.montantTotalHtCents,
+        factureHtCents: d.factureHtCents,
       })),
     },
     maintenant

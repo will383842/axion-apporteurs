@@ -7,9 +7,11 @@
  *   — cliente au titre d'une prestation facturée au cours des `ANTERIORITE_CLIENT_MOIS` derniers mois ;
  *   — signataire d'un devis qui n'est pas entièrement facturé, quelle que soit sa date (art. 3.3) ;
  *   — destinataire d'un devis émis il y a moins de `ANTERIORITE_DEVIS_MOIS` mois.
- * Les fenêtres sont lues dans la SSOT, en mois civils UTC, bornes comprises.
+ * Les fenêtres sont lues dans la SSOT, en mois CIVILS à l'heure de Paris (`ajouterMoisParis`, comme
+ * tout délai du domaine), bornes comprises. L'heure n'est jamais lue ici : `maintenant` est reçu.
  */
 import { SEUILS } from '../seuils/ssot';
+import { ajouterMoisParis } from '../attribution/machine';
 
 /** L'origine d'une entreprise connue : les valeurs du glossaire (`OrigineEntrepriseConnue`). */
 export type OrigineEntrepriseConnue = 'client' | 'devis' | 'financeur';
@@ -37,11 +39,9 @@ export type Anteriorite =
   | { connue: true; origine: 'financeur'; depuis: null }
   | { connue: true; origine: 'client' | 'devis'; depuis: Date };
 
-/** La date `mois` mois civils avant `maintenant`, en UTC. */
-function moisAvant(maintenant: Date, mois: number): Date {
-  const d = new Date(maintenant.getTime());
-  d.setUTCMonth(d.getUTCMonth() - mois);
-  return d;
+/** L'instant `mois` mois civils avant `maintenant`, à l'heure de Paris. */
+function moisAvant(maintenant: Date, mois: number): number {
+  return ajouterMoisParis(maintenant.getTime(), -mois);
 }
 
 /** « Entièrement facturé » : le facturé HT, avoirs déduits, atteint le montant HT du devis (B-11). */
@@ -66,14 +66,14 @@ export function evaluerAnteriorite(faits: FaitsDUneEntreprise, maintenant: Date)
   if (faits.financeur) return { connue: true, origine: 'financeur', depuis: null };
 
   const limiteClient = moisAvant(maintenant, SEUILS.ANTERIORITE_CLIENT_MOIS.valeur);
-  if (faits.derniereFactureAt !== null && faits.derniereFactureAt >= limiteClient) {
+  if (faits.derniereFactureAt !== null && faits.derniereFactureAt.getTime() >= limiteClient) {
     return { connue: true, origine: 'client', depuis: faits.derniereFactureAt };
   }
 
   // Un devis signé et pas entièrement facturé, quelle que soit sa date : le plus ancien fait foi.
   const signesOuverts = faits.devis
-    .filter((d) => d.signeAt !== null && !estEntierementFacture(d))
-    .map((d) => d.signeAt as Date)
+    .filter((d) => !estEntierementFacture(d))
+    .flatMap((d) => (d.signeAt === null ? [] : [d.signeAt]))
     .sort((a, b) => a.getTime() - b.getTime());
   if (signesOuverts.length > 0) {
     return { connue: true, origine: 'devis', depuis: signesOuverts[0]! };
@@ -81,7 +81,7 @@ export function evaluerAnteriorite(faits: FaitsDUneEntreprise, maintenant: Date)
 
   const limiteDevis = moisAvant(maintenant, SEUILS.ANTERIORITE_DEVIS_MOIS.valeur);
   const emisRecents = faits.devis
-    .filter((d) => d.emisAt >= limiteDevis)
+    .filter((d) => d.emisAt.getTime() >= limiteDevis)
     .map((d) => d.emisAt)
     .sort((a, b) => a.getTime() - b.getTime());
   if (emisRecents.length > 0) {
