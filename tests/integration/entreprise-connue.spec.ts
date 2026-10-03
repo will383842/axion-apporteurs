@@ -129,16 +129,17 @@ function codeSql(e: unknown): string | null {
 
 describe('REQ-DM-029 — la référence d’un devis est bornée à 64 caractères', () => {
   it('REQ-DM-029 : TÉMOIN — une référence de 65 caractères est refusée par son TYPE, VARCHAR(64), SQLSTATE 22001, lu sur le code', async () => {
+    // En SQL brut : par le client typé, Prisma refuse AVANT la base (P2000, sans SQLSTATE), et le
+    // témoin ne prouverait plus que la COLONNE est bornée.
     let erreur: unknown = null;
-    await app.devisConnu
-      .create({
-        data: {
-          devisRef: `${'d'.repeat(64)}1`,
-          siren: unSiren(),
-          emisAt: new Date(ilYA(2)),
-          montantTotalHtCents: 0,
-        },
-      })
+    await app
+      .$executeRawUnsafe(
+        `INSERT INTO "devis_connus" ("devis_ref", "siren", "emis_at", "montant_total_ht_cents")
+         VALUES ($1, $2, $3::timestamptz, 0)`,
+        `${'d'.repeat(64)}1`,
+        unSiren(),
+        ilYA(2)
+      )
       .catch((e: unknown) => {
         erreur = e;
       });
