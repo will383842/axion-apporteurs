@@ -112,7 +112,8 @@ function ports(o: { maintenant?: Date; panne?: boolean } = {}): PortsDuCode {
   return {
     maintenant: () => o.maintenant ?? MAINTENANT,
     adresseDuClient: () => '203.0.113.7',
-    empreinteAdresseReseau: () => 'r'.repeat(64),
+    // L'empreinte réseau a la taille de la colonne `sessions_espace.ip_hash` (16 hexadécimaux).
+    empreinteAdresseReseau: () => '0123456789abcdef',
     compterAdresseCode: verdict,
     compterCourrielCode: verdict,
     transaction: transactionDuCode(app),
@@ -244,7 +245,10 @@ describe('REQ-SEC-001 — un nouveau lien, un nouveau code', () => {
     const ancien = await emettre(a.id, MAINTENANT, '111111');
     const neuf = await emettre(a.id, new Date(t0 + 1_000), '222222');
     expect(await verifier(a.emailHash, ancien.code)).toEqual({ etat: 'code_refuse' });
-    expect((await verifier(a.emailHash, neuf.code)).etat).toBe('ouverte');
+    // Le nouveau code se saisit APRÈS la création de son lien (`liens_magiques_consomme_avant_expiration`).
+    expect(
+      (await verifier(a.emailHash, neuf.code, { maintenant: new Date(t0 + 2_000) })).etat
+    ).toBe('ouverte');
   });
 });
 

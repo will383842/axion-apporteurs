@@ -175,7 +175,8 @@ describe('REQ-SEC-001 — usage unique et durée de vie, comptés en lignes de s
     const jeton = await poserLien(id, new Date(t0));
     await consommerLien({ jeton, ipHash: null }, ports(new Date(t0 + 1000)));
     const seconde = await consommerLien({ jeton, ipHash: null }, ports(new Date(t0 + 2000)));
-    expect(seconde).toEqual({ etat: 'lien_invalide' });
+    // SEC-54 : un lien déjà consommé se dit « déjà utilisé », distinct d'un lien invalide.
+    expect(seconde).toEqual({ etat: 'deja_utilise' });
     expect(await sessionsDe(id)).toBe(1);
   });
 
@@ -546,7 +547,7 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
     const consommation = portsDeConsommation(connu.d);
     expect((await consommerLien({ jeton, ipHash: null }, consommation)).etat).toBe('ouverte');
     expect(await consommerLien({ jeton, ipHash: null }, consommation)).toEqual({
-      etat: 'lien_invalide',
+      etat: 'deja_utilise',
     });
     expect(await sessionsDe(id)).toBe(1);
   });
