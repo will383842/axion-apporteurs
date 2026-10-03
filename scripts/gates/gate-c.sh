@@ -28,6 +28,8 @@ ENV_MD="docs/env.md"
 nettoyer() {
   docker rm -f "$ID-app" "$ID-base" "$ID-cache" >/dev/null 2>&1 || true
   docker network rm "$ID" >/dev/null 2>&1 || true
+  # Le fichier d'environnement porte le secret de partners_app : effacé même si `docker run` échoue.
+  if [ -n "${FICHIER_ENV:-}" ]; then rm -f "$FICHIER_ENV"; fi
 }
 trap nettoyer EXIT INT TERM
 
