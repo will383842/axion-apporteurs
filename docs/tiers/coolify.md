@@ -34,6 +34,27 @@ comportement au démarrage d'un container qui échoue, et la procédure de retou
 trois dernières commandent des exigences de vérification, elles ne peuvent pas être déduites de notre
 spécification.
 
+### 2.1 L'image tirée par empreinte — lecture du 2026-10-03 (QA-T65, RM-08)
+
+**Question.** Coolify accepte-t-il une empreinte d'image (`sha256:<64 hex>`) dans le champ
+`docker_registry_image_tag` de `PATCH /api/v1/applications/{uuid}`, au lieu d'une étiquette ?
+
+**Réponse : oui, sous la forme `sha256-<64 hex>`.** Lu le 2026-10-03 par A06 :
+
+| Source | Ce qu'elle dit |
+| --- | --- |
+| `openapi.json` du dépôt `coollabsio/coolify`, branche `main` (ETag `5eb476ee14e779668a96402ea647cfd1928d2526e58abeb8769be9385ac21275`) | `docker_registry_image_tag` : `{"type":"string","description":"The docker registry image tag."}`. Le contrat ne dit rien d'une empreinte. |
+| `app/Jobs/ApplicationDeploymentJob.php`, même dépôt, commit `c0d81d4c` de `main`, l. 1361-1366 | « Check if this is an image hash deployment » : pour le build pack `dockerimage`, une étiquette qui commence par `sha256-` donne `production_image_name = "{$this->dockerImage}@sha256:{$hash}"`. |
+| même fichier, l. 698-705 | le même test (`startsWith('sha256-')`) donne le nom affiché `<image>@sha256:<hash>`. |
+| `app/Support/ValidationPatterns.php`, l. 151 | `DOCKER_IMAGE_TAG_PATTERN = '/\A[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}\z/'` : `sha256-` suivi de 64 hex passe, `sha256:` (deux-points) est refusé. |
+
+**Conséquence appliquée** (`scripts/gates/deploy-verify.ts`) : le déploiement et le retour arrière posent
+`sha256-<hex>`, l'empreinte du manifeste `sha-<7>` publié lue au registre (en-tête `Docker-Content-Digest`),
+et jamais l'étiquette. Après l'atterrissage, l'étiquette que l'application tire est relue : une autre
+empreinte rend NON ATTERRI. **Limite** : le comportement est celui du CODE de Coolify, pas de son contrat
+documenté ; une version qui le retirerait ferait échouer le déploiement de façon visible (image introuvable),
+jamais en silence. À relire à chaque montée de version de Coolify.
+
 ## 3. Données qui lui sont confiées
 
 Toutes. C'est le tiers le plus exposé du dossier : le serveur porte la base de production, donc les données
