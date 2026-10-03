@@ -1346,6 +1346,8 @@ model EntrepriseConnue {
   siren            String                  @db.Char(9)
   origine          OrigineEntrepriseConnue
   connueDepuisAt   DateTime                @map("connue_depuis_at") @db.Timestamptz(3)
+  /// Origine client : la date de la DERNIÈRE prestation facturée (dernière facture non annulée), d'où
+  /// se compte l'effacement à vingt-quatre mois. Origine devis : la dernière émission ou signature.
   dernierContactAt DateTime                @map("dernier_contact_at") @db.Timestamptz(3)
 
   @@id([siren, origine])
