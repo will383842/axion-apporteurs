@@ -111,7 +111,9 @@ export interface PortsDuPasMoi {
   lireJeton(
     id: string
   ): Promise<{ id: string; apporteurId: string; revoqueAt: Date | null } | null>;
-  lireDepot(id: string): Promise<{ apporteurId: string | null; jetonDepotId: string | null } | null>;
+  lireDepot(
+    id: string
+  ): Promise<{ apporteurId: string | null; jetonDepotId: string | null } | null>;
   /** Révocation CONDITIONNELLE (`revoque_at` nul) : rend le nombre de lignes révoquées. */
   revoquer(id: string, at: Date): Promise<number>;
 }
@@ -194,7 +196,10 @@ export interface JetonEmis {
 }
 
 /** Le statut de l'apporteur, ligne VERROUILLÉE jusqu'à la fin de la transaction ; nul s'il n'existe pas. */
-async function statutVerrouille(tx: Prisma.TransactionClient, apporteurId: string): Promise<string | null> {
+async function statutVerrouille(
+  tx: Prisma.TransactionClient,
+  apporteurId: string
+): Promise<string | null> {
   const lignes = await tx.$queryRaw<{ statut: string }[]>`
     SELECT statut::text AS statut FROM apporteurs WHERE id = ${apporteurId}::uuid FOR UPDATE`;
   return lignes[0]?.statut ?? null;
@@ -208,7 +213,11 @@ async function inserer(
   const { clair, enregistrement } = nouveauJetonDepot(ctx.source, ctx.maintenant.getTime());
   try {
     const ligne = await tx.jetonDepot.create({
-      data: { apporteurId, tokenHash: enregistrement.tokenHash, creeAt: new Date(enregistrement.creeAt) },
+      data: {
+        apporteurId,
+        tokenHash: enregistrement.tokenHash,
+        creeAt: new Date(enregistrement.creeAt),
+      },
       select: { id: true },
     });
     return { id: ligne.id, clair };
@@ -224,7 +233,10 @@ async function inserer(
   }
 }
 
-async function exigerStatutAvecJeton(tx: Prisma.TransactionClient, apporteurId: string): Promise<void> {
+async function exigerStatutAvecJeton(
+  tx: Prisma.TransactionClient,
+  apporteurId: string
+): Promise<void> {
   if (niveauDAcces(await statutVerrouille(tx, apporteurId)) !== 'plein') {
     throw new ErreurEmissionJeton('statut_sans_jeton');
   }

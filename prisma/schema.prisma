@@ -309,7 +309,9 @@ model Apporteur {
 }
 
 /// Un jeton de dépôt privé (REQ-DM-012). Seule l'EMPREINTE se stocke ; un jeton révoqué ne se
-/// réactive pas (déclencheur `jetons_depot_revocation_definitive`, SQL brut).
+/// réactive pas (déclencheur `jetons_depot_revocation_definitive`, SQL brut). Un seul jeton ACTIF
+/// par apporteur (REQ-SEC-005, SEC-11) : index unique partiel `jetons_depot_un_actif_par_apporteur`,
+/// SQL brut. Aucune colonne d'expiration : l'échéance se dérive de `creeAt` et de la SSOT.
 model JetonDepot {
   id             String    @id @default(uuid()) @db.Uuid
   apporteurId    String    @map("apporteur_id") @db.Uuid
