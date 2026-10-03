@@ -17,7 +17,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, realpathSync } from 'node:fs';
 import {
   EXEMPTIONS_NOMMEES,
   MOTIFS_DE_LA_GARDE,
@@ -276,7 +276,33 @@ export function fauteDeGarde(chemin: string, contenu: string): string | null {
   return appel.test(contenu) ? null : `sans_garde ${chemin} (« ${segment} »)`;
 }
 
+/** Vrai si le répertoire courant est la RACINE d'un dépôt git (le bac à sable de Stryker ne l'est pas). */
+function racineDuDepot(): boolean {
+  try {
+    const racine = execFileSync('git', ['rev-parse', '--show-toplevel'], {
+      encoding: 'utf8',
+    }).trim();
+    return realpathSync(racine) === realpathSync(process.cwd());
+  } catch {
+    return false;
+  }
+}
+
+/** Les fichiers de l'espace sur le disque, à la forme de chemin de git (séparateur « / »). */
+function fichiersDuDisque(dossier: string = RACINE_ESPACE.slice(0, -1)): string[] {
+  return readdirSync(dossier, { withFileTypes: true }).flatMap((e) => {
+    const chemin = `${dossier}/${e.name}`;
+    return e.isDirectory() ? fichiersDuDisque(chemin) : [chemin];
+  });
+}
+
+/**
+ * Les fichiers SUIVIS par git sous l'espace. Le bac à sable de Stryker n'est pas un dépôt git : là
+ * seulement, la liste se tire du DISQUE (patron de QA-T56), et le témoin juge encore chaque fichier.
+ * Dans le dépôt, c'est `git ls-files` qui fait foi : un fichier non suivi n'est jugé par personne.
+ */
 function suivis(): string[] {
+  if (!racineDuDepot()) return fichiersDuDisque().sort();
   return execFileSync('git', ['ls-files', '-z', '--', RACINE_ESPACE], { encoding: 'utf8' })
     .split('\0')
     .filter(Boolean);
