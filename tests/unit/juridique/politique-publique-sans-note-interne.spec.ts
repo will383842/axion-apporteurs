@@ -10,7 +10,7 @@
  *   2. une rubrique encore à compléter reste annoncée, en cours de rédaction, sans sa question ;
  *   3. le registre RÉEL produit une page sans question, sans nom et sans mot interdit.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   MARQUE_A_COMPLETER,
@@ -70,7 +70,7 @@ describe('REQ-JUR-025 — la politique publique ne porte aucune note interne', (
 
   it('REQ-JUR-025 : TÉMOIN — un nom de personne dans une note du registre sort de la page, nommé', () => {
     const l = lue(
-      avecRubrique('Destinataires', 'Les équipes de la Société, à confirmer par Will.')
+      avecRubrique('Destinataires', 'La Société et son hébergeur, à confirmer par Will.')
     );
     expect(lisible(l)).not.toMatch(/\bWill\b/);
     expect(l.filtres).toContainEqual({ ou: 'destinataires', motif: 'nom_de_personne' });
@@ -137,5 +137,102 @@ describe('REQ-JUR-025 — la politique publique ne porte aucune note interne', (
           ),
       },
     ]);
+  });
+});
+
+/**
+ * LES CONSTANTES DU MODULE SONT ÉVALUÉES À SON CHARGEMENT (les personnes, les formes refusées, le
+ * motif du refus des conseillers) : chaque témoin ci-dessous importe le module À NEUF, pour que la
+ * mesure de mutation juge ces lignes et non un module resté en cache.
+ */
+async function politiqueFraiche() {
+  vi.resetModules();
+  return import('../../../src/domain/rgpd/politique');
+}
+
+describe('REQ-JUR-025 — chaque retenue a son témoin, module chargé à neuf', () => {
+  it('REQ-JUR-025 : TÉMOIN — un nom de personne sans autre mention est retenu, nommé, et la rubrique reste annoncée', async () => {
+    const { extrairePolitique: extraire, PERSONNES_DU_REGISTRE } = await politiqueFraiche();
+    expect(PERSONNES_DU_REGISTRE).toEqual(['Will', 'Williams']);
+    for (const nom of PERSONNES_DU_REGISTRE) {
+      const l = extraire(
+        avecRubrique('Destinataires', `La Société et son hébergeur, avec ${nom}.`)
+      );
+      if (!l.ok) throw new Error(l.refus);
+      expect(l.politique.rubriques.find((r) => r.cle === 'destinataires')?.contenu).toEqual([
+        { type: 'a_completer' },
+      ]);
+      expect(l.filtres).toContainEqual({ ou: 'destinataires', motif: 'nom_de_personne' });
+    }
+  });
+
+  it('REQ-JUR-025 : TÉMOIN — chaque forme que le lexique refuse retient le texte qui l’emploie, nommée', async () => {
+    const { extrairePolitique: extraire } = await politiqueFraiche();
+    for (const forme of ['attribution', 'SIREN', 'prorata']) {
+      const l = extraire(avecRubrique('Destinataires', `La Société et son hébergeur (${forme}).`));
+      if (!l.ok) throw new Error(l.refus);
+      expect(l.filtres).toContainEqual({
+        ou: 'destinataires',
+        motif: 'lexique_interdit',
+        detail: forme,
+      });
+    }
+  });
+
+  it('REQ-JUR-025 : TÉMOIN — une mention « à confirmer » dans une rubrique est omise, nommée', async () => {
+    const { extrairePolitique: extraire } = await politiqueFraiche();
+    const l = extraire(avecRubrique('Destinataires', 'La Société et son hébergeur, à confirmer.'));
+    if (!l.ok) throw new Error(l.refus);
+    expect(l.politique.rubriques.find((r) => r.cle === 'destinataires')?.contenu).toEqual([]);
+    expect(l.filtres).toContainEqual({ ou: 'destinataires', motif: 'non_tranche' });
+  });
+
+  it('REQ-JUR-025 : TÉMOIN — les conseillers sont refusés même dans un texte que le lexique retiendrait', async () => {
+    const { extrairePolitique: extraire } = await politiqueFraiche();
+    const l = extraire(
+      avecRubrique('Finalité', 'Attribution et contrôle des conseillers salariés.')
+    );
+    expect(l).toEqual({
+      ok: false,
+      refus: 'l’extrait mentionne les conseillers : leur information passe par un autre canal',
+    });
+  });
+
+  it('REQ-JUR-025 : chaque retenue du registre réel nomme où elle a lieu, tiers et colonne compris', async () => {
+    const { extrairePolitique: extraire } = await politiqueFraiche();
+    const l = extraire(REGISTRE);
+    if (!l.ok) throw new Error(l.refus);
+    expect(l.filtres[0]).toEqual({ ou: 'baseLegale', motif: 'question_interne' });
+    expect(l.filtres).toContainEqual({
+      ou: 'Sentry · Localisation et transfert',
+      motif: 'question_interne',
+    });
+    expect(l.filtres.every((f) => typeof f === 'object')).toBe(true);
+  });
+
+  it('REQ-JUR-025 : TÉMOIN — la casse ne cache pas un mot refusé, et un mot qui CONTIENT un nom n’est pas un nom', async () => {
+    const { extrairePolitique: extraire } = await politiqueFraiche();
+    const majuscules = extraire(
+      avecRubrique('Destinataires', 'La Société et son hébergeur (ATTRIBUTION).')
+    );
+    if (!majuscules.ok) throw new Error(majuscules.refus);
+    expect(majuscules.filtres).toContainEqual({
+      ou: 'destinataires',
+      motif: 'lexique_interdit',
+      detail: 'attribution',
+    });
+    const voisin = extraire(
+      avecRubrique('Destinataires', 'La Société et son hébergeur, rue Willemin.')
+    );
+    if (!voisin.ok) throw new Error(voisin.refus);
+    expect(voisin.filtres.filter((x) => x.ou === 'destinataires')).toEqual([]);
+  });
+
+  it('REQ-JUR-025 : TÉMOIN — un tiers dont le NOM parle des conseillers est refusé', async () => {
+    const { extrairePolitique: extraire } = await politiqueFraiche();
+    expect(extraire(REGISTRE.replace('| Banque |', '| Banque des conseillers |'))).toEqual({
+      ok: false,
+      refus: 'l’extrait mentionne les conseillers : leur information passe par un autre canal',
+    });
   });
 });
