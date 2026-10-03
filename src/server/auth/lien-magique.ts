@@ -46,6 +46,17 @@ export function empreinteDeSession(jeton: string, secret: string): string {
   return createHmac('sha256', secret).update(`partners.session.v1\u001f${jeton}`).digest('hex');
 }
 
+/**
+ * SEC-29 : l'empreinte d'une session de la CONSOLE, sous un domaine DISTINCT de celui de l'espace
+ * (lentille sécurité, condition b) : le jeton d'une population ne se lit jamais comme celui de
+ * l'autre, même présenté dans le mauvais cookie.
+ */
+export function empreinteDeSessionConsole(jeton: string, secret: string): string {
+  return createHmac('sha256', secret)
+    .update(`partners.session-console.v1\u001f${jeton}`)
+    .digest('hex');
+}
+
 // ── le code à six chiffres (SEC-54) ──────────────────────────────────────────────────────────────
 //
 // LE CODE EST LE LIEN (lentille sécurité, point 1) : une seconde forme du MÊME lien, posée à son
@@ -144,6 +155,31 @@ export interface NouvelleSession {
   expireAt: Date;
 }
 
+/** SEC-29 : un lien de la CONSOLE ne porte que son utilisateur, jamais un apporteur. */
+export interface NouveauLienConsole {
+  utilisateurConsoleId: string;
+  tokenHash: string;
+  codeHash: string;
+  kid: string;
+  creeAt: Date;
+  expireAt: Date;
+}
+
+/**
+ * SEC-29 : une session de la CONSOLE. Son empreinte est sous le domaine de la console, sa durée
+ * celle de la console, et sa dernière vue est posée à l'ouverture : l'inactivité se mesure dès elle.
+ */
+export interface NouvelleSessionConsole {
+  utilisateurConsoleId: string;
+  lienMagiqueId: string;
+  tokenHash: string;
+  kid: string;
+  ipHash: string | null;
+  creeAt: Date;
+  expireAt: Date;
+  derniereVueAt: Date;
+}
+
 /** Tout ce qui dépend du compte : n'est appelé qu'APRÈS la réponse. */
 export interface PortsDEmission {
   trouverApporteur(emailHash: string): Promise<{ id: string; statut: string } | null>;
@@ -179,6 +215,29 @@ export interface PortsDeDemande {
   configuration: ConfigurationDuLien;
 }
 
+/**
+ * SEC-29 : ce qui dépend du compte de la CONSOLE. Un utilisateur désactivé est trouvé, puis écarté
+ * dans le travail différé : la réponse, partie avant, est la même (lentille sécurité, condition c).
+ */
+export interface PortsDEmissionConsole extends Pick<
+  PortsDEmission,
+  'adresseStockee' | 'annulerLiensActifs' | 'envoyer' | 'signalerPotDeMiel' | 'signalerEchec'
+> {
+  trouverUtilisateurConsole(
+    emailHash: string
+  ): Promise<{ id: string; desactiveAt: Date | null } | null>;
+  insererLien(lien: NouveauLienConsole): Promise<void>;
+}
+
+export interface PortsDeDemandeConsole extends Omit<PortsDeDemande, 'emission'> {
+  emission: PortsDEmissionConsole;
+}
+
+/** Ce que la demande partage entre les deux populations : tout sauf le travail qui dépend du compte. */
+type PortsDeDemandeCommuns = Omit<PortsDeDemande, 'emission'> & {
+  emission: Pick<PortsDEmission, 'signalerPotDeMiel' | 'signalerEchec'>;
+};
+
 // ── la demande ───────────────────────────────────────────────────────────────────────────────────
 
 export interface RequeteDeLien {
@@ -193,9 +252,33 @@ function refusDe(v: VerdictDeLimite): EtatDeDemande | null {
   return v.autorise ? null : v.panne ? 'indisponible' : 'suspendu';
 }
 
-export async function demanderLien(
+export function demanderLien(
   requete: RequeteDeLien,
   ports: PortsDeDemande
+): Promise<EtatDeDemande> {
+  return demander(requete, ports, (emailHash, maintenant) =>
+    emettreLien(emailHash, maintenant, ports)
+  );
+}
+
+/** SEC-29 : la demande de la console, par le MÊME parcours que l'espace ; seul le travail diffère. */
+export function demanderLienConsole(
+  requete: RequeteDeLien,
+  ports: PortsDeDemandeConsole
+): Promise<EtatDeDemande> {
+  return demander(requete, ports, (emailHash, maintenant) =>
+    emettreLienConsole(emailHash, maintenant, ports)
+  );
+}
+
+/**
+ * Le parcours commun : débit, forme, réponse, puis le travail différé. `emettre` est le seul point
+ * qui dépend de la population, et il ne s'exécute qu'après la réponse.
+ */
+async function demander(
+  requete: RequeteDeLien,
+  ports: PortsDeDemandeCommuns,
+  emettre: (emailHash: string, maintenant: Date) => Promise<void>
 ): Promise<EtatDeDemande> {
   const maintenant = ports.maintenant();
   try {
@@ -219,7 +302,7 @@ export async function demanderLien(
               adresseHash,
               survenuAt: maintenant,
             })
-          : emettreLien(emailHash, maintenant, ports));
+          : emettre(emailHash, maintenant));
       } catch {
         ports.emission.signalerEchec('travail_differe_echoue');
       }
@@ -238,25 +321,53 @@ async function emettreLien(
 ): Promise<void> {
   const compte = await emission.trouverApporteur(emailHash);
   if (compte === null || !peutOuvrirLEspace(compte.statut)) return;
-  const jeton = tirerJeton();
-  const code = tirerCode();
-  const expireAt = new Date(maintenant.getTime() + DUREES_AUTH.lienMagiqueMs.valeur);
+  const l = tirerUnLien(maintenant, configuration);
   await emission.annulerLiensActifs(compte.id, maintenant);
-  await emission.insererLien({
-    apporteurId: compte.id,
-    tokenHash: empreinteDuJeton(jeton, configuration.secret),
-    codeHash: empreinteDuCode(code, configuration.secret),
-    kid: configuration.kid,
-    creeAt: maintenant,
-    expireAt,
-  });
+  await emission.insererLien({ apporteurId: compte.id, ...l.ligne });
   const a = await emission.adresseStockee(compte.id);
   await emission.envoyer({
     a,
-    url: `${configuration.urlPublique}/connexion/${jeton}`,
-    code,
-    expireAt,
+    url: `${configuration.urlPublique}/connexion/${l.jeton}`,
+    code: l.code,
+    expireAt: l.ligne.expireAt,
   });
+}
+
+/** SEC-29 : le travail différé de la console. Un utilisateur désactivé ne reçoit rien. */
+async function emettreLienConsole(
+  emailHash: string,
+  maintenant: Date,
+  { emission, configuration }: PortsDeDemandeConsole
+): Promise<void> {
+  const compte = await emission.trouverUtilisateurConsole(emailHash);
+  if (compte === null || compte.desactiveAt !== null) return;
+  const l = tirerUnLien(maintenant, configuration);
+  await emission.annulerLiensActifs(compte.id, maintenant);
+  await emission.insererLien({ utilisateurConsoleId: compte.id, ...l.ligne });
+  const a = await emission.adresseStockee(compte.id);
+  await emission.envoyer({
+    a,
+    url: `${configuration.urlPublique}/console/connexion/${l.jeton}`,
+    code: l.code,
+    expireAt: l.ligne.expireAt,
+  });
+}
+
+/** Le jeton, le code et la ligne d'un lien neuf : les mêmes pour les deux populations. */
+function tirerUnLien(maintenant: Date, configuration: ConfigurationDuLien) {
+  const jeton = tirerJeton();
+  const code = tirerCode();
+  return {
+    jeton,
+    code,
+    ligne: {
+      tokenHash: empreinteDuJeton(jeton, configuration.secret),
+      codeHash: empreinteDuCode(code, configuration.secret),
+      kid: configuration.kid,
+      creeAt: maintenant,
+      expireAt: new Date(maintenant.getTime() + DUREES_AUTH.lienMagiqueMs.valeur),
+    },
+  };
 }
 
 // ── la consommation ──────────────────────────────────────────────────────────────────────────────
@@ -267,13 +378,43 @@ export interface ConditionDeConsommation {
   consommeAt?: null;
   annuleAt?: null;
   expireAt?: { gt: Date };
+  /** SEC-29 : la population est jugée DANS l'écriture ; un lien de la console n'est pas consommé ici. */
+  apporteurId?: { not: null };
 }
 
 export function conditionDeConsommation(
   tokenHash: string,
   maintenant: Date
 ): ConditionDeConsommation {
-  return { tokenHash, consommeAt: null, annuleAt: null, expireAt: { gt: maintenant } };
+  return {
+    tokenHash,
+    consommeAt: null,
+    annuleAt: null,
+    expireAt: { gt: maintenant },
+    apporteurId: { not: null },
+  };
+}
+
+/** SEC-29 : la même condition pour un lien de la CONSOLE ; un lien de l'espace n'est pas consommé. */
+export interface ConditionDeConsommationConsole {
+  tokenHash: string;
+  consommeAt: null;
+  annuleAt: null;
+  expireAt: { gt: Date };
+  utilisateurConsoleId: { not: null };
+}
+
+export function conditionDeConsommationConsole(
+  tokenHash: string,
+  maintenant: Date
+): ConditionDeConsommationConsole {
+  return {
+    tokenHash,
+    consommeAt: null,
+    annuleAt: null,
+    expireAt: { gt: maintenant },
+    utilisateurConsoleId: { not: null },
+  };
 }
 
 export interface TransactionDeConsommation {
@@ -299,36 +440,117 @@ export interface PortsDeConsommation {
   configuration: ConfigurationDuLien;
 }
 
+/** SEC-29 : la transaction de consommation d'un lien de la CONSOLE. */
+export interface TransactionDeConsommationConsole {
+  consommer(
+    condition: ConditionDeConsommationConsole,
+    donnees: { consommeAt: Date }
+  ): Promise<number>;
+  /** Le lien et sa population : `utilisateurConsoleId` nul pour un lien de l'espace. */
+  lireLienConsole(
+    tokenHash: string
+  ): Promise<{ id: string; utilisateurConsoleId: string | null; kid: string } | null>;
+  /** Le lien de la console, sous la clé courante, est-il déjà consommé ? Absent : « invalide ». */
+  dejaConsommeConsole?(tokenHash: string, kid: string): Promise<boolean>;
+  /** Vrai seulement si l'utilisateur existe et n'est pas désactivé, relu dans la transaction. */
+  utilisateurActif(utilisateurConsoleId: string): Promise<boolean>;
+  ouvrirSessionConsole(s: NouvelleSessionConsole): Promise<void>;
+}
+
+export interface PortsDeConsommationConsole {
+  maintenant(): Date;
+  transaction<T>(travail: (tx: TransactionDeConsommationConsole) => Promise<T>): Promise<T>;
+  configuration: ConfigurationDuLien;
+}
+
 const INVALIDE = { etat: 'lien_invalide' } as const;
 
-export async function consommerLien(
+/** Les options d'ouverture d'une session, communes aux deux populations. */
+interface OuvertureDeSession {
+  maintenant: Date;
+  ipHash: string | null;
+  configuration: ConfigurationDuLien;
+}
+
+/**
+ * La consommation commune aux deux populations : UNE écriture conditionnelle, puis la lecture du
+ * lien et l'ouverture de la session. Seuls la condition, le « déjà consommé » et l'ouverture
+ * dépendent de la population ; chacune juge la population dans sa condition ET à la lecture.
+ */
+async function consommer<Tx>(
   entree: { jeton: string; ipHash: string | null },
-  ports: PortsDeConsommation
+  ports: {
+    maintenant(): Date;
+    configuration: ConfigurationDuLien;
+    transaction<T>(travail: (tx: Tx) => Promise<T>): Promise<T>;
+  },
+  population: {
+    ecrire(tx: Tx, tokenHash: string, maintenant: Date): Promise<number>;
+    dejaConsomme(tx: Tx, tokenHash: string, kid: string): Promise<boolean | undefined>;
+    ouvrir(tx: Tx, tokenHash: string, o: OuvertureDeSession): Promise<string | null>;
+  }
 ): Promise<ResultatDeConsommation> {
   if (!aLaFormeDUnJeton(entree.jeton)) return INVALIDE;
   const tokenHash = empreinteDuJeton(entree.jeton, ports.configuration.secret);
   const maintenant = ports.maintenant();
   return ports.transaction(async (tx) => {
-    const ecrites = await tx.consommer(conditionDeConsommation(tokenHash, maintenant), {
-      consommeAt: maintenant,
-    });
-    if (ecrites !== 1) {
-      // SEC-54 : un lien de l'espace DÉJÀ CONSOMMÉ (par le clic ou par le code) se dit comme tel ;
-      // tout autre échec (inconnu, expiré, annulé, autre clé, console) reste « invalide ». Le jeton
+    if ((await population.ecrire(tx, tokenHash, maintenant)) !== 1) {
+      // SEC-54 : un lien DÉJÀ CONSOMMÉ (par le clic ou par le code) se dit comme tel ; tout autre
+      // échec (inconnu, expiré, annulé, autre clé, autre population) reste « invalide ». Le jeton
       // est un secret de 256 bits : le dire déjà utilisé n'apprend rien d'un compte.
-      const dejaUtilise = (await tx.dejaConsomme?.(tokenHash, ports.configuration.kid)) === true;
+      const dejaUtilise =
+        (await population.dejaConsomme(tx, tokenHash, ports.configuration.kid)) === true;
       return dejaUtilise ? { etat: 'deja_utilise' } : INVALIDE;
     }
-    const lien = await tx.lireLien(tokenHash);
-    if (lien === null || lien.kid !== ports.configuration.kid) return INVALIDE;
-    // Un lien de la CONSOLE ne s'ouvre pas ici : l'espace n'ouvre de session qu'à un apporteur.
-    if (lien.apporteurId === null) return INVALIDE;
-    const jetonSession = await ouvrirLaSession(
-      tx,
-      { id: lien.id, apporteurId: lien.apporteurId },
-      { maintenant, ipHash: entree.ipHash, configuration: ports.configuration }
-    );
+    const jetonSession = await population.ouvrir(tx, tokenHash, {
+      maintenant,
+      ipHash: entree.ipHash,
+      configuration: ports.configuration,
+    });
     return jetonSession === null ? INVALIDE : { etat: 'ouverte', jetonSession };
+  });
+}
+
+export function consommerLien(
+  entree: { jeton: string; ipHash: string | null },
+  ports: PortsDeConsommation
+): Promise<ResultatDeConsommation> {
+  return consommer(entree, ports, {
+    ecrire: (tx, tokenHash, maintenant) =>
+      tx.consommer(conditionDeConsommation(tokenHash, maintenant), { consommeAt: maintenant }),
+    dejaConsomme: async (tx, tokenHash, kid) => tx.dejaConsomme?.(tokenHash, kid),
+    async ouvrir(tx, tokenHash, o) {
+      const lien = await tx.lireLien(tokenHash);
+      if (lien === null || lien.kid !== o.configuration.kid) return null;
+      // Un lien de la CONSOLE ne s'ouvre pas ici : l'espace n'ouvre de session qu'à un apporteur.
+      if (lien.apporteurId === null) return null;
+      return ouvrirLaSession(tx, { id: lien.id, apporteurId: lien.apporteurId }, o);
+    },
+  });
+}
+
+/** SEC-29 : la consommation d'un lien de la CONSOLE, par le même parcours que l'espace. */
+export function consommerLienConsole(
+  entree: { jeton: string; ipHash: string | null },
+  ports: PortsDeConsommationConsole
+): Promise<ResultatDeConsommation> {
+  return consommer(entree, ports, {
+    ecrire: (tx, tokenHash, maintenant) =>
+      tx.consommer(conditionDeConsommationConsole(tokenHash, maintenant), {
+        consommeAt: maintenant,
+      }),
+    dejaConsomme: async (tx, tokenHash, kid) => tx.dejaConsommeConsole?.(tokenHash, kid),
+    async ouvrir(tx, tokenHash, o) {
+      const lien = await tx.lireLienConsole(tokenHash);
+      if (lien === null || lien.kid !== o.configuration.kid) return null;
+      // Un lien de l'ESPACE ne s'ouvre pas ici : la console n'ouvre de session qu'à son utilisateur.
+      if (lien.utilisateurConsoleId === null) return null;
+      return ouvrirLaSessionConsole(
+        tx,
+        { id: lien.id, utilisateurConsoleId: lien.utilisateurConsoleId },
+        o
+      );
+    },
   });
 }
 
@@ -355,6 +577,32 @@ async function ouvrirLaSession(
     ipHash: o.ipHash,
     creeAt: o.maintenant,
     expireAt: new Date(o.maintenant.getTime() + DUREES_AUTH.sessionMs.valeur),
+  });
+  return jetonSession;
+}
+
+/**
+ * SEC-29 : la session de la CONSOLE, ouverte par le clic ou par le code. Même rotation que l'espace,
+ * mais SON domaine d'empreinte, SA durée courte, et la dernière vue posée à l'ouverture. Rend le
+ * jeton, ou `null` si l'utilisateur est désactivé ou introuvable.
+ */
+async function ouvrirLaSessionConsole(
+  tx: Pick<TransactionDeConsommationConsole, 'utilisateurActif' | 'ouvrirSessionConsole'>,
+  lien: { id: string; utilisateurConsoleId: string },
+  o: OuvertureDeSession
+): Promise<string | null> {
+  if (!(await tx.utilisateurActif(lien.utilisateurConsoleId))) return null;
+  const jetonSession = tirerJeton();
+  const { secret, kid } = o.configuration.session;
+  await tx.ouvrirSessionConsole({
+    utilisateurConsoleId: lien.utilisateurConsoleId,
+    lienMagiqueId: lien.id,
+    tokenHash: empreinteDeSessionConsole(jetonSession, secret),
+    kid,
+    ipHash: o.ipHash,
+    creeAt: o.maintenant,
+    expireAt: new Date(o.maintenant.getTime() + DUREES_AUTH.sessionConsoleMs.valeur),
+    derniereVueAt: o.maintenant,
   });
   return jetonSession;
 }
@@ -411,6 +659,22 @@ export interface PortsDuCode {
   configuration: ConfigurationDuLien;
 }
 
+/** SEC-29 : la transaction du code de la CONSOLE ; l'essai, l'annulation et la consommation sont ceux de l'espace. */
+export interface TransactionDuCodeConsole
+  extends
+    Pick<TransactionDuCode, 'compterEssai' | 'annulerLien' | 'consommerParId'>,
+    Pick<TransactionDeConsommationConsole, 'utilisateurActif' | 'ouvrirSessionConsole'> {
+  /** Le seul lien actif le plus récent de l'utilisateur de la console : population console seule. */
+  lienActifDeConsole(
+    emailHash: string,
+    maintenant: Date
+  ): Promise<{ id: string; utilisateurConsoleId: string; kid: string } | null>;
+}
+
+export interface PortsDuCodeConsole extends Omit<PortsDuCode, 'transaction'> {
+  transaction<T>(travail: (tx: TransactionDuCodeConsole) => Promise<T>): Promise<T>;
+}
+
 /**
  * L'empreinte d'attente : 64 hexadécimaux minuscules, jamais une adresse. Jugée AVANT tout ; hors
  * forme, elle vaut une adresse hors forme (lentille sécurité, condition 3).
@@ -424,7 +688,7 @@ function refuse(): ResultatDuCode {
   return { etat: 'code_refuse' };
 }
 
-export async function verifierLeCode(
+export function verifierLeCode(
   /**
    * `emailHash` : l'empreinte de l'adresse saisie à la DEMANDE, que l'action relit dans le cookie
    * d'attente `__Host-connexion_code` (lentille sécurité, 2026-10-03). L'adresse n'est jamais
@@ -432,6 +696,40 @@ export async function verifierLeCode(
    */
   requete: { emailHash: string | null; code: string; entetes: Headers },
   ports: PortsDuCode
+): Promise<ResultatDuCode> {
+  return verifier(requete, ports, {
+    lienActif: (tx, emailHash, maintenant) => tx.lienActifDe(emailHash, maintenant),
+    ouvrir: (tx, lien, o) => ouvrirLaSession(tx, lien, o),
+  });
+}
+
+/** SEC-29 : le code de la CONSOLE, par la MÊME vérification que l'espace (débit, essais, factice). */
+export function verifierLeCodeConsole(
+  requete: { emailHash: string | null; code: string; entetes: Headers },
+  ports: PortsDuCodeConsole
+): Promise<ResultatDuCode> {
+  return verifier(requete, ports, {
+    lienActif: (tx, emailHash, maintenant) => tx.lienActifDeConsole(emailHash, maintenant),
+    ouvrir: (tx, lien, o) => ouvrirLaSessionConsole(tx, lien, o),
+  });
+}
+
+/**
+ * La vérification commune : seuls la recherche du lien actif (population jugée) et l'ouverture de
+ * la session dépendent de la population.
+ */
+async function verifier<
+  Tx extends Pick<TransactionDuCode, 'compterEssai' | 'annulerLien' | 'consommerParId'>,
+  Lien extends { id: string; kid: string },
+>(
+  requete: { emailHash: string | null; code: string; entetes: Headers },
+  ports: Omit<PortsDuCode, 'transaction'> & {
+    transaction<T>(travail: (tx: Tx) => Promise<T>): Promise<T>;
+  },
+  population: {
+    lienActif(tx: Tx, emailHash: string, maintenant: Date): Promise<Lien | null>;
+    ouvrir(tx: Tx, lien: Lien, o: OuvertureDeSession): Promise<string | null>;
+  }
 ): Promise<ResultatDuCode> {
   const maintenant = ports.maintenant();
   const debit = (): ResultatDuCode => {
@@ -458,7 +756,7 @@ export async function verifierLeCode(
   }
   const calculee = empreinteDuCode(requete.code, ports.configuration.secret);
   return ports.transaction(async (tx) => {
-    const lien = await tx.lienActifDe(emailHash, maintenant);
+    const lien = await population.lienActif(tx, emailHash, maintenant);
     // L'essai part dans TOUS les cas, pour que l'aller-retour en base ne dise rien de l'existence du
     // lien (lentille sécurité, 2026-10-03) : sur un identifiant FACTICE quand aucun lien valide
     // n'existe, que l'écriture conditionnelle ne trouve jamais.
@@ -482,7 +780,7 @@ export async function verifierLeCode(
       ports.signaler('code_refuse');
       return refuse();
     }
-    const jetonSession = await ouvrirLaSession(tx, lien, {
+    const jetonSession = await population.ouvrir(tx, lien, {
       maintenant,
       ipHash: ports.empreinteAdresseReseau(adresse),
       configuration: ports.configuration,
