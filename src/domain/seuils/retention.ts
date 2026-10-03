@@ -71,4 +71,16 @@ export const DUREES_DE_RETENTION = {
     renvois: [],
     verifieLe: '2026-10-02',
   },
+  /**
+   * SEC-58 : le journal des accès à la console (connexions, lectures de coordonnées), purgé à
+   * l'échéance. Le gel d'une ligne liée à un incident ou à un litige est une tâche à part.
+   */
+  JOURNAL_ACCES_CONSOLE_CONSERVATION_MOIS: {
+    valeur: 12,
+    unite: 'mois',
+    source:
+      'décision de Williams du 2026-10-03, après l’avis de la juriste (journalisation des accès)',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
 } as const satisfies Record<string, Seuil>;

@@ -58,6 +58,7 @@ import { minimiserCandidatures } from './minimiser-candidatures';
 import { purgerLesContacts } from './purger-contacts';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
 import { purgerLesValeursDesDroits } from './purger-valeurs-droits-contact';
+import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
 import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
@@ -197,6 +198,9 @@ export function inscriptions(
     // DM-59 (REQ-JUR-065) : la valeur d'une rectification, effacée à son échéance même sans traitement.
     droits_contact_purger: () =>
       purgerLesValeursDesDroits(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-58 : le journal des accès à la console, purgé à son échéance, sous le marqueur de la purge.
+    journal_acces_console_purger: () =>
+      purgerLeJournalDesAccesConsole(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>

@@ -404,13 +404,14 @@ model UtilisateurConsole {
 
   liensMagiques           LienMagique[]
   sessionsEspace          SessionEspace[]
-  attributions            Attribution[]        @relation("AttributionsDuConseiller")
-  suspensionsDePeremption Attribution[]        @relation("SuspensionsDePeremption")
+  attributions            Attribution[]         @relation("AttributionsDuConseiller")
+  suspensionsDePeremption Attribution[]         @relation("SuspensionsDePeremption")
   verifications           Verification[]
   anomaliesTraitees       Anomalie[]
   rattachementsDecides    RattachementManuel[]
   contestationsRepondues  Contestation[]
   qualificationsSaisies   Qualification[]
+  accesJournalises        JournalAccesConsole[]
 
   @@map("utilisateurs_console")
 }
@@ -1257,4 +1258,30 @@ model Qualification {
   @@index([attributionId, creeAt])
   @@index([auteurId])
   @@map("qualifications")
+}
+
+/// La nature d'un accès journalisé à la console (SEC-58) : les valeurs du glossaire.
+enum NatureAccesConsole {
+  connexion
+  lecture_coordonnees_apporteur
+  lecture_coordonnees_contact
+
+  @@map("nature_acces_console")
+}
+
+/// Le journal des accès à la console (SEC-58), par identifiants SEULS : qui, quand, quelle fiche,
+/// aucun contenu. Ajout seul tenu par la base (`journal_acces_console_refuser`) ; seule la purge
+/// planifiée supprime, à l'échéance de la SSOT. `cibleId` est polymorphe (un apporteur, ou
+/// l'attribution qui porte le contact), sans clé étrangère : le code la vérifie avant d'écrire.
+model JournalAccesConsole {
+  id                   String             @id @db.Uuid
+  utilisateurConsoleId String             @map("utilisateur_console_id") @db.Uuid
+  utilisateurConsole   UtilisateurConsole @relation(fields: [utilisateurConsoleId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  nature               NatureAccesConsole
+  cibleId              String?            @map("cible_id") @db.Uuid
+  survenuAt            DateTime           @default(dbgenerated("clock_timestamp()")) @map("survenu_at") @db.Timestamptz(3)
+
+  @@index([survenuAt])
+  @@index([utilisateurConsoleId, survenuAt], map: "journal_acces_console_utilisateur_survenu_idx")
+  @@map("journal_acces_console")
 }

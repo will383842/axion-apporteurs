@@ -130,6 +130,7 @@ ordinaire **reste `prevue`** (l'attribution passe `figee_resiliation`) ; `conser
 | `QualiteExercice`      | `commercant`, `societe_commerciale`, `artisan`, `profession_liberale` — liste fermée d'A07 ; les deux premières rendent applicable la clause attributive de juridiction (art. 48 CPC) ; « micro-entrepreneur » est un régime, pas une qualité | REQ-JUR-022 |
 | `ProfessionReglementee` | `expertise_comptable`, `auxiliaire_services_financiers`, `intermediaire_assurance` — une valeur par code NAF (69.20Z, 66.19B, 66.22Z), HYP-JUR-PROF-REGLEMENTEES | REQ-JUR-022 |
 | `MotifResiliation`     | `ordinaire_apporteur`, `ordinaire_axion`, `manquement_grave` — colonne `resiliationMotif` | REQ-DM-011 |
+| `NatureAccesConsole`   | `connexion`, `lecture_coordonnees_apporteur`, `lecture_coordonnees_contact` — colonne `nature` du journal des accès à la console ; une connexion n'a pas de cible, une lecture en a toujours une | SEC-58 |
 | `RegimeTva`            | `assujetti`, `franchise_293b` — historique daté, figé sur chaque autofacture | REQ-ARG-033 |
 | `CanalCandidature`     | `site`, `linkedin`, `jobboard`, `saisie_console`, `autre` — dérivé par EXT-T03 de `sourceCanal`, chaîne transportée figée ; chemin inconnu → `autre`, journalisé | REQ-DM-035, REQ-EXT-008 |
 | `StatutTache`          | `a_faire`, `en_cours`, `en_revue`, `fusionnee`, `deployee`, `verifiee`, `bloquee`, `attente_externe`, `proposee` — **neuf valeurs**, celles de `scripts/lot/tasks.schema.json` ; `proposee` manquait ici depuis GOV-017a et rien ne l'attrapait | REQ-GOV-021 |
