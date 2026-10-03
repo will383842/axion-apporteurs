@@ -66,3 +66,24 @@ export function heuresOuvreesEcoulees(
   }
   return total / MS_PAR_HEURE;
 }
+
+/**
+ * DM-24 (audit du plan de la Phase 1, écart A1-09) — `jours` jours CIVILS après `debut`, à la même
+ * heure légale de Paris : un changement d'heure franchi ne décale pas l'heure affichée. Les délais
+ * du contrat comptés en jours (confirmation tacite, libération) la partagent ; aucun ne la retape.
+ */
+export function ajouterJoursCivilsParis(debut: Instant, jours: number): Instant {
+  if (!Number.isInteger(jours) || jours < 0) {
+    throw new ErreurTemps('duree_invalide', `${jours} j n'est pas un nombre entier de jours >= 0`);
+  }
+  return instantDepuisLocal(localDepuisInstant(debut) + jours * MS_PAR_JOUR);
+}
+
+/** L'alias, en JOURS ouvrés, de `echeanceOuvree` : un jour ouvré vaut un jour d’heures ouvrées. */
+export function joursOuvres(
+  debut: Instant,
+  jours: number,
+  calendrier: CalendrierFeries = CALENDRIER_FERIES_FR
+): Instant {
+  return echeanceOuvree(debut, jours * (MS_PAR_JOUR / MS_PAR_HEURE), calendrier);
+}

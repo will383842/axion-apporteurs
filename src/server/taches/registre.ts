@@ -35,6 +35,11 @@ export const TACHES = {
    * haute séquence reçue, rejeu des trous (`src/server/jobs/reconciliation.ts`).
    */
   reconciliation_axionia: { req: 'REQ-INT-013' },
+  /**
+   * DM-24 — la confirmation tacite à trente jours d'une demande reçue et silencieuse
+   * (`src/server/jobs/confirmation-tacite.ts`), passage « tout ce qui est dû à l'instant t ».
+   */
+  confirmation_tacite: { req: 'REQ-DM-042' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;

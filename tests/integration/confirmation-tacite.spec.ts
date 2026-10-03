@@ -1,4 +1,6 @@
-// @req REQ-DM-042 REQ-DM-006 REQ-DM-008
+// @req REQ-DM-042
+// @req REQ-DM-006
+// @req REQ-DM-008
 /**
  * DM-24 — la confirmation tacite à trente jours (HYP-W20-TACITE, HYP-C1), horloge FIGÉE.
  *
