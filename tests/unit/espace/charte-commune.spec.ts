@@ -160,8 +160,10 @@ describe('REQ-UX-017 — le contraste AA, recalculé dans chaque maquette de l�
           for (const [avant, arriere] of paires) {
             expect(t[avant], `${f} ${nom} --${avant}`).toMatch(/^#[0-9a-f]{6}$/);
             expect(t[arriere], `${f} ${nom} --${arriere}`).toMatch(/^#[0-9a-f]{6}$/);
-            expect(rapport(t[avant]!, t[arriere]!), `${f} ${nom} --${avant}/--${arriere}`)
-              .toBeGreaterThanOrEqual(seuil);
+            expect(
+              rapport(t[avant]!, t[arriere]!),
+              `${f} ${nom} --${avant}/--${arriere}`
+            ).toBeGreaterThanOrEqual(seuil);
             mesures += 1;
           }
         }
@@ -190,7 +192,9 @@ describe('REQ-UX-017 — le relief : cartes et encarts ne sont plus du texte à 
     expect(regle('.carte')).toMatch(/box-shadow:/);
   });
 
-  it('REQ-UX-017 — l’encart porte un liseré d’état à gauche', () => {
-    expect(regle('.encart')).toMatch(/border-left-width:\s*6px/);
+  it('REQ-UX-017 — l’encart porte un liseré d’état à gauche, un cadre et une ombre', () => {
+    expect(regle('.encart')).toMatch(/border-left(?:-width)?:\s*6px/);
+    expect(regle('.encart')).toMatch(/border:\s*1px solid/);
+    expect(regle('.encart')).toMatch(/box-shadow:/);
   });
 });
