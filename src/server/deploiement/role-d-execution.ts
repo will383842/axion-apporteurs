@@ -19,6 +19,7 @@
 import { createHash, createHmac, pbkdf2Sync, randomBytes } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { productionDeclaree } from '../../lib/notify';
+import { TABLE_DU_JOURNAL } from '../evenement/journal';
 
 /** Le secret : un alphabet sans échappement, celui que le provisionnement de la plateforme tire. */
 const SECRET = /^[A-Za-z0-9_.~-]{32,}$/;
@@ -92,7 +93,7 @@ type Etat = {
   journal: boolean;
   tables: number;
   courant: boolean;
-  /** SEC-50 : le journal (`evenements`) appartient à `partners_journal`. Absent, il ne l'est pas. */
+  /** SEC-50 : le journal (`TABLE_DU_JOURNAL`) appartient à `partners_journal`. Absent, il ne l'est pas. */
   possede: boolean;
   /** SEC-50 : `partners_execution` peut réécrire le journal (UPDATE, DELETE ou TRUNCATE). */
   groupe: boolean;
@@ -111,16 +112,18 @@ async function etatDu(c: PrismaClient, role: string): Promise<Etat> {
              WHERE r.rolname = ${role}::name) AS tables,
            (${role}::name = current_user) AS courant,
            COALESCE((SELECT pg_get_userbyid(relowner) = 'partners_journal' FROM pg_class
-             WHERE oid = to_regclass('public.evenements')), false) AS possede,
-           CASE WHEN to_regclass('public.evenements') IS NULL
+             WHERE oid = to_regclass(${TABLE_DU_JOURNAL}::text)), false) AS possede,
+           CASE WHEN to_regclass(${TABLE_DU_JOURNAL}::text) IS NULL
                   OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'partners_execution')
              THEN false
-             ELSE has_table_privilege('partners_execution', 'public.evenements', 'UPDATE, DELETE, TRUNCATE')
+             ELSE has_table_privilege('partners_execution', to_regclass(${TABLE_DU_JOURNAL}::text),
+                    'UPDATE, DELETE, TRUNCATE')
            END AS groupe,
-           CASE WHEN to_regclass('public.evenements') IS NULL
+           CASE WHEN to_regclass(${TABLE_DU_JOURNAL}::text) IS NULL
                   OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = ${role}::name)
              THEN false
-             ELSE has_table_privilege(${role}::name, 'public.evenements', 'UPDATE, DELETE, TRUNCATE')
+             ELSE has_table_privilege(${role}::name, to_regclass(${TABLE_DU_JOURNAL}::text),
+                    'UPDATE, DELETE, TRUNCATE')
            END AS reecrit`;
   return e!;
 }
@@ -162,6 +165,9 @@ export async function provisionnerRoleDExecution(urls: {
     // CONSTANT relit, le verbe choisi dans le bloc et la valeur citée par `%L`.
     await c.$transaction([
       c.$queryRaw`SELECT set_config('partners_execution.verificateur', ${verificateurScram(secret)}, true)`,
+      // SEC-50 : le NOM du journal, de même, en paramètre lié que la boucle des droits relit : il
+      // vient de son seul écrivain (`TABLE_DU_JOURNAL`), jamais d'un littéral recopié ici.
+      c.$queryRaw`SELECT set_config('partners_execution.journal', ${TABLE_DU_JOURNAL}, true)`,
       c.$executeRaw`DO $corps$
 DECLARE
   verbe text := CASE WHEN EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'partners_app')
@@ -187,7 +193,10 @@ BEGIN
   FOR t IN
     SELECT c.relname, c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'S')
-      AND c.relname NOT IN ('evenements', 'evenements_id_seq', '_prisma_migrations')
+      AND c.oid IS DISTINCT FROM to_regclass(current_setting('partners_execution.journal'))
+      AND c.oid IS DISTINCT FROM
+        pg_get_serial_sequence(current_setting('partners_execution.journal'), 'id')::regclass
+      AND c.relname <> '_prisma_migrations'
   LOOP
     IF t.relkind = 'S' THEN
       EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %I TO partners_execution', t.relname);
@@ -225,9 +234,10 @@ export async function constaterRoleDExecution(urlExecution: string): Promise<voi
              pg_has_role(current_user, 'partners_execution', 'MEMBER') AS execution,
              (SELECT count(*)::int FROM pg_class WHERE relowner = r.oid) AS tables,
              COALESCE((SELECT pg_get_userbyid(relowner) = 'partners_journal' FROM pg_class
-               WHERE oid = to_regclass('public.evenements')), false) AS possede,
-             CASE WHEN to_regclass('public.evenements') IS NULL THEN false
-               ELSE has_table_privilege('public.evenements', 'UPDATE, DELETE, TRUNCATE')
+               WHERE oid = to_regclass(${TABLE_DU_JOURNAL}::text)), false) AS possede,
+             CASE WHEN to_regclass(${TABLE_DU_JOURNAL}::text) IS NULL THEN false
+               ELSE has_table_privilege(to_regclass(${TABLE_DU_JOURNAL}::text),
+                      'UPDATE, DELETE, TRUNCATE')
              END AS reecrit
       FROM pg_roles r WHERE r.rolname = current_user`;
     if (!f || f.superutilisateur) {

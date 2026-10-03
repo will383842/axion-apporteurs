@@ -61,6 +61,8 @@ const {
   urlDuRoleDExecution,
   verificateurScram,
 } = await import('../../../src/server/deploiement/role-d-execution');
+// SEC-50 : le nom du journal vient de son SEUL écrivain, et voyage en paramètre lié.
+const { TABLE_DU_JOURNAL } = await import('../../../src/server/evenement/journal');
 
 const SECRET = 'a'.repeat(40);
 const URL_PROPRIO = 'postgresql://proprio:mdp@hote:5432/partners';
@@ -223,12 +225,17 @@ describe('REQ-DM-024 — le provisionnement : refus AVANT d’écrire, puis un l
     await provisionnerRoleDExecution({ urlMigration: URL_PROPRIO, urlExecution: URL_SERVEUR });
     expect(etat.urls).toEqual([URL_PROPRIO]);
     expect(etat.requetes).toHaveLength(1);
-    expect(etat.requetes[0]!.valeurs.every((v) => v === 'partners_app')).toBe(true);
+    // Le nom du rôle, et celui du journal (SEC-50) : aucune autre valeur liée.
+    expect(
+      etat.requetes[0]!.valeurs.every((v) => v === 'partners_app' || v === TABLE_DU_JOURNAL)
+    ).toBe(true);
     expect(etat.transactions).toHaveLength(1);
     const lot = etat.transactions[0]!;
     const tous = JSON.stringify(lot);
     expect(tous).not.toContain(SECRET);
-    const parametre = lot.find((x) => x.sql.includes('set_config'));
+    const parametre = lot.find((x) =>
+      x.sql.includes("set_config('partners_execution.verificateur'")
+    );
     expect(String(parametre?.valeurs[0]).startsWith('SCRAM-SHA-256$4096:')).toBe(true);
     expect(tous).toContain('GRANT partners_execution TO partners_app');
     expect(tous).toContain('GRANT SELECT ON _prisma_migrations TO partners_execution');
@@ -238,10 +245,23 @@ describe('REQ-DM-024 — le provisionnement : refus AVANT d’écrire, puis un l
   it('REQ-DM-024 : TÉMOIN — la boucle des droits exclut le journal par son NOM, sans le déduire de son propriétaire', async () => {
     etat.reponses.push([ETAT_SAIN]);
     await provisionnerRoleDExecution({ urlMigration: URL_PROPRIO, urlExecution: URL_SERVEUR });
-    const boucle = etat.transactions[0]!.find((x) => x.sql.includes('FOR t IN'));
+    const lot = etat.transactions[0]!;
+    // Le NOM du journal, lié en paramètre AVANT la boucle, dans le même lot, et lu chez son écrivain.
+    expect(TABLE_DU_JOURNAL).toBe('public.evenements');
+    const nom = lot.findIndex((x) => x.sql.includes("set_config('partners_execution.journal'"));
+    expect(nom).toBeGreaterThanOrEqual(0);
+    expect(lot[nom]!.valeurs).toEqual([TABLE_DU_JOURNAL]);
+    const iBoucle = lot.findIndex((x) => x.sql.includes('FOR t IN'));
+    expect(nom).toBeLessThan(iBoucle);
+    const boucle = lot[iBoucle];
+    // La table ET sa séquence, exclues par ce nom ; la table de suivi des migrations, par le sien.
     expect(boucle?.sql).toContain(
-      "c.relname NOT IN ('evenements', 'evenements_id_seq', '_prisma_migrations')"
+      "c.oid IS DISTINCT FROM to_regclass(current_setting('partners_execution.journal'))"
     );
+    expect(boucle?.sql).toContain(
+      "pg_get_serial_sequence(current_setting('partners_execution.journal'), 'id')::regclass"
+    );
+    expect(boucle?.sql).toContain("c.relname <> '_prisma_migrations'");
     expect(boucle?.sql).not.toContain('relowner');
   });
 
@@ -250,7 +270,8 @@ describe('REQ-DM-024 — le provisionnement : refus AVANT d’écrire, puis un l
     await provisionnerRoleDExecution({ urlMigration: URL_PROPRIO, urlExecution: URL_SERVEUR });
     expect(etat.requetes).toHaveLength(1);
     const lu = etat.requetes[0]!.sql;
-    expect(lu).toContain("to_regclass('public.evenements')");
+    expect(lu).toContain('to_regclass($::text)');
+    expect(etat.requetes[0]!.valeurs).toContain(TABLE_DU_JOURNAL);
     expect(lu).toContain("'UPDATE, DELETE, TRUNCATE'");
   });
 });
