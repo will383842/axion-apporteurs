@@ -63,7 +63,9 @@
       "taches": [
         "DM-07",
         "DM-08",
-        "DM-13"
+        "DM-13",
+        "DM-55",
+        "JUR-T49"
       ]
     },
     {
@@ -96,7 +98,8 @@
         "DM-08",
         "DM-13",
         "DM-24",
-        "DM-41"
+        "DM-41",
+        "DM-55"
       ]
     },
     {
@@ -138,22 +141,24 @@
     {
       "id": "REQ-DM-009",
       "domaine": "domaine-donnees",
-      "texte": "Le taux de confirmation et le palier d'un apporteur sont dérivés par fonction pure des N dernières Qualifications (fenêtre glissante de 10) ; aucun compteur mutable n'est stocké. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : palier et taux se dérivent des seules qualifications d'apporteurs.",
-      "source": "anti-abus M1, M3 ; outil §1.1",
+      "texte": "Aucun palier, aucun score et aucun taux n'est calculé par apporteur pour produire un effet sur ses déclarations, ses vérifications ou ses droits. Aucun plafond de dépôts, ni par période ni au total, n'est opposé à un apporteur. Seule une limite de débit technique, identique pour tous et commune à l'espace, protège le service contre l'automatisation et la saturation : elle porte sur la session et l'empreinte de l'adresse réseau, sur une fenêtre de l'ordre de la minute, à un niveau qu'un dépôt fait à la main n'atteint pas ; son seul effet est de faire réessayer la requête, sans trace au dossier de l'apporteur, sans statut ni anomalie, et sans effet sur ses déclarations déjà enregistrées. Chaque déclaration est jugée sur ses propres faits (contrat art. 3.2, 3.3 bis et 3.7). Un taux de confirmation peut être suivi par la Société pour l'ensemble des déclarations, sans rattachement à un apporteur, comme indicateur de qualité de son propre processus.",
+      "source": "anti-abus M1, M3 ; outil §1.1 ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
       "etape": 8,
       "phase": 1,
       "taches": [
-        "DM-09"
+        "DM-09",
+        "SEC-12",
+        "SEC-56"
       ]
     },
     {
       "id": "REQ-DM-010",
       "domaine": "domaine-donnees",
-      "texte": "`Apporteur.seuilVerificationPrioritaire` est une colonne Int (défaut dérivé du palier, surcharge manuelle tracée) ; aucun dépôt n'est refusé pour dépassement de seuil — au-delà, l'attribution est acceptée, horodatée, opposable, et porte `verificationPrioritaire = true` ; au-delà d'un second seuil de dépôts sur 24 h pour une même identité (valeur en configuration, hors de ce dépôt public : REQ-GOV-031), chaque dépôt supplémentaire exige un `captcha` et est accepté de la même façon (issue `captcha` de REQ-UX-002), jamais refusé.",
-      "source": "outil §1.1, D3 ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
+      "texte": "L'ordre des appels de confirmation de la Société est fixé par sa capacité et par une surcharge manuelle ; il ne compte rien par apporteur et ne produit aucun effet sur la demande ni sur l'apporteur. Une demande n'est mise en vérification, au sens de l'article 3.2 alinéa 4, que sur des éléments objectifs qui lui sont propres, tenant aux coordonnées déclarées ou aux conditions dans lesquelles la réponse est donnée, et jamais sur le nombre, le rythme, l'heure ou le lieu des déclarations d'un apporteur. La surcharge manuelle qui met une demande en vérification est motivée par ces éléments et journalisée. Un défi anti-automatisation (captcha) peut être présenté au dépôt sur un signal technique de la session ou de l'empreinte réseau, de même nature que la limite de débit, identique pour tous ; il ne compte pas les dépôts d'un apporteur, ne laisse aucune trace à son dossier, n'est ni un statut ni une anomalie, et ne refuse aucun dépôt d'une personne qui le résout.",
+      "source": "outil §1.1, D3 ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will) ; réécrite le 2026-10-03, texte de la juriste (le captcha remplace celui « au-delà de N dépôts sur 24 h ») : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 9,
@@ -161,9 +166,9 @@
       "phase": 0,
       "taches": [
         "DM-06",
-        "DM-09",
         "JUR-T24",
-        "SEC-12"
+        "SEC-12",
+        "SEC-56"
       ]
     },
     {
@@ -208,7 +213,6 @@
       "etape": 5,
       "phase": 1,
       "taches": [
-        "DM-11",
         "DM-23",
         "INT-T23"
       ]
@@ -345,7 +349,7 @@
     {
       "id": "REQ-DM-022",
       "domaine": "domaine-donnees",
-      "texte": "**Définition unique de la commande** (contrat art. 4.4, corrigé le 2026-09-03, M-10) : le **devis, le bon de commande ou la convention de formation signé** par l'entreprise attribuée ; la date retenue (`dateRef`) est celle de **cette signature** et, **à défaut de document signé, la date d'émission de la première facture** (`facture.emiseAt`) — le repli existait dans le code sans figurer au contrat, il y figure désormais. Une commande est dans la fenêtre si `dateRef` ∈ [dateDeDepart, fenetreFinAt] ; une ligne est créée pour tout état ∈ ETATS_OCCUPANTS (REQ-DM-003) ; les encaissements postérieurs à `fenetreFinAt` d'une commande signée dans la fenêtre restent commissionnés ; une commande signée hors fenêtre ne crée aucune ligne, même `prevue`.",
+      "texte": "**Définition unique de la commande** (contrat art. 4.4, corrigé le 2026-09-03, M-10) : le **devis, le bon de commande ou la convention de formation signé** par l'entreprise attribuée ; la date retenue (`dateRef`) est celle de **cette signature** et, **à défaut de document signé, la date d'émission de la première facture** (`facture.emiseAt`) — le repli existait dans le code sans figurer au contrat, il y figure désormais. Une commande est dans la fenêtre si `dateRef` ∈ [dateDeDepart, fenetreFinAt] ; une ligne est créée pour tout état ∈ ETATS_OCCUPANTS (REQ-DM-003) ; les encaissements postérieurs à `fenetreFinAt` d'une commande signée dans la fenêtre restent commissionnés ; une commande signée hors fenêtre ne crée aucune ligne, même `prevue`. Amendement LOT OPCO (rattrapage 54) : une commande conclue sous condition suspensive est datée de sa SIGNATURE et réputée n'avoir jamais existé si la condition défaille (REQ-JUR-061, contrat art. 4.4 amendé par JUR-T47, avis d'A07).",
       "source": "fonctionnement R2, §5.2 ; audit-attribution §3.1 ; contrat art. 4.4 ; synthèse du 2026-09-03, M-10",
       "statut": "active",
       "remplaceePar": null,
@@ -354,7 +358,9 @@
       "phase": 1,
       "taches": [
         "DM-08",
-        "DM-15"
+        "DM-15",
+        "JUR-T47",
+        "JUR-T53"
       ]
     },
     {
@@ -386,7 +392,8 @@
         "DM-20",
         "DM-45",
         "QA-T62",
-        "SEC-30"
+        "SEC-30",
+        "SEC-50"
       ]
     },
     {
@@ -432,7 +439,9 @@
         "CPL-T07",
         "DM-11",
         "DM-19",
+        "DM-51",
         "JUR-T16",
+        "SEC-49",
         "T-ARG-032"
       ]
     },
@@ -498,6 +507,7 @@
         "DM-20",
         "DM-40",
         "DM-48",
+        "DM-52",
         "JUR-T41"
       ]
     },
@@ -527,6 +537,7 @@
       "phase": 1,
       "taches": [
         "DM-12",
+        "DM-62",
         "SEC-14"
       ]
     },
@@ -671,7 +682,10 @@
       "taches": [
         "DM-25",
         "DM-31",
-        "JUR-T31"
+        "DM-53",
+        "DM-62",
+        "JUR-T31",
+        "UX-P1-51"
       ]
     },
     {
@@ -686,21 +700,23 @@
       "phase": 0,
       "taches": [
         "SEC-03",
-        "SEC-42"
+        "SEC-42",
+        "SEC-54"
       ]
     },
     {
       "id": "REQ-SEC-002",
       "domaine": "anti-abus-securite",
-      "texte": "La demande de lien magique est limitée à 10 / 15 min par hash IP et 5 / 15 min par email, avec `surPanne: refuser` ; le message générique explique la suspension sans révéler l'existence du compte.",
-      "source": "nouvelle (patron `auth.actions.ts`)",
+      "texte": "La demande de lien magique est limitée à 10 / 15 min par hash IP et 5 / 15 min par email, avec `surPanne: refuser` ; le message générique explique la suspension sans révéler l'existence du compte. La vérification du code à six chiffres (SEC-54) est limitée, en plus du plafond de cinq essais par lien tenu par la base, à 20 / 15 min par hash IP au code et à 10 / 15 min par email au code, avec `surPanne: refuser` ; ces deux compteurs sont distincts de ceux de la demande de lien, une saisie mal formée y est comptée, et leur refus est une réponse générique, identique que le compte existe ou non : le statut 429 pour une route, et pour une action serveur une redirection unique, sans paramètre qui distingue le compteur ni le compte.",
+      "source": "nouvelle (patron `auth.actions.ts`) ; complétée le 2026-10-03 (cadrage de la lentille sécurité pour SEC-54, rattrapage 86) ; réponse générique précisée le 2026-10-03 (lentille sécurité, rattrapage 87)",
       "statut": "active",
       "remplaceePar": null,
       "module": 21,
       "etape": 12,
       "phase": 0,
       "taches": [
-        "SEC-03"
+        "SEC-03",
+        "SEC-54"
       ]
     },
     {
@@ -719,6 +735,7 @@
         "SEC-29",
         "SEC-30",
         "SEC-45",
+        "SEC-55",
         "UX-P1-04"
       ]
     },
@@ -855,8 +872,7 @@
       "taches": [
         "INT-T50-A",
         "SEC-07",
-        "SEC-44",
-        "SEC-46"
+        "SEC-44"
       ]
     },
     {
@@ -870,7 +886,8 @@
       "etape": 10,
       "phase": 0,
       "taches": [
-        "INT-T09"
+        "INT-T09",
+        "QA-T68"
       ]
     },
     {
@@ -913,6 +930,7 @@
       "phase": 0,
       "taches": [
         "DM-31",
+        "QA-T68",
         "SEC-03",
         "SEC-10"
       ]
@@ -953,8 +971,8 @@
     {
       "id": "REQ-SEC-019",
       "domaine": "anti-abus-securite",
-      "texte": "🔴 **Le gel est un enum à TROIS valeurs — `libre`, `gele_non_confirmation`, `gele_fraude`** — avec motif, date et auteur (réécrite le 2026-09-03, A-3 (c) : `gele_anomalie` est renommée `gele_fraude` pour porter le mot du contrat, et `gele_manuel` **est supprimée** — un gel « manuel » sans motif écrit est exactement le pouvoir discrétionnaire que l'article 3.7 exclut ; la valeur `gele_strikes` avait déjà été renommée, « strike » étant un synonyme interdit au glossaire). **Tous les chemins de gel passent par une fonction unique** dont l'entrée est typée sur ces deux motifs et que garde `jur:suspension-motifs-fermes` (REQ-SEC-038). 🔴 **Portée strictement limitée** (contrat art. 3.7 al. 3 réécrit) : le gel porte **exclusivement sur l'enregistrement de nouvelles déclarations**. Il est **sans effet** sur les attributions en cours, provisoires ou définitives, sur les commandes signées, sur les commissions acquises ou à venir, et **sur l'accès de l'apporteur à son espace** — aucun jeton n'est révoqué, `sessionVersion` n'est pas incrémenté, aucune attribution n'est annulée (c'est REQ-SEC-032 qui réserve ces effets à la **résiliation**). Les attributions `provisoire` non qualifiées **restent `provisoire`**, portent `verificationPrioritaire = true` (la valeur `suspendue` n'existe pas dans l'enum fermé de REQ-DM-006) et libèrent la file M2. 🔴 **Durée maximale de quinze jours** (`SUSPENSION_MAX_JOURS`, SSOT, contrat art. 3.7) : un cron quotidien **lève de plein droit** tout gel de plus de quinze jours à compter de sa notification, écrit l'événement et notifie l'apporteur ; la Société demeure libre de résilier selon l'article 11. Une levée avant terme reste réservée à un rôle habilité et journalisée. Tests : gel posé à J0 → levé par le cron à J+15, jamais avant ; **un gel qui survit à J+16 → rouge** ; gel posé → jeton toujours valide, session vivante, attributions inchangées, lignes de commission inchangées (quatre assertions, **vues rougir** sur l'ancien comportement) ; `gele_manuel` ou `gele_anomalie` présent dans l'enum → gate rouge.",
-      "source": "audit-outil §1.1 ; contrat art. 3.7 al. 3 ; synthèse du 2026-09-03, A-3 (c) et (e)",
+      "texte": "🔴 **Le gel est un enum à TROIS valeurs — `libre`, `gele_non_confirmation`, `gele_fraude`** — avec motif, date et auteur (réécrite le 2026-09-03, A-3 (c) : `gele_anomalie` est renommée `gele_fraude` pour porter le mot du contrat, et `gele_manuel` **est supprimée** — un gel « manuel » sans motif écrit est exactement le pouvoir discrétionnaire que l'article 3.7 exclut ; la valeur `gele_strikes` avait déjà été renommée, « strike » étant un synonyme interdit au glossaire). **Tous les chemins de gel passent par une fonction unique** dont l'entrée est typée sur ces deux motifs et que garde `jur:suspension-motifs-fermes` (REQ-SEC-038). 🔴 **Portée strictement limitée** (contrat art. 3.7 al. 3 réécrit) : le gel porte **exclusivement sur l'enregistrement de nouvelles déclarations**. Il est **sans effet** sur les attributions en cours, provisoires ou définitives, sur les commandes signées, sur les commissions acquises ou à venir, et **sur l'accès de l'apporteur à son espace** — aucun jeton n'est révoqué, `sessionVersion` n'est pas incrémenté, aucune attribution n'est annulée (c'est REQ-SEC-032 qui réserve ces effets à la **résiliation**). Les attributions `provisoire` non qualifiées **restent `provisoire`** (la valeur `suspendue` n'existe pas dans l'enum fermé de REQ-DM-006) et libèrent la file M2. La suspension de l'enregistrement des déclarations d'un apporteur ne change rien à ses attributions en cours : aucune n'est mise en vérification de ce seul fait. La Société peut placer leurs demandes de confirmation en tête de son ordre d'appel, sans effet sur elles. Une demande n'est mise en vérification que sur des éléments objectifs qui lui sont propres (art. 3.2 al. 4). 🔴 **Durée maximale de quinze jours** (`SUSPENSION_MAX_JOURS`, SSOT, contrat art. 3.7) : un cron quotidien **lève de plein droit** tout gel de plus de quinze jours à compter de sa notification, écrit l'événement et notifie l'apporteur ; la Société demeure libre de résilier selon l'article 11. Une levée avant terme reste réservée à un rôle habilité et journalisée. Tests : gel posé à J0 → levé par le cron à J+15, jamais avant ; **un gel qui survit à J+16 → rouge** ; gel posé → jeton toujours valide, session vivante, attributions inchangées, lignes de commission inchangées (quatre assertions, **vues rougir** sur l'ancien comportement) ; `gele_manuel` ou `gele_anomalie` présent dans l'enum → gate rouge.",
+      "source": "audit-outil §1.1 ; contrat art. 3.7 al. 3 ; synthèse du 2026-09-03, A-3 (c) et (e) ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 21,
@@ -1075,7 +1093,9 @@
       "etape": 4,
       "phase": 1,
       "taches": [
-        "DM-11"
+        "CPL-T07",
+        "DM-58",
+        "UX-P1-09"
       ]
     },
     {
@@ -1117,13 +1137,14 @@
       "etape": null,
       "phase": 0,
       "taches": [
-        "SEC-02"
+        "SEC-02",
+        "SEC-46"
       ]
     },
     {
       "id": "REQ-SEC-030",
       "domaine": "anti-abus-securite",
-      "texte": "Les coordonnées du tiers rencontré sont purgées par le cron de REQ-DM-031 selon `retention.ts` : `CONTACT_PURGE_APRES_LIBERATION_JOURS` (défaut 90, états `invalidee`/`perdue`/`expiree`/`perimee`) et `CONTACT_PURGE_CONVERTIE_APRES_DERNIER_CONTACT_JOURS` (défaut 1 095), toutes deux sous marqueur `HYP-RGPD-RETENTION` **jusqu'à la décision de Will consignée dans `DECISIONS.md`** (il n'y a pas de DPO sur le projet, décision du 2026-09-03), avec un test HYP qui échoue si la valeur change ; l'information art. 14 est délivrée selon REQ-JUR-009 ; apporteur et tiers disposent d'une voie d'accès et d'effacement par jeton (1/jour, `surPanne: refuser`, testée) ; le registre art. 30 décrit trois traitements et un test vérifie qu'il en liste exactement trois.",
+      "texte": "Les coordonnées du tiers rencontré sont purgées par le cron de REQ-DM-031 selon `retention.ts` : `CONTACT_PURGE_APRES_LIBERATION_JOURS` (défaut 90, états `invalidee`/`perdue`/`expiree`/`perimee`/`annulee`) et `CONTACT_PURGE_CONVERTIE_APRES_DERNIER_CONTACT_JOURS` (défaut 1 095), toutes deux sous marqueur `HYP-RGPD-RETENTION` **jusqu'à la décision de Will consignée dans `DECISIONS.md`** (il n'y a pas de DPO sur le projet, décision du 2026-09-03), avec un test HYP qui échoue si la valeur change ; l'information art. 14 est délivrée selon REQ-JUR-009 ; apporteur et tiers disposent d'une voie d'accès et d'effacement par jeton (1/jour, `surPanne: refuser`, testée) ; le registre art. 30 décrit trois traitements et un test vérifie qu'il en liste exactement trois.",
       "source": "audit-outil §3.3, §5 étape 12 ; audit-attribution P8 ; reformulation d'annexe appliquée le 2026-09-03",
       "statut": "active",
       "remplaceePar": null,
@@ -1322,6 +1343,8 @@
         "JUR-T31",
         "QA-T31",
         "SEC-34",
+        "SEC-51",
+        "SEC-52",
         "UX-P1-17"
       ]
     },
@@ -1585,9 +1608,8 @@
       "remplaceePar": null,
       "module": 4,
       "etape": 4,
-      "phase": 1,
+      "phase": 2,
       "taches": [
-        "DM-11",
         "JUR-T16",
         "T-ARG-015",
         "T-ARG-032",
@@ -1641,6 +1663,7 @@
       "etape": 11,
       "phase": 2,
       "taches": [
+        "DM-57",
         "T-ARG-017"
       ]
     },
@@ -2122,14 +2145,17 @@
         "INT-T08-P",
         "INT-T21-A",
         "INT-T21-P",
-        "INT-T51"
+        "INT-T51",
+        "INT-T70-A",
+        "INT-T70-P",
+        "INT-T74-P"
       ]
     },
     {
       "id": "REQ-INT-013",
       "domaine": "integration",
-      "texte": "Un job quotidien de réconciliation compare, sur 7 jours glissants, Σ encaissements HT par SIREN attribué côté axionia et côté Partners ; tout écart produit une alerte nommant les event_id manquants et déclenche leur rejeu ; le job journalise ses compteurs même quand tout va bien.",
-      "source": "crm-sync/reconcile.ts (dérivé) ; INT-F10/F22",
+      "texte": "Un job quotidien de réconciliation compare, sur 7 jours glissants, Σ encaissements HT par SIREN attribué côté axionia et côté Partners ; tout écart produit une alerte au nombre d'écarts ; les event_id manquants sont nommés dans Partners, jamais à l'extérieur, et leur rejeu est déclenché ; le job journalise ses compteurs même quand tout va bien.",
+      "source": "crm-sync/reconcile.ts (dérivé) ; INT-F10/F22 ; amendée le 2026-10-03 : alerte au nombre, event_id nommés dans Partners seulement (arbitrage de la sécurité et de la coordination, rattrapage 81)",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
@@ -2137,7 +2163,8 @@
       "phase": 1,
       "taches": [
         "INT-T08-A",
-        "INT-T08-P"
+        "INT-T08-P",
+        "INT-T73-P"
       ]
     },
     {
@@ -2249,7 +2276,7 @@
     {
       "id": "REQ-INT-021",
       "domaine": "integration",
-      "texte": "Depuis la réponse API, Partners persiste `siren, siret (siège), nom_complet, nature_juridique, activite_principale, tranche_effectif_salarie, etat_administratif, categorie_entreprise, siege.{code_postal, libelle_commune, departement, region}` ; des dirigeants, seulement un hash normalisé de `nom+prenoms` et `qualite` ; jamais `annee_de_naissance` ; `statut_diffusion` est respecté à l'affichage.",
+      "texte": "Depuis la réponse API, Partners persiste `siren, siret, nom_complet, nature_juridique, activite_principale, tranche_effectif_salarie, etat_administratif, categorie_entreprise, siege.{code_postal, libelle_commune, departement, region, latitude_microdeg, longitude_microdeg}`, le `siret` étant celui du siège ; la position du siège est gardée en micro-degrés entiers, calculés par le serveur depuis le WGS84 du tiers, et seulement quand la diffusion de l'unité légale et du siège est pleine (échec fermé) ; des dirigeants, seulement un hash normalisé de `nom+prenoms` et `qualite` ; jamais `annee_de_naissance` ; `statut_diffusion` est respecté à l'affichage.",
       "source": "audit anti-abus M5 ; INT-F16",
       "statut": "active",
       "remplaceePar": null,
@@ -2257,6 +2284,7 @@
       "etape": 10,
       "phase": 0,
       "taches": [
+        "EXT-T08",
         "INT-T09"
       ]
     },
@@ -2423,7 +2451,8 @@
         "JUR-T29",
         "JUR-T44",
         "JUR-T44b",
-        "JUR-T45"
+        "JUR-T45",
+        "QA-T69"
       ]
     },
     {
@@ -2439,7 +2468,8 @@
       "taches": [
         "JUR-T03",
         "JUR-T29",
-        "JUR-T45"
+        "JUR-T45",
+        "QA-T69"
       ]
     },
     {
@@ -2456,7 +2486,8 @@
         "JUR-T01",
         "JUR-T01b",
         "JUR-T40",
-        "JUR-T46"
+        "JUR-T46",
+        "JUR-T48"
       ]
     },
     {
@@ -2499,7 +2530,8 @@
       "etape": 12,
       "phase": 1,
       "taches": [
-        "DM-09"
+        "JUR-T28",
+        "SEC-15"
       ]
     },
     {
@@ -2522,7 +2554,7 @@
     {
       "id": "REQ-JUR-008",
       "domaine": "juridique",
-      "texte": "Le formulaire de dépôt exige la case « Cette personne sait qu'Axion-IA va la contacter. » (e-mail et téléphone) (échec fermé : absente ou décochée = refus serveur, pas seulement client) et enregistre la version du texte de la case. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : le texte de la case devient « Cette personne sait qu'Axion-IA va la contacter. » (e-mail et téléphone) ; sa version est enregistrée, comme aujourd'hui.",
+      "texte": "Le formulaire de dépôt exige la case « Cette personne sait qu'Axion-IA va la contacter. » (e-mail et téléphone) (échec fermé : absente ou décochée = refus serveur, pas seulement client) et enregistre la version du texte de la case. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : le texte de la case devient « Cette personne sait qu'Axion-IA va la contacter. » (e-mail et téléphone) ; sa version est enregistrée, comme aujourd'hui. Amendement LOT OPCO (rattrapage 54) : le texte de la case devient « Je confirme avoir informé <Prénom Nom> que je transmets ses coordonnées à Axion-IA. » (texte validé par Williams le 2026-10-02, <Prénom Nom> = le contact saisi) ; c'est une ATTESTATION d'information (contrat art. 7.1, RGPD art. 13), JAMAIS un consentement (A07) ; la case est une VRAIE case, présentée décochée (option A, coordination, par délégation) ; la preuve est la VERSION du texte, écrite dans `information_tiers_version` (A02), sans autre usage.",
       "source": "plan §3.3 · audit SIREN P8",
       "statut": "active",
       "remplaceePar": null,
@@ -2530,7 +2562,8 @@
       "etape": 7,
       "phase": 1,
       "taches": [
-        "SEC-12"
+        "SEC-12",
+        "UX-P1-47"
       ]
     },
     {
@@ -2724,7 +2757,7 @@
       "etape": 4,
       "phase": 1,
       "taches": [
-        "DM-11"
+        "DM-50"
       ]
     },
     {
@@ -2772,6 +2805,9 @@
         "JUR-T04",
         "JUR-T34",
         "JUR-T36",
+        "JUR-T57",
+        "JUR-T60",
+        "SEC-53",
         "T-ARG-033"
       ]
     },
@@ -2829,7 +2865,6 @@
       "etape": 11,
       "phase": 0,
       "taches": [
-        "DM-11",
         "INT-T44",
         "INT-T56",
         "JUR-T02",
@@ -2853,7 +2888,7 @@
     {
       "id": "REQ-UX-001",
       "domaine": "produit-ux",
-      "texte": "Le dépôt d'un contact depuis un téléphone compte ≤ 8 interactions (taps + champs) de l'accueil à l'écran de confirmation, avec une seule saisie de l'entreprise (nom + ville) et aucun champ SIREN/SIRET obligatoire ; vérifié par le test E2E mobile de REQ-QA-017 ; la mesure chrono sur appareil réel (iPhone, 4G) est ≤ 90 s et consignée (vidéo ou trace Playwright) dans la PR qui livre l'écran de dépôt. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : « Les quatre coordonnées du contact (nom, fonction, e-mail, téléphone) sont exigées et comptent dans le budget ; le contexte est facultatif et n'y compte pas ; la case d'information de REQ-JUR-008 est présentée cochée par défaut. Décompte de référence : saisie de l'entreprise (1), choix du résultat (2), nom (3), fonction (4), e-mail (5), téléphone (6), bouton « Déposer et prévenir » (7), soit une interaction de marge. » Le décompte est à confirmer sur la maquette UX-P1-40 ; si le passage par la carte Entreprise ajoute un geste (« Déposer »), il reste 8 sans marge.",
+      "texte": "Le dépôt d'un contact depuis un téléphone compte ≤ 8 interactions (taps + champs) de l'accueil à l'écran de confirmation, avec une seule saisie de l'entreprise (nom + ville) et aucun champ SIREN/SIRET obligatoire ; vérifié par le test E2E mobile de REQ-QA-017 ; la mesure chrono sur appareil réel (iPhone, 4G) est ≤ 90 s et consignée (vidéo ou trace Playwright) dans la PR qui livre l'écran de dépôt. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : « Les quatre coordonnées du contact (nom, fonction, e-mail, téléphone) sont exigées et comptent dans le budget ; le contexte est facultatif et n'y compte pas ; la case d'information de REQ-JUR-008 est présentée cochée par défaut. Décompte de référence : saisie de l'entreprise (1), choix du résultat (2), nom (3), fonction (4), e-mail (5), téléphone (6), bouton « Déposer et prévenir » (7), soit une interaction de marge. » Le décompte est à confirmer sur la maquette UX-P1-40 ; si le passage par la carte Entreprise ajoute un geste (« Déposer »), il reste 8 sans marge. Amendement LOT OPCO (rattrapage 54 ; option A de la coordination, par délégation, 2026-10-02) : le budget passe à ≤ 9 interactions ; l'écart est NOMMÉ : la case d'information de REQ-JUR-008 n'est plus présentée cochée, c'est une vraie case cochée par l'apporteur (une attestation ne se coche pas d'office). Décompte de référence : les sept gestes ci-dessus et la case, soit 8, une interaction de marge ; 9 sans marge si la carte Entreprise ajoute « Déposer ». L'IDCC facultatif (REQ-DM-064) ne compte que s'il est rempli.",
       "source": "fonctionnement §4.1-4.2 ; audit-attribution P4 ; audit-outil §12.3 point 1 ; reformulation d'annexe appliquée le 2026-09-03",
       "statut": "active",
       "remplaceePar": null,
@@ -2864,7 +2899,8 @@
         "QA-T40",
         "UX-P1-01",
         "UX-P1-02",
-        "UX-P1-40"
+        "UX-P1-40",
+        "UX-P1-47"
       ]
     },
     {
@@ -2909,8 +2945,8 @@
     {
       "id": "REQ-UX-004",
       "domaine": "produit-ux",
-      "texte": "Le statut affiché à l'apporteur est dérivé par une fonction pure exhaustive `statutApporteur(EtatAttribution)` ; chaque état interne (dont provisoire, en_attente, invalidée, perdue, expirée, périmée) a un libellé, une couleur et une phrase « prochaine étape et par qui » ; l'ajout d'une valeur d'enum sans libellé fait échouer le typecheck et le test. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : pour un dépôt en phase de confirmation, le libellé de `statutApporteur` est le badge de REQ-UX-062, et la phrase « prochaine étape » est sa phrase d'aide ; les phrases de REQ-UX-023 ne s'y ajoutent pas, et « Nous vous appelons d'abord (vérification prioritaire) » n'est jamais affichée pour une raison de vérification W20 (HYP-W20-VERIFICATION).",
-      "source": "tableaux-de-bord §3.2 ; audit-outil §7 et §8",
+      "texte": "Le statut affiché à l'apporteur est dérivé par une fonction pure exhaustive `statutApporteur(EtatAttribution)` ; chaque état interne (dont provisoire, en_attente, invalidée, perdue, expirée, périmée) a un libellé, une couleur et une phrase « prochaine étape et par qui » ; l'ajout d'une valeur d'enum sans libellé fait échouer le typecheck et le test. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : pour un dépôt en phase de confirmation, le libellé de `statutApporteur` est le badge de REQ-UX-062, et la phrase « prochaine étape » est sa phrase d'aide ; les phrases de REQ-UX-023 ne s'y ajoutent pas. Aucun texte montré à l'apporteur ne fait état d'une priorité d'appel. Le badge d'une demande vérifiée reste celui d'UX-P1-41 (« En attente de confirmation — Axion-IA va appeler votre contact »).",
+      "source": "tableaux-de-bord §3.2 ; audit-outil §7 et §8 ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
@@ -3096,6 +3132,8 @@
       "etape": 12,
       "phase": 1,
       "taches": [
+        "DM-55",
+        "DM-61",
         "INT-T24",
         "UX-P1-09",
         "UX-P1-10",
@@ -3117,7 +3155,8 @@
       "taches": [
         "UX-P0-02",
         "UX-P0-03",
-        "UX-P1-42"
+        "UX-P1-42",
+        "UX-P1-49"
       ]
     },
     {
@@ -3187,14 +3226,15 @@
       "phase": 1,
       "taches": [
         "UX-P1-06",
+        "UX-P1-07",
         "UX-P1-19"
       ]
     },
     {
       "id": "REQ-UX-022",
       "domaine": "produit-ux",
-      "texte": "La file de qualification est triée vérification prioritaire > `aQualifierDepuis` croissant ; le chrono SLA (48 h ouvrées, calendrier fériés France) porte sur `aQualifierDepuis` (posée à l'entrée en provisoire, y compris par promotion), jamais sur `deposeLe`. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : `aQualifierDepuis` est posée à l'**entrée dans la liste d'appels** (REQ-DM-062), et non plus au dépôt, pour les dépôts confirmés par e-mail en premier lieu : le SLA de 48 h ouvrées porte sur un appel à passer, pas sur un dépôt que personne n'a à appeler.",
-      "source": "audit-outil §8, §9.2 ; anti-abus M2 ; nouvelle (UX-25)",
+      "texte": "La file est triée par la priorité d'appel (capacité de la Société, surcharge manuelle), puis par aQualifierDepuis ; cet ordre ne produit aucun effet sur la demande ni sur l'apporteur. Une surcharge de l'ordre n'a pas à être motivée ; seule la mise en vérification doit l'être. Le chrono SLA (48 h ouvrées, calendrier fériés France) porte sur `aQualifierDepuis` (posée à l'entrée en provisoire, y compris par promotion), jamais sur `deposeLe`. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : `aQualifierDepuis` est posée à l'**entrée dans la liste d'appels** (REQ-DM-062), et non plus au dépôt, pour les dépôts confirmés par e-mail en premier lieu : le SLA de 48 h ouvrées porte sur un appel à passer, pas sur un dépôt que personne n'a à appeler.",
+      "source": "audit-outil §8, §9.2 ; anti-abus M2 ; nouvelle (UX-25) ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
@@ -3210,8 +3250,8 @@
     {
       "id": "REQ-UX-023",
       "domaine": "produit-ux",
-      "texte": "Côté apporteur, une attribution en qualification affiche l'une des phrases dérivées serveur : « Axion-IA appelle avant le [date] », « Axion-IA a tenté N fois, prochaine tentative le … », « Nous vous appelons d'abord (vérification prioritaire) », « Rendez-vous le … », « Proposition envoyée » ; l'état invalidée affiche un texte non accusatoire avec la date de re-déclaration possible. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : pour un dépôt en phase de confirmation, le libellé de `statutApporteur` est le badge de REQ-UX-062, et la phrase « prochaine étape » est sa phrase d'aide ; les phrases de REQ-UX-023 ne s'y ajoutent pas, et « Nous vous appelons d'abord (vérification prioritaire) » n'est jamais affichée pour une raison de vérification W20 (HYP-W20-VERIFICATION).",
-      "source": "audit-outil §7 Mes entreprises, §8 SLA ; anti-abus M1",
+      "texte": "Côté apporteur, une attribution en qualification affiche l'une des phrases dérivées serveur : « Axion-IA appelle avant le [date] », « Axion-IA a tenté N fois, prochaine tentative le … », « Rendez-vous le … », « Proposition envoyée » ; l'état invalidée affiche un texte non accusatoire avec la date de re-déclaration possible. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : pour un dépôt en phase de confirmation, le libellé de `statutApporteur` est le badge de REQ-UX-062, et la phrase « prochaine étape » est sa phrase d'aide ; les phrases de REQ-UX-023 ne s'y ajoutent pas. Aucun texte montré à l'apporteur ne fait état d'une priorité d'appel. Le badge d'une demande vérifiée reste celui d'UX-P1-41 (« En attente de confirmation — Axion-IA va appeler votre contact »).",
+      "source": "audit-outil §7 Mes entreprises, §8 SLA ; anti-abus M1 ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
@@ -3278,6 +3318,7 @@
       "phase": 1,
       "taches": [
         "SEC-22",
+        "SEC-49",
         "UX-P1-09"
       ]
     },
@@ -3299,8 +3340,8 @@
     {
       "id": "REQ-UX-029",
       "domaine": "produit-ux",
-      "texte": "Mon activité n'affiche aucun objectif, classement ni comparaison à d'autres apporteurs ; le palier et ce qui le fait monter sont formulés comme un capital de confiance (contacts confirmés), jamais comme un quota de vente.",
-      "source": "audit-outil §3.2, §7 Mon activité ; plan §3.2",
+      "texte": "Mon activité n'affiche aucun objectif, classement ni comparaison à d'autres apporteurs ; aucun palier n'y est affiché, puisqu'aucun palier n'existe par apporteur (REQ-DM-009), et rien n'y est formulé comme un quota de vente ; aucun score ni aucun taux propre à l'apporteur n'y est affiché, et son activité y est restituée comme des faits (dépôts, états, commissions), jamais comme une performance.",
+      "source": "audit-outil §3.2, §7 Mon activité ; plan §3.2 ; palier retiré le 2026-10-03 (décision de Williams, aucun palier par apporteur, REQ-DM-009, rattrapage 84) ; complétée le 2026-10-03, texte de la juriste (rattrapage 85)",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -3374,8 +3415,8 @@
     {
       "id": "REQ-UX-034",
       "domaine": "produit-ux",
-      "texte": "Le mode sombre et le mode clair de l'espace sont pilotés par des tokens propres (jamais ceux de la console admin), tous deux passant les mêmes tests de contraste.",
-      "source": "audit-outil §12.3 point 6",
+      "texte": "Le mode sombre et le mode clair de l'espace sont pilotés par des tokens propres (jamais ceux de la console admin), tous deux passant les mêmes tests de contraste. Une seule marque pour l'espace et la console (décision de Williams du 2026-10-03) : les deux blocs de jetons peuvent porter les mêmes valeurs ; chacun est déclaré à part et passe les mêmes seuils de contraste.",
+      "source": "audit-outil §12.3 point 6 ; précisée le 2026-10-03 : décision de Williams du 2026-10-03 (réponses « NON C4ETAIT MIEUX JUSTE AVANT » et « oui 5 ans et ok pour la console »), rattrapage 85",
       "statut": "active",
       "remplaceePar": null,
       "module": 17,
@@ -3597,12 +3638,14 @@
         "GOV-076",
         "GOV-083",
         "GOV-140",
+        "GOV-142",
         "QA-T00",
         "QA-T01",
         "QA-T07",
         "QA-T28",
         "QA-T63",
-        "QA-T64"
+        "QA-T64",
+        "QA-T68"
       ]
     },
     {
@@ -3753,7 +3796,9 @@
       "taches": [
         "QA-T12",
         "QA-T53",
-        "QA-T57"
+        "QA-T57",
+        "QA-T66",
+        "QA-T70"
       ]
     },
     {
@@ -3863,6 +3908,7 @@
         "INT-T12",
         "INT-T41",
         "INT-T42",
+        "INT-T72-A",
         "QA-T04",
         "QA-T52"
       ]
@@ -4021,6 +4067,7 @@
         "GOV-060",
         "GOV-119",
         "GOV-123",
+        "GOV-141",
         "QA-T63",
         "QA-T64"
       ]
@@ -4180,7 +4227,8 @@
         "GOV-057",
         "QA-T54",
         "QA-T55",
-        "QA-T65"
+        "QA-T65",
+        "QA-T67"
       ]
     },
     {
@@ -4354,7 +4402,8 @@
         "GOV-052",
         "GOV-073",
         "GOV-091",
-        "GOV-108"
+        "GOV-108",
+        "GOV-141"
       ]
     },
     {
@@ -4549,8 +4598,7 @@
       "etape": 4,
       "phase": -1,
       "taches": [
-        "CPL-T01",
-        "DM-11"
+        "CPL-T01"
       ]
     },
     {
@@ -4869,8 +4917,8 @@
     {
       "id": "REQ-CPL-026",
       "domaine": "complétude (REQ-CPL)",
-      "texte": "Le SLA affiché à l'apporteur est paramétré par la capacité réelle (jours ouvrés × qualifieurs disponibles, calendrier d'absence) ; le seuil de vérification prioritaire (D3) se dérive de la capacité restante. ⚠️ **Le « nous prenons contact dans deux jours ouvrés » n'est plus un engagement ferme au contrat** (art. 3.2 réécrit : « la Société **s'efforce de** prendre contact ») — `MANQUES-ET-RISQUES` §F.2 n° 4 le classait parmi les cinq risques d'échec les plus probables. Le SLA reste un objectif **interne** de console (REQ-UX-022) ; sa seule conséquence externe est la confirmation tacite à trente jours (REQ-DM-042).",
-      "source": "critique de complétude (2026-09-03)",
+      "texte": "Le SLA affiché à l'apporteur est paramétré par la capacité réelle (jours ouvrés × qualifieurs disponibles, calendrier d'absence) ; l'ordre d'appel de la Société se dérive de sa capacité restante ; ce n'est pas un seuil, il ne compte rien par apporteur, et il ne met aucune demande en vérification. ⚠️ **Le « nous prenons contact dans deux jours ouvrés » n'est plus un engagement ferme au contrat** (art. 3.2 réécrit : « la Société **s'efforce de** prendre contact ») — `MANQUES-ET-RISQUES` §F.2 n° 4 le classait parmi les cinq risques d'échec les plus probables. Le SLA reste un objectif **interne** de console (REQ-UX-022) ; sa seule conséquence externe est la confirmation tacite à trente jours (REQ-DM-042).",
+      "source": "critique de complétude (2026-09-03) ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
@@ -4926,6 +4974,55 @@
       "phase": 1,
       "taches": [
         "INT-T40"
+      ]
+    },
+    {
+      "id": "REQ-INT-061",
+      "domaine": "integration",
+      "texte": "**La liste d'appels lue par axion-ia, et le rappel d'agenda (LOT OPCO, D-OPCO-2).** axion-ia lit la liste « À appeler aujourd'hui » de Partners par une route `GET` authentifiée par un SECRET DISTINCT de portée `appels:lire` (même juge que l'API entrante : HMAC horodaté, `kid`, allowlist d'IP ; temps constant ; 404 indistinct ; compteur à son nom, `surPanne: refuser` ; débit après l'authentification ; pagination keyset). La réponse est un objet FERMÉ `{ reference, siren, raisonSociale, entrepriseIndividuelle, aAppelerDepuis }` et rien d'autre : AUCUNE coordonnée du contact, ni apporteur, ni IDCC. Une attribution en opposition ou au contact purgé n'y figure JAMAIS. Chaque lecture est journalisée sans donnée. Le rappel d'agenda ne porte que la raison sociale (un libellé NEUTRE pour une entreprise individuelle) et un lien vers la fiche de la console Partners, sans participant, dans un agenda privé, retiré à la sortie de la liste, à l'opposition et à la purge ; jamais le SIREN.",
+      "source": "Cahier OPCO du 2026-10-02 (§8 chantier 3, §11 étape 5) ; D-OPCO-2 par délégation ; arbitrage A01 entre A02 et la lentille sécurité (2026-10-02)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 12,
+      "etape": 8,
+      "phase": 2,
+      "taches": [
+        "INT-T59-P",
+        "INT-T63-A"
+      ]
+    },
+    {
+      "id": "REQ-INT-062",
+      "domaine": "integration",
+      "texte": "**L'OPCO déduit de l'IDCC, dans axion-ia (LOT OPCO).** La correspondance IDCC → OPCO est importée d'une source OFFICIELLE (lue et datée, RM-08), jamais codée en dur ; ses changements sont journalisés, jamais écrasés. Chaque entreprise porte un statut IDCC fermé {non_renseigne, probable, concordant, anomalie, confirme} issu du contrôle croisé (IDCC saisi, `liste_idcc` de l'API publique, NAF), dont `confirme` exige une PREUVE DÉCLARATIVE typée (auteur, date, source), sans aucun fichier ni route de téléversement. Un OPCO non confirmé est toujours affiché « probable ». Le dossier de financement ne se génère pas tant que l'IDCC n'est pas `confirme`.",
+      "source": "Cahier OPCO du 2026-10-02 (§5, §8 chantier 1, §10) ; A02 et lentille sécurité (2026-10-02)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 2,
+      "taches": [
+        "INT-T60-A",
+        "INT-T61-A",
+        "INT-T62-A",
+        "INT-T64-A",
+        "INT-T67-A",
+        "UX-P2-17"
+      ]
+    },
+    {
+      "id": "REQ-INT-063",
+      "domaine": "integration",
+      "texte": "**L'API 4 : Partners pousse vers le CRM Pro ce qui est déclaré (décision de Williams du 2026-10-02, option B).** Partners POUSSE seul (aucune route de lecture n'est ouverte au CRM), par une outbox qui ne garde que la référence et la version, jamais un clair ; la charge se construit à l'envoi depuis les colonnes courantes, et le contrôle d'opposition se fait dans la MÊME transaction. Requêtes signées HMAC-SHA256 (horodatage et corps, 300 s), secret DÉDIÉ avec `kid`, hôte en liste fermée, HTTPS, aucune redirection ; idempotence par `Idempotency-Key` ; journal sans charge. Contrat `.strict()` à empreinte épinglée des deux côtés : `reference`, `entreprise{…}`, `contact{prenom, nom, email?, telephone?, fonction?}`, `provenance` {apporteur, commercial, societe}, `informationTiersVersion`. Ne sortent JAMAIS : la date du contact ni aucune date d'acte, toute identité de l'apporteur (même un identifiant opaque), ses empreintes, le contexte libre, la précision du lien d'intérêt, les signaux de sincérité, l'état d'un dépôt refusé ou en attente, les coordonnées géographiques. Une entreprise individuelle (forme non prouvée personne morale) n'est jamais émise. Aucune émission avant que le CRM ne lise la version, ni avant les textes validés par Williams et le registre et l'AIPD amendés.",
+      "source": "Décision de Williams du 2026-10-02 (option B, verbatim dans REPONSES-WILLIAMS-SEANCE-2026-10-02.md, hors dépôt) ; A02, lentille sécurité et A07 (2026-10-02)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 2,
+      "taches": [
+        "INT-T68-P",
+        "INT-T69-P"
       ]
     },
     {
@@ -5031,8 +5128,7 @@
       "etape": 8,
       "phase": 1,
       "taches": [
-        "DM-13",
-        "UX-P1-10"
+        "DM-13"
       ]
     },
     {
@@ -5124,8 +5220,8 @@
     {
       "id": "REQ-UX-046",
       "domaine": "produit-ux",
-      "texte": "La console tient une **bibliothèque de documents** mis à disposition des apporteurs : ajout, **remplacement versionné** (la version précédente est conservée et n'est plus servie), **retrait** (dépublication, la trace restant), **ciblage** (tous, un palier, un apporteur) et **date de publication**. Côté espace, un document apparaît dans « Ressources » (UX-P3-02) pour les seuls apporteurs ciblés, à partir de sa date de publication ; un document qui n'est pas ciblé sur l'apporteur connecté répond **404 byte-identique** à un identifiant inexistant (REQ-SEC-009, couche `forApporteur`, REQ-SEC-008). Les fichiers sont des **PDF** sur stockage privé servis par URL signée courte (REQ-SEC-026), sans logo ni charte (REQ-JUR-041), relus par Will avant publication (REQ-CPL-023) ; le vocabulaire est « documents de présentation », jamais le terme que REQ-JUR-041 bannit. Ajout, remplacement et retrait sont journalisés (`HYP-W15-BIBLIOTHEQUE`). Décision W15 (5), 2026-09-25. Tests : ciblage palier → visible pour ce palier, 404 pour un autre ; publication datée demain → invisible aujourd'hui ; remplacement → seule la dernière version est servie ; fichier non PDF (octets d'en-tête) → refus ; journal vérifié.",
-      "source": "décision de Will du 2026-09-25, W15 (point 5)",
+      "texte": "La console tient une **bibliothèque de documents** mis à disposition des apporteurs : ajout, **remplacement versionné** (la version précédente est conservée et n'est plus servie), **retrait** (dépublication, la trace restant), **ciblage** (tous, un apporteur) (le ciblage par palier est retiré au rattrapage 84 : aucun palier n'existe par apporteur, REQ-DM-009) et **date de publication**. Côté espace, un document apparaît dans « Ressources » (UX-P3-02) pour les seuls apporteurs ciblés, à partir de sa date de publication ; un document qui n'est pas ciblé sur l'apporteur connecté répond **404 byte-identique** à un identifiant inexistant (REQ-SEC-009, couche `forApporteur`, REQ-SEC-008). Les fichiers sont des **PDF** sur stockage privé servis par URL signée courte (REQ-SEC-026), sans logo ni charte (REQ-JUR-041), relus par Will avant publication (REQ-CPL-023) ; le vocabulaire est « documents de présentation », jamais le terme que REQ-JUR-041 bannit. Ajout, remplacement et retrait sont journalisés (`HYP-W15-BIBLIOTHEQUE`). Décision W15 (5), 2026-09-25. Tests : ciblage apporteur → visible pour cet apporteur, 404 pour un autre ; publication datée demain → invisible aujourd'hui ; remplacement → seule la dernière version est servie ; fichier non PDF (octets d'en-tête) → refus ; journal vérifié.",
+      "source": "décision de Will du 2026-09-25, W15 (point 5) ; ciblage par palier retiré le 2026-10-03 (décision de Williams, aucun palier par apporteur, rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 7,
@@ -5159,6 +5255,7 @@
         "GOV-113",
         "JUR-T32",
         "JUR-T36",
+        "JUR-T57",
         "QA-T33",
         "QA-T58",
         "SEC-29",
@@ -5185,6 +5282,8 @@
         "UX-P1-44",
         "UX-P1-45",
         "UX-P1-46",
+        "UX-P1-48",
+        "UX-P1-51",
         "UX-P2-01",
         "UX-P2-02",
         "UX-P2-03",
@@ -5213,8 +5312,8 @@
     {
       "id": "REQ-UX-048",
       "domaine": "produit-ux",
-      "texte": "Carte des routes unique pour la console (`docs/CONSOLE-ROUTES.md`) : route, écran, rôle, phase et statut (prévue ou livrée), REQ, maquette. Navigation DÉRIVÉE des droits `ecran:*` de la matrice. Bureau : ≤ 7 entrées de premier niveau groupées par métier ; moins de 768 px : barre inférieure de ≤ 4 entrées plus un menu, sans défilement horizontal à 320 px. Accueil par rôle ET par phase : la première route livrée de la liste de préférence du rôle ; à défaut, un état vide guidant qui dit ce qui arrive et quand ; jamais de 404. Connexion propre à la console : lien et code à 6 chiffres, page « lien déjà utilisé » ; elle mène à l'accueil ou à l'URL demandée (chemin relatif `/console/`) en une action. Écran d'accès refusé qui explique quoi faire. Recherche globale bornée par la matrice. Page « Votre rôle » dérivée du GLOSSAIRE §7.",
-      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; module repris de REQ-UX-018 (console), sans étape",
+      "texte": "Carte des routes unique pour la console (`docs/CONSOLE-ROUTES.md`) : route, écran, rôle, phase et statut (prévue ou livrée), REQ, maquette. Navigation DÉRIVÉE des droits `ecran:*` de la matrice. Bureau : une barre latérale de ≤ 7 entrées de premier niveau groupées par métier ; moins de 768 px : barre inférieure de ≤ 4 entrées plus un bouton Menu qui ouvre la barre latérale en tiroir, sans défilement horizontal à 320 px. Accueil par rôle ET par phase : la première route livrée de la liste de préférence du rôle ; à défaut, un état vide guidant qui dit ce qui arrive et quand ; jamais de 404. Connexion propre à la console : lien et code à 6 chiffres, page « lien déjà utilisé » ; elle mène à l'accueil ou à l'URL demandée (chemin relatif `/console/`) en une action. Écran d'accès refusé qui explique quoi faire. Recherche globale bornée par la matrice. Page « Votre rôle » dérivée du GLOSSAIRE §7.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; module repris de REQ-UX-018 (console), sans étape ; précisée le 2026-10-03 : décision de Williams du 2026-10-03 (réponses « NON C4ETAIT MIEUX JUSTE AVANT » et « oui 5 ans et ok pour la console »), rattrapage 85",
       "statut": "active",
       "remplaceePar": null,
       "module": 17,
@@ -5235,6 +5334,7 @@
         "UX-P1-16",
         "UX-P1-18",
         "UX-P1-20",
+        "UX-P1-50",
         "UX-P2-03",
         "UX-P2-05",
         "UX-P3-04",
@@ -5331,7 +5431,7 @@
     {
       "id": "REQ-DM-046",
       "domaine": "domaine-donnees",
-      "texte": "Au dépôt, le code NAF (`activite_principale`, nomenclature NAF rév. 2) rendu par le client recherche-entreprises (REQ-INT-021) est **stocké sur l'attribution** (REQ-DM-030). Un dépôt fait en **repli manuel** (tiers indisponible, REQ-INT-020) porte un code NAF **nul — jamais deviné, jamais saisi par l'apporteur** ; il est complété par un nouvel appel au tiers après la fermeture du disjoncteur (`HYP-W15-SECTEUR`) et reste « non renseigné » tant que le tiers ne l'a pas rendu. Décision W15 (4), 2026-09-25. Tests : fixture enregistrée → code stocké égal à celui de la fixture ; repli manuel → code nul, puis complété par la reprise sur fixture ; le formulaire de dépôt ne porte aucun champ de code NAF.",
+      "texte": "Au dépôt, le code NAF (`activite_principale`, nomenclature NAF rév. 2) rendu par le client recherche-entreprises (REQ-INT-021) est **stocké sur l'attribution** (REQ-DM-030). Un dépôt fait en **repli manuel** (tiers indisponible, REQ-INT-020) porte un code NAF **nul — jamais deviné, jamais saisi par l'apporteur** ; il est complété par un nouvel appel au tiers après la fermeture du disjoncteur (`HYP-W15-SECTEUR`) et reste « non renseigné » tant que le tiers ne l'a pas rendu. Décision W15 (4), 2026-09-25. Tests : fixture enregistrée → code stocké égal à celui de la fixture s'il est en NAF rév. 2, nul sinon (CHECK de DM-07) ; repli manuel → code nul, puis complété par la reprise sur fixture ; le formulaire de dépôt ne porte aucun champ de code NAF.",
       "source": "décision de Will du 2026-09-25, W15 (point 4)",
       "statut": "active",
       "remplaceePar": null,
@@ -5434,6 +5534,37 @@
       ]
     },
     {
+      "id": "REQ-DM-064",
+      "domaine": "domaine-donnees",
+      "texte": "**L'IDCC saisi au dépôt (LOT OPCO, D-OPCO-6).** Le dépôt accepte un IDCC FACULTATIF : quatre chiffres (`CHECK ^[0-9]{4}$`, stocké en texte pour garder les zéros de tête), en clair, rendu à l'apporteur (c'est sa saisie), transmis à axion-ia par l'API 1. Aucun document n'est demandé ni accepté : JAMAIS de bulletin de paie, ni collecté par l'apporteur, ni stocké dans Partners, ni suggéré comme méthode (l'aide du champ ne le nomme pas). Un IDCC absent ne bloque jamais le dépôt.",
+      "source": "Cahier OPCO du 2026-10-02 (§5.4, §8 chantier 2, §10.3) ; arbitrage de Williams (cahier absorbé) ; D-OPCO-6 par délégation ; A02, A07 et lentille sécurité (2026-10-02)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 9,
+      "etape": 7,
+      "phase": 2,
+      "taches": [
+        "DM-49",
+        "INT-T58-A",
+        "INT-T58-P",
+        "UX-P2-16"
+      ]
+    },
+    {
+      "id": "REQ-DM-065",
+      "domaine": "domaine-donnees",
+      "texte": "**Le statut juridique de l'apporteur est une liste FERMÉE.** `StatutJuridique` est un vrai enum : `micro_entrepreneur`, `entrepreneur_individuel`, `sarl`, `eurl`, `sas`, `sasu`, `sa`, `snc` ; il alimente `{{APPORTEUR_STATUT}}` au préambule du contrat par son libellé du glossaire, jamais par une chaîne libre. Chaque statut se range dans UNE `QualiteExercice` (REQ-JUR-022, liste de quatre valeurs inchangée) : les deux premiers selon l'activité déclarée (`commercant`, `artisan` ou `profession_liberale`), les six sociétés en `societe_commerciale`. Un témoin fige la liste et la correspondance. Le portage salarial et l'entrepreneur-salarié de coopérative changent qui signe et qui facture : ils relèvent de la phase 2.",
+      "source": "Décision de Williams du 2026-10-02 (« ok donc rajoute tous les statuts autorisés »), sur l'avis d'A07 du même jour (hors dépôt) ; relayée par la coordination",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 4,
+      "etape": 4,
+      "phase": 1,
+      "taches": [
+        "DM-56"
+      ]
+    },
+    {
       "id": "REQ-QA-035",
       "domaine": "Annexe — passe de dédoublonnage (à appliquer par le Gardien du spec, GOV-001)",
       "texte": "Le score de candidature est calculé **une seule fois par axionia** et transporté figé (total, parts, `scoreBaremeVersion`) ; Partners ne le recalcule jamais ; test de parité sur fixtures exportées.",
@@ -5480,8 +5611,8 @@
     {
       "id": "REQ-EXT-003",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "🔴 **Charte relationnelle** : aucun champ de suivi n'est obligatoire ; le nombre d'échanges n'entre ni dans le palier de confiance, ni dans le score, ni dans un classement, ni dans une alerte ; aucune relance automatique du type « vous n'avez rien saisi depuis N jours » n'existe. Test : une entreprise sans aucun échange n'affiche aucune alerte et ne change aucun compteur.",
-      "source": "EXTENSIONS §2.3 ; plan §3.2",
+      "texte": "🔴 **Charte relationnelle** : aucun champ de suivi n'est obligatoire ; le nombre d'échanges n'entre ni dans le score, ni dans un classement, ni dans une alerte ; aucune relance automatique du type « vous n'avez rien saisi depuis N jours » n'existe. Test : une entreprise sans aucun échange n'affiche aucune alerte et ne change aucun compteur.",
+      "source": "EXTENSIONS §2.3 ; plan §3.2 ; « palier de confiance » retiré le 2026-10-03 (décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat, rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -5509,8 +5640,8 @@
     {
       "id": "REQ-EXT-005",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "La fiche prospect côté console montre **les échanges** (tous — la notion d'échange privé est supprimée, REQ-EXT-002 / M-14), la fiche de qualification, les lignes de commission rattachées et le journal immuable ; la navigation est **bidirectionnelle** : d'une ligne de commission vers la fiche, et de la fiche vers l'encaissement. ⚠️ Voir un échange **ne crée aucun compteur** : le nombre d'échanges n'entre ni dans le palier, ni dans le score, ni dans un classement, ni dans une alerte (REQ-EXT-003, inchangée).",
-      "source": "EXTENSIONS §2.5 ; tableaux-de-bord §4.4 ; synthèse du 2026-09-03, M-14",
+      "texte": "La fiche prospect côté console montre **les échanges** (tous — la notion d'échange privé est supprimée, REQ-EXT-002 / M-14), la fiche de qualification, les lignes de commission rattachées et le journal immuable ; la navigation est **bidirectionnelle** : d'une ligne de commission vers la fiche, et de la fiche vers l'encaissement. ⚠️ Voir un échange **ne crée aucun compteur** : le nombre d'échanges n'entre ni dans le score, ni dans un classement, ni dans une alerte (REQ-EXT-003, inchangée).",
+      "source": "EXTENSIONS §2.5 ; tableaux-de-bord §4.4 ; synthèse du 2026-09-03, M-14 ; palier retiré le 2026-10-03 (décision de Williams, aucun palier par apporteur, REQ-DM-009, rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 20,
@@ -5538,8 +5669,8 @@
     {
       "id": "REQ-EXT-007",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "Un apporteur dont une part de dépôts au-delà du seuil de configuration d'une fenêtre glissante portent sur des entreprises `libre_deja_travaillee` produit un signal d'anomalie (ramassage), jamais un refus.",
-      "source": "EXTENSIONS §3.2",
+      "texte": "Le dépôt d'une entreprise libre que la Société a déjà travaillée n'est pas une anomalie et ne produit aucun effet sur le dépôt ni sur l'apporteur : ni vérification, ni suspension, ni statut. Il peut seulement placer la demande de confirmation en tête de la liste des appels de la Société, au titre de la prise de contact que l'article 3.2 lui permet. Aucun compte, aucune proportion et aucune fenêtre de temps ne sont calculés sur les dépôts d'un apporteur.",
+      "source": "EXTENSIONS §3.2 ; amendée le 2026-10-03 par la juriste (art. 3.2 al. 4 et art. 3.7 al. 3 du contrat : le nombre et le rythme sont exclus « même partiellement »), rattrapage 82",
       "statut": "active",
       "remplaceePar": null,
       "module": 10,
@@ -5722,15 +5853,18 @@
     {
       "id": "REQ-EXT-020",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "Si la prolongation de fenêtre est retenue (HYP-W9) : une attribution dont un devis est `en cours` au terme de la fenêtre d'attribution (`FENETRE_MOIS`) est prolongée **une seule fois de 3 mois**, automatiquement, les deux parties étant notifiées ; la prolongation est journalisée et visible dans la fiche.",
+      "texte": "**PROPOSITION (JUR-T54, en attente de la validation finale de Williams ; principe validé : « il ne faut pas qu'il perde l'entreprise tant qu'il s'en occupe »).** Une attribution est prolongée **une seule fois de 3 mois** au terme de la fenêtre (`FENETRE_MOIS`) si la Société s'occupe de l'entreprise (rendez-vous tenu ou planifié, ou échange consigné dans les `PROLONGATION_FAITS_RECENTS_JOURS` derniers jours) OU si l'apporteur la DEMANDE (un clic, ouvert dans les `PROLONGATION_DEMANDE_OUVERTE_JOURS` derniers jours) et que l'entreprise confirme son intérêt à la Société ; l'absence de demande n'emporte aucune conséquence. La prolongation est notifiée aux deux parties, journalisée et visible dans la fiche. Remplace la prolongation automatique « si un devis est en cours » (HYP-W9).",
       "source": "EXTENSIONS §3.3",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
       "etape": 9,
-      "phase": 2,
+      "phase": 1,
       "taches": [
-        "EXT-T07"
+        "EXT-T07",
+        "JUR-T54",
+        "UX-P2-18",
+        "UX-P2-19"
       ]
     },
     {
@@ -5881,6 +6015,8 @@
         "JUR-T24",
         "JUR-T27",
         "JUR-T28",
+        "JUR-T56",
+        "JUR-T58",
         "SEC-14",
         "SEC-15",
         "SEC-41",
@@ -5890,15 +6026,16 @@
     {
       "id": "REQ-JUR-032",
       "domaine": "charte relationnelle (REQ-JUR-031 → 038)",
-      "texte": "🔴 Le palier est un **seuil de vérification prioritaire**, jamais un objectif **et jamais un plafond** : l'espace n'affiche **jamais** ce qui manque pour l'étape suivante ; aucun compte à rebours, aucune barre de progression, aucune notification de franchissement ; jamais nommé « niveau », « statut », « rang » ni « grade » ; le seuil **ne redescend jamais** pour cause d'inactivité. 🔴 **Le libellé « vous pouvez déclarer jusqu'à 15 entreprises par semaine » est RETIRÉ** (corrigé le 2026-09-03, P-2) : il annonçait un plafond que REQ-DM-010 ne pose pas — « **aucun dépôt n'est refusé pour dépassement de seuil** », le seuil 5/15/25 déclenche une **vérification prioritaire**, pas un refus. Soit l'espace mentait sur l'étendue des droits (art. 1112-1 C. civ., dont l'al. 5 est d'ordre public et que l'art. 17 ne peut pas écarter), soit le plafond existait et était inopposable. Libellé unique, qui ne promet ni ne restreint : « **Vos déclarations au-delà de quinze par semaine font l'objet d'une vérification prioritaire ; aucune n'est refusée.** » Tests : snapshot du libellé ; toute formulation contenant « jusqu'à N » ou « plafond » sur ce composant → **gate rouge** ; un dépôt au-delà du seuil aboutit avec `verificationPrioritaire = true`.",
-      "source": "note interne (hors dépôt) §3.2 B ; motifs 1 et 6 ; REQ-DM-010 ; art. 1112-1 C. civ. ; synthèse du 2026-09-03, P-2",
+      "texte": "Aucun palier ni seuil de dépôts n'existe par apporteur. La priorité d'appel est un ordre de travail interne de la Société, fondé sur sa capacité ; elle n'est pas une vérification, et n'en a aucun effet.",
+      "source": "note interne (hors dépôt) §3.2 B ; motifs 1 et 6 ; REQ-DM-010 ; art. 1112-1 C. civ. ; synthèse du 2026-09-03, P-2 ; réécrite le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
       "statut": "active",
       "remplaceePar": null,
       "module": 9,
       "etape": 7,
       "phase": 1,
       "taches": [
-        "JUR-T24"
+        "JUR-T24",
+        "SEC-56"
       ]
     },
     {
@@ -5949,7 +6086,7 @@
     {
       "id": "REQ-JUR-036",
       "domaine": "charte relationnelle (REQ-JUR-031 → 038)",
-      "texte": "Toute PR touchant `src/app/(espace)/**`, `emails/apporteur/**`, `micro-copy/**` ou les ressources diffusées porte le label `apporteur-facing`, **exige la revue du rôle `juriste`** (bloquante) et recopie dans son corps la checklist des 12 motifs interdits, chaque ligne cochée ; un motif coché « présent » bloque la fusion.",
+      "texte": "Toute PR touchant `src/app/(espace)/**`, `emails/apporteur/**`, `micro-copy/**` ou les ressources diffusées porte le label `apporteur-facing`, **exige la revue du rôle `juriste`** (bloquante) et recopie dans son corps la checklist des 12 motifs interdits, chaque ligne cochée ; un motif coché « présent » bloque la fusion. Amendement (rattrapage 54, décision de Williams du 2026-10-02, point 10 de la séance) : quand la juriste titulaire (A07) est l’autrice du texte relu, la revue bloquante est celle d’une SECONDE JURISTE indépendante, qui n’a rien écrit de la tâche ; elle signe « A07 · juriste » suivi d’une ligne « Suppléance : … (décision de Williams du 02/10, point 10) ». La titulaire ne se relit jamais. La garde `jur:revue-apporteur-facing` est inchangée : elle lit l’en-tête « A07 · juriste ».",
       "source": "note interne (hors dépôt) §5.3",
       "statut": "active",
       "remplaceePar": null,
@@ -6058,7 +6195,6 @@
       "taches": [
         "JUR-T24",
         "SEC-19",
-        "UX-P1-10",
         "UX-P1-12"
       ]
     },
@@ -6115,7 +6251,7 @@
     {
       "id": "REQ-JUR-060",
       "domaine": "juridique",
-      "texte": "**Ce que dit l'e-mail au contact.** L'e-mail est envoyé depuis une adresse humaine d'un domaine authentifié (REQ-INT-022). Il nomme l'apporteur (prénom et nom), l'entreprise et le contexte s'il existe, sans date du contact (REQ-JUR-040) ; il porte les deux liens, l'information de l'art. 14 (identité du responsable, finalité, base légale, destinataires, durée, droits, source des données : l'apporteur) et un lien d'opposition. Il ne demande rien d'autre qu'un clic ; il ne contient ni pièce jointe ni lien autre que ceux-là. Le texte envoyé est versionné et la version est journalisée avec l'envoi.",
+      "texte": "**Ce que dit l'e-mail au contact.** L'e-mail est envoyé depuis une adresse humaine d'un domaine authentifié (REQ-INT-022). Il nomme l'apporteur (prénom et nom), l'entreprise et le contexte s'il existe, sans date du contact (REQ-JUR-040) ; il porte les deux liens, l'information de l'art. 14 (identité du responsable, finalité, base légale, destinataires, durée, droits, source des données : l'apporteur) et un lien d'opposition. Il ne demande rien d'autre qu'un clic ; il ne contient ni pièce jointe ni lien autre que ceux-là. Le texte envoyé est versionné et la version est journalisée avec l'envoi. Amendement LOT CRM PRO (rattrapage 57) : après la décision de Williams du 2026-10-02 (option B), l'information de l'art. 14 nomme aussi le CRM d'Axion-IA, la finalité commerciale, la base légale, la durée propre et l'opposition à la prospection présentée à part, dans la version 5 du bloc (JUR-T51), dont le texte est validé par Williams avant tout envoi.",
       "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-JUR-009",
       "statut": "active",
       "remplaceePar": null,
@@ -6125,7 +6261,99 @@
       "taches": [
         "INT-T40",
         "JUR-T09",
+        "JUR-T51",
         "UX-P1-41"
+      ]
+    },
+    {
+      "id": "REQ-JUR-061",
+      "domaine": "juridique",
+      "texte": "**La commande sous condition suspensive (LOT OPCO, D-OPCO-8).** Une commande conclue sous condition suspensive (accord de financement de l'OPCO) est datée de sa SIGNATURE ; elle est réputée n'avoir jamais existé si la condition défaille (C. civ. art. 1304 et 1304-6), ce qui vaut annulation au sens de l'art. 3.3. La RENONCIATION du client à la condition avant la date limite (art. 1304-4) garde la convention et la date de la commande ; un accord APRÈS un refus de l'OPCO forme une NOUVELLE convention, datée de sa signature. L'avenant de l'art. 4.4 qui l'écrit est validé par Williams avant tout premier envoi en signature.",
+      "source": "Cahier OPCO du 2026-10-02 (§6.4) ; avis d'A07 (2026-10-02) ; D-OPCO-8",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 11,
+      "etape": 10,
+      "phase": 1,
+      "taches": [
+        "INT-T65-A",
+        "INT-T66-A",
+        "JUR-T47"
+      ]
+    },
+    {
+      "id": "REQ-JUR-062",
+      "domaine": "juridique",
+      "texte": "**Le contrat suit la décision de Williams du 2026-10-02 (option B : les données déclarées vont au CRM Pro dès la déclaration), dans des textes que Williams valide avant tout premier envoi en signature.** Williams a autorisé l'écriture du nouvel art. 3.5 al. 4, mot pour mot : « J'autorise l'écriture du nouvel article 3.5 alinéa 4 (option B : le CRM dès la déclaration), avec les deux protections pour l'apporteur. Vas-y. » (rattrapage 61) ; le texte, écrit par A07 avec les deux protections de l'apporteur (aucun démarchage pendant le délai de confirmation ; aucun usage des vérifications faites sans déclaration), reste à valider par Williams après la relecture de la suppléante. Ce qui est déjà acquis par délégation : toute commande de l'entreprise attribuée signée pendant l'attribution reste commissionnée, quel que soit celui qui la conclut ; le délai `RESERVE_APRES_ACTE_APPORTEUR_JOURS` est gardé ; la conservation au CRM a sa durée propre, `CRM_DUREE_PROSPECT_ANS`, à compter du dernier échange à l'initiative de la personne, sauf opposition ; aucune émission avant les textes validés.",
+      "source": "Décision de Williams du 2026-10-02 (option B) ; textes d'A07 ; décisions de la coordination par délégation (délai de 30 jours gardé, deux phrases recommandées gardées par défaut)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 11,
+      "etape": 10,
+      "phase": 1,
+      "taches": [
+        "JUR-T50",
+        "JUR-T51",
+        "JUR-T52"
+      ]
+    },
+    {
+      "id": "REQ-JUR-063",
+      "domaine": "juridique",
+      "texte": "**L'admission au KYC refuse, avec un motif NOMMÉ pour chacun :** (1) l'absence de SIREN actif ; (2) la personne salariée, dirigeante ou associée d'Axion-IA, sur sa seule déclaration ; (3) un statut hors de la liste de REQ-DM-065. Les professions dont la déontologie interdit de percevoir un apport sont EXCLUES D'OFFICE (avocats, notaires, commissaires de justice, professions de santé), par une liste de codes figée par un témoin. Le signal bloquant « attestation spécifique requise » de REQ-JUR-022 reste inchangé pour les professions réglementées qui peuvent être admises. Contre l'oracle (lentille sécurité, 2026-10-02) : (1) le motif nommé `lien_avec_la_societe` ne naît QUE de la déclaration de la personne ; (2) le contrôle croisé (REQ-CPL-030) ne refuse pas : il BLOQUE pour revue humaine, avec une réponse IDENTIQUE au candidat, qu'il y ait correspondance ou non ; (3) témoin : deux candidatures, correspondante et non correspondante, reçoivent la même réponse ; (4) comparaison par empreintes (`PII_HASH_KEY`), journal sans nom ni adresse. Aucun refus ne laisse de donnée conservée au-delà de ce que le registre de traitement prévoit (sécurité, 2026-10-02 : les motifs non persistés ne couvrent pas ce qu'a saisi la personne refusée).",
+      "source": "Décision de Williams du 2026-10-02 (« ok donc rajoute tous les statuts autorisés »), sur l'avis d'A07 du même jour (hors dépôt) ; relayée par la coordination",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 4,
+      "etape": 4,
+      "phase": 1,
+      "taches": [
+        "DM-56"
+      ]
+    },
+    {
+      "id": "REQ-JUR-064",
+      "domaine": "juridique",
+      "texte": "**L'art. 23 du contrat (déclarations de l'Apporteur) couvre la situation envers un employeur :** il déclare que l'activité n'est contraire ni à une clause de non-concurrence ou d'exclusivité, et qu'il a vérifié sa situation, le cas échéant, auprès de son employeur. Ce texte EXISTANT suffit, et aucune phrase n'y est ajoutée (une redite pourrait se lire comme deux obligations, art. 1190 C. civ. ; A07, 2026-10-02). Un témoin vérifie que le gabarit porte les deux fragments « clause de non-concurrence ou d'exclusivité » et « auprès de son employeur ».",
+      "source": "Avis d'A07 du 2026-10-02 (hors dépôt), retenu par la décision de Williams du même jour ; relayé par la coordination",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 11,
+      "etape": 10,
+      "phase": 1,
+      "taches": [
+        "JUR-T55"
+      ]
+    },
+    {
+      "id": "REQ-JUR-065",
+      "domaine": "juridique",
+      "texte": "**La page ouverte par le lien du courriel au contact permet TOUS ses droits** (accès, rectification, effacement, limitation, opposition), chacun distinct, sans compte et sans condition, avec DEUX actions distinctes : exercer un droit, et s'opposer. C'est le moyen électronique de l'art. 12 du RGPD, puisque `{adresseDroits}` est postale dans le courriel ; la clé `droits` de l'information de l'art. 14 (v5) y renvoie. Condition de mise en service d'A07 (2026-10-02), mot pour mot : « Aucun courriel en v5 ne doit partir tant que cette page n'offre pas ces droits, chacun distinct de l'opposition et sans compte. Sinon, l'information de l'art. 14 serait inexacte. »",
+      "source": "Arbitrage de la coordination du 2026-10-02, accepté par A07 et la lentille sécurité ; condition de mise en service d'A07 (2026-10-02)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "DM-59",
+        "DM-60",
+        "JUR-T59",
+        "UX-P1-48"
+      ]
+    },
+    {
+      "id": "REQ-JUR-066",
+      "domaine": "juridique",
+      "texte": "**Une personne qui répond à une annonce de commercial salarié n'entre dans le tunnel des apporteurs qu'après avoir accepté une proposition.** Le script d'import des CV la route vers le parcours « proposer le réseau » qui existe déjà ; il ne crée ni ne rattache aucune fiche d'apporteur sans ce consentement. Les deux populations, salariés et apporteurs, restent séparées dès le départ.",
+      "source": "Décision de Williams du 2026-10-02, point 4 de la séance (« Pour le point 4 = A. ») ; HYP-CANDIDATS-INDEED",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "INT-T71-A"
       ]
     },
     {
@@ -6151,7 +6379,8 @@
         "GOV-089",
         "GOV-092",
         "GOV-094",
-        "GOV-105"
+        "GOV-105",
+        "SEC-48"
       ]
     },
     {

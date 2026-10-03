@@ -1,0 +1,74 @@
+/**
+ * Les durées de CONSERVATION — un SOUS-MODULE de la SSOT (partners/ADR-0022 §12 ; condition d'A02 au
+ * rattrapage 53). Chaque durée a la forme `Seuil` (valeur, unité, source, renvois, date de
+ * vérification) ; `SEUILS` (`ssot.ts`) les ÉTALE, l'accès reste unique (`SEUILS.X`) et la garde
+ * `ssot:seuils` les juge comme les autres. Une durée vit ICI ou dans `ssot.ts`, jamais aux deux
+ * endroits.
+ *
+ * HYP-RGPD-RETENTION : valeurs PROVISOIRES, à confirmer par Williams (il n'y a pas de DPO sur le
+ * projet, décision du 2026-09-03) ; un test HYP rougit si l'une change sans décision datée.
+ */
+import type { Seuil } from './ssot';
+
+const LE = '2026-10-02';
+
+export const DUREES_DE_RETENTION = {
+  /** REQ-SEC-030 : le contact d'une attribution libérée (invalidée, perdue, expirée, périmée). */
+  CONTACT_PURGE_APRES_LIBERATION_JOURS: {
+    valeur: 90,
+    unite: 'jours',
+    source: 'REQ-SEC-030, HYP-RGPD-RETENTION (valeur provisoire, à confirmer par Williams)',
+    renvois: [],
+    verifieLe: LE,
+  },
+  /** REQ-SEC-030 : le contact d'une attribution convertie, compté depuis le dernier contact. */
+  CONTACT_PURGE_CONVERTIE_APRES_DERNIER_CONTACT_JOURS: {
+    valeur: 1095,
+    unite: 'jours',
+    source: 'REQ-SEC-030, HYP-RGPD-RETENTION (valeur provisoire, à confirmer par Williams)',
+    renvois: [],
+    verifieLe: LE,
+  },
+  // La minimisation de fond (tâche `minimiser_candidatures`) : une candidature reçue restée non
+  // traitée au-delà de ce délai perd `reponsesJson` de sa charge conservée. PLAFOND PROVISOIRE :
+  // jamais plus long sans décision de Williams.
+  CANDIDATURE_NON_TRAITEE_MINIMISEE_APRES_JOURS: {
+    valeur: 30,
+    unite: 'jours',
+    source:
+      'HYP-RGPD-RETENTION, proposition de la lentille sécurité, 2026-10-02 (minimisation des candidatures, REQ-JUR-029) — plafond provisoire, à confirmer par Williams',
+    renvois: [],
+    verifieLe: '2026-10-02',
+  },
+  /** DM-53 (REQ-DM-043) : le SIREN d'un dépôt refusé, effacé douze mois après le refus. */
+  DEPOT_REFUSE_SIREN_PURGE_APRES_MOIS: {
+    valeur: 12,
+    unite: 'mois',
+    source: 'REQ-DM-043, HYP-A02-RETENTION (durée de conservation de depots_refuses)',
+    renvois: [],
+    verifieLe: '2026-10-02',
+  },
+  /**
+   * DM-59 (REQ-JUR-065) : le délai de réponse à une demande de droit du contact, compté de sa
+   * réception. La nouvelle valeur d'une rectification ne survit pas au-delà, même sans traitement.
+   */
+  DROITS_CONTACT_DELAI_REPONSE_MOIS: {
+    valeur: 1,
+    unite: 'mois',
+    source: 'RGPD art. 12.3 (délai de réponse, compté de la réception de la demande), REQ-JUR-065',
+    renvois: [],
+    verifieLe: '2026-10-02',
+  },
+  /**
+   * DM-59 (REQ-JUR-065) : la prolongation du délai de réponse, posée dans le premier mois ; la
+   * valeur d'une rectification survit alors jusqu'à trois mois après la réception.
+   */
+  DROITS_CONTACT_PROLONGATION_MOIS: {
+    valeur: 2,
+    unite: 'mois',
+    source:
+      'RGPD art. 12.3 (prolongation du délai de réponse), REQ-JUR-065, précision d’A07 du 2026-10-02',
+    renvois: [],
+    verifieLe: '2026-10-02',
+  },
+} as const satisfies Record<string, Seuil>;

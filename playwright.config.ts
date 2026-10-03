@@ -31,12 +31,18 @@ export default defineConfig({
   testDir: 'tests/e2e',
   forbidOnly: true,
   projects: [
+    // QA-T33 (REQ-UX-047 point 2) : la console a un profil mobile à 375 px ; ses parcours tournent
+    // AUSSI sur les deux projets mobiles, sans quitter le bureau.
     {
       name: PROJETS.mobileSafari,
-      testMatch: PARCOURS.espace,
+      testMatch: [PARCOURS.espace, PARCOURS.console],
       use: { ...devices['iPhone 14 Pro'] },
     },
-    { name: PROJETS.mobileChrome, testMatch: PARCOURS.espace, use: { ...devices['Pixel 7'] } },
+    {
+      name: PROJETS.mobileChrome,
+      testMatch: [PARCOURS.espace, PARCOURS.console],
+      use: { ...devices['Pixel 7'] },
+    },
     { name: PROJETS.bureau, testMatch: PARCOURS.console, use: { ...devices['Desktop Chrome'] } },
   ],
 });

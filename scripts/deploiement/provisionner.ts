@@ -52,6 +52,7 @@
  */
 import {
   NOMS_DES_SECRETS,
+  NOMS_DES_SECRETS_CONDITIONNELS,
   NOMS_FACULTATIFS,
   NOMS_EN_ROTATION,
   variablesDeRotation,
@@ -59,6 +60,10 @@ import {
   lireTrousseaux,
   formaterRefus,
 } from '../../src/lib/env';
+import {
+  RoleDExecutionRefuse,
+  urlDuRoleDExecution,
+} from '../../src/server/deploiement/role-d-execution';
 
 const PROJET = 'Axion-Partners';
 const ENVIRONNEMENT = 'production';
@@ -83,6 +88,8 @@ const SECRETS_DE_LA_PLATEFORME = [
   'COOLIFY_URL',
   'COOLIFY_API_TOKEN',
   'PARTNERS_URL_PUBLIQUE',
+  // QA-T62 (REQ-DM-024) : le secret du rôle d'exécution du serveur — geste de Williams.
+  'PARTNERS_DB_EXECUTION_SECRET',
 ] as const;
 
 type Element = { uuid?: unknown; name?: unknown };
@@ -184,6 +191,9 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
 
   const secrets: Record<string, string> = {};
   for (const n of NOMS_DES_SECRETS) secrets[n] = env[n] ?? '';
+  // Un secret conditionnel POSÉ est jugé avec les autres (longueur, préfixe, égalité).
+  for (const n of NOMS_DES_SECRETS_CONDITIONNELS)
+    if ((env[n] ?? '') !== '') secrets[n] = env[n] ?? '';
   const lu = lireEnvironnement({ ...secrets, NODE_ENV: 'production', PARTNERS_ENV: 'production' });
   if (!lu.ok) {
     console.error(
@@ -211,6 +221,16 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
       `❌ double clé refusée par la règle du démarrage (src/lib/env.ts) — rien n'est appelé :`
     );
     for (const r of tr.refus) console.error(`   ${formaterRefus(r)}`);
+    return 1;
+  }
+
+  // QA-T62 : le secret du rôle d'exécution est jugé AVANT tout appel, sur une adresse factice.
+  const secretExecution = env.PARTNERS_DB_EXECUTION_SECRET ?? '';
+  try {
+    urlDuRoleDExecution('postgresql://jugement@127.0.0.1/partners', secretExecution);
+  } catch (e) {
+    if (!(e instanceof RoleDExecutionRefuse)) throw e;
+    console.error(`❌ PARTNERS_DB_EXECUTION_SECRET refusé — rien n'est appelé : ${e.message}`);
     return 1;
   }
 
@@ -295,9 +315,25 @@ export async function provisionner(env: NodeJS.ProcessEnv): Promise<0 | 1> {
   const variables: { key: string; value: string }[] = [
     ...NOMS_DES_SECRETS.map((n) => ({ key: n, value: secrets[n] ?? '' })),
     ...Object.entries(rotation).map(([key, value]) => ({ key, value })),
-    { key: 'DATABASE_URL', value: await adresseInterne(uuidBase, NOM_BASE) },
+    // QA-T62 (REQ-DM-024) : DEUX URL — le propriétaire pour la migration, le rôle d'exécution pour le
+    // serveur. Les deux portent un secret : la seconde est masquée comme la première.
+    ...(await (async () => {
+      const migration = await adresseInterne(uuidBase, NOM_BASE);
+      const execution = urlDuRoleDExecution(migration, secretExecution);
+      if (process.env.GITHUB_ACTIONS === 'true') console.log(`::add-mask::${execution}`);
+      return [
+        { key: 'DATABASE_MIGRATION_URL', value: migration },
+        { key: 'DATABASE_URL', value: execution },
+      ];
+    })()),
     { key: 'REDIS_URL', value: await adresseInterne(uuidCache, NOM_CACHE) },
     { key: 'PARTNERS_ENV', value: 'production' },
+    // INT-T57 : les secrets conditionnels, posés seulement s'ils sont présents (jugés par
+    // `lireEnvironnement` avec les autres) ; leur absence n'empêche pas le provisionnement.
+    ...NOMS_DES_SECRETS_CONDITIONNELS.filter((n) => (env[n] ?? '') !== '').map((n) => ({
+      key: n,
+      value: env[n] ?? '',
+    })),
     ...NOMS_FACULTATIFS.filter((n) => n !== 'PARTNERS_ENV' && (env[n] ?? '') !== '').map((n) => ({
       key: n,
       value: env[n] ?? '',

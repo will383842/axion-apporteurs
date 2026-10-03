@@ -217,4 +217,90 @@ describe('REQ-QA-021 — le vidage N−1 est SEMÉ, pas vide', () => {
     // Le candidat que les deux CHECK admettent : porteur_a ET sa grille, sans porteur_b.
     expect(s.sql).toContain(`SELECT ${u}, ${u}, NULL, ${u} WHERE`);
   });
+
+  it('REQ-QA-021 — DM-53 : un CHECK à polarités OPPOSÉES (`(a IS NULL) = (b IS NOT NULL)`) est une EXCLUSION — le semeur remplit l’une sans l’autre', () => {
+    const colonne = (nom: string, type: string, nonNul = false) => ({
+      table: 'refus',
+      colonne: nom,
+      type,
+      nonNul,
+      defaut: false,
+      valeurs: null,
+    });
+    const check = (definition: string) => ({
+      table: 'refus',
+      genre: 'c' as const,
+      definition,
+      colonnes: [],
+      cible: null,
+      colonnesCibles: null,
+    });
+    const s = semis({
+      colonnes: [
+        colonne('id', 'uuid', true),
+        colonne('siren', 'character(9)'),
+        colonne('siren_purge_at', 'timestamp(3) with time zone'),
+      ],
+      contraintes: [
+        check("CHECK ((siren ~ '^[0-9]{9}$'::text))"),
+        check('CHECK (((siren IS NULL) = (siren_purge_at IS NOT NULL)))'),
+      ],
+    });
+    const inserts = s.sql.split('\n').filter((l) => l.startsWith('INSERT'));
+    // Les candidats que le CHECK admet existent : le SIREN SEUL, sans date de purge, et la date seule.
+    // (Les autres candidats, que la base refuse, sont essayés puis écartés : c'est le mécanisme.)
+    expect(inserts.some((l) => /CAST\('\d{9}' AS character\(9\)\), NULL WHERE/.test(l))).toBe(true);
+    expect(
+      inserts.some((l) => /, NULL, CAST\('[^']*' AS timestamp\(3\) with time zone\) WHERE/.test(l))
+    ).toBe(true);
+  });
+});
+
+describe('REQ-QA-021 — SEC-45 : deux colonnes au même motif reçoivent des valeurs DISTINCTES', () => {
+  it('REQ-QA-021 — le rang choisit un autre caractère de la classe, sans sortir du motif', () => {
+    const motif = '^[0-9a-f]{64}$';
+    expect(chaineQuiSatisfait(motif)).toBe('0'.repeat(64));
+    expect(chaineQuiSatisfait(motif, 1)).toBe('1'.repeat(64));
+    expect(chaineQuiSatisfait(motif, 1)).toMatch(new RegExp(motif));
+    expect(chaineQuiSatisfait('^x[a-c]$', 4)).toBe('xb');
+  });
+
+  it('REQ-QA-021 — TÉMOIN : deux empreintes au même motif, liées et différentes par CHECK, se sèment chacune de sa valeur', () => {
+    const colonne = (nom: string, nonNul: boolean) => ({
+      table: 'emissions',
+      colonne: nom,
+      type: 'character(64)',
+      nonNul,
+      defaut: false,
+      valeurs: null,
+    });
+    const check = (definition: string, colonnes: string[]) => ({
+      table: 'emissions',
+      genre: 'c' as const,
+      definition,
+      colonnes,
+      cible: null,
+      colonnesCibles: null,
+    });
+    const s = semis({
+      colonnes: [colonne('jeton_oui_hash', false), colonne('jeton_non_hash', false)],
+      contraintes: [
+        check("CHECK (((jeton_oui_hash)::text ~ '^[0-9a-f]{64}$'::text))", ['jeton_oui_hash']),
+        check("CHECK (((jeton_non_hash)::text ~ '^[0-9a-f]{64}$'::text))", ['jeton_non_hash']),
+        check('CHECK (((jeton_oui_hash IS NULL) = (jeton_non_hash IS NULL)))', [
+          'jeton_oui_hash',
+          'jeton_non_hash',
+        ]),
+        check('CHECK ((jeton_oui_hash <> jeton_non_hash))', ['jeton_oui_hash', 'jeton_non_hash']),
+      ],
+    });
+    const remplies = s.sql
+      .split('\n')
+      .filter((l) => l.startsWith('INSERT') && !l.includes('SELECT NULL, NULL'));
+    expect(remplies.length).toBeGreaterThan(0);
+    for (const l of remplies) {
+      expect(l, l).toContain(`'${'0'.repeat(64)}'`);
+      expect(l, l).toContain(`'${'1'.repeat(64)}'`);
+    }
+  });
 });

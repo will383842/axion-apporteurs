@@ -358,7 +358,8 @@ describe('REQ-SEC-001 REQ-SEC-002 — la demande de lien ne dépend pas de l’e
   });
 
   it('REQ-SEC-001 : un compte au statut qui ne donne pas accès répond comme un compte absent', async () => {
-    const ferme = univers({ comptes: [{ ...MARIE, statut: 'kyc_en_cours' }] });
+    // SEC-43 : `kyc_en_cours` ouvre l'espace en ouverture limitée ; `candidat` reste fermé.
+    const ferme = univers({ comptes: [{ ...MARIE, statut: 'candidat' }] });
     const absent = univers({ comptes: [] });
     const a = await observer(demanderLien, ferme, MARIE.courriel, false);
     const b = await observer(demanderLien, absent, MARIE.courriel, false);

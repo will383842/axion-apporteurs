@@ -108,7 +108,9 @@ describe('REQ-SEC-003 — le cookie de session', () => {
       },
     ]);
     // Le cookie est posé AVANT la redirection, et l'URL ne porte pas le jeton de session.
-    expect(espions.redirections).toEqual(['/connexion?issue=ouverte']);
+    // JUR-T57 (lentille sécurité) : sans base lisible pour l'acceptation, la connexion ne mène JAMAIS
+    // à l'issue habituelle de l'espace, mais à son état d'indisponibilité. Ce banc n'a pas de base.
+    expect(espions.redirections).toEqual(['/connexion?etat=indisponible']);
     expect(COOKIE_DE_SESSION.nom.startsWith('__Host-')).toBe(true);
     expect(COOKIE_DE_SESSION.attributs).not.toHaveProperty('domain');
   });
@@ -284,9 +286,16 @@ describe('REQ-SEC-003 — la vérification à chaque requête', () => {
     expect(refus(await exigerSession(JETON_A, p))).toBe('acceptee');
     m.apporteurs.get('apporteur-a')!.statut = 'suspendu';
     const v = await exigerSession(JETON_A, p);
+    // SEC-43 : la session porte son niveau d'accès — la suspension garde l'ouverture PLEINE.
     expect(v).toEqual({
       ok: true,
-      session: { id: 'session-a', apporteurId: 'apporteur-a', lienConsommeAt: T0 },
+      session: {
+        id: 'session-a',
+        apporteurId: 'apporteur-a',
+        lienConsommeAt: T0,
+        niveau: 'plein',
+        statut: 'suspendu',
+      },
     });
   });
 
@@ -388,13 +397,20 @@ describe('REQ-SEC-003 — le juge de session nomme chaque refus', () => {
       'version_perimee',
       'statut_ferme',
       'releve_requis',
+      'hors_ouverture_limitee',
     ]);
   });
 
-  it('REQ-SEC-003 : une session saine passe, et le verdict ne porte que l’identité de la session', () => {
+  it('REQ-SEC-003 : une session saine passe, et le verdict ne porte que l’identité de la session et son niveau d’accès', () => {
     expect(jugerSession(ligne(saine), T0, KID)).toEqual({
       ok: true,
-      session: { id: 'session-x', apporteurId: 'apporteur-x', lienConsommeAt: T0 },
+      session: {
+        id: 'session-x',
+        apporteurId: 'apporteur-x',
+        lienConsommeAt: T0,
+        niveau: 'plein',
+        statut: 'signe',
+      },
     });
   });
 

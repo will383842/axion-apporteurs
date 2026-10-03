@@ -44,6 +44,7 @@
 import { randomUUID } from 'node:crypto';
 import { appendFileSync } from 'node:fs';
 import { ENTETE_DE_BUILD } from '../../next.config';
+import { politiqueDeContenu } from '../../src/server/securite/entetes';
 import {
   creerAlerteur,
   shaLisible,
@@ -279,6 +280,69 @@ function shaDemande(argv: string[]): string {
   return sha;
 }
 
+// ── SEC-46 : la politique de contenu SERVIE est celle de la configuration ─────────────────────
+
+/** Le nonce neutre qui remplace, des deux côtés, celui que chaque réponse tire. */
+const NONCE_NEUTRE = 'nonce-de-comparaison';
+
+/** La route où la politique se lit : une page publique, que le proxy couvre comme toute page. */
+const ROUTE_DE_LA_POLITIQUE = '/confidentialite';
+
+/**
+ * La politique de PRODUCTION telle que la configuration la produit (`politiqueDeContenu`), nonce
+ * neutralisé. Ce n'est pas un second exemplaire des directives : la configuration est jugée par
+ * `tests/unit/securite/headers.spec.ts` ; ici ne se juge que l'écart entre elle et ce que le domaine
+ * SERT — un mandataire qui la retire ou la réécrit, un proxy qui ne tourne pas.
+ */
+export function politiqueAttendue(): string {
+  return politiqueDeContenu({ nonce: NONCE_NEUTRE, developpement: false });
+}
+
+export type JugementDeLaPolitique =
+  { ok: true } | { ok: false; motif: 'csp_absente' | 'csp_differente' };
+
+/** La politique servie, nonce neutralisé, égale-t-elle celle de la configuration ? */
+export function jugerLaPolitique(servie: string | null): JugementDeLaPolitique {
+  if (servie === null || servie.trim() === '') return { ok: false, motif: 'csp_absente' };
+  const neutre = servie.replace(/'nonce-[A-Za-z0-9+/=_-]+'/g, `'nonce-${NONCE_NEUTRE}'`);
+  return neutre === politiqueAttendue() ? { ok: true } : { ok: false, motif: 'csp_differente' };
+}
+
+/**
+ * Après l'atterrissage du sha COURANT (jamais d'un retour arrière, dont l'image porte sa propre
+ * politique) : l'en-tête `Content-Security-Policy` servi doit être celui de la configuration.
+ * Sinon, NON ATTERRI — correcte en configuration, altérée au service, c'est une politique absente.
+ */
+export async function verifierLaPolitique(base: URL): Promise<0 | 1> {
+  let servie: string | null;
+  try {
+    const r = await fetch(new URL(ROUTE_DE_LA_POLITIQUE, base), {
+      method: 'HEAD',
+      redirect: 'manual',
+      cache: 'no-store',
+    });
+    servie = r.headers.get('content-security-policy');
+  } catch (e) {
+    console.error(
+      `❌ NON ATTERRI : ${base.origin}${ROUTE_DE_LA_POLITIQUE} ne répond pas (${(e as Error).message})`
+    );
+    return 1;
+  }
+  const j = jugerLaPolitique(servie);
+  if (j.ok) {
+    console.log(
+      `✅ politique de contenu servie = configuration (${base.origin}${ROUTE_DE_LA_POLITIQUE})`
+    );
+    return 0;
+  }
+  console.error(
+    `❌ NON ATTERRI : la politique de contenu servie n'est pas celle de la configuration (${j.motif})`
+  );
+  console.error(`   attendue : ${politiqueAttendue()}`);
+  console.error(`   servie   : ${servie ?? 'en-tête absent'}`);
+  return 1;
+}
+
 async function commandeVerifier(argv: string[]): Promise<number> {
   const sha = shaDemande(argv);
   const brut = process.env.PARTNERS_URL_PUBLIQUE ?? '';
@@ -289,7 +353,116 @@ async function commandeVerifier(argv: string[]): Promise<number> {
     );
     return 2;
   }
-  return verifier(sha, adresseSure(brut, 'PARTNERS_URL_PUBLIQUE'), options(argv));
+  const base = adresseSure(brut, 'PARTNERS_URL_PUBLIQUE');
+  const code = await verifier(sha, base, options(argv));
+  return code === 0 ? verifierLaPolitique(base) : code;
+}
+
+// ── QA-T65 (REQ-GOV-014) : l'image tirée par EMPREINTE ───────────────────────────────────────────
+
+/**
+ * L'étiquette `sha-<7>` est immuable par CONVENTION : le registre accepte qu'on la repousse.
+ * L'empreinte désigne un CONTENU. Coolify la lit dans `docker_registry_image_tag` sous la forme
+ * `sha256-<hex>` et tire alors `<image>@sha256:<hex>` (vérifié dans son code, `docs/tiers/coolify.md`) ;
+ * `sha256:<hex>` serait refusé par son motif d'étiquette.
+ */
+const EMPREINTE = /^sha256:[0-9a-f]{64}$/;
+
+/** L'étiquette à poser pour une empreinte ; toute autre valeur (étiquette mobile) est refusée, nommée. */
+export function etiquetteParEmpreinte(empreinte: string): string {
+  if (!EMPREINTE.test(empreinte)) {
+    throw new Error(
+      `empreinte_attendue : « ${empreinte} » n'est pas une empreinte sha256 — une étiquette se déplace, une empreinte non`
+    );
+  }
+  return `sha256-${empreinte.slice('sha256:'.length)}`;
+}
+
+export type JugementDeLEmpreinte = { atterri: true } | { atterri: false; raison: string };
+
+/** L'image que l'application tire, confrontée à l'empreinte publiée : différente, NON ATTERRI. */
+export function jugerLEmpreinteServie(
+  publiee: string,
+  servie: string | null
+): JugementDeLEmpreinte {
+  return servie === etiquetteParEmpreinte(publiee)
+    ? { atterri: true }
+    : {
+        atterri: false,
+        raison: `l'application tire ${servie ?? 'une image non lue'}, et non l'empreinte publiée ${publiee}`,
+      };
+}
+
+/**
+ * L'empreinte de l'image `sha-<7>` publiée, lue au registre (anonymement : l'image est publique),
+ * sur l'en-tête `Docker-Content-Digest` du manifeste. Échec FERMÉ et nommé.
+ */
+async function empreintePubliee(sha: string): Promise<string> {
+  const depot = (process.env.GITHUB_REPOSITORY ?? '').toLowerCase();
+  if (!/^[\w.-]+\/[\w.-]+$/.test(depot)) {
+    throw new Error("GITHUB_REPOSITORY est exigé pour lire l'empreinte de l'image publiée");
+  }
+  const registre = adresseSure(
+    process.env.PARTNERS_REGISTRE_URL ?? 'https://ghcr.io',
+    'PARTNERS_REGISTRE_URL'
+  );
+  const etiquette = `sha-${sha.slice(0, 7)}`;
+  const t = await fetch(new URL(`/token?scope=repository:${depot}:pull`, registre));
+  const anonyme = t.ok
+    ? ((await t.json()) as { token?: unknown }).token
+    : (await t.body?.cancel(), null);
+  const manifeste = await fetch(new URL(`/v2/${depot}/manifests/${etiquette}`, registre), {
+    method: 'HEAD',
+    headers: {
+      ...(typeof anonyme === 'string' ? { authorization: `Bearer ${anonyme}` } : {}),
+      accept:
+        'application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json',
+    },
+  });
+  await manifeste.body?.cancel();
+  if (!manifeste.ok) {
+    throw new Error(
+      `l'image ${etiquette} n'a jamais été publiée (registre : HTTP ${manifeste.status}) — refusé`
+    );
+  }
+  const empreinte = manifeste.headers.get('docker-content-digest') ?? '';
+  etiquetteParEmpreinte(empreinte);
+  return empreinte;
+}
+
+/** L'étiquette que l'application tire, relue sur la plateforme après le déploiement. */
+async function etiquetteServie(
+  racine: string,
+  uuid: string,
+  jeton: string
+): Promise<string | null> {
+  const r = await fetch(new URL(`${racine}/api/v1/applications/${uuid}`), {
+    headers: { authorization: `Bearer ${jeton}`, accept: 'application/json' },
+    redirect: 'manual',
+  });
+  if (!r.ok) {
+    await r.body?.cancel();
+    return null;
+  }
+  const lue = ((await r.json()) as { docker_registry_image_tag?: unknown })
+    .docker_registry_image_tag;
+  return typeof lue === 'string' ? lue : null;
+}
+
+/** Après l'en-tête : l'application tire-t-elle l'empreinte publiée ? Sinon NON ATTERRI, nommé. */
+async function exigerLEmpreinteServie(
+  publiee: string,
+  racine: string,
+  uuid: string,
+  jeton: string
+): Promise<0 | 1> {
+  const j = jugerLEmpreinteServie(publiee, await etiquetteServie(racine, uuid, jeton));
+  if (j.atterri) {
+    console.log(`   empreinte servie : ${publiee}`);
+    return 0;
+  }
+  console.error(`❌ NON ATTERRI — ${j.raison}`);
+  return 1;
 }
 
 async function appel(
@@ -338,14 +511,15 @@ async function commandeDeclencher(argv: string[]): Promise<number> {
   const publique = adresseSure(env.PARTNERS_URL_PUBLIQUE, 'PARTNERS_URL_PUBLIQUE');
   const racine = plateforme.href.replace(/\/+$/, '');
   const uuid = encodeURIComponent(env.COOLIFY_APP_UUID);
-  const etiquette = `sha-${sha.slice(0, 7)}`;
+  const empreinte = await empreintePubliee(sha);
+  const etiquette = etiquetteParEmpreinte(empreinte);
 
   const s1 = await appel(
     new URL(`${racine}/api/v1/applications/${uuid}`),
     'PATCH',
     env.COOLIFY_API_TOKEN,
     {
-      docker_registry_image_tag: etiquette,
+      docker_registry_image_tag: etiquetteParEmpreinte(empreinte),
     }
   );
   if (s1 < 200 || s1 > 299) {
@@ -365,7 +539,169 @@ async function commandeDeclencher(argv: string[]): Promise<number> {
   console.log(`   déploiement déclenché — lecture de ${ENTETE_DE_BUILD} sur ${publique.origin}`);
   const r = await atterrir(sha, publique, options(argv));
   ecrireLaSortie(r.servi);
-  return r.code;
+  if (r.code !== 0) return r.code;
+  if ((await exigerLEmpreinteServie(empreinte, racine, uuid, env.COOLIFY_API_TOKEN)) !== 0)
+    return 1;
+  return verifierLaPolitique(publique);
+}
+
+// ── QA-T55, QA-T67 (REQ-GOV-014) : la porte A du MÊME sha, de la bonne provenance ─────────────
+
+/**
+ * Le job `deployer` partait sur tout push de `main`, que la porte A soit verte, rouge ou encore en
+ * cours. `pnpm deploy:attendre-porte-a` l'attend, AVANT l'AIPD et la plateforme. Deux lectures
+ * seulement, `contents` et `actions` (lentille `securite` du 2026-10-02, quatre conditions) :
+ *   1. les runs de `ci.yml` filtrés par la forge sur le sha, `event=push` et `branch=main` ; un run
+ *      rendu hors de ce filtre est un refus nommé, jamais ignoré ;
+ *   2. le plus récent se choisit sur `run_number` puis `run_attempt`, champs du SERVEUR ;
+ *   3. ce run est `completed` et `success`, puis son job `gate-a` est `success` ;
+ *   4. la paire de permissions est figée par le témoin du workflow.
+ * Le jeton n'est servi qu'à cette étape. Échec FERMÉ et nommé partout ; ni le jeton ni les adresses
+ * appelées ne sont imprimés.
+ */
+export const JOB_DE_LA_PORTE_A = 'gate-a';
+export const WORKFLOW_DE_LA_PORTE_A = '.github/workflows/ci.yml';
+const FICHIER_DU_WORKFLOW = 'ci.yml';
+
+export type VerdictDesRuns =
+  | { etat: 'reussie'; runId: number }
+  | { etat: 'absente' }
+  | { etat: 'en_cours' }
+  | { etat: 'refusee'; raison: string };
+
+type Run = {
+  id?: unknown;
+  run_number?: unknown;
+  run_attempt?: unknown;
+  head_sha?: unknown;
+  head_branch?: unknown;
+  event?: unknown;
+  path?: unknown;
+  status?: unknown;
+  conclusion?: unknown;
+};
+
+const entier = (x: unknown): x is number => typeof x === 'number' && Number.isSafeInteger(x);
+
+export function jugerLesRuns(brut: unknown, sha: string): VerdictDesRuns {
+  const liste =
+    typeof brut === 'object' && brut !== null
+      ? (brut as { workflow_runs?: unknown }).workflow_runs
+      : undefined;
+  if (!Array.isArray(liste)) return { etat: 'refusee', raison: 'reponse_illisible : les runs' };
+  const tous = liste as Run[];
+  const horsFiltre = tous.find(
+    (r) =>
+      r?.head_sha !== sha ||
+      r.event !== 'push' ||
+      r.head_branch !== 'main' ||
+      r.path !== WORKFLOW_DE_LA_PORTE_A
+  );
+  if (horsFiltre !== undefined)
+    return {
+      etat: 'refusee',
+      raison: `hors_filtre : un run « ${String(horsFiltre?.event)} » de « ${String(horsFiltre?.head_branch)} » (${String(horsFiltre?.path)}) rendu pour ce sha`,
+    };
+  if (tous.length === 0) return { etat: 'absente' };
+  if (tous.some((r) => !entier(r.id) || !entier(r.run_number) || !entier(r.run_attempt)))
+    return { etat: 'refusee', raison: 'reponse_illisible : id, run_number ou run_attempt' };
+  const rang = (r: Run) => [r.run_number as number, r.run_attempt as number] as const;
+  const recent = [...tous].sort((a, b) => {
+    const [na, ta] = rang(a);
+    const [nb, tb] = rang(b);
+    return nb - na || tb - ta;
+  })[0]!;
+  if (recent.status !== 'completed') return { etat: 'en_cours' };
+  if (recent.conclusion !== 'success')
+    return {
+      etat: 'refusee',
+      raison: `echec : le run de ${WORKFLOW_DE_LA_PORTE_A} le plus récent conclut « ${String(recent.conclusion)} »`,
+    };
+  return { etat: 'reussie', runId: recent.id as number };
+}
+
+export function jugerLesJobs(
+  brut: unknown
+): { etat: 'reussie' } | { etat: 'refusee'; raison: string } {
+  const liste =
+    typeof brut === 'object' && brut !== null ? (brut as { jobs?: unknown }).jobs : undefined;
+  if (!Array.isArray(liste)) return { etat: 'refusee', raison: 'reponse_illisible : les jobs' };
+  const porte = (liste as { name?: unknown; status?: unknown; conclusion?: unknown }[]).filter(
+    (j) => j?.name === JOB_DE_LA_PORTE_A
+  );
+  if (porte.length === 0)
+    return {
+      etat: 'refusee',
+      raison: `gate_a_absent : le run ne porte pas de job « ${JOB_DE_LA_PORTE_A} »`,
+    };
+  const ko = porte.find((j) => j.status !== 'completed' || j.conclusion !== 'success');
+  if (ko !== undefined)
+    return {
+      etat: 'refusee',
+      raison: `echec : le job « ${JOB_DE_LA_PORTE_A} » conclut « ${String(ko.conclusion)} »`,
+    };
+  return { etat: 'reussie' };
+}
+
+async function lireLaForge(chemin: string, jeton: string): Promise<unknown> {
+  const api = adresseSure(process.env.GITHUB_API_URL ?? 'https://api.github.com', 'GITHUB_API_URL');
+  try {
+    const r = await fetch(new URL(chemin, api), {
+      headers: { authorization: `Bearer ${jeton}`, accept: 'application/vnd.github+json' },
+      redirect: 'manual',
+    });
+    if (!r.ok) {
+      await r.body?.cancel();
+      return null;
+    }
+    return (await r.json()) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+async function commandeAttendrePorteA(argv: string[]): Promise<number> {
+  const sha = shaDemande(argv);
+  const depot = process.env.GITHUB_REPOSITORY ?? '';
+  const jeton = process.env.GH_TOKEN ?? '';
+  if (!/^[\w.-]+\/[\w.-]+$/.test(depot) || jeton === '') {
+    console.error('❌ porte A non vérifiable : GITHUB_REPOSITORY et GH_TOKEN sont exigés — refusé');
+    return 1;
+  }
+  const o = options(argv);
+  let dernier: VerdictDesRuns = { etat: 'absente' };
+  for (let essai = 1; essai <= o.essais; essai++) {
+    dernier = jugerLesRuns(
+      await lireLaForge(
+        `/repos/${depot}/actions/workflows/${FICHIER_DU_WORKFLOW}/runs?head_sha=${sha}&event=push&branch=main&per_page=100`,
+        jeton
+      ),
+      sha
+    );
+    if (dernier.etat === 'reussie' || dernier.etat === 'refusee') break;
+    if (essai < o.essais) await new Promise((ok) => setTimeout(ok, o.delaiMs));
+  }
+  if (dernier.etat === 'refusee') {
+    console.error(`❌ porte A refusée pour ${sha} — ${dernier.raison}`);
+    return 1;
+  }
+  if (dernier.etat !== 'reussie') {
+    console.error(
+      `❌ porte A ${dernier.etat === 'absente' ? 'absente' : 'toujours en cours'} pour ${sha} après ${o.essais} lecture(s) — déploiement refusé`
+    );
+    return 1;
+  }
+  const porte = jugerLesJobs(
+    await lireLaForge(`/repos/${depot}/actions/runs/${dernier.runId}/jobs?per_page=100`, jeton)
+  );
+  if (porte.etat === 'refusee') {
+    console.error(`❌ porte A refusée pour ${sha} — ${porte.raison}`);
+    return 1;
+  }
+  console.log(
+    `✅ porte A « ${JOB_DE_LA_PORTE_A} » réussie sur ${sha}, run de ${WORKFLOW_DE_LA_PORTE_A} — le déploiement peut partir`
+  );
+  return 0;
 }
 
 /**
@@ -376,7 +712,7 @@ async function commandeDeclencher(argv: string[]): Promise<number> {
  * est publique). Jamais une image de branche. Les deux contrôles précèdent tout appel à la plateforme,
  * et échouent fermé.
  */
-async function exigerUnShaLivre(cible: string): Promise<void> {
+async function exigerUnShaLivre(cible: string): Promise<string> {
   const depot = process.env.GITHUB_REPOSITORY ?? '';
   const jetonForge = process.env.GH_TOKEN ?? '';
   if (!/^[\w.-]+\/[\w.-]+$/.test(depot) || jetonForge === '') {
@@ -396,30 +732,8 @@ async function exigerUnShaLivre(cible: string): Promise<void> {
       `le sha ${cible} n'est pas un ancêtre de main (comparaison : ${String(statut ?? comparaison.status)}) — refusé`
     );
   }
-  const registre = adresseSure(
-    process.env.PARTNERS_REGISTRE_URL ?? 'https://ghcr.io',
-    'PARTNERS_REGISTRE_URL'
-  );
-  const nom = depot.toLowerCase();
-  const etiquette = `sha-${cible.slice(0, 7)}`;
-  const t = await fetch(new URL(`/token?scope=repository:${nom}:pull`, registre));
-  const anonyme = t.ok
-    ? ((await t.json()) as { token?: unknown }).token
-    : (await t.body?.cancel(), null);
-  const manifeste = await fetch(new URL(`/v2/${nom}/manifests/${etiquette}`, registre), {
-    method: 'HEAD',
-    headers: {
-      ...(typeof anonyme === 'string' ? { authorization: `Bearer ${anonyme}` } : {}),
-      accept:
-        'application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json',
-    },
-  });
-  await manifeste.body?.cancel();
-  if (!manifeste.ok) {
-    throw new Error(
-      `l'image ${etiquette} n'a jamais été publiée (registre : HTTP ${manifeste.status}) — refusé`
-    );
-  }
+  // L'image doit avoir été PUBLIÉE ; son empreinte est ce que le retour arrière tire (QA-T65).
+  return empreintePubliee(cible);
 }
 
 /** L'échappatoire, remise à `0` — l'étape `if: always()` du workflow, jouée même après un échec. */
@@ -488,7 +802,7 @@ async function commandeRetourArriere(argv: string[]): Promise<number> {
   const plateforme = adresseSure(lire('COOLIFY_URL'), 'COOLIFY_URL');
   const publique = adresseSure(lire('PARTNERS_URL_PUBLIQUE'), 'PARTNERS_URL_PUBLIQUE');
   const jeton = lire('COOLIFY_API_TOKEN');
-  await exigerUnShaLivre(cible);
+  const empreinte = await exigerUnShaLivre(cible);
   const racine = plateforme.href.replace(/\/+$/, '');
   const uuid = encodeURIComponent(lire('COOLIFY_APP_UUID'));
   const variables = new URL(`${racine}/api/v1/applications/${uuid}/envs/bulk`);
@@ -502,9 +816,9 @@ async function commandeRetourArriere(argv: string[]): Promise<number> {
       console.error(`❌ la plateforme refuse SKIP_MIGRATE=1 : HTTP ${s0}`);
       return 1;
     }
-    const etiquette = `sha-${cible.slice(0, 7)}`;
+    const etiquette = etiquetteParEmpreinte(empreinte);
     const s1 = await appel(new URL(`${racine}/api/v1/applications/${uuid}`), 'PATCH', jeton, {
-      docker_registry_image_tag: etiquette,
+      docker_registry_image_tag: etiquetteParEmpreinte(empreinte),
     });
     if (s1 < 200 || s1 > 299) {
       console.error(`❌ la plateforme refuse l'étiquette ${etiquette} : HTTP ${s1}`);
@@ -520,6 +834,7 @@ async function commandeRetourArriere(argv: string[]): Promise<number> {
       return 1;
     }
     if ((await verifier(cible, publique, options(argv))) !== 0) return 1;
+    if ((await exigerLEmpreinteServie(empreinte, racine, uuid, jeton)) !== 0) return 1;
     const sante = await readyz(publique);
     if (sante !== 200) {
       console.error(
@@ -554,10 +869,12 @@ if (APPELE_DIRECTEMENT) {
           ? commandeRetirerEchappatoire
           : argv.includes('--alerter')
             ? commandeAlerter
-            : null;
+            : argv.includes('--attendre-porte-a')
+              ? commandeAttendrePorteA
+              : null;
   if (mode === null) {
     console.error(
-      'usage : deploy-verify.ts --verifier [<sha>] | --declencher | --retour-arriere | --retirer-echappatoire | --alerter'
+      'usage : deploy-verify.ts --verifier [<sha>] | --declencher | --retour-arriere | --retirer-echappatoire | --alerter | --attendre-porte-a'
     );
     process.exit(1);
   }
@@ -567,7 +884,8 @@ if (APPELE_DIRECTEMENT) {
     argv.filter(
       (a) =>
         !['--declencher', '--verifier', '--retour-arriere', '--retirer-echappatoire'].includes(a) &&
-        a !== '--alerter'
+        a !== '--alerter' &&
+        a !== '--attendre-porte-a'
     )
   ).then(
     (code) => {

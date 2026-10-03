@@ -96,6 +96,11 @@ export const LISTE_BLANCHE_PAR_CONTENU: { chemin: string; motif: string; lignes:
     lignes: ['"$id": "https://axion-ia.com/contrats/partners/evenements/v2",'],
   },
   {
+    chemin: 'src/server/integrations/axionia/relecture.ts',
+    motif: 'le chemin de la route de relecture d’axion-ia (INT-T08-P), pas la table',
+    lignes: ["export const CHEMIN_RELECTURE = '/api/partners/evenements';"],
+  },
+  {
     chemin: 'packages/contracts/events.ts',
     motif: 'un paramètre `evenement` du contrat inter-dépôts et l’URL de son schéma, sans client',
     lignes: [
@@ -138,6 +143,23 @@ export const LISTE_BLANCHE_PAR_CONTENU: { chemin: string; motif: string; lignes:
     lignes: [
       "'DM-01': ['prisma/schema.prisma', 'prisma/migrations/', 'src/domain/evenement/journal.ts'],",
       "'src/server/queue/workers/evenement-recu.ts',",
+    ],
+  },
+  {
+    chemin: 'src/server/notifications/table-ssot.ts',
+    motif:
+      'la valeur `evenement` du déclencheur d’une notification (acceptance d’UX-P1-10), pas la table',
+    lignes: [
+      "export type Declencheur = 'evenement' | 'echeance_piece' | 'calendrier_fixe';",
+      // Un texte admis vaut pour UNE ligne : les huit clés déclenchées par un fait du dossier.
+      "declencheur: 'evenement',",
+      "declencheur: 'evenement',",
+      "declencheur: 'evenement',",
+      "declencheur: 'evenement',",
+      "declencheur: 'evenement',",
+      "declencheur: 'evenement',",
+      "declencheur: 'evenement',",
+      "declencheur: 'evenement',",
     ],
   },
 ];
