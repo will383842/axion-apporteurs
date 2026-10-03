@@ -14,7 +14,7 @@
  *   3. LE REFUS CÔTÉ SERVEUR : `exigerSessionPour` refuse avec le motif nommé
  *      `hors_ouverture_limitee` et écrit au journal le statut et le segment, rien d'autre ;
  *      TÉMOIN D'ACTION : l'action de dépôt d'un `kyc_en_cours` est refusée avant toute écriture ;
- *   4. LE DISQUE : chaque page, route et action de `src/app/(espace)/` appelle `exigerSessionPour`
+ *   4. LE DISQUE : chaque page, route et action de `src/app/(espace)/` appelle `pageEspace`
  *      (ou `actionEspace`) avec LE segment que son chemin dérive, comme premier acte — hors des
  *      segments publics et de la page publique de la politique. PIÈGE : un fichier non protégé, un
  *      fichier au mauvais segment, un segment inconnu et un appel qui n'est pas le premier acte
@@ -76,6 +76,19 @@ function ports(statut: string, journal?: RefusDOuvertureLimitee[]): PortsDeSessi
       incrementerVersion: async () => undefined,
     },
     ...(journal === undefined ? {} : { journal: (l) => journal.push(l) }),
+    // SEC-53 : la garde d'acceptation suit la session. Ce témoin juge l'ouverture limitée : la
+    // politique courante y est acceptée, pour que seul le niveau d'accès décide.
+    acceptation: {
+      lirePolitique: () => ({
+        ok: true,
+        politique: { rubriques: [], destinataires: [], version: 'v' },
+        filtres: [],
+      }),
+      depot: {
+        lire: async () => ({ accepteeAt: T0, version: 'v' }),
+        ecrire: async () => undefined,
+      },
+    },
   };
 }
 
@@ -447,7 +460,7 @@ function fauteDeLaFonction(
   quoi: string,
   fn: Fonction,
   segment: string,
-  attendu: 'actionEspace' | 'exigerSessionPour'
+  attendu: 'actionEspace' | 'pageEspace'
 ): string | null {
   for (const n of enoncesDe(fn)) {
     const appel = appelDe(n);
@@ -498,9 +511,9 @@ export function fauteDuFichier(cheminRelatif: string, contenu: string): string |
     SEGMENT_DE_L_ACCEPTATION,
   ];
   if (!proteges.includes(segment)) return `segment_inconnu ${cheminRelatif} (« ${segment} »)`;
-  // Une ACTION serveur passe par l'enveloppeur ; une page ou une route, par exigerSessionPour.
+  // Une ACTION serveur passe par l'enveloppeur ; une page ou une route, par pageEspace (SEC-53 : session ET acceptation).
   const estUneAction = directiveEnTete(f);
-  const attendu = estUneAction ? 'actionEspace' : 'exigerSessionPour';
+  const attendu = estUneAction ? 'actionEspace' : 'pageEspace';
   const exports = exportsDe(f);
   if (exports === 'indirect') return `export_indirect ${cheminRelatif}`;
   if (exports.length === 0) return `non_protege ${cheminRelatif} (aucun export jugé)`;
@@ -546,25 +559,25 @@ describe('REQ-SEC-032 — sur le disque, chaque page, route et action de l’esp
     [
       'un fichier au MAUVAIS segment',
       'deposer/page.tsx',
-      "export default async function P() { const v = await exigerSessionPour('conformite', j, p); }",
+      "export default async function P() { const v = await pageEspace('conformite', j, p); }",
       /^mauvais_segment deposer\/page\.tsx/,
     ],
     [
       'un segment INCONNU',
       'clients/page.tsx',
-      "export default async function P() { await exigerSessionPour('clients', j, p); }",
+      "export default async function P() { await pageEspace('clients', j, p); }",
       /^segment_inconnu clients\/page\.tsx/,
     ],
     [
       'un appel qui n’est pas le PREMIER acte',
       'mes-entreprises/page.tsx',
-      "export default async function P() { const l = await lire(); await exigerSessionPour('mes-entreprises', j, p); }",
+      "export default async function P() { const l = await lire(); await pageEspace('mes-entreprises', j, p); }",
       /^pas_premier_acte mes-entreprises\/page\.tsx/,
     ],
     [
-      'une action qui appelle exigerSessionPour au lieu de l’enveloppeur',
+      'une action qui appelle pageEspace au lieu de l’enveloppeur',
       'deposer/actions.ts',
-      "'use server';\nexport async function deposer() { const v = await exigerSessionPour('deposer', j, p); }",
+      "'use server';\nexport async function deposer() { const v = await pageEspace('deposer', j, p); }",
       /^non_protege deposer\/actions\.ts#deposer \(actionEspace attendu\)$/,
     ],
     [
@@ -588,13 +601,13 @@ describe('REQ-SEC-032 — sur le disque, chaque page, route et action de l’esp
     [
       'une route dont le GET se protège et le POST est nu',
       'conformite/route.ts',
-      "export async function GET() { const v = await exigerSessionPour('conformite', j, p); }\nexport async function POST() { await ecrire(); }",
-      /^non_protege conformite\/route\.ts#POST \(exigerSessionPour attendu\)$/,
+      "export async function GET() { const v = await pageEspace('conformite', j, p); }\nexport async function POST() { await ecrire(); }",
+      /^non_protege conformite\/route\.ts#POST \(pageEspace attendu\)$/,
     ],
     [
       'une page qui porte une action EN LIGNE',
       'conformite/page.tsx',
-      "export default async function P() { const v = await exigerSessionPour('conformite', j, p); async function envoyer() { 'use server'; await ecrire(); } }",
+      "export default async function P() { const v = await pageEspace('conformite', j, p); async function envoyer() { 'use server'; await ecrire(); } }",
       /^action_en_ligne conformite\/page\.tsx$/,
     ],
     [
@@ -630,13 +643,13 @@ describe('REQ-SEC-032 — sur le disque, chaque page, route et action de l’esp
     [
       '`await headers()` AVANT la garde',
       'conformite/page.tsx',
-      "export default async function P() { const h = await headers(); const v = await exigerSessionPour('conformite', j, p); }",
+      "export default async function P() { const h = await headers(); const v = await pageEspace('conformite', j, p); }",
       /^pas_premier_acte conformite\/page\.tsx#default$/,
     ],
     [
       '`await params` AVANT la garde',
       'conformite/page.tsx',
-      "export default async function P({ params }: { params: Promise<{ id: string }> }) { const q = await params; const v = await exigerSessionPour('conformite', j, p); }",
+      "export default async function P({ params }: { params: Promise<{ id: string }> }) { const q = await params; const v = await pageEspace('conformite', j, p); }",
       /^pas_premier_acte conformite\/page\.tsx#default$/,
     ],
     [
@@ -654,7 +667,7 @@ describe('REQ-SEC-032 — sur le disque, chaque page, route et action de l’esp
     [
       'un `lireLaPolitique()` avant la garde',
       'conformite/page.tsx',
-      "export default async function P() { const t = lireLaPolitique(); const v = await exigerSessionPour('conformite', j, p); }",
+      "export default async function P() { const t = lireLaPolitique(); const v = await pageEspace('conformite', j, p); }",
       /^pas_premier_acte conformite\/page\.tsx#default$/,
     ],
     [
@@ -678,7 +691,7 @@ describe('REQ-SEC-032 — sur le disque, chaque page, route et action de l’esp
     [
       'un gabarit ÉTIQUETÉ avant la garde',
       'conformite/page.tsx',
-      "import { sql } from './base';\nexport default async function P() { const q = sql`SELECT 1`; const v = await exigerSessionPour('conformite', j, p); }",
+      "import { sql } from './base';\nexport default async function P() { const q = sql`SELECT 1`; const v = await pageEspace('conformite', j, p); }",
       /^pas_premier_acte conformite\/page\.tsx#default$/,
     ],
     [
@@ -695,7 +708,7 @@ describe('REQ-SEC-032 — sur le disque, chaque page, route et action de l’esp
     [
       'une page protégée pour son segment, après la lecture du cookie',
       'conformite/page.tsx',
-      "export default async function P() { const j = (await cookies()).get('x'); const v = await exigerSessionPour('conformite', j, p); }",
+      "export default async function P() { const j = (await cookies()).get('x'); const v = await pageEspace('conformite', j, p); }",
     ],
     [
       'une action enveloppée',
@@ -715,7 +728,7 @@ describe('REQ-SEC-032 — sur le disque, chaque page, route et action de l’esp
     [
       'une route dont chaque handler se protège',
       'conformite/route.ts',
-      "export async function GET() { const v = await exigerSessionPour('conformite', j, p); }\nexport async function POST() { const v = await exigerSessionPour('conformite', j, p); }",
+      "export async function GET() { const v = await pageEspace('conformite', j, p); }\nexport async function POST() { const v = await pageEspace('conformite', j, p); }",
     ],
     [
       'la page publique de la politique',
