@@ -5,8 +5,9 @@
  * LES ÉCHÉANCES (durées lues dans `SEUILS`, sous-module `retention.ts`, jamais retapées) :
  *   — une anomalie LEVÉE : `ANOMALIE_LEVEE_ANONYMISEE_APRES_MOIS` après sa levée (`traite_at`) ;
  *   — une anomalie CONFIRMÉE : `ANOMALIE_CONFIRMEE_ANONYMISEE_APRES_ANS` après la fin de la mesure
- *     qu'elle a fondée (`mesure_terminee_at`, qui vaut `traite_at` pour une mesure sans durée) ;
- *     jamais tant que cette fin n'est pas posée ; une anomalie OUVERTE, jamais ;
+ *     qu'elle a fondée (`mesure_terminee_at`) ; jamais tant que cette fin n'est pas posée, le passage
+ *     ne la remplace par rien. C'est la console qui la pose, à `traite_at` pour une mesure sans
+ *     durée (DM-12) ; une anomalie OUVERTE, jamais ;
  *   — une contestation : `CONTESTATION_TEXTES_VIDES_APRES_ANS` après sa réponse, à défaut après sa
  *     réception ;
  *   — le démenti d'un contact (`non_confirme`, contrat art. 3.7, que la purge du contact EXCEPTE) :
