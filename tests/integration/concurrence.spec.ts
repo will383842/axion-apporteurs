@@ -26,7 +26,7 @@
  *      refus, aucune pour un dépôt annulé.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { demarrerBase, type Base } from './harnais';
 import { clesPii } from '../../src/server/securite/pii';
 import { NOMS_DES_SECRETS } from '../../src/lib/env';
@@ -42,7 +42,7 @@ import { issueRendue } from '../../src/content/micro-copy/espace/issues-depot';
 import { notifier } from '../../src/server/notifications/envoyer';
 import { forApporteur } from '../../src/server/acces/for-apporteur';
 import type { DemandeDeNotification } from '../../src/server/notifications/envoyer';
-import { VERSION_INFORMATION_TIERS } from '../../src/content/micro-copy/espace/information-tiers';
+import { CASE_INFORMATION_TIERS } from '../../src/content/micro-copy/espace/information-tiers';
 
 let base: Base;
 let codes = 0;
@@ -138,9 +138,9 @@ function demande(apporteurId: string, siren: string): DemandeDeDepot {
       lienInteretDeclare: false,
     },
     fiche: { raisonSociale: 'Entreprise Témoin SAS', etatAdministratif: 'actif' },
-    ipHash: hex(8),
+    adresseReseau: '203.0.113.7',
     reponseCaptcha: null,
-    agentHash: hex(32),
+    agentUtilisateur: 'Mozilla/5.0 (témoin)',
     clientCapturedAt: null,
   };
 }
@@ -375,7 +375,10 @@ describe('REQ-JUR-008 — la saisie se juge au serveur', () => {
     const l = await base.prisma.attribution.findUniqueOrThrow({ where: { id: r.attributionId! } });
     expect(l.apporteurId).toBe(a);
     expect(l.canal).toBe('espace');
-    expect(l.informationTiersVersion).toBe(VERSION_INFORMATION_TIERS);
+    // La version est l'empreinte du texte de la case, recalculée ici hors du code.
+    expect(l.informationTiersVersion).toBe(
+      createHash('sha256').update(CASE_INFORMATION_TIERS).digest('hex').slice(0, 32)
+    );
     expect(l.emailHash).toMatch(/^[0-9a-f]{64}$/);
     expect(l.phoneHash).toMatch(/^[0-9a-f]{64}$/);
     expect(l.nomContactChiffre).not.toBeNull();

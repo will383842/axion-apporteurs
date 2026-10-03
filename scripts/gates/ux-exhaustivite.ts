@@ -69,6 +69,7 @@ import * as VOCABULAIRE_DE_L_ESPACE from '../../src/content/micro-copy/espace/vo
 import * as TYPES_DE_LA_MICRO_COPIE from '../../src/content/micro-copy/types';
 import * as NOTIFICATIONS_DE_L_APPORTEUR from '../../src/content/micro-copy/courriels/notifications';
 import * as CONFIRMATION_DU_DEPOT from '../../src/content/micro-copy/espace/confirmation-du-depot';
+import * as INFORMATION_DES_TIERS from '../../src/content/micro-copy/espace/information-tiers';
 import { ETATS_VIDES_CONSOLE } from '../../src/content/micro-copy/console/etats-vides';
 import { GABARITS } from '../../src/server/notifications/table-ssot';
 import type { ActionEcran, EtatVide, TexteIssue } from '../../src/content/micro-copy/types';
@@ -99,6 +100,8 @@ const MICRO_COPIE_DE_L_ESPACE: Readonly<Record<string, unknown>> = {
   'espace/etats-vides.ts': ETATS_VIDES_DE_L_ESPACE,
   'espace/vocabulaire.ts': VOCABULAIRE_DE_L_ESPACE,
   'espace/confirmation-du-depot.ts': CONFIRMATION_DU_DEPOT,
+  // SEC-12 (REQ-JUR-008) : la case que l'apporteur coche au dépôt, et la version enregistrée.
+  'espace/information-tiers.ts': INFORMATION_DES_TIERS,
   // Hors d'`espace/`, mais importé par chaque module de l'espace : parcouru comme eux.
   'types.ts': TYPES_DE_LA_MICRO_COPIE,
   // UX-P1-10 : les notifications de l'apporteur (e-mail et espace), lues par lui : parcourues aussi.

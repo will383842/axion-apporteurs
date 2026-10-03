@@ -386,6 +386,17 @@ export const SEUILS = {
   },
   // DM-40 (REQ-DM-060, HYP-W20-REBOND) : au-delà, le dépôt reste dans la liste d'appels et l'action
   // « Corriger l'adresse » disparaît.
+  // SEC-12 (REQ-DM-009) : la SEULE limite de débit du dépôt, technique, identique pour tous, sur
+  // l'empreinte réseau (compteur `depot:ip`). Les valeurs sont celles que REQ-SEC-016 chiffre
+  // aujourd'hui ; le texte de la juriste veut une fenêtre « de l'ordre de la minute », et
+  // l'alignement de REQ-SEC-016 appartient au gardien de la spécification.
+  DEPOT_DEBIT_TENTATIVES_MAX: {
+    valeur: 20,
+    unite: 'tentatives',
+    source: 'REQ-SEC-016 (dépôt limité à 20 / 10 min par hash IP), REQ-DM-009',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
   CORRECTIONS_ADRESSE_MAX: {
     valeur: 2,
     unite: 'tentatives',
