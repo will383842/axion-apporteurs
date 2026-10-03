@@ -184,6 +184,8 @@
       "taches": [
         "DM-06",
         "DM-18",
+        "DM-63",
+        "DM-64",
         "SEC-19"
       ]
     },
@@ -393,7 +395,8 @@
         "DM-45",
         "QA-T62",
         "SEC-30",
-        "SEC-50"
+        "SEC-50",
+        "SEC-57"
       ]
     },
     {
@@ -503,6 +506,7 @@
       "phase": 1,
       "taches": [
         "DM-07",
+        "DM-09",
         "DM-13",
         "DM-20",
         "DM-40",
@@ -1757,8 +1761,8 @@
     {
       "id": "REQ-ARG-026",
       "domaine": "argent",
-      "texte": "Sortie : à `resilie`, **quel que soit le motif** : les lignes `acquise` sont portées au dernier relevé, produit au lot suivant **sans le seuil de versement minimal** (HYP-E1-17) ; les lignes `prevue` restent `prevue` et deviennent `acquise` si l'encaissement survient dans les conditions du contrat art. 12.3 ; un solde ≤ 0 devient une `creance_apporteur` exportée en compta, sans virement. Les attributions `convertie` restent résolubles jusqu'à leur expiration. Aucune ligne `dechue` n'existe (REQ-DM-020, REQ-JUR-007).",
-      "source": "audit-outil §5 étape 12, D11 ; anti-abus §4 ; ARG-15, ARG-25 ; réécrite le 2026-09-03 — déchéance retirée du produit",
+      "texte": "Sortie : à `resilie`, **quel que soit le motif** : les lignes `acquise` sont portées au dernier relevé, produit au lot suivant **sans le seuil de versement minimal** (HYP-E1-17) ; les lignes `prevue` restent `prevue` et deviennent `acquise` si l'encaissement survient dans les conditions du contrat art. 12.3 ; un solde ≤ 0 devient une `creance_apporteur` exportée en compta, sans virement. Les attributions `signee` et `convertie` gardent leur état ; la commande signée avant la fin du contrat continue d'ouvrir droit à commission au fur et à mesure de ses encaissements, quelle qu'en soit la date (contrat art. 12.3). Aucune ligne `dechue` n'existe (REQ-DM-020, REQ-JUR-007).",
+      "source": "audit-outil §5 étape 12, D11 ; anti-abus §4 ; ARG-15, ARG-25 ; réécrite le 2026-09-03 — déchéance retirée du produit ; amendée le 2026-10-03, texte de la juriste (oubli de `signee`, et « jusqu'à leur expiration » contredisait l'art. 12.3), rattrapage 88",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
@@ -2417,7 +2421,6 @@
       "phase": 1,
       "taches": [
         "INT-T08-A",
-        "INT-T08-P",
         "QA-T19"
       ]
     },
@@ -3766,7 +3769,8 @@
       "etape": null,
       "phase": 0,
       "taches": [
-        "QA-T11"
+        "QA-T11",
+        "QA-T71"
       ]
     },
     {
@@ -4470,6 +4474,7 @@
         "GOV-127",
         "GOV-128",
         "GOV-140",
+        "GOV-143",
         "QA-T60"
       ]
     },
@@ -5335,6 +5340,7 @@
         "UX-P1-18",
         "UX-P1-20",
         "UX-P1-50",
+        "UX-P1-52",
         "UX-P2-03",
         "UX-P2-05",
         "UX-P3-04",
@@ -5460,8 +5466,8 @@
     {
       "id": "REQ-DM-048",
       "domaine": "domaine-donnees",
-      "texte": "Le porteur d'une attribution est exclusif : soit un apporteur, soit un utilisateur de console de rôle `conseiller_salarie` non désactivé. Le rôle est vérifié par un DÉCLENCHEUR à l'INSERT et à l'UPDATE du porteur ; un CHECK ne suffit pas, le rôle vit dans une autre table. Une seule table `attributions`, avec CHECK XOR, un index d'occupation unique par SIREN et l'horodatage de transaction (REQ-DM-005), communs aux deux porteurs. Vue de l'espace et de l'API 1, l'attribution du conseiller suit la même chronologie, les mêmes états visibles et les mêmes délais que celle d'un apporteur (HYP-W19-CYCLE) ; sa fenêtre d'attribution (`FENETRE_MOIS`, SSOT) n'est pas reconduite ; W9 s'applique à l'identique ; ce qui diffère en interne (aucun qualifieur, aucune confirmation par un apporteur, aucun rang) ne se voit jamais de l'espace. Le conseiller n'entre jamais en file : CHECK `rang_attente IS NULL OR apporteur_id IS NOT NULL` ; une file d'apporteurs se forme derrière sa prise en charge comme derrière un apporteur (art. 3.5). Pour la non-reconduction et le délai d'attente, la Société compte comme UN seul porteur : aucun conseiller ne reprend un SIREN libéré depuis moins de `CARENCE_CONSEILLER_JOURS`, quel que soit le porteur sortant ; le SIREN est aussi fermé aux conseillers pendant la fenêtre de redéclaration d'un rang 1, et pendant `RESERVE_APRES_ACTE_APPORTEUR_JOURS` après une vérification ou un dépôt refusé d'un apporteur. Limites par conseiller et par Société (HYP-W19-LIMITES). Une prise en charge ne naît que dans Partners, par la console admin ou par l'API 3 ; aucun statut du CRM Pro n'occupe un SIREN (HYP-W19-SOURCE, question 22).",
-      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; la durée de la fenêtre suit la décision de Williams du 2026-09-30 (6 mois, art. 3.4 al. 1), d'où la référence à la SSOT plutôt qu'à un chiffre ; module et étape repris de REQ-DM-005",
+      "texte": "Le porteur d'une attribution est exclusif : soit un apporteur, soit un utilisateur de console de rôle `conseiller_salarie` non désactivé. Le rôle est vérifié par un DÉCLENCHEUR à l'INSERT et à l'UPDATE du porteur ; un CHECK ne suffit pas, le rôle vit dans une autre table. Une seule table `attributions`, avec CHECK XOR, un index d'occupation unique par SIREN et l'horodatage de transaction (REQ-DM-005), communs aux deux porteurs. Vue de l'espace et de l'API 1, l'attribution du conseiller suit la même chronologie, les mêmes états visibles et les mêmes délais que celle d'un apporteur (HYP-W19-CYCLE) ; sa fenêtre d'attribution (`FENETRE_MOIS`, SSOT) n'est pas reconduite ; W9 s'applique à l'identique ; ce qui diffère en interne (aucun qualifieur, aucune confirmation par un apporteur, aucun rang) ne se voit jamais de l'espace. Le conseiller n'entre jamais en file : CHECK `rang_attente IS NULL OR apporteur_id IS NOT NULL` ; une file d'apporteurs se forme derrière sa prise en charge comme derrière un apporteur (art. 3.5). Pour la non-reconduction et le délai d'attente, la Société compte comme UN seul porteur : aucun conseiller ne reprend un SIREN libéré depuis moins de `CARENCE_CONSEILLER_JOURS`, quel que soit le porteur sortant [SUPPRIMÉE le 2026-10-02 (réponse « A. », REPONSES-WILLIAMS-SEANCE-2026-10-02.md, Point 6 : aucune attente pour les salariés après la fin des 6 mois ; RESERVE_APRES_ACTE reste à 30 j)] ; le SIREN est aussi fermé aux conseillers pendant la fenêtre de redéclaration d'un rang 1, et pendant `RESERVE_APRES_ACTE_APPORTEUR_JOURS` après une vérification ou un dépôt refusé d'un apporteur. Limites par conseiller et par Société (HYP-W19-LIMITES). Une prise en charge ne naît que dans Partners, par la console admin ou par l'API 3 ; aucun statut du CRM Pro n'occupe un SIREN (HYP-W19-SOURCE, question 22).",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; la durée de la fenêtre suit la décision de Williams du 2026-09-30 (6 mois, art. 3.4 al. 1), d'où la référence à la SSOT plutôt qu'à un chiffre ; module et étape repris de REQ-DM-005 ; CARENCE_CONSEILLER_JOURS supprimée le 2026-10-02 (réponse « A. », rattrapage 90)",
       "statut": "active",
       "remplaceePar": null,
       "module": 9,
@@ -6284,8 +6290,8 @@
     {
       "id": "REQ-JUR-062",
       "domaine": "juridique",
-      "texte": "**Le contrat suit la décision de Williams du 2026-10-02 (option B : les données déclarées vont au CRM Pro dès la déclaration), dans des textes que Williams valide avant tout premier envoi en signature.** Williams a autorisé l'écriture du nouvel art. 3.5 al. 4, mot pour mot : « J'autorise l'écriture du nouvel article 3.5 alinéa 4 (option B : le CRM dès la déclaration), avec les deux protections pour l'apporteur. Vas-y. » (rattrapage 61) ; le texte, écrit par A07 avec les deux protections de l'apporteur (aucun démarchage pendant le délai de confirmation ; aucun usage des vérifications faites sans déclaration), reste à valider par Williams après la relecture de la suppléante. Ce qui est déjà acquis par délégation : toute commande de l'entreprise attribuée signée pendant l'attribution reste commissionnée, quel que soit celui qui la conclut ; le délai `RESERVE_APRES_ACTE_APPORTEUR_JOURS` est gardé ; la conservation au CRM a sa durée propre, `CRM_DUREE_PROSPECT_ANS`, à compter du dernier échange à l'initiative de la personne, sauf opposition ; aucune émission avant les textes validés.",
-      "source": "Décision de Williams du 2026-10-02 (option B) ; textes d'A07 ; décisions de la coordination par délégation (délai de 30 jours gardé, deux phrases recommandées gardées par défaut)",
+      "texte": "**Le contrat suit la décision de Williams du 2026-10-02 (option B : les données déclarées vont au CRM Pro dès la déclaration), dans des textes que Williams valide avant tout premier envoi en signature.** Williams a autorisé l'écriture du nouvel art. 3.5 al. 4, mot pour mot : « J'autorise l'écriture du nouvel article 3.5 alinéa 4 (option B : le CRM dès la déclaration), avec les deux protections pour l'apporteur. Vas-y. » (rattrapage 61) ; le texte, écrit par A07 avec les deux protections de l'apporteur (aucun démarchage pendant le délai de confirmation ; texte du CONTRAT VALIDÉ, art. 3.5 al. 4 (tête 9b34a278 de #433), MOT POUR MOT : « Dans les {{RESERVE_APRES_ACTE_APPORTEUR_JOURS}} jours qui suivent une vérification d'entreprise faite par l'Apporteur, ou une déclaration de sa part refusée ou en attente, la Société ne démarche pas l'entreprise concernée et ne la prend pas en charge ; cette réserve ne s'applique ni à une entreprise que la Société connaissait déjà au sens de l'article 3.3, ni à une entreprise dont une attribution ou une prise en charge était en cours à la date de cette vérification ou de cette déclaration. ») ; EXIGENCE SÉPARÉE, HORS CONTRAT (texte de la juriste, plus stricte, qui s'impose au code sans être du texte contractuel ; rattrapage 90, voie (a)) : « Une vérification faite par un apporteur sans déclaration n'est versée à aucun outil commercial de la Société et ne sert qu'à la preuve de la réserve de l'article 3.5 alinéa 4 : pendant {{RESERVE_APRES_ACTE_APPORTEUR_JOURS}} jours, la Société ne démarche pas l'entreprise vérifiée et ne la prend pas en charge, sauf si elle la connaissait déjà au sens de l'article 3.3 ou si une attribution ou une prise en charge était en cours. » ; [rattrapage 91, note de l'exactitude] la mention « reste à valider par Williams » visait le texte CONTRACTUEL de l'al. 4, que Williams a VALIDÉ (#433) ; l'exigence séparée ci-dessus n'est pas un texte contractuel et s'impose au code sans cette validation. Ce qui est déjà acquis par délégation : toute commande de l'entreprise attribuée signée pendant l'attribution reste commissionnée, quel que soit celui qui la conclut ; le délai `RESERVE_APRES_ACTE_APPORTEUR_JOURS` est gardé ; [la durée propre `CRM_DUREE_PROSPECT_ANS` est RETIRÉE au rattrapage 90 : décision de Williams du 2026-10-03, ticket #220, « Option 3 : sans limite » ; la conservation au CRM suit JUR-T52] ; aucune émission avant les textes validés.",
+      "source": "Décision de Williams du 2026-10-02 (option B) ; textes d'A07 ; décisions de la coordination par délégation (délai de 30 jours gardé, deux phrases recommandées gardées par défaut) ; protection des vérifications sans déclaration réécrite le 2026-10-03, texte de la juriste (rattrapage 90) ; al. 4 cité depuis le contrat validé (#433, 9b34a278) et durée CRM retirée (ticket #220), rattrapage 90 ; note de l'exactitude sur la validation, rattrapage 91",
       "statut": "active",
       "remplaceePar": null,
       "module": 11,
@@ -6357,6 +6363,20 @@
       ]
     },
     {
+      "id": "REQ-JUR-067",
+      "domaine": "juridique",
+      "texte": "Aucun contrat d'apporteur n'est envoyé en signature tant que la chaîne des commissions n'est pas opérationnelle de bout en bout : le calcul des commissions (DM-15), leur acquisition à l'encaissement et les reprises (art. 4.2 à 4.5), le relevé et l'autofacturation (art. 5 et annexe 2), le paiement (T-ARG-033, REQ-ARG-026), et les effets de la fin du contrat sur les commissions (DM-18). Décision de Williams du 2026-10-03 : « non il n'y aura pas de contrats avant que cet outil sont fonctionnelet opérationnel ».",
+      "source": "texte de la juriste (2026-10-03), sur la décision de Williams du 2026-10-03 citée mot pour mot ; rattrapage 88",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "INT-T12"
+      ]
+    },
+    {
       "id": "REQ-GOV-031",
       "domaine": "charte relationnelle (REQ-JUR-031 → 038)",
       "texte": "🔴 **Règle de publication (dépôt PUBLIC, décision W13).** Le dépôt `axion-apporteurs` est public : tout ce qui y est poussé est définitivement lisible, y compris après un passage en privé (forks, caches, miroirs). Trois catégories n'y entrent **jamais** : Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : Extension : plans de part variable, montants et matricules des salariés n'entrent jamais dans le dépôt ni dans les journaux (valeurs factices dans les seeds). Témoin ajouté à `gov:publication`.",
@@ -6404,7 +6424,8 @@
         "GOV-087",
         "GOV-090",
         "GOV-101",
-        "GOV-123"
+        "GOV-123",
+        "QA-T72"
       ]
     },
     {
