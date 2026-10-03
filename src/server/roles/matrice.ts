@@ -52,7 +52,7 @@ export const MATRICE_DES_ROLES = {
   'ecran:qualification': ['admin', 'qualifieur', 'lecteur'],
   'ecran:apporteurs': ['admin', 'qualifieur', 'comptable'],
   'ecran:attributions': ['admin', 'qualifieur', 'lecteur'],
-  'ecran:utilisateurs': ['admin'],
+  'ecran:utilisateurs_console': ['admin'],
   // L'écran d'accès refusé, ouvert à tout rôle : il dit ce que le rôle permet et à qui s'adresser.
   'ecran:acces_refuse': ['admin', 'qualifieur', 'comptable', 'lecteur'],
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, readonly ConsoleRole[]>>;

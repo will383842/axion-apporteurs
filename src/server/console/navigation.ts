@@ -50,7 +50,7 @@ export const ENTREES_DE_LA_CONSOLE: readonly EntreeDeLaConsole[] = [
     ordre: 7,
     libelle: E.administration,
     route: '/console/utilisateurs',
-    droit: 'ecran:utilisateurs',
+    droit: 'ecran:utilisateurs_console',
   },
 ];
 
