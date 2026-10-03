@@ -48,4 +48,16 @@ export const DUREES_DE_RETENTION = {
     renvois: [],
     verifieLe: '2026-10-02',
   },
+  /**
+   * DM-61 (REQ-UX-016) : une notification reste visible dans l'espace douze mois après son
+   * inscription (`notifications_espace.cree_at`), puis elle est supprimée. La preuve d'un délai est
+   * le courriel envoyé, jamais cette copie d'affichage.
+   */
+  NOTIFICATIONS_ESPACE_CONSERVATION_MOIS: {
+    valeur: 12,
+    unite: 'mois',
+    source: 'REQ-UX-016, décision de Williams du 2026-10-03 (proposition d’A07)',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
 } as const satisfies Record<string, Seuil>;

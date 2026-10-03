@@ -50,6 +50,7 @@ import type { Inscriptions } from './lanceur';
 import { minimiserCandidatures } from './minimiser-candidatures';
 import { purgerLesContacts } from './purger-contacts';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
+import { purgerLesNotificationsDeLEspace } from './purger-notifications-espace';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
 import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
@@ -186,6 +187,9 @@ export function inscriptions(
     // DM-53 (REQ-DM-043) : le SIREN des dépôts refusés, douze mois après le refus.
     siren_refuses_purger: () =>
       purgerLesSirenRefuses(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-61 (REQ-UX-016) : les notifications de l'espace, douze mois après leur inscription.
+    notifications_espace_purger: () =>
+      purgerLesNotificationsDeLEspace(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>
