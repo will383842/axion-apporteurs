@@ -89,3 +89,14 @@ export const CORPS_DE_LA_LIBERATION = {
 } as const;
 
 export type CauseDeLiberation = keyof typeof CORPS_DE_LA_LIBERATION;
+
+/**
+ * SEC-54 — les deux phrases qui encadrent le code à six chiffres, dans le MÊME courriel que le lien
+ * (`lien_magique`). Le code est une seconde forme du lien : il ne sert qu'une fois et ne vaut pas plus
+ * longtemps que lui. Le code lui-même n'est pas un paramètre de texte : l'envoi le pose seul, sur sa
+ * ligne, entre les deux phrases.
+ */
+export const CODE_DU_COURRIEL_DE_CONNEXION = {
+  avant: 'Vous pouvez aussi saisir ce code sur la page de connexion :',
+  apres: 'Il ne sert qu’une fois, et pas plus longtemps que le lien.',
+} as const;

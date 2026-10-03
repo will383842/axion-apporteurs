@@ -41,7 +41,9 @@ import {
 import {
   consommerLien,
   demanderLien,
+  empreinteDuCode,
   empreinteDuJeton,
+  tirerCode,
   tirerJeton,
   type ConfigurationDuLien,
   type PortsDeConsommation,
@@ -131,6 +133,7 @@ async function poserLien(apporteurId: string, creeAt: Date): Promise<string> {
   await ecrituresDeLien(base.prisma).insererLien({
     apporteurId,
     tokenHash: empreinteDuJeton(jeton, configuration.secret),
+    codeHash: empreinteDuCode(tirerCode(), configuration.secret),
     kid: configuration.kid,
     creeAt,
     expireAt: new Date(creeAt.getTime() + QUINZE_MINUTES),
@@ -172,7 +175,8 @@ describe('REQ-SEC-001 — usage unique et durée de vie, comptés en lignes de s
     const jeton = await poserLien(id, new Date(t0));
     await consommerLien({ jeton, ipHash: null }, ports(new Date(t0 + 1000)));
     const seconde = await consommerLien({ jeton, ipHash: null }, ports(new Date(t0 + 2000)));
-    expect(seconde).toEqual({ etat: 'lien_invalide' });
+    // SEC-54 : un lien déjà consommé se dit « déjà utilisé », distinct d'un lien invalide.
+    expect(seconde).toEqual({ etat: 'deja_utilise' });
     expect(await sessionsDe(id)).toBe(1);
   });
 
@@ -239,6 +243,7 @@ describe('REQ-SEC-001 — seule l’empreinte HMAC est stockée, et seule elle f
     await ecrituresDeLien(base.prisma).insererLien({
       apporteurId: id,
       tokenHash: empreinteDuJeton(VECTEUR_LIEN.jeton, VECTEUR_LIEN.cle),
+      codeHash: empreinteDuCode(tirerCode(), configuration.secret),
       kid: kidDe(VECTEUR_LIEN.cle),
       creeAt: new Date(t0),
       expireAt: new Date(t0 + QUINZE_MINUTES),
@@ -278,6 +283,7 @@ describe('REQ-SEC-001 — seule l’empreinte HMAC est stockée, et seule elle f
     await ecrituresDeLien(base.prisma).insererLien({
       apporteurId: id,
       tokenHash: createHash('sha256').update(jeton, 'utf8').digest('hex'),
+      codeHash: empreinteDuCode(tirerCode(), configuration.secret),
       kid: configuration.kid,
       creeAt: new Date(t0),
       expireAt: new Date(t0 + QUINZE_MINUTES),
@@ -333,6 +339,7 @@ describe('REQ-SEC-001 — la base refuse ce que le code ne ferait pas', () => {
       ecrituresDeLien(base.prisma).insererLien({
         apporteurId: id,
         tokenHash: 'Z'.repeat(64),
+        codeHash: empreinteDuCode(tirerCode(), configuration.secret),
         kid: configuration.kid,
         creeAt: new Date(t0),
         expireAt: new Date(t0 + QUINZE_MINUTES),
@@ -347,6 +354,7 @@ describe('REQ-SEC-001 — la base refuse ce que le code ne ferait pas', () => {
       ecrituresDeLien(base.prisma).insererLien({
         apporteurId: id,
         tokenHash: empreinteDuJeton(tirerJeton(), configuration.secret),
+        codeHash: empreinteDuCode(tirerCode(), configuration.secret),
         kid: configuration.kid,
         creeAt: new Date(t0),
         expireAt: new Date(t0),
@@ -539,7 +547,7 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
     const consommation = portsDeConsommation(connu.d);
     expect((await consommerLien({ jeton, ipHash: null }, consommation)).etat).toBe('ouverte');
     expect(await consommerLien({ jeton, ipHash: null }, consommation)).toEqual({
-      etat: 'lien_invalide',
+      etat: 'deja_utilise',
     });
     expect(await sessionsDe(id)).toBe(1);
   });
