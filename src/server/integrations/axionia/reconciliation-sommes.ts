@@ -17,7 +17,10 @@
  * seul le NOMBRE d'écarts part ; les SIREN en cause ne sont nommés que dans Partners.
  */
 import { TYPES_EVENEMENT, type TypeEvenement } from '../../../../packages/contracts/events';
-import { payloadConforme } from './reception';
+import type { PrismaClient } from '@prisma/client';
+import { identifiantDuType, payloadConforme } from './reception';
+import { RECOUVREMENT_SEQUENCES } from './reconciliation';
+import type { LirePage, MotifDeRelecture } from './relecture';
 
 /** La fenêtre glissante, en jours (REQ-INT-013). */
 export const FENETRE_JOURS = 7;
@@ -182,5 +185,151 @@ export function comparerLesSommes(
     ecartsParSiren,
     ecartsGlobaux,
     nombreDEcarts: ecartsParSiren.length + ecartsGlobaux.length,
+  };
+}
+
+// ── le passage ─────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * La borne d'une relecture des sommes : cinquante pages. Sept jours de file dépassent la borne
+ * d'un passage de rattrapage ; au-delà de celle-ci, le passage s'arrête et le signale, sans rien
+ * comparer : une relecture incomplète ne produirait que de faux écarts.
+ */
+export const PAGES_MAX_DES_SOMMES = 50;
+
+export type SignalDesSommes =
+  | { readonly genre: 'relecture_echouee'; readonly motif: MotifDeRelecture }
+  | { readonly genre: 'relecture_bornee'; readonly nombre: number }
+  | { readonly genre: 'ecart_de_sommes'; readonly nombre: number };
+
+/** Un événement d'argent REÇU par Partners : son identifiant, son type, sa charge stockée. */
+export interface EvenementRecuDeSomme {
+  readonly eventId: string;
+  readonly eventType: string;
+  readonly charge: unknown;
+}
+
+export interface PortsDesSommes {
+  maintenant(): Date;
+  /** La plus haute séquence d'axion-ia REÇUE avant cet instant (heure de réception), ou zéro. */
+  sequenceAvant(instant: Date): Promise<bigint>;
+  readonly lire: LirePage;
+  /** Les événements d'argent reçus par Partners, source axion-ia. */
+  evenementsRecus(types: readonly TypeDeSomme[]): Promise<readonly EvenementRecuDeSomme[]>;
+  /** Les SIREN attribués dans Partners. */
+  sirensAttribues(): Promise<ReadonlySet<string>>;
+  signaler(s: SignalDesSommes): Promise<void>;
+}
+
+export interface CompteursDesSommes extends ResultatDesSommes {
+  readonly pages: number;
+  readonly relus: number;
+}
+
+/** Le corps relu, réduit à ce que la somme lit ; `null` s'il n'est pas une enveloppe lisible. */
+function evenementDuCorps(eventId: string, corps: string): EvenementDeSomme | null {
+  let brut: unknown;
+  try {
+    brut = JSON.parse(corps);
+  } catch {
+    return null;
+  }
+  const e = (brut ?? {}) as Record<string, unknown>;
+  return typeof e['event_type'] === 'string'
+    ? evenementDeSomme(eventId, e['event_type'], e['payload'])
+    : null;
+}
+
+/**
+ * Un passage : relit la file d'axion-ia depuis la plus haute séquence reçue AVANT la fenêtre, moins
+ * le recouvrement ; somme les deux côtés sur la fenêtre ; compare. Un écart : UNE alerte, au nombre.
+ * Les SIREN en cause ne sont rendus qu'au retour, que Partners garde. Lève quand la relecture échoue
+ * ou est bornée : le battement le dit, et rien n'est comparé.
+ */
+export async function passageDesSommes(d: PortsDesSommes): Promise<CompteursDesSommes> {
+  const fenetre = fenetreDe(d.maintenant());
+  const avant = await d.sequenceAvant(fenetre.debut);
+  let apres = avant > RECOUVREMENT_SEQUENCES ? avant - RECOUVREMENT_SEQUENCES : 0n;
+  const cote: EvenementDeSomme[] = [];
+  let pages = 0;
+  let relus = 0;
+  let suite = true;
+  while (suite && pages < PAGES_MAX_DES_SOMMES) {
+    const page = await d.lire(apres);
+    if (!page.ok) {
+      await d.signaler({ genre: 'relecture_echouee', motif: page.motif });
+      throw new Error(`relecture_echouee : ${page.motif}`);
+    }
+    pages += 1;
+    relus += page.lignes.length;
+    for (const l of page.lignes) {
+      const e = evenementDuCorps(l.eventId, l.corps);
+      if (e !== null) cote.push(e);
+    }
+    apres = page.derniereSequence;
+    suite = page.suite;
+  }
+  if (suite) {
+    await d.signaler({ genre: 'relecture_bornee', nombre: pages });
+    throw new Error('relecture_bornee : la fenêtre dépasse la borne, rien n’est comparé');
+  }
+  const recus: EvenementDeSomme[] = [];
+  for (const r of await d.evenementsRecus(TYPES_DE_SOMME)) {
+    const e = evenementDeSomme(r.eventId, r.eventType, r.charge);
+    if (e !== null) recus.push(e);
+  }
+  const attribues = await d.sirensAttribues();
+  const resultat = comparerLesSommes(
+    sommerSurLaFenetre(cote, fenetre, attribues),
+    sommerSurLaFenetre(recus, fenetre, attribues)
+  );
+  if (resultat.nombreDEcarts > 0)
+    await d.signaler({ genre: 'ecart_de_sommes', nombre: resultat.nombreDEcarts });
+  return { ...resultat, pages, relus };
+}
+
+// ── les ports en base ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * Les états d'une attribution qui ne font PAS un SIREN attribué : invalidée ou annulée, elle n'a
+ * jamais tenu. Tout autre état, en cours comme terminé, rattache encore les paiements du SIREN.
+ * Choix soumis à la lentille schema ; les contrôles globaux couvrent de toute façon le reste.
+ */
+const ETATS_SANS_ATTRIBUTION = ['invalidee', 'annulee'] as const;
+
+/** Les ports de lecture en base ; la relecture, l'horloge et le signal arrivent de l'appelant. */
+export function portsDesSommesEnBase(
+  prisma: PrismaClient,
+  d: Pick<PortsDesSommes, 'maintenant' | 'lire' | 'signaler'>
+): PortsDesSommes {
+  return {
+    ...d,
+    async sequenceAvant(instant) {
+      const r = await prisma.evenementRecu.aggregate({
+        where: { source: 'axionia', receivedAt: { lt: instant } },
+        _max: { sequence: true },
+      });
+      return r._max.sequence ?? 0n;
+    },
+    async evenementsRecus(types) {
+      const parIdentifiant = new Map(types.map((t) => [identifiantDuType(t), t]));
+      const lignes = await prisma.evenementRecu.findMany({
+        where: { source: 'axionia', eventType: { in: [...parIdentifiant.keys()] } },
+        select: { eventId: true, eventType: true, charge: true },
+      });
+      return lignes.map((l) => ({
+        eventId: l.eventId,
+        eventType: parIdentifiant.get(l.eventType) ?? '',
+        charge: l.charge,
+      }));
+    },
+    async sirensAttribues() {
+      const lignes = await prisma.attribution.findMany({
+        where: { statut: { notIn: [...ETATS_SANS_ATTRIBUTION] } },
+        select: { siren: true },
+        distinct: ['siren'],
+      });
+      return new Set(lignes.map((l) => l.siren));
+    },
   };
 }
