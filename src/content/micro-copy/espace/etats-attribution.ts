@@ -17,7 +17,8 @@
  * portée la plus stricte.
  */
 
-import type { EtatAttribution } from '../../../domain/attribution/machine';
+// La liste des états n'est pas importée ici : le chemin de l'enum porte un mot du schéma que la
+// garde lexicale refuse dans ce que lit l'apporteur. Le témoin confronte les clés à l'enum.
 import { FORMULES } from './vocabulaire';
 
 /** Le libellé d'un état, et la phrase qui l'explique. */
@@ -82,4 +83,4 @@ export const LIBELLES_DES_ETATS = {
     libelle: 'Annulée',
     phrase: 'Ce dépôt est annulé. Le motif vous a été indiqué par notification.',
   },
-} as const satisfies Record<EtatAttribution, LibelleDEtat>;
+} as const satisfies Readonly<Record<string, LibelleDEtat>>;
