@@ -24,6 +24,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { FORMULES } from '../../../src/content/micro-copy/espace/vocabulaire';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
+import { BADGES_DU_DEPOT } from '../../../src/content/micro-copy/espace/confirmation-du-depot';
 import {
   ISSUES_DEPOT,
   ISSUES_DE_REFUS,
@@ -1229,7 +1230,9 @@ describe('REQ-SEC-042 REQ-UX-002 REQ-JUR-043 — l’occupant d’une entreprise
       '{delaiRedeclaration}',
       `${SEUILS.FILE_FENETRE_REDECLARATION_JOURS.valeur} jours`
     );
-    expect(rendu).toContain('vous aurez 15 jours pour déposer à nouveau cette entreprise');
+    expect(rendu).toContain(
+      `vous aurez ${SEUILS.FILE_FENETRE_REDECLARATION_JOURS.valeur} jours pour déposer à nouveau cette entreprise`
+    );
     expect(rendu).not.toMatch(/\{[^}]*\}/);
     // Les autres « Rien à faire » de l'espace restent : ils ne visent pas l'attente.
     expect(TEXTES_DES_ISSUES.enregistree.quoiFaire).toContain(FORMULES.rienAFaire);
@@ -1272,5 +1275,38 @@ describe('REQ-SEC-042 REQ-UX-002 REQ-JUR-043 — l’occupant d’une entreprise
         'Un conseiller de la banque vous répondra',
       ])
     ).toEqual([]);
+  });
+
+  /**
+   * Art. 3.5 (rattrapage 89, texte de la juriste) : le refus d'une entreprise déjà prise est
+   * IDENTIQUE quel que soit l'occupant, et la réserve de l'alinéa 4 n'est pas une occupation. Côté
+   * micro-copie, cela se lit ainsi : aucune issue n'est propre à un occupant ou à la réserve, et les
+   * deux issues d'une entreprise prise ne disent pas qui la tient. La moitié serveur du témoin (le
+   * même refus rendu pour les deux occupants, une déclaration pendant la réserve qui passe) est
+   * celle de SEC-12, sur `tests/integration/concurrence.spec.ts`.
+   */
+  it('REQ-SEC-042 REQ-JUR-043 : TÉMOIN art. 3.5 — un seul texte pour une entreprise prise, quel que soit l’occupant, et aucune issue pour la réserve', () => {
+    const OCCUPANT_OU_RESERVE = mot(
+      'société|axion-ia|préposés?|conseillers?|prise en charge|réserve de la Société'
+    );
+    for (const i of ISSUES_DEPOT)
+      expect(i, `issue ${i}`).not.toMatch(/societe|conseiller|prepose|prise_en_charge|reserve/);
+    for (const i of ['en_attente', 'file_complete'] as const) {
+      const { pastille, titre, pourquoi, quoiFaire } = TEXTES_DES_ISSUES[i];
+      for (const t of [pastille, titre, pourquoi, quoiFaire])
+        expect(t, `${i} › ${t}`).not.toMatch(OCCUPANT_OU_RESERVE);
+      expect(pourquoi).toContain(FORMULES.dejaReservee);
+    }
+  });
+
+  it('REQ-JUR-043 : la fin d’une demande vérifiée suit le libellé d’UX-P1-41, « de nouveau disponible » ne reste qu’à la péremption et à la fin de durée (rattrapage 70)', () => {
+    const lu = readFileSync('docs/maquettes/mes-entreprises.html', 'utf8');
+    const libelles = [...lu.matchAll(/>\s*(Réservation terminée · [^<]+?)\s*</g)].map((m) =>
+      m[1]!.replace(/\s+/g, ' ')
+    );
+    expect(libelles.length).toBeGreaterThan(0);
+    const avant = BADGES_DU_DEPOT.reservationTermineeVerifiee.split('{dateRedepot}')[0]!;
+    for (const l of libelles) expect(l.startsWith(avant), l).toBe(true);
+    expect(lu).toMatch(/de nouveau disponible[^<]*ne sert qu’à la péremption/);
   });
 });
