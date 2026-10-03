@@ -376,6 +376,9 @@ export const CHAMPS_PII = {
   contexte: { chiffre: 'contexteChiffre' },
   codePostal: { chiffre: 'codePostalChiffre' },
   lienInteretPrecision: { chiffre: 'lienInteretPrecisionChiffre' },
+  // DM-59 (REQ-JUR-065) : la nouvelle valeur d'une rectification demandée par le contact, chiffrée
+  // comme ses autres données, SANS empreinte (on ne la cherche jamais), effacée à la clôture.
+  valeurRectification: { chiffre: 'valeurChiffree' },
 } as const satisfies Record<
   string,
   { chiffre: string } | { chiffre: string; empreinte: string; type: TypeEmpreinte }
