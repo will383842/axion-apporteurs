@@ -25,6 +25,7 @@ import { consommerLien, demanderLien, verifierLeCode } from '../../../server/aut
 import {
   COOKIE_DATTENTE,
   dependancesDuProcessus,
+  effacerLeCookieDAttente,
   empreinteDeLaSaisie,
   empreinteReseauDeLaRequete,
   portsDeConsommation,
@@ -64,7 +65,7 @@ export async function demanderUnLienDeConnexion(formulaire: FormData): Promise<v
 
 /** SEC-54 : « Changer d'adresse » efface le cookie d'attente, puis revient à la demande. */
 export async function changerDAdresse(): Promise<void> {
-  (await cookies()).delete({ name: COOKIE_DATTENTE.nom, path: COOKIE_DATTENTE.attributs.path });
+  effacerLeCookieDAttente(await cookies());
   redirect('/connexion');
 }
 
@@ -81,8 +82,7 @@ async function ouvrirLaConnexion(
   pot.set(nom, jetonSession, attributs);
   // SEC-54 : la session ouverte, le cookie d'attente du code n'a plus d'objet. Effacé s'il existe :
   // une ouverture par le clic, sans demande sur cet appareil, n'en porte aucun.
-  if (pot.get?.(COOKIE_DATTENTE.nom) !== undefined)
-    pot.delete({ name: COOKIE_DATTENTE.nom, path: COOKIE_DATTENTE.attributs.path });
+  if (pot.get?.(COOKIE_DATTENTE.nom) !== undefined) effacerLeCookieDAttente(pot);
   redirect(
     await destinationDeLOuverture(
       jetonSession,
@@ -125,6 +125,6 @@ export async function verifierUnCodeDeConnexion(formulaire: FormData): Promise<v
   );
   if (resultat.etat === 'ouverte') await ouvrirLaConnexion(resultat.jetonSession, d);
   // Le lien annulé au cinquième échec : le cookie d'attente part avec lui.
-  if (lienAnnule) pot.delete({ name: COOKIE_DATTENTE.nom, path: COOKIE_DATTENTE.attributs.path });
+  if (lienAnnule) effacerLeCookieDAttente(pot);
   redirect(`/connexion?code=${resultat.etat}`);
 }

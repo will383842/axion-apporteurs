@@ -168,6 +168,17 @@ export const COOKIE_DATTENTE = {
   },
 } as const;
 
+/**
+ * Efface le cookie d'attente PAR LE MÊME EN-TÊTE que sa pose, Max-Age=0 : un cookie `__Host-` n'est
+ * accepté qu'avec Secure et Path=/, et un effacement nu (`delete`) sans Secure serait REJETÉ par le
+ * navigateur, le cookie restant jusqu'à son terme (lentille sécurité, 2026-10-03).
+ */
+export function effacerLeCookieDAttente(pot: {
+  set(nom: string, valeur: string, attributs: Record<string, unknown>): unknown;
+}): void {
+  pot.set(COOKIE_DATTENTE.nom, '', { ...COOKIE_DATTENTE.attributs, maxAge: 0 });
+}
+
 /** L'empreinte de recherche de l'adresse saisie, comme à l'émission, ou `null` si elle est hors forme. */
 export function empreinteDeLaSaisie(env: DependancesDuLien['env'], saisie: string): string | null {
   try {

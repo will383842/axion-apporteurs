@@ -60,6 +60,7 @@ import { horlogeFigee } from '../../../src/domain/temps/horloge';
 import {
   COOKIE_DATTENTE,
   corpsDuCourriel,
+  effacerLeCookieDAttente,
   empreinteDeLaSaisie,
   portsDuCode,
 } from '../../../src/server/auth/lien-magique-production';
@@ -690,8 +691,10 @@ describe('REQ-SEC-001 — le cookie d’attente du code', () => {
   });
 
   it('REQ-SEC-001 : TÉMOIN — effacé dans les trois cas : session ouverte, « Changer d’adresse », lien annulé au 5e échec', async () => {
-    const efface =
-      /\.delete\(\{ name: COOKIE_DATTENTE\.nom, path: COOKIE_DATTENTE\.attributs\.path \}\)/g;
+    // Jamais un effacement nu (`delete`, sans Secure, rejeté par le navigateur pour un `__Host-`) :
+    // toujours le helper, qui efface par le même en-tête que la pose.
+    expect(ACTIONS).not.toMatch(/\.delete\(/);
+    const efface = /effacerLeCookieDAttente\((?:await cookies\(\)|pot)\)/g;
     expect(ACTIONS.match(efface)).toHaveLength(3);
     const ouvrir = ACTIONS.slice(
       ACTIONS.indexOf('async function ouvrirLaConnexion'),
@@ -703,7 +706,7 @@ describe('REQ-SEC-001 — le cookie d’attente du code', () => {
       ACTIONS.indexOf('async function ouvrirLaConnexion')
     );
     expect(changer).toMatch(efface);
-    expect(ACTIONS).toMatch(/if \(lienAnnule\) pot\.delete\(/);
+    expect(ACTIONS).toMatch(/if \(lienAnnule\) effacerLeCookieDAttente\(pot\)/);
     // Et le noyau ne signale l'annulation qu'au cinquième échec, une fois.
     const u = univers();
     let annonces = 0;
@@ -725,5 +728,19 @@ describe('REQ-SEC-001 — le cookie d’attente du code', () => {
     const tout = lignes.join('\n');
     expect(lignes.length).toBeGreaterThan(0);
     expect(tout).not.toContain(empreinte);
+  });
+});
+
+describe('REQ-SEC-001 — l’effacement du cookie d’attente, accepté par le navigateur', () => {
+  it('REQ-SEC-001 : TÉMOIN — l’en-tête d’effacement porte Secure, HttpOnly, Path=/, SameSite=Strict et Max-Age=0', () => {
+    const poses: [string, string, Record<string, unknown>][] = [];
+    effacerLeCookieDAttente({ set: (n, v, a) => poses.push([n, v, a]) });
+    expect(poses).toEqual([
+      [
+        '__Host-connexion_code',
+        '',
+        { httpOnly: true, secure: true, path: '/', sameSite: 'strict', maxAge: 0 },
+      ],
+    ]);
   });
 });
