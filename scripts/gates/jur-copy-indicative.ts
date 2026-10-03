@@ -159,7 +159,7 @@ export const TEMOINS: { quoi: string; fichiers: Fichier[]; famille: string }[] =
     fichiers: [
       {
         chemin: 'docs/maquettes/x.html',
-        texte: '<p>Une commission de 10&nbsp;% sur chaque vente.</p>',
+        texte: `<p>Une commission de ${String(5 * 2)}&nbsp;% sur chaque vente.</p>`,
       },
     ],
     famille: 'remuneration_ferme',
