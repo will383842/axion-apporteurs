@@ -1,5 +1,5 @@
 /**
- * jur-copy-indicative.ts — `jur:copy-indicative` (QA-T69 ; REQ-JUR-001, REQ-JUR-002) : la rémunération
+ * jur-copy-indicative.ts — `jur:copy-indicative-partners` (QA-T69 ; REQ-JUR-001, REQ-JUR-002) : la rémunération
  * d'un apporteur ne se promet pas.
  *
  * USAGE : npx tsx scripts/gates/jur-copy-indicative.ts           (juge le dépôt)
@@ -241,7 +241,7 @@ function prouver(): string[] {
 }
 
 function lireLeDepot(): Fichier[] {
-  return fichiersSuivisOuRefus('jur:copy-indicative')
+  return fichiersSuivisOuRefus('jur:copy-indicative-partners')
     .filter(
       (c) =>
         (c.startsWith('src/content/') && /\.(ts|json|md)$/.test(c)) ||
@@ -261,16 +261,16 @@ if (APPELE_DIRECTEMENT) {
         (f) => `[${f.famille}] ${f.chemin}:${f.ligne} — « ${f.extrait} »`
       );
   if (echecs.length > 0) {
-    console.error(`❌ jur:copy-indicative — ${echecs.length} faute(s) :`);
+    console.error(`❌ jur:copy-indicative-partners — ${echecs.length} faute(s) :`);
     for (const e of echecs) console.error(`   ${e}`);
     process.exitCode = 1;
   } else if (prouve) {
     console.log(
-      `✅ jur:copy-indicative — ${TEMOINS.length} témoins rougissent chacun sur sa seule famille, ${CONTRE_TEMOINS.length} contre-témoins restent verts — preuve faite.`
+      `✅ jur:copy-indicative-partners — ${TEMOINS.length} témoins rougissent chacun sur sa seule famille, ${CONTRE_TEMOINS.length} contre-témoins restent verts — preuve faite.`
     );
   } else {
     console.log(
-      `✅ jur:copy-indicative — ${fichiers.length} fichiers de src/content/ et docs/maquettes/ lus : aucune rémunération présentée comme ferme.`
+      `✅ jur:copy-indicative-partners — ${fichiers.length} fichiers de src/content/ et docs/maquettes/ lus : aucune rémunération présentée comme ferme.`
     );
   }
 }

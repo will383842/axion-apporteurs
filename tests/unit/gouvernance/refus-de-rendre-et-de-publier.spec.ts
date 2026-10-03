@@ -1010,10 +1010,10 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       porte: 1,
       temoins: 0,
       raison:
-        'QA-T69 — `jur:copy-indicative`, REQ-JUR-001 et REQ-JUR-002 : aucune rémunération présentée ' +
+        'QA-T69 — `jur:copy-indicative-partners`, REQ-JUR-001 et REQ-JUR-002 : aucune rémunération présentée ' +
         'comme ferme. `process.exitCode = 1` : sortie DIFFÉRÉE, commune au jugement du dépôt et à ' +
         '`--prove` (un témoin resté vert, un contre-témoin rouge). Les familles sont éprouvées par ' +
-        '`pnpm jur:copy-indicative:prove` et par copy-indicative.spec.ts ; aucun témoin de `REFUS` ne ' +
+        '`pnpm jur:copy-indicative-partners:prove` et par copy-indicative.spec.ts ; aucun témoin de `REFUS` ne ' +
         'voit le binaire sortir en 1. Le REFUS DE PÉRIMÈTRE vient de `fichiersSuivisOuRefus`. ' +
         'Dette DÉCLARÉE.',
     },
@@ -2432,7 +2432,7 @@ const GARDES_QUI_BALAIENT = [
   // SEC-46 — `csp:inline` juge les fichiers SUIVIS sous `src/app/`.
   'scripts/gates/csp-inline.ts',
   'scripts/gates/jur-lexique-social.ts',
-  // QA-T69 — `jur:copy-indicative` juge les fichiers SUIVIS de `src/content/` et `docs/maquettes/`.
+  // QA-T69 — `jur:copy-indicative-partners` juge les fichiers SUIVIS de `src/content/` et `docs/maquettes/`.
   'scripts/gates/jur-copy-indicative.ts',
   // SEC-17 — `securite:roles` dérive les actions et les routes de la console des fichiers SUIVIS
   // sous `src/app/(console)/` et `src/server/console/`.

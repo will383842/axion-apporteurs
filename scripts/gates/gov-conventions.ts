@@ -2848,11 +2848,11 @@ export const PORTE_A_FIGEE: PorteFigee = {
     },
     {
       nom: 'Charte — aucune remuneration presentee comme ferme',
-      run: 'pnpm jur:copy-indicative',
+      run: 'pnpm jur:copy-indicative-partners',
     },
     {
       nom: 'La garde de la remuneration indicative sait rougir',
-      run: 'pnpm jur:copy-indicative:prove',
+      run: 'pnpm jur:copy-indicative-partners:prove',
     },
     {
       nom: 'Seuils et delais du contrat — une seule source, aucun litteral hors SSOT',
@@ -2982,8 +2982,8 @@ export const PORTE_A_FIGEE: PorteFigee = {
     'jur:revue-apporteur-facing:prove': 'tsx scripts/gates/jur-revue-apporteur-facing.ts --prove',
     'jur:lexique-social': 'tsx scripts/gates/jur-lexique-social.ts',
     'jur:lexique-social:prove': 'tsx scripts/gates/jur-lexique-social.ts --prove',
-    'jur:copy-indicative': 'tsx scripts/gates/jur-copy-indicative.ts',
-    'jur:copy-indicative:prove': 'tsx scripts/gates/jur-copy-indicative.ts --prove',
+    'jur:copy-indicative-partners': 'tsx scripts/gates/jur-copy-indicative.ts',
+    'jur:copy-indicative-partners:prove': 'tsx scripts/gates/jur-copy-indicative.ts --prove',
     'ssot:seuils': 'tsx scripts/gates/seuils-ssot.ts',
     'ssot:seuils:prove': 'tsx scripts/gates/seuils-ssot.ts --prove',
     'securite:roles': 'tsx scripts/gates/roles.ts',

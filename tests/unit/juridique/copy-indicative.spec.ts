@@ -1,7 +1,7 @@
 // @req REQ-JUR-001
 // @req REQ-JUR-002
 /**
- * QA-T69 — la garde `jur:copy-indicative`, transposée d'axion-ia : la rémunération d'un
+ * QA-T69 — la garde `jur:copy-indicative-partners`, transposée d'axion-ia : la rémunération d'un
  * apporteur ne se promet pas, ni dans la micro-copy ni dans les maquettes.
  *
  * CE QUE CE FICHIER GARDE :
