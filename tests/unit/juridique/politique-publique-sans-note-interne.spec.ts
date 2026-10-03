@@ -105,4 +105,37 @@ describe('REQ-JUR-025 — la politique publique ne porte aucune note interne', (
     }
     expect(lisible(l)).not.toMatch(/à confirmer/i);
   });
+
+  it('REQ-JUR-025 : TÉMOIN (A07) — une qualification n’est montrée que tranchée : « à confirmer » ou « À compléter », elle n’est pas annoncée du tout', () => {
+    const lignes = REGISTRE.split('\n');
+    const tiers = (nom: string) => lignes.find((x) => x.startsWith(`| ${nom} |`))!.split('|');
+    const enSuspens = ['Banque', 'URSSAF', 'Sentry'].filter((nom) => {
+      const q = tiers(nom)[3]!;
+      return /à confirmer/i.test(q) || q.includes(MARQUE_A_COMPLETER);
+    });
+    expect(enSuspens).toEqual(['Banque', 'URSSAF', 'Sentry']);
+    const l = lue(REGISTRE);
+    for (const nom of enSuspens)
+      expect([nom, l.politique.destinataires.find((x) => x.nom === nom)?.qualification]).toEqual([
+        nom,
+        [],
+      ]);
+    const tranchee = l.politique.destinataires.filter((d) => d.qualification.length > 0);
+    expect(tranchee.length).toBeGreaterThan(0);
+    for (const d of tranchee) expect(d.qualification).not.toContainEqual({ type: 'a_completer' });
+  });
+
+  it('REQ-JUR-025 : TÉMOIN (A07) — la donnée confiée à l’URSSAF, mot pour mot', () => {
+    const urssaf = lue(REGISTRE).politique.destinataires.find((x) => x.nom === 'URSSAF');
+    expect(urssaf?.donnees).toEqual([
+      {
+        type: 'texte',
+        texte:
+          'L’attestation de vigilance remise par l’apporteur, pour en vérifier l’authenticité'.replace(
+            /’/g,
+            "'"
+          ),
+      },
+    ]);
+  });
 });

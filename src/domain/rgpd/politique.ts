@@ -253,6 +253,19 @@ function tableauDesTiers(lignes: readonly string[]) {
   return { corps: tableau.slice(1), colonne };
 }
 
+/**
+ * La qualification d'un tiers n'est montrée que TRANCHÉE (A07) : une cellule qui porte « à confirmer »
+ * ou un manque déclaré n'est pas annoncée du tout — ni texte, ni « en cours » — et la retenue est
+ * nommée. La page dit alors le rôle du tiers (ses données confiées), jamais un titre juridique en suspens.
+ */
+function qualificationTranchee(contenu: string, ou: string, filtres: Filtre[]): Segment[] {
+  if (NON_TRANCHE.test(contenu) || contenu.includes(MARQUE_A_COMPLETER)) {
+    filtres.push({ ou, motif: 'non_tranche' });
+    return [];
+  }
+  return segments(contenu, ou, filtres);
+}
+
 function lireDestinataires(lignes: readonly string[], filtres: Filtre[]): Destinataire[] {
   const { corps, colonne } = tableauDesTiers(lignes);
   const c = {
@@ -274,7 +287,11 @@ function lireDestinataires(lignes: readonly string[], filtres: Filtre[]): Destin
         segments(cellule(l, i), `${nom} · ${colonne}`, filtres);
       return {
         nom,
-        qualification: lire(c.qualification, COLONNES.qualification),
+        qualification: qualificationTranchee(
+          cellule(l, c.qualification),
+          `${nom} · ${COLONNES.qualification}`,
+          filtres
+        ),
         donnees: lire(c.donnees, COLONNES.donnees),
         localisation: lire(c.localisation, COLONNES.localisation),
       };
