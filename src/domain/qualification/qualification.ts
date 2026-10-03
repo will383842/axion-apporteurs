@@ -6,8 +6,8 @@
  *     éteint l'attribution et ouvre l'article 3.7 ; `injoignable` et `ne_se_souvient_pas` la
  *     maintiennent, sans rien imputer à personne ;
  *   — le taux de confirmation et le palier PAR APPORTEUR (REQ-DM-009, REQ-DM-010) ne sont PAS dérivés ici :
- *     la juriste les juge contraires au contrat (art. 3.2 al. 4, 3.3 bis, 3.7 al. 3), question posée à
- *     Williams (coordination, 2026-10-03) ;
+ *     la juriste les juge contraires au contrat (art. 3.2 al. 4, 3.3 bis, 3.7 al. 3), et Williams a
+ *     retiré le palier le 2026-10-03 : « non pas pour le moment » ;
  *   — le nombre d'« injoignable » d'une attribution est dérivé du compte des qualifications ;
  *   — REQ-CPL-024 : verrou optimiste, une version périmée est rejetée avec l'état courant.
  */

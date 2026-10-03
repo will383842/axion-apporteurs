@@ -12,7 +12,8 @@
  *      (`non_confirmee`) ; `confirme` la confirme quand elle est encore `provisoire` ; les autres la
  *      maintiennent. Un refus de la machine lève, et RIEN n'est écrit, qualification comprise.
  *
- * Aucun taux ni palier par apporteur n'est dérivé ici (REQ-DM-009 et REQ-DM-010 en question).
+ * Aucun taux ni palier par apporteur n'est dérivé ici : Williams a retiré le palier le 2026-10-03,
+ * « non pas pour le moment ».
  */
 import { randomUUID } from 'node:crypto';
 import type { Prisma } from '@prisma/client';

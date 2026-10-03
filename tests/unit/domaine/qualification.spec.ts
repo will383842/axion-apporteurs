@@ -6,8 +6,8 @@
  * CE QUE CE FICHIER GARDE :
  *   1. REQ-DM-008 : seul `non_confirme` éteint l'attribution ; `injoignable` et `ne_se_souvient_pas`
  *      la maintiennent `provisoire`, sans rien imputer à personne ; `confirme` la confirme ;
- *   2. aucun taux ni palier n'est calculé PAR APPORTEUR : REQ-DM-009 et REQ-DM-010 sont en question
- *      auprès de Williams (avis contraire de la juriste, 2026-10-03) ;
+ *   2. aucun taux ni palier n'est calculé PAR APPORTEUR : la juriste les juge contraires au contrat, et
+ *      Williams a retiré le palier le 2026-10-03, « non pas pour le moment » ;
  *   3. le nombre d'« injoignable » d'UNE attribution est DÉRIVÉ, jamais stocké ;
  *   4. REQ-CPL-024 : un second enregistrement concurrent est rejeté avec l'état courant.
  */
