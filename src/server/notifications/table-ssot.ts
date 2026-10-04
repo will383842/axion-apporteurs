@@ -304,6 +304,38 @@ export const GABARITS = {
     route: '/mes-entreprises',
     routeEnAttente: null,
   },
+  // SEC-19 (fiches de la juriste, #703, 5980966503 ; arrêt d'A02, 5980982895 §1) : la mise en demeure
+  // fait courir son délai de l'envoi du courriel ; son texte vit dans `decisions_de_contrat`.
+  mise_en_demeure: {
+    destinataire: 'apporteur',
+    req: 'REQ-JUR-006',
+    emetteur: 'SEC-19',
+    fondement: `art. 11.2 — ${SEUILS.MISE_EN_DEMEURE_JOURS.valeur} jours pour remédier au manquement, à compter de l’envoi`,
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: true,
+    canaux: ['email', 'espace'],
+    desactivable: false,
+    actions: action('mise_en_demeure'),
+    route: '/mes-entreprises',
+    routeEnAttente: null,
+  },
+  // SEC-19 : la fin du contrat, dans l'espace en lecture seule ; elle fait courir le préavis d'une
+  // résiliation par la Société (art. 11.1 et 20).
+  resiliation: {
+    destinataire: 'apporteur',
+    req: 'REQ-DM-011',
+    emetteur: 'SEC-19',
+    fondement: 'art. 11 et 12.5 — la fin du contrat et ses effets (art. 12), notifiés par écrit',
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: true,
+    canaux: ['email', 'espace'],
+    desactivable: false,
+    actions: action('resiliation'),
+    route: '/mes-commissions',
+    routeEnAttente: null,
+  },
 } as const satisfies Readonly<Record<string, LigneDeNotification>>;
 
 export type Gabarit = keyof typeof GABARITS;
