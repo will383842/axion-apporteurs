@@ -47,7 +47,7 @@ export type Decision = {
 const NUMERO_D_ENTREPRISE = /^[0-9]{9}$/;
 
 /**
- * Un caractère de contrôle (C0, DEL, C1), un séparateur de ligne ou de paragraphe, ou un caractère de
+ * Un caractère de contrôle (sous 0x20, de 0x7f à 0x9f), un séparateur de ligne ou de paragraphe, ou un caractère de
  * FORMAT (catégorie Cf : U+202E retourne un texte, U+200B le cache) — que le rendu refuserait.
  */
 const FORMAT = /^\p{Cf}$/u;
