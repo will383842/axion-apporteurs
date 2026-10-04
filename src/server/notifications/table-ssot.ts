@@ -27,6 +27,7 @@
 import { z } from 'zod';
 import { SEUILS } from '../../domain/seuils/ssot';
 import { CONNEXION_CONSOLE } from '../../content/micro-copy/console/connexion';
+import { UTILISATEURS_CONSOLE } from '../../content/micro-copy/console/utilisateurs';
 import {
   TEXTES_DES_NOTIFICATIONS,
   type TexteDeNotification,
@@ -110,6 +111,54 @@ export const GABARITS = {
       {
         libelle: CONNEXION_CONSOLE.courriel.appel,
         source: 'src/content/micro-copy/console/connexion.ts',
+      },
+    ],
+    route: '/console/connexion',
+    routeEnAttente: null,
+  },
+  /**
+   * SEC-30 : la création d'un administrateur, notifiée à TOUS les administrateurs actifs, auteur
+   * compris (HYP-W19-QUATRE-YEUX). Une émission par administrateur. Textes de la juriste (96).
+   */
+  admin_cree: {
+    destinataire: 'utilisateur_console',
+    req: 'REQ-SEC-023',
+    emetteur: 'SEC-30',
+    fondement:
+      'REQ-SEC-023 et HYP-W19-QUATRE-YEUX — toute création d’un administrateur est notifiée à tous les administrateurs',
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: false,
+    canaux: ['email'],
+    desactivable: false,
+    actions: [
+      {
+        libelle: UTILISATEURS_CONSOLE.courriels.adminCree.appel,
+        source: 'src/content/micro-copy/console/utilisateurs.ts',
+      },
+    ],
+    route: '/console/utilisateurs',
+    routeEnAttente: null,
+  },
+  /**
+   * SEC-30 : l'invitation à la console, SANS lien de connexion : l'adresse de `/console/connexion`.
+   * L'échéance FERME l'invitation, elle n'ouvre aucun délai. Textes de la juriste (96).
+   */
+  invitation_console: {
+    destinataire: 'utilisateur_console',
+    req: 'REQ-UX-048',
+    emetteur: 'SEC-30',
+    fondement:
+      'REQ-UX-048 et REQ-DM-024 — invitation à la console, transactionnelle, sans lien de connexion',
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: false,
+    canaux: ['email'],
+    desactivable: false,
+    actions: [
+      {
+        libelle: UTILISATEURS_CONSOLE.courriels.invitation.appel,
+        source: 'src/content/micro-copy/console/utilisateurs.ts',
       },
     ],
     route: '/console/connexion',

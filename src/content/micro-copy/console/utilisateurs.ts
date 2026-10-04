@@ -92,4 +92,46 @@ export const UTILISATEURS_CONSOLE = {
     action: 'Inviter une personne',
   },
   chargement: 'Chargement des utilisateurs…',
+  /**
+   * Les deux courriels de SEC-30 : textes de la juriste versés au rattrapage 96, MOT POUR MOT. Les
+   * durées vivent dans la SSOT, jamais en clair ; les dates sont à l'heure de Paris.
+   */
+  courriels: {
+    /**
+     * `admin_cree` — à TOUS les administrateurs actifs, auteur compris. Il NOMME la personne créée :
+     * c'est le signal d'un abus (décision de la juriste, art. 5.1.c). Aucune autre donnée.
+     */
+    adminCree: {
+      sujet: 'Un nouvel administrateur a été créé dans la console',
+      corps: (d: {
+        prenomNomCree: string;
+        courrielCree: string;
+        prenomNomAuteur: string;
+        dateHeure: string;
+        secondAdministrateur: boolean;
+      }) =>
+        `${d.prenomNomCree} (${d.courrielCree}) a reçu le rôle d'administrateur de la console d'Axion Partners. Ce compte a été créé par ${d.prenomNomAuteur}, le ${d.dateHeure}.` +
+        (d.secondAdministrateur
+          ? " Ce compte reste inactif tant qu'un autre administrateur que son auteur ne l'a pas validé. Si vous n'attendiez pas ce compte, ne le validez pas, et désactivez-le depuis la console (Utilisateurs)."
+          : '') +
+        " Si vous ne reconnaissez pas cette création, prévenez aussitôt la direction d'Axion-IA : un administrateur a accès aux données des apporteurs et des contacts.",
+      appel: 'Utilisateurs',
+    },
+    /**
+     * `invitation_console` — AUCUN lien de connexion : `adresseConnexion` est l'adresse de
+     * `/console/connexion`, sans aucun jeton. Ni l'identité de l'administrateur qui invite, ni
+     * d'autres rôles, ni aucune donnée d'apporteur.
+     */
+    invitation: {
+      sujet: "Votre accès à la console d'Axion Partners",
+      corps: (d: {
+        libelleRole: string;
+        adresseConnexion: string;
+        dateExpiration: string;
+        adressePolitique: string;
+      }) =>
+        `Axion-IA vous a ouvert un accès à la console d'Axion Partners, avec le rôle ${d.libelleRole}. Pour vous connecter, ouvrez ${d.adresseConnexion} et saisissez cette adresse e-mail : vous recevrez un lien et un code de connexion. Cette invitation expire le ${d.dateExpiration} ; passé ce délai, demandez une nouvelle invitation. Si vous n'attendiez pas ce message, ignorez-le. La façon dont Axion-IA traite vos données de connexion est décrite dans ${d.adressePolitique}.`,
+      appel: 'Se connecter',
+    },
+  },
 } as const;
