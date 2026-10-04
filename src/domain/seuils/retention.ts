@@ -156,4 +156,30 @@ export const DUREES_DE_RETENTION = {
     renvois: [],
     verifieLe: '2026-10-03',
   },
+  /**
+   * SEC-65 (REQ-SEC-003) : une session de l'espace ou de la console, expirée ou révoquée, et son
+   * empreinte d'adresse réseau, effacées à ce délai de sa FIN — la plus tardive de `expire_at` et de
+   * `revoque_at`. Une session vivante n'est jamais touchée.
+   */
+  SESSIONS_CONSERVATION_APRES_FIN_MOIS: {
+    valeur: 6,
+    unite: 'mois',
+    source:
+      'décision de Williams du 2026-10-04 (registre de l’article 30, sessions et empreinte d’adresse réseau), CNIL, recommandation relative à la journalisation (2021)',
+    renvois: [],
+    verifieLe: '2026-10-04',
+  },
+  /**
+   * SEC-65 (REQ-JUR-068) : un accès DÉSACTIVÉ de la console perd son nom, son adresse chiffrée et son
+   * empreinte à ce délai de `desactive_at`, preuve des actes accomplis dans la console jusque-là ;
+   * l'identifiant et le rôle restent. Un compte actif n'est jamais touché.
+   */
+  UTILISATEUR_CONSOLE_DESACTIVE_EFFACE_APRES_ANS: {
+    valeur: 5,
+    unite: 'ans',
+    source:
+      'décision de Williams du 2026-10-04 (registre de l’article 30, accès désactivé de la console)',
+    renvois: [],
+    verifieLe: '2026-10-04',
+  },
 } as const satisfies Record<string, Seuil>;

@@ -76,6 +76,8 @@ import {
   purgerLesDementis,
 } from './purger-contestations-anomalies';
 import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
+import { purgerLesSessions } from './purger-sessions-espace';
+import { effacerLesComptesDesactives } from './purger-utilisateurs-console';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import {
   ouvrirLesAnomaliesDAutoParrainage,
@@ -265,6 +267,11 @@ export function inscriptions(
     // SEC-58 : le journal des accès à la console, purgé à son échéance (la purge vide les identifiants).
     journal_acces_console_purger: () =>
       purgerLeJournalDesAccesConsole(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-65 (REQ-SEC-003, REQ-JUR-068) : les sessions finies, six mois après leur fin ; le nom et
+    // l'adresse d'un accès désactivé de la console, cinq ans après la désactivation.
+    sessions_purger: () => purgerLesSessions(prisma, new Date(horlogeSysteme.maintenant())),
+    utilisateurs_console_effacer: () =>
+      effacerLesComptesDesactives(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>
