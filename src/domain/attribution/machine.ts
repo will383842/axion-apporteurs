@@ -71,6 +71,9 @@ export const EVENEMENTS_ATTRIBUTION = [
   'paiement_recu',
   'commande_caduque',
   'commande_caduque_hors_fenetre',
+  // DM-67 (REQ-JUR-007, art. 3.3) : l'antériorité de la Société établie après l'enregistrement, par
+  // des faits datés avant le dépôt. Depuis tout état OCCUPANT ; les commissions acquises restent.
+  'anteriorite_etablie',
 ] as const;
 export type TransitionAttribution = (typeof EVENEMENTS_ATTRIBUTION)[number];
 
@@ -88,6 +91,7 @@ const SUITES_SANS_PERTE = {
   expiree: 'expiree',
   anomalie_confirmee: 'invalidee',
   figee: 'figee_resiliation',
+  anteriorite_etablie: 'annulee',
 } as const;
 
 /** La matrice : pour chaque état, les seules transitions acceptées et leur état d'arrivée. */
@@ -108,6 +112,7 @@ export const TRANSITIONS_ATTRIBUTION: {
     annulee_par_la_console: 'annulee',
     liberee_sans_confirmation: 'perimee',
     figee: 'figee_resiliation',
+    anteriorite_etablie: 'annulee',
   },
   active: { rdv_pris: 'rdv_pris', perimee: 'perimee', ...SUITES_SANS_PERTE },
   rdv_pris: SUITES_SANS_PERTE,
@@ -117,6 +122,7 @@ export const TRANSITIONS_ATTRIBUTION: {
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
     figee: 'figee_resiliation',
+    anteriorite_etablie: 'annulee',
   },
   signee: {
     paiement_recu: 'convertie',
@@ -124,9 +130,10 @@ export const TRANSITIONS_ATTRIBUTION: {
     figee: 'figee_resiliation',
     commande_caduque: 'active',
     commande_caduque_hors_fenetre: 'expiree',
+    anteriorite_etablie: 'annulee',
   },
-  convertie: { expiree: 'expiree', figee: 'figee_resiliation' },
-  figee_resiliation: { expiree: 'expiree' },
+  convertie: { expiree: 'expiree', figee: 'figee_resiliation', anteriorite_etablie: 'annulee' },
+  figee_resiliation: { expiree: 'expiree', anteriorite_etablie: 'annulee' },
   invalidee: {},
   perdue: {},
   perimee: {},

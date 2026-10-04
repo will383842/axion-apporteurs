@@ -166,14 +166,26 @@ export const CHARGES_PAR_TYPE = {
       transition: z.enum(EVENEMENTS_ATTRIBUTION),
       acteur: FORMES.acteur(),
       lienInteret: z.enum(['declare', 'non_declare']).optional(),
+      /**
+       * DM-67 (REQ-JUR-007) : le critère de l'antériorité établie après coup, en enum INTERNE, porté
+       * par `anteriorite_etablie` et par elle seule ; aucune donnée de personne.
+       */
+      critere: z.enum(['cliente', 'devis', 'devis_signe']).optional(),
     })
     .strict()
-    .superRefine(({ de, transition }, ctx) => {
+    .superRefine(({ de, transition, critere }, ctx) => {
       if ((de === null) !== NAISSANCES.includes(transition)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['de'],
           message: 'naissance_incoherente',
+        });
+      }
+      if ((transition === 'anteriorite_etablie') !== (critere !== undefined)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['critere'],
+          message: 'critere_incoherent',
         });
       }
     }),
