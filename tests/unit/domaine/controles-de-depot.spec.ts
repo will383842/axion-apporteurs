@@ -24,6 +24,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createHash } from 'node:crypto';
+import { ETATS_OCCUPANTS } from '../../../src/domain/attribution/etats';
 import {
   ISSUES_DE_REFUS,
   PLACES_EN_ATTENTE,
@@ -290,7 +291,7 @@ function demande(modif: Partial<DemandeDeDepot> = {}): DemandeDeDepot {
 /** Un client de transaction simulé : il rend les lignes réglées, et note chaque appel, dans l'ordre. */
 function transaction(regles: {
   statut?: string | null;
-  occupation?: { occupee: boolean; en_attente: number } | null;
+  occupation?: { occupee: boolean; en_attente: number };
   grille?: { id: string } | null;
 }) {
   const appels: Appel[] = [];
@@ -303,12 +304,6 @@ function transaction(regles: {
       appels.push(['$queryRaw', gabarit.join('?'), ...valeurs]);
       const statut = regles.statut === undefined ? 'signe' : regles.statut;
       return Promise.resolve(statut === null ? [] : [{ statut }]);
-    },
-    $queryRawUnsafe: (sql: string, ...valeurs: unknown[]) => {
-      appels.push(['$queryRawUnsafe', sql, ...valeurs]);
-      const o =
-        regles.occupation === undefined ? { occupee: false, en_attente: 0 } : regles.occupation;
-      return Promise.resolve(o === null ? [] : [o]);
     },
     depotRefuse: {
       create: (a: unknown) => {
@@ -323,6 +318,11 @@ function transaction(regles: {
       },
     },
     attribution: {
+      count: (a: { where: { statut: unknown } }) => {
+        appels.push(['attribution.count', a]);
+        const o = regles.occupation ?? { occupee: false, en_attente: 0 };
+        return Promise.resolve(a.where.statut === 'en_attente' ? o.en_attente : o.occupee ? 1 : 0);
+      },
       create: (a: unknown) => {
         appels.push(['attribution.create', a]);
         return Promise.resolve({});
@@ -468,10 +468,11 @@ describe('REQ-SEC-022 — les faits lus sous verrou, et le refus tracé', () => 
   it('REQ-SEC-022 : l’occupation et la file se lisent sur le SIREN, sur les états qui occupent', async () => {
     const { tx, appels } = transaction({});
     await deposerDans(tx, demande(), ports());
-    const lecture = appels.find((a) => a[0] === '$queryRawUnsafe')!;
-    expect(lecture[2]).toBe(SIREN);
-    expect(String(lecture[1])).toMatch(/AS occupee/);
-    expect(String(lecture[1])).toMatch(/statut = 'en_attente'\) AS en_attente/);
+    const comptes = appels.filter((a) => a[0] === 'attribution.count').map((a) => a[1]);
+    expect(comptes).toEqual([
+      { where: { siren: SIREN, statut: { in: [...ETATS_OCCUPANTS] } } },
+      { where: { siren: SIREN, statut: 'en_attente' } },
+    ]);
   });
 
   it.each([
@@ -526,8 +527,8 @@ describe('REQ-SEC-022 — les faits lus sous verrou, et le refus tracé', () => 
     expect(ecrit(appels, 'depotRefuse.create')?.data.motif).toBe('file_complete');
   });
 
-  it('REQ-SEC-022 : sans ligne d’occupation lue, rien n’occupe : la déclaration est enregistrée', async () => {
-    const { tx } = transaction({ occupation: null });
+  it('REQ-SEC-022 : aucune attribution occupante comptée, rien n’occupe : la déclaration est enregistrée', async () => {
+    const { tx } = transaction({ occupation: { occupee: false, en_attente: 1 } });
     expect((await deposerDans(tx, demande(), ports())).issue).toBe('enregistree');
   });
 });
