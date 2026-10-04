@@ -7,7 +7,7 @@
  * ici ; mêmes entrées, mêmes lignes. Le courriel et le nom passent par `colonnesPii`, liés à la
  * ligne (modèle `UtilisateurConsole`) ; les empreintes des jetons viennent des producteurs réels
  * (`empreinteDuJeton`, `empreinteDeSessionConsole`, RM-03). Aucun clair ni aucun jeton n'est écrit. La
- * version de la session n'est pas écrite : la base la pose à 0 pour une session de la console.
+ * version de la session n'est pas écrite : la base y copie la version de son utilisateur (SEC-30).
  */
 
 import {

@@ -68,12 +68,13 @@ export { MODELE_APPORTEUR } from './lien-magique-depot';
 
 /** L'envoi du lien : l'adresse stockée, un sujet, un corps qui porte l'URL. */
 export interface EnvoiDuLien {
-  /** SEC-29 : `gabarit` absent vaut `lien_magique`, celui de l'espace. */
+  /** SEC-29 : `gabarit` absent vaut `lien_magique`, celui de l'espace. SEC-30 : l'invitation et la
+   * création d'un administrateur, destinées à la console. */
   envoyer(message: {
     a: string;
     sujet: string;
     corps: string;
-    gabarit?: 'lien_magique' | 'lien_magique_console';
+    gabarit?: 'lien_magique' | 'lien_magique_console' | 'invitation_console' | 'admin_cree';
   }): Promise<void>;
 }
 

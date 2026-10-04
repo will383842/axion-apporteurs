@@ -19,6 +19,7 @@ import { ROLES_CONSOLE } from '../../roles/matrice';
 import { clesPii } from '../../securite/pii';
 import {
   COOKIE_DE_SESSION_CONSOLE,
+  configurationDuLien,
   dependancesDuProcessus,
   portsDeRoleConsole,
 } from '../../auth/lien-magique-production';
@@ -75,12 +76,19 @@ export async function inviterUnePersonne(formData: FormData): Promise<void> {
   const email = texte(formData, 'email').trim();
   if (vers === null || email === '') redirect(`${ECRAN}?refus=saisie`);
   await geste(async () => {
-    await inviter(d.prisma, {
+    const { courriels } = await inviter(d.prisma, {
       acteur,
       email,
       role: vers,
       cles: clesPii(d.env),
       maintenant: new Date(d.horloge.maintenant()),
+      // L'adresse de la connexion, SANS jeton : l'invitation ne porte aucun lien de connexion.
+      adresseConnexion: `${configurationDuLien(d.env).urlPublique}/console/connexion`,
+    });
+    // Les courriels partent APRÈS la réponse, un par destinataire ; un échec d'envoi ne défait pas
+    // l'invitation, déjà écrite et journalisée.
+    d.planifier(async () => {
+      for (const c of courriels) await d.envoi.envoyer(c);
     });
   });
 }
@@ -93,14 +101,18 @@ export async function changerLeRoleDe(formData: FormData): Promise<void> {
   );
   const vers = role(formData);
   if (vers === null) redirect(`${ECRAN}?refus=saisie`);
-  await geste(() =>
-    changerLeRole(d.prisma, {
+  await geste(async () => {
+    const { courriels } = await changerLeRole(d.prisma, {
       acteur,
       cibleId: texte(formData, 'cibleId'),
       vers,
       maintenant: new Date(d.horloge.maintenant()),
-    })
-  );
+      cles: clesPii(d.env),
+    });
+    d.planifier(async () => {
+      for (const c of courriels) await d.envoi.envoyer(c);
+    });
+  });
 }
 
 export async function desactiverLeCompte(formData: FormData): Promise<void> {

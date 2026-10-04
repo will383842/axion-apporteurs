@@ -297,13 +297,20 @@ describe('REQ-DM-024 — SEC-30 : l’invitation en base (forme d’A02)', () =>
 
     const premier = await utilisateur('admin');
     await valider(app, premier, null);
-    const invite = await inviter(app, {
+    const { id: invite, courriels } = await inviter(app, {
       acteur: { id: premier, role: 'admin' },
       email: 'invitee-sec30@example.org',
       role: 'lecteur',
       cles: CLES,
       maintenant: new Date(t0),
+      adresseConnexion: 'https://partners.example.org/console/connexion',
     });
+    // L'invitation d'un lecteur : UN courriel, à l'invité, sans aucun jeton ni lien de connexion.
+    expect(courriels.map((c) => [c.gabarit, c.a])).toEqual([
+      ['invitation_console', 'invitee-sec30@example.org'],
+    ]);
+    expect(courriels[0]!.corps).toContain('https://partners.example.org/console/connexion ');
+    expect(courriels[0]!.corps).not.toContain('/console/connexion/');
     const l = await base.prisma.utilisateurConsole.findUniqueOrThrow({
       where: { id: invite },
       select: { inviteeAt: true, activeeAt: true },
@@ -420,6 +427,7 @@ describe('REQ-SEC-023 — SEC-30 : les gestes du serveur, chacun avec son évén
       cibleId: c,
       vers: 'lecteur',
       maintenant: new Date(t0),
+      cles: CLES,
     });
     const l = await base.prisma.utilisateurConsole.findUniqueOrThrow({
       where: { id: c },
@@ -438,6 +446,7 @@ describe('REQ-SEC-023 — SEC-30 : les gestes du serveur, chacun avec son évén
       cibleId: premier,
       vers: 'lecteur',
       maintenant: new Date(t0),
+      cles: CLES,
     }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ErreurAdministrationConsole);
     expect((err as ErreurAdministrationConsole).motif).toBe('auto_changement');
@@ -645,5 +654,32 @@ describe('REQ-SEC-003 — SEC-30 : une seule session de console vivante par pers
       select: { revoqueAt: true },
     });
     expect(apres.revoqueAt).toBeNull();
+  });
+});
+
+describe('REQ-SEC-023 — SEC-30 : la création d’un administrateur est notifiée à tous les administrateurs', () => {
+  it('REQ-SEC-023 : TÉMOIN — inviter un admin : l’invitation à l’invité, et admin_cree à CHAQUE admin actif, auteur et créé compris ; la phrase des quatre yeux quand un autre admin existe', async () => {
+    await tronquer();
+    const premier = await utilisateur('admin');
+    await valider(app, premier, null);
+    const second = await utilisateur('admin');
+    await valider(app, second, premier);
+    const { courriels } = await inviter(app, {
+      acteur: { id: premier, role: 'admin' },
+      email: 'nouvel-admin-sec30@example.org',
+      role: 'admin',
+      cles: CLES,
+      maintenant: new Date(t0),
+      adresseConnexion: 'https://partners.example.org/console/connexion',
+    });
+    const parGabarit = (g: string) => courriels.filter((c) => c.gabarit === g);
+    expect(parGabarit('invitation_console').map((c) => c.a)).toEqual([
+      'nouvel-admin-sec30@example.org',
+    ]);
+    const creation = parGabarit('admin_cree');
+    expect(creation).toHaveLength(3);
+    expect(new Set(creation.map((c) => c.a)).size).toBe(3);
+    expect(creation[0]!.corps).toContain('nouvel-admin-sec30@example.org a reçu le rôle');
+    expect(creation[0]!.corps).toContain("n'a aucun droit d'administrateur");
   });
 });

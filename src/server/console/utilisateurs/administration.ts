@@ -21,6 +21,11 @@ import { MODELE_UTILISATEUR_CONSOLE } from '../../auth/lien-magique-depot';
 import { colonnesPii, type ClesPii } from '../../securite/pii';
 import { roleAutorise } from '../../roles/matrice';
 import { jugerChangementDeRole } from './regles';
+import {
+  courrielDInvitation,
+  courrielsDeCreationDAdministrateur,
+  type CourrielDeLAdministration,
+} from './courriels';
 
 export type MotifDAdministration =
   | 'droit_absent'
@@ -90,9 +95,16 @@ async function lireLaCible(tx: Tx, cibleId: string) {
 /** Changer le rôle d'un AUTRE utilisateur. Toutes ses sessions tombent à la requête suivante. */
 export async function changerLeRole(
   prisma: PrismaClient,
-  d: { acteur: ActeurDeLaConsole; cibleId: string; vers: ConsoleRole; maintenant: Date }
-): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+  d: {
+    acteur: ActeurDeLaConsole;
+    cibleId: string;
+    vers: ConsoleRole;
+    maintenant: Date;
+    /** Pour lire les adresses des administrateurs, si le geste crée un administrateur. */
+    cles: ClesPii;
+  }
+): Promise<{ courriels: CourrielDeLAdministration[] }> {
+  return prisma.$transaction(async (tx) => {
     const cible = await lireLaCible(tx, d.cibleId);
     const verdict = jugerChangementDeRole({ acteur: d.acteur, cible, vers: d.vers });
     if (!verdict.ok) throw new ErreurAdministrationConsole(verdict.motif);
@@ -105,6 +117,18 @@ export async function changerLeRole(
       de: cible.role,
       vers: d.vers,
     });
+    // Un passage VERS admin crée un administrateur (en attente) : tous les administrateurs actifs
+    // en sont notifiés, comme pour une invitation d'administrateur.
+    const courriels =
+      d.vers === 'admin'
+        ? await courrielsDeCreationDAdministrateur(tx, {
+            creeId: cible.id,
+            auteurId: d.acteur.id,
+            maintenant: d.maintenant,
+            cles: d.cles,
+          })
+        : [];
+    return { courriels };
   });
 }
 
@@ -187,12 +211,14 @@ export async function inviter(
     role: ConsoleRole;
     cles: ClesPii;
     maintenant: Date;
+    /** L'adresse de `/console/connexion`, SANS jeton : seule forme qu'un courriel d'invitation porte. */
+    adresseConnexion: string;
   }
-): Promise<string> {
+): Promise<{ id: string; courriels: CourrielDeLAdministration[] }> {
   if (!roleAutorise('action:gerer_utilisateur_console', d.acteur.role))
     throw new ErreurAdministrationConsole('droit_absent');
   const id = randomUUID();
-  await prisma.$transaction(async (tx) => {
+  const courriels = await prisma.$transaction(async (tx) => {
     await tx.utilisateurConsole.create({
       data: {
         role: d.role,
@@ -219,8 +245,25 @@ export async function inviter(
       maintenant: d.maintenant,
       vers: d.role,
     });
+    const invitation = courrielDInvitation({
+      a: d.email,
+      role: d.role,
+      adresseConnexion: d.adresseConnexion,
+      inviteeAt: d.maintenant,
+    });
+    // Toute création d'un administrateur est notifiée à tous les administrateurs actifs.
+    const creation =
+      d.role === 'admin'
+        ? await courrielsDeCreationDAdministrateur(tx, {
+            creeId: id,
+            auteurId: d.acteur.id,
+            maintenant: d.maintenant,
+            cles: d.cles,
+          })
+        : [];
+    return [invitation, ...creation];
   });
-  return id;
+  return { id, courriels };
 }
 
 /** Relancer une invitation NON activée : `invitee_at` reposé, aucun second compte. */

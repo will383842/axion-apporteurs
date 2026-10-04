@@ -19,7 +19,7 @@ import { CHAMPS_PII, clesPii, decryptPii } from '../../../../server/securite/pii
 import { MODELE_UTILISATEUR_CONSOLE } from '../../../../server/auth/lien-magique-depot';
 import { DUREES_AUTH } from '../../../../server/auth/durees';
 import { invitationOuverte } from '../../../../server/console/utilisateurs/regles';
-import { versParis } from '../../../../domain/temps/paris';
+import { jourDeParis, jourEtHeureDeParis } from '../../../../server/console/utilisateurs/dates';
 import {
   COOKIE_DE_SESSION_CONSOLE,
   dependancesDuProcessus,
@@ -40,34 +40,6 @@ import {
 
 // Lue à chaque requête : la page lit le cookie de session et la base.
 export const dynamic = 'force-dynamic';
-
-const MOIS = [
-  'janvier',
-  'février',
-  'mars',
-  'avril',
-  'mai',
-  'juin',
-  'juillet',
-  'août',
-  'septembre',
-  'octobre',
-  'novembre',
-  'décembre',
-] as const;
-
-/** Le jour de Paris, par la règle légale du dépôt (`versParis`), jamais par la base de fuseaux. */
-function jourDeParis(d: Date): string {
-  const p = versParis(d.getTime());
-  return `${p.jour} ${MOIS[p.mois - 1]}`;
-}
-
-/** Le jour et l'heure de Paris. */
-function jourEtHeureDeParis(d: Date): string {
-  const p = versParis(d.getTime());
-  const deux = (n: number) => String(n).padStart(2, '0');
-  return `${jourDeParis(d)}, ${deux(p.heure)}:${deux(p.minute)}`;
-}
 
 export default async function PageUtilisateursConsole() {
   const d = dependancesDuProcessus({ apres: after, env: process.env });
