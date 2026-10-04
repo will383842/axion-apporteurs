@@ -121,7 +121,25 @@ const valider = (client: PrismaClient, id: string, par: string | null) =>
     par
   );
 
-const tronquer = () => base.prisma.$executeRawUnsafe('TRUNCATE utilisateurs_console CASCADE');
+/**
+ * La console vide, SANS TRUNCATE : la cascade atteindrait les tables en ajout seul (`qualifications`,
+ * `journal_acces_console`…), que le gabarit commun refuse de vider. Ces témoins ne créent que des
+ * sessions et des liens : ils partent d'abord, puis les utilisateurs, un validateur après ceux qu'il a
+ * validés (la validation est une clé étrangère RESTRICT). Une ligne qui resterait est une faute.
+ */
+async function viderLaConsole(): Promise<void> {
+  const p = base.prisma;
+  await p.$executeRawUnsafe('DELETE FROM sessions_espace WHERE utilisateur_console_id IS NOT NULL');
+  await p.$executeRawUnsafe('DELETE FROM liens_magiques WHERE utilisateur_console_id IS NOT NULL');
+  for (;;) {
+    const n = await p.$executeRawUnsafe(
+      `DELETE FROM utilisateurs_console u
+       WHERE NOT EXISTS (SELECT 1 FROM utilisateurs_console v WHERE v.valide_par_id = u.id)`
+    );
+    if (n === 0) break;
+  }
+  expect(await p.utilisateurConsole.count()).toBe(0);
+}
 
 async function verdict(utilisateurConsoleId: string): Promise<string> {
   const jetonSession = tirerJeton();
@@ -143,7 +161,7 @@ async function verdict(utilisateurConsoleId: string): Promise<string> {
 
 describe('REQ-SEC-023 — SEC-30 : un administrateur est validé par un AUTRE administrateur', () => {
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — un admin non validé est EN ATTENTE et refusé ; validé par un autre admin validé, même appel, il passe', async () => {
-    await tronquer();
+    await viderLaConsole();
     const premier = await utilisateur('admin');
     await valider(app, premier, null);
     const second = await utilisateur('admin');
@@ -153,7 +171,7 @@ describe('REQ-SEC-023 — SEC-30 : un administrateur est validé par un AUTRE ad
   });
 
   it('REQ-SEC-023 : TÉMOIN — une auto-validation est refusée', async () => {
-    await tronquer();
+    await viderLaConsole();
     const premier = await utilisateur('admin');
     await valider(app, premier, null);
     const second = await utilisateur('admin');
@@ -161,7 +179,7 @@ describe('REQ-SEC-023 — SEC-30 : un administrateur est validé par un AUTRE ad
   });
 
   it('REQ-SEC-023 : TÉMOIN — un validateur en attente, désactivé ou non administrateur est refusé', async () => {
-    await tronquer();
+    await viderLaConsole();
     const premier = await utilisateur('admin');
     await valider(app, premier, null);
     const enAttente = await utilisateur('admin');
@@ -181,7 +199,7 @@ describe('REQ-SEC-023 — SEC-30 : un administrateur est validé par un AUTRE ad
   });
 
   it('REQ-SEC-023 : TÉMOIN — une validation posée ne se réécrit pas', async () => {
-    await tronquer();
+    await viderLaConsole();
     const premier = await utilisateur('admin');
     await valider(app, premier, null);
     const autre = await utilisateur('admin');
@@ -192,7 +210,7 @@ describe('REQ-SEC-023 — SEC-30 : un administrateur est validé par un AUTRE ad
   });
 
   it('REQ-SEC-023 : TÉMOIN — un second « premier administrateur » est refusé dès qu’un admin validé existe', async () => {
-    await tronquer();
+    await viderLaConsole();
     const premier = await utilisateur('admin');
     await valider(app, premier, null);
     const second = await utilisateur('admin');
@@ -200,7 +218,7 @@ describe('REQ-SEC-023 — SEC-30 : un administrateur est validé par un AUTRE ad
   });
 
   it('REQ-SEC-023 : TÉMOIN À DEUX CONNEXIONS — deux « premiers administrateurs » simultanés : un succès, un refus nommé, jamais deux validés', async () => {
-    await tronquer();
+    await viderLaConsole();
     const a = await utilisateur('admin');
     const b = await utilisateur('admin');
     let relacherA: () => void = () => {};
@@ -231,7 +249,7 @@ describe('REQ-SEC-023 — SEC-30 : un administrateur est validé par un AUTRE ad
   });
 
   it('REQ-SEC-023 : TÉMOIN — un passage vers admin remet en attente ; une validation posée sur un autre rôle est refusée', async () => {
-    await tronquer();
+    await viderLaConsole();
     const premier = await utilisateur('admin');
     await valider(app, premier, null);
     const q = await utilisateur('qualifieur');
@@ -259,7 +277,7 @@ describe('REQ-SEC-023 — SEC-30 : un administrateur réactivé repart en attent
     );
 
   it('REQ-SEC-023 : TÉMOIN — un admin désactivé puis réactivé est EN ATTENTE, refusé jusqu’à sa nouvelle validation', async () => {
-    await tronquer();
+    await viderLaConsole();
     const premier = await utilisateur('admin');
     await valider(app, premier, null);
     const second = await utilisateur('admin');
@@ -272,7 +290,7 @@ describe('REQ-SEC-023 — SEC-30 : un administrateur réactivé repart en attent
   });
 
   it('REQ-SEC-023 : un autre rôle se réactive sans changement de validation', async () => {
-    await tronquer();
+    await viderLaConsole();
     const c = await utilisateur('comptable');
     await desactiver(c);
     await reactiver(c);
@@ -286,7 +304,7 @@ describe('REQ-SEC-023 — SEC-30 : un administrateur réactivé repart en attent
 
 describe('REQ-DM-024 — SEC-30 : l’invitation en base (forme d’A02)', () => {
   it('REQ-DM-024 : TÉMOIN — un compte créé sans les deux champs est activé au défaut ; un compte invité par le serveur a activee_at NULL', async () => {
-    await tronquer();
+    await viderLaConsole();
     const seme = await utilisateur('comptable');
     const ligne = await base.prisma.utilisateurConsole.findUniqueOrThrow({
       where: { id: seme },
@@ -320,7 +338,7 @@ describe('REQ-DM-024 — SEC-30 : l’invitation en base (forme d’A02)', () =>
   });
 
   it('REQ-DM-024 : TÉMOIN — ni invité ni activé est refusé ; une activation antérieure à l’invitation est refusée', async () => {
-    await tronquer();
+    await viderLaConsole();
     const c = await utilisateur('comptable');
     expect(
       await refus(
@@ -343,7 +361,7 @@ describe('REQ-DM-024 — SEC-30 : l’invitation en base (forme d’A02)', () =>
 
 describe('REQ-SEC-003 — SEC-30 : la version de session de la console', () => {
   it('REQ-SEC-003 : TÉMOIN — une session de la console COPIE la version de son utilisateur ; un changement de rôle l’incrémente d’un cran et la session ancienne tombe', async () => {
-    await tronquer();
+    await viderLaConsole();
     const premier = await utilisateur('admin');
     await valider(app, premier, null);
     const c = await utilisateur('comptable');
@@ -373,7 +391,7 @@ describe('REQ-SEC-003 — SEC-30 : la version de session de la console', () => {
   });
 
   it('REQ-SEC-003 : la version de session d’un utilisateur ne descend jamais', async () => {
-    await tronquer();
+    await viderLaConsole();
     const c = await utilisateur('comptable');
     await app.$executeRawUnsafe(
       "UPDATE utilisateurs_console SET role = 'lecteur' WHERE id = $1::uuid",
@@ -392,7 +410,7 @@ describe('REQ-SEC-003 — SEC-30 : la version de session de la console', () => {
 
 describe('REQ-SEC-023 — SEC-30 : la ligne de données de la migration ne valide que le plus ancien admin actif', () => {
   it('REQ-SEC-023 : TÉMOIN — sur une base à deux administrateurs, seul le plus ancien est validé après la ligne de la migration', async () => {
-    await tronquer();
+    await viderLaConsole();
     const ancien = await utilisateur('admin', new Date(t0 - 60_000));
     const recent = await utilisateur('admin', new Date(t0));
     const migration = readFileSync(
@@ -417,7 +435,7 @@ describe('REQ-SEC-023 — SEC-30 : les gestes du serveur, chacun avec son évén
     });
 
   it('REQ-SEC-023 : TÉMOIN — un admin change le rôle d’un autre : la version monte d’un cran et l’événement est écrit', async () => {
-    await tronquer();
+    await viderLaConsole();
     const premier = await utilisateur('admin');
     await valider(app, premier, null);
     const c = await utilisateur('comptable');
@@ -438,7 +456,7 @@ describe('REQ-SEC-023 — SEC-30 : les gestes du serveur, chacun avec son évén
   });
 
   it('REQ-SEC-023 : TÉMOIN — l’auto-promotion est refusée, nommée, et rien n’est écrit', async () => {
-    await tronquer();
+    await viderLaConsole();
     const premier = await utilisateur('admin');
     await valider(app, premier, null);
     const err = await changerLeRole(app, {
@@ -454,7 +472,7 @@ describe('REQ-SEC-023 — SEC-30 : les gestes du serveur, chacun avec son évén
   });
 
   it('REQ-SEC-023 : TÉMOIN — un changement dont l’événement est refusé fait échouer la transaction : la désactivation n’a pas eu lieu', async () => {
-    await tronquer();
+    await viderLaConsole();
     const premier = await utilisateur('admin');
     await valider(app, premier, null);
     const c = await utilisateur('comptable');
@@ -558,7 +576,7 @@ describe('REQ-SEC-003 — SEC-30 : une seule session de console vivante par pers
   };
 
   it('REQ-SEC-003 : TÉMOIN — deux sessions, puis une troisième ouverture : les deux premières sont révoquées et refusées à la requête suivante ; celle d’un AUTRE utilisateur reste vivante', async () => {
-    await tronquer();
+    await viderLaConsole();
     const c = await utilisateur('comptable');
     const autre = await utilisateur('comptable');
     const [s1, s2, sAutre] = [await jetonDe(c), await jetonDe(c), await jetonDe(autre)];
@@ -576,7 +594,7 @@ describe('REQ-SEC-003 — SEC-30 : une seule session de console vivante par pers
         where: { utilisateurConsoleId: id },
         select: { revoqueAt: true },
       });
-    await tronquer();
+    await viderLaConsole();
     const desactive = await utilisateur('comptable');
     await jetonDe(desactive);
     await base.prisma.$executeRawUnsafe(
@@ -605,7 +623,7 @@ describe('REQ-SEC-003 — SEC-30 : une seule session de console vivante par pers
   });
 
   it('REQ-SEC-003 : TÉMOIN — une session de l’ESPACE n’est jamais touchée par la rotation de la console', async () => {
-    await tronquer();
+    await viderLaConsole();
     const c = await utilisateur('comptable');
     await jetonDe(c);
     // Une session de l'espace, d'un apporteur minimal : elle doit rester ouverte.
@@ -659,7 +677,7 @@ describe('REQ-SEC-003 — SEC-30 : une seule session de console vivante par pers
 
 describe('REQ-SEC-023 — SEC-30 : la création d’un administrateur est notifiée à tous les administrateurs', () => {
   it('REQ-SEC-023 : TÉMOIN — inviter un admin : l’invitation à l’invité, et admin_cree à CHAQUE admin actif, auteur et créé compris ; la phrase des quatre yeux quand un autre admin existe', async () => {
-    await tronquer();
+    await viderLaConsole();
     const premier = await utilisateur('admin');
     await valider(app, premier, null);
     const second = await utilisateur('admin');

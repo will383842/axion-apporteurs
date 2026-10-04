@@ -147,8 +147,14 @@ describe('REQ-SEC-023 — requireRole en base réelle', () => {
     const jeton = await ouvrir(id);
     expect(await verdict('action:lever_gel', jeton)).toBe('admin');
     await base.prisma.utilisateurConsole.update({ where: { id }, data: { role: 'comptable' } });
-    expect(await verdict('action:lever_gel', jeton)).toBe('role_refuse');
-    expect(await verdict('action:approuver_lot', jeton)).toBe('comptable');
+    // SEC-30 (REQ-SEC-003) : le changement de rôle fait monter la version de session ; la session
+    // ouverte en admin tombe dès la requête suivante, pour tout droit.
+    expect(await verdict('action:lever_gel', jeton)).toBe('version_perimee');
+    expect(await verdict('action:approuver_lot', jeton)).toBe('version_perimee');
+    // Une session neuve lit le rôle relu : refusé sur la levée de gel, admis comme comptable.
+    const neuf = await ouvrir(id);
+    expect(await verdict('action:lever_gel', neuf)).toBe('role_refuse');
+    expect(await verdict('action:approuver_lot', neuf)).toBe('comptable');
   });
 
   it('REQ-SEC-023 : un utilisateur désactivé ne franchit plus la requête SUIVANTE', async () => {

@@ -44,9 +44,11 @@ CREATE TRIGGER utilisateurs_console_version_de_session BEFORE UPDATE ON "utilisa
 
 -- La session de la console COPIE la version de son utilisateur à l'ouverture (elle rendait 0).
 -- Même nom de fonction, même déclencheur `sessions_espace_version_de_console`, ordre inchangé.
+-- Une session SANS population (ni apporteur ni utilisateur) n'est pas lue ici : le CHECK
+-- `sessions_espace_une_population` la refuse en se nommant, au lieu d'un « no rows » anonyme.
 CREATE OR REPLACE FUNCTION sessions_espace_version_console() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW."apporteur_id" IS NULL THEN
+  IF NEW."apporteur_id" IS NULL AND NEW."utilisateur_console_id" IS NOT NULL THEN
     SELECT u."session_version" INTO STRICT NEW."session_version"
       FROM "utilisateurs_console" u WHERE u."id" = NEW."utilisateur_console_id";
   END IF;
