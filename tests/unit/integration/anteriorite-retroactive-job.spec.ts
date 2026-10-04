@@ -364,3 +364,25 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
     );
   });
 });
+
+/**
+ * Le rapprochement est QUOTIDIEN (acceptance de DM-25) : il est inscrit au lanceur sous une clé du
+ * registre des tâches, qui porte son exigence, et son passage appelle le job à l'heure du système.
+ */
+describe('REQ-JUR-007 — le rapprochement des antériorités est inscrit au lanceur', () => {
+  it('REQ-JUR-007 : TÉMOIN — la clé `anteriorites_rapprocher` est au registre, avec son exigence', async () => {
+    const { TACHES } = await import('../../../src/server/taches/registre');
+    expect(TACHES).toHaveProperty('anteriorites_rapprocher');
+    expect((TACHES as Record<string, { req: string }>).anteriorites_rapprocher!.req).toBe(
+      'REQ-JUR-007'
+    );
+  });
+
+  it('REQ-JUR-007 : TÉMOIN STATIQUE — son inscription appelle rapprocherLesAnteriorites sur le client, à l’heure du système', async () => {
+    const { readFileSync } = await import('node:fs');
+    const source = readFileSync('src/server/taches/inscriptions.ts', 'utf8');
+    expect(source).toMatch(
+      /anteriorites_rapprocher: \(\) =>\s*rapprocherLesAnteriorites\(prisma, new Date\(horlogeSysteme\.maintenant\(\)\)\)/
+    );
+  });
+});
