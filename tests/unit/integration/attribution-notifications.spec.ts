@@ -32,8 +32,12 @@ import {
 } from '../../../src/server/attribution/notifications';
 import {
   ENTREPRISE_DE_REPLI,
+  LIBELLES_DES_CATEGORIES,
   MOTIFS_DES_DECISIONS,
 } from '../../../src/content/micro-copy/courriels/notifications';
+import { rendreLaNotification } from '../../../src/server/notifications/envoyer';
+import { LEXIQUE_INTERDIT } from '../../../src/domain/lexique/lexique-interdit';
+import { motifDeLaForme } from '../../../scripts/gates/lexique-apporteurs';
 import {
   CLES_ENVOYEES_PAR_LE_PASSAGE,
   envoyerLesNotificationsDeLEspace,
@@ -362,8 +366,8 @@ describe('REQ-DM-006 — le motif d’une décision, mot pour mot (juriste, ratt
     ],
     [
       'entreprise_relevant_de_l_article_3_3_bis',
-      'Financeur public',
-      'Financeur public (contrat, article 3.3 bis), situation qui existait déjà à la date de votre dépôt',
+      'financeur_public',
+      "l'entreprise est un financeur public avec lequel Axion-IA est en relation (contrat, article 3.3 bis), situation qui existait déjà à la date de votre dépôt",
     ],
   ] as const)(
     'REQ-DM-006 : annulee_par_la_console, %s — sa raison, en clair',
@@ -570,16 +574,50 @@ describe('REQ-DM-004 — la fenêtre finit à MINUIT, heure de Paris, après le 
   });
 });
 
-describe('REQ-UX-016 — l’entreprise nommée dans la notification', () => {
+describe('REQ-UX-016 — l’entreprise nommée dans la notification (juriste)', () => {
   it('REQ-UX-016 : la raison sociale de l’attribution, telle quelle', () => {
-    expect(entrepriseDeLaNotification('Société Fictive')).toBe('Société Fictive');
+    expect(entrepriseDeLaNotification('Société Fictive', '100000001')).toBe('Société Fictive');
   });
 
   it.each([null, '', '   '])(
-    'REQ-UX-016 : TÉMOIN — sans raison sociale (%j), le repli de la micro-copie : la notification part quand même',
+    'REQ-UX-016 : TÉMOIN — sans raison sociale (%j), « Entreprise n° » et le numéro saisi au dépôt',
     (raisonSociale) => {
-      expect(entrepriseDeLaNotification(raisonSociale)).toBe(ENTREPRISE_DE_REPLI);
-      expect(ENTREPRISE_DE_REPLI).toBe('l’entreprise déclarée');
+      expect(entrepriseDeLaNotification(raisonSociale, '100000001')).toBe(
+        'Entreprise n° 100000001'
+      );
+      expect(ENTREPRISE_DE_REPLI).toBe('Entreprise n° {numeroEntreprise}');
+    }
+  );
+
+  it('REQ-UX-016 : TÉMOIN — le TITRE rendu, avec le repli', () => {
+    const t = rendreLaNotification('decision_attribution', {
+      entreprise: entrepriseDeLaNotification(null, '100000001'),
+      motif: 'x',
+    });
+    expect(t.titre).toBe('Entreprise n° 100000001 : une décision concerne votre dépôt');
+  });
+
+  it.each(Object.keys(LIBELLES_DES_CATEGORIES))(
+    'REQ-UX-016 : TÉMOIN — la PHRASE rendue pour la catégorie %s, sans un mot du lexique interdit',
+    (categorie) => {
+      const motif = motifDeLaDecision({
+        transition: 'annulee_par_la_console',
+        raison: 'entreprise_relevant_de_l_article_3_3_bis',
+        categorie: categorie as never,
+      })!;
+      const t = rendreLaNotification('decision_attribution', {
+        entreprise: entrepriseDeLaNotification(null, '100000001'),
+        motif,
+      });
+      expect(t.corps).toContain(
+        `${LIBELLES_DES_CATEGORIES[categorie as keyof typeof LIBELLES_DES_CATEGORIES]} (contrat, article 3.3 bis)`
+      );
+      const rendu = [t.titre, t.appel, t.corps].join(' ');
+      for (const famille of LEXIQUE_INTERDIT.filter((f) => f.portee === 'apporteur')) {
+        for (const forme of famille.formes) {
+          expect(motifDeLaForme(forme).test(rendu), `${famille.nom} : ${forme}`).toBe(false);
+        }
+      }
     }
   );
 });
