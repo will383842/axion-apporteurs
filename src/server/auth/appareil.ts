@@ -46,8 +46,9 @@ import {
 // ── l'identifiant et son empreinte ───────────────────────────────────────────────────────────────
 
 /**
- * Le cookie de l'appareil : `__Host-` impose `Secure`, `Path=/` et l'absence de domaine. Il vit au
- * plus la durée d'une session, comme l'empreinte qu'il permet de reconnaître.
+ * Le cookie de l'appareil : `__Host-` impose `Secure`, `Path=/` et l'absence de domaine. Il vit une
+ * durée de session après la CONSOMMATION qui l'a posé, alors que l'empreinte vit une durée de session
+ * après sa dernière VUE : un appareil revenu sans cookie reçoit un identifiant neuf, et son avis.
  */
 export const COOKIE_D_APPAREIL = {
   nom: '__Host-partners-appareil',
