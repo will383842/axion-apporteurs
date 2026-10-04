@@ -421,7 +421,7 @@ export type NomDeSeuil = keyof typeof SEUILS;
  */
 export type Parametre = {
   readonly valeur: number;
-  readonly unite: 'points_de_base';
+  readonly unite: 'points_de_base' | 'pages';
   readonly source: string;
   readonly verifieLe: string;
 };
@@ -434,6 +434,14 @@ export const PARAMETRES = {
     unite: 'points_de_base',
     source: 'REQ-ARG-007 (paramètre, défaut 100 %) ; avenant A01 du 2026-09-29 sur DM-04',
     verifieLe: '2026-09-29',
+  },
+  // INT-T73-P (REQ-INT-013) : la borne d'une relecture des sommes avec axion-ia, en pages de la file.
+  // Au-delà, le passage s'arrête, le signale (`relecture_bornee`) et ne compare rien.
+  RELECTURE_DES_SOMMES_PAGES_MAX: {
+    valeur: 50,
+    unite: 'pages',
+    source: 'INT-T73-P, borne acceptée par la lentille schema (A02) le 2026-10-04',
+    verifieLe: '2026-10-04',
   },
 } as const satisfies Record<string, Parametre>;
 

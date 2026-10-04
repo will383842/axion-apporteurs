@@ -19,6 +19,7 @@
 import { TYPES_EVENEMENT, type TypeEvenement } from '../../../../packages/contracts/events';
 import type { PrismaClient } from '@prisma/client';
 import { MS_PAR_JOUR } from '../../../domain/temps/calendrier-civil';
+import { PARAMETRES } from '../../../domain/seuils/ssot';
 import { identifiantDuType, payloadConforme } from './reception';
 import { RECOUVREMENT_SEQUENCES } from './reconciliation';
 import type { LirePage, MotifDeRelecture } from './relecture';
@@ -192,11 +193,11 @@ export function comparerLesSommes(
 // ── le passage ─────────────────────────────────────────────────────────────────────────────────
 
 /**
- * La borne d'une relecture des sommes : cinquante pages. Sept jours de file dépassent la borne
- * d'un passage de rattrapage ; au-delà de celle-ci, le passage s'arrête et le signale, sans rien
- * comparer : une relecture incomplète ne produirait que de faux écarts.
+ * La borne d'une relecture des sommes, LUE dans la source unique des paramètres (A02) : sept jours
+ * de file dépassent la borne d'un passage de rattrapage ; au-delà de celle-ci, le passage s'arrête
+ * et le signale, sans rien comparer : une relecture incomplète ne produirait que de faux écarts.
  */
-export const PAGES_MAX_DES_SOMMES = 50;
+export const PAGES_MAX_DES_SOMMES = PARAMETRES.RELECTURE_DES_SOMMES_PAGES_MAX.valeur;
 
 export type SignalDesSommes =
   | { readonly genre: 'relecture_echouee'; readonly motif: MotifDeRelecture }
