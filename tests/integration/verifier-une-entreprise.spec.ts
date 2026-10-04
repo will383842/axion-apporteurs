@@ -1,5 +1,7 @@
 // @req REQ-SEC-021
 // @req REQ-UX-007
+// @req REQ-JUR-011
+// @req REQ-SEC-022
 /**
  * « Vérifier une entreprise » (SEC-16) sur la vraie base : l'occupation et la file se lisent dans
  * `attributions`, la vérification se journalise dans `verifications`, et rien d'autre ne s'écrit —
@@ -147,31 +149,34 @@ describe('REQ-UX-007 — l’occupation et la file, lues dans attributions', () 
   });
 });
 
-describe('REQ-UX-007 — la liste de la Société et l’antériorité, lues dans leurs tables', () => {
-  it('REQ-UX-007 : un SIREN de la liste — non_disponible, la cause tenue au journal est la liste', async () => {
+describe('REQ-JUR-011 REQ-SEC-022 — la liste de la Société et l’antériorité, lues dans leurs tables', () => {
+  it('REQ-SEC-022 : un SIREN de la liste — non_disponible, sans sa catégorie ; la cause tenue au journal est la liste', async () => {
     const siren = unSiren();
     await base.prisma.sirenListeNoire.create({
       data: { siren, motif: 'financeur_public', ajouteParId: utilisateurConsole },
     });
-    expect(await verifierUneEntreprise(ports(), demande(siren))).toEqual({
-      ok: true,
-      dto: { etat: 'non_disponible' },
-    });
+    const r = await verifierUneEntreprise(ports(), demande(siren));
+    expect(r).toEqual({ ok: true, dto: { etat: 'non_disponible' } });
+    // La catégorie ne se dit qu'au refus d'un DÉPÔT : jamais dans une vérification.
+    expect(JSON.stringify(r)).not.toContain('financeur_public');
     expect(await base.prisma.verification.findFirst({ where: { siren } })).toMatchObject({
       resultat: 'liste_noire',
     });
   });
 
-  it('REQ-UX-007 : une cliente récente — non_disponible ; la même réponse que la liste, la cause « cliente »', async () => {
+  it('REQ-JUR-011 : une cliente récente et un SIREN de la liste rendent la même réponse, octet pour octet ; la cause « cliente » au journal', async () => {
     const siren = unSiren();
     const recente = new Date(Date.now() - 30 * 24 * 3600 * 1000);
     await base.prisma.entrepriseConnue.create({
       data: { siren, origine: 'client', connueDepuisAt: recente, dernierContactAt: recente },
     });
-    expect(await verifierUneEntreprise(ports(), demande(siren))).toEqual({
-      ok: true,
-      dto: { etat: 'non_disponible' },
+    const surLaListe = unSiren();
+    await base.prisma.sirenListeNoire.create({
+      data: { siren: surLaListe, motif: 'administration', ajouteParId: utilisateurConsole },
     });
+    const cliente = JSON.stringify(await verifierUneEntreprise(ports(), demande(siren)));
+    expect(cliente).toBe(JSON.stringify(await verifierUneEntreprise(ports(), demande(surLaListe))));
+    expect(cliente).toBe(JSON.stringify({ ok: true, dto: { etat: 'non_disponible' } }));
     expect(await base.prisma.verification.findFirst({ where: { siren } })).toMatchObject({
       resultat: 'cliente',
     });
