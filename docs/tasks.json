@@ -5706,7 +5706,8 @@
         "tests/unit/domaine/apporteur-acces-espace.spec.ts",
         "src/server/securite/pii.ts",
         "src/server/attribution/notifications.ts",
-        "src/server/auth/lien-magique-depot.ts"
+        "src/server/auth/lien-magique-depot.ts",
+        "tests/unit/securite/revocation.spec.ts"
       ],
       "schema": true,
       "sensible": [
