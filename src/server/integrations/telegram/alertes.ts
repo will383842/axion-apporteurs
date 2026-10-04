@@ -31,6 +31,7 @@
  * LIMITE DÉCLARÉE. L'état du dédoublonnage et du plafond vit dans la mémoire du processus : deux
  * instances du serveur ont chacune leur plafond.
  */
+import { MOTIFS_DE_NON_RENDU } from '../../attribution/notifications';
 import { TypeEvenementRecu } from '@prisma/client';
 import type { Horloge } from '../../../domain/temps/horloge';
 import { MS_PAR_HEURE } from '../../../domain/temps/calendrier-civil';
@@ -121,6 +122,13 @@ export const CATEGORIES_ALERTE = [
    * (`ObjetAlerte.reconciliation`) : les `event_id` manquants restent dans Partners, au battement.
    */
   'reconciliation',
+  /**
+   * DM-55 (arbitrage de la sécurité, `REQ-UX-016`) — une notification de la machine qui ne s'est pas
+   * rendue : le courriel n'est pas parti, et la console doit informer autrement. Le message ne porte
+   * que le motif FERMÉ (`MOTIFS_DE_NON_RENDU`) et un NOMBRE (`ObjetAlerte.nonRendu`) : ni
+   * identifiant de notification ou d'attribution, ni texte, ni SIREN.
+   */
+  'notification_non_rendue',
 ] as const;
 
 /**
@@ -164,6 +172,11 @@ export type ObjetAlerte = {
     readonly motif?: string;
     readonly nombre?: number;
   };
+  /** DM-55 — ce qu'une alerte `notification_non_rendue` montre : le motif fermé, et un nombre. */
+  readonly nonRendu?: {
+    readonly motif: string;
+    readonly nombre: number;
+  };
   readonly attente?: {
     readonly forme: string;
     readonly type: string;
@@ -203,6 +216,7 @@ const entier = (v: unknown): string =>
   typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 ? String(v) : ILLISIBLE;
 
 const genreDeReconciliation = dansLaListe(GENRES_RECONCILIATION);
+const motifDeNonRendu = dansLaListe(MOTIFS_DE_NON_RENDU);
 const motifDeReconciliation = (v: unknown): string =>
   typeof v === 'string' && MOTIF_DE_RECONCILIATION.test(v) ? v : ILLISIBLE;
 
@@ -248,7 +262,10 @@ const ligneDeBase = (o: ObjetAlerte): string =>
       (o.reconciliation.motif === undefined
         ? ''
         : ` · motif ${motifDeReconciliation(o.reconciliation.motif)}`) +
-      (o.reconciliation.nombre === undefined ? '' : ` · ${entier(o.reconciliation.nombre)}`));
+      (o.reconciliation.nombre === undefined ? '' : ` · ${entier(o.reconciliation.nombre)}`)) +
+  (o.nonRendu === undefined
+    ? ''
+    : ` · non rendu ${motifDeNonRendu(o.nonRendu.motif)} · ${entier(o.nonRendu.nombre)}`);
 
 /**
  * Les gabarits de message, et eux seuls : la garde les confronte TOUS, en les énumérant ici. Chacun

@@ -224,6 +224,19 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   ],
   // La fin de SA réservation, choisie par la cause (A07) : la date où il pourra redéposer.
   'courriels/notifications.ts › CORPS_DE_LA_LIBERATION › demande_verifiee': ['dateRedepot'],
+  // DM-55 : le nom de SON entreprise quand le dépôt n'a pas de raison sociale — le numéro qu'il a
+  // lui-même saisi au dépôt (juriste, mot pour mot).
+  'courriels/notifications.ts › ENTREPRISE_DE_REPLI': ['numeroEntreprise'],
+  // DM-55 : les faits retenus contre SON dépôt (art. 3.7), saisis par la console et lus au rendu ;
+  // sans lien, sans nom de tiers, sans les mots refusés (sécurité, rattrapage 64).
+  'courriels/notifications.ts › MOTIFS_DES_DECISIONS › anomalie_confirmee': ['faits'],
+  // DM-55 : la raison, de la liste fermée MotifAnnulationConsole, de l'annulation de SON dépôt.
+  'courriels/notifications.ts › MOTIFS_DES_DECISIONS › annulee_par_la_console': ['raison'],
+  // DM-55 : la catégorie (liste fermée MotifListeNoire) de l'entreprise de SON dépôt, art. 3.3 bis ;
+  // la juriste la DIT ici, la règle de SEC-22 ne valant que pour une vérification.
+  'courriels/notifications.ts › RAISONS_D_ANNULATION › entreprise_relevant_de_l_article_3_3_bis': [
+    'categorie',
+  ],
   // W20 (UX-P1-41) : le contact que l'apporteur a LUI-MÊME saisi, son entreprise, l'heure de SON
   // envoi ; deux délais venus de leur source unique (RM-10).
   'espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › messageAvantLeBouton': [
