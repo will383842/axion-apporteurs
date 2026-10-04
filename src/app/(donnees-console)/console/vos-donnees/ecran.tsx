@@ -33,18 +33,39 @@ function Contenu({ segments }: { segments: readonly Segment[] }) {
   );
 }
 
-export function EcranVosDonneesConsole({ page }: { page: PageDeLaConsole }) {
+/** L'identité du responsable, lue dans le registre de l'entité ; `null` tant qu'elle n'y est pas. */
+export type Responsable = { readonly denomination: string; readonly siege: string } | null;
+
+export function EcranVosDonneesConsole({
+  page,
+  responsable,
+}: {
+  page: PageDeLaConsole;
+  responsable: Responsable;
+}) {
+  const publiable = pageDeLaConsolePubliable(page) && responsable !== null;
   return (
     <main>
       <h1>{T.titre}</h1>
       <p>{T.phrase}</p>
-      {pageDeLaConsolePubliable(page) ? null : <p role="status">{T.enProposition}</p>}
+      {publiable ? null : <p role="status">{T.enProposition}</p>}
+      <section>
+        <h2>{T.responsable.titre}</h2>
+        {responsable === null ? (
+          <p>
+            <strong>{T.aCompleter}</strong>
+          </p>
+        ) : (
+          <p>{T.responsable.phrase(responsable)}</p>
+        )}
+      </section>
       {page.rubriques.map((r) => (
         <section key={r.cle}>
           <h2>{T.rubriques[r.cle]}</h2>
           <Contenu segments={r.contenu} />
         </section>
       ))}
+      <p>{T.obligatoire}</p>
     </main>
   );
 }
