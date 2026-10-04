@@ -524,17 +524,21 @@ model PieceKyc {
 /// BASE (déclencheur), et fait courir le délai d'un mois de l'art. 12.3. Aucune donnée en clair :
 /// la nouvelle valeur d'une rectification est chiffrée, puis effacée à la clôture ou à l'échéance.
 model DemandeDroitContact {
-  id             String             @id @default(uuid()) @db.Uuid
-  attributionId  String             @map("attribution_id") @db.Uuid
-  attribution    Attribution        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  droit          DroitContact
-  recueAt        DateTime           @default(dbgenerated("clock_timestamp()")) @map("recue_at") @db.Timestamptz(3)
-  traiteeAt      DateTime?          @map("traitee_at") @db.Timestamptz(3)
-  issue          IssueDemandeDroit?
-  donneeVisee    DonneeContact?     @map("donnee_visee")
-  valeurChiffree Bytes?             @map("valeur_chiffree")
-  valeurPurgeeAt DateTime?          @map("valeur_purgee_at") @db.Timestamptz(3)
-  prolongeeAt    DateTime?          @map("prolongee_at") @db.Timestamptz(3)
+  id                String             @id @default(uuid()) @db.Uuid
+  /// NULL une fois la trace anonymisée (DM-60, partners/ADR-0031), avec `traceAnonymiseeAt` (CHECK).
+  attributionId     String?            @map("attribution_id") @db.Uuid
+  attribution       Attribution?       @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  droit             DroitContact
+  recueAt           DateTime           @default(dbgenerated("clock_timestamp()")) @map("recue_at") @db.Timestamptz(3)
+  traiteeAt         DateTime?          @map("traitee_at") @db.Timestamptz(3)
+  issue             IssueDemandeDroit?
+  donneeVisee       DonneeContact?     @map("donnee_visee")
+  valeurChiffree    Bytes?             @map("valeur_chiffree")
+  valeurPurgeeAt    DateTime?          @map("valeur_purgee_at") @db.Timestamptz(3)
+  prolongeeAt       DateTime?          @map("prolongee_at") @db.Timestamptz(3)
+  /// DM-60 (REQ-JUR-065) : l'anonymisation de la trace, cinq ans après sa clôture
+  /// (`DROITS_CONTACT_TRACE_ANS`), écrite une fois, liée au lien vidé (CHECK en SQL brut).
+  traceAnonymiseeAt DateTime?          @map("trace_anonymisee_at") @db.Timestamptz(3)
 
   @@index([attributionId])
   @@map("demandes_droits_contact")
