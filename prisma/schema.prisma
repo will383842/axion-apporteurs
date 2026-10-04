@@ -1328,8 +1328,9 @@ enum NatureAccesConsole {
 /// (`refuser_modification_sauf`) : la purge, à l'échéance de la SSOT, vide l'utilisateur, la cible et
 /// l'empreinte et pose `purgeAt`, une fois ; la ligne nue (nature, date) reste. `cibleId` est
 /// polymorphe (un apporteur, l'attribution qui porte le contact, ou, pour une lecture du journal
-/// (SEC-60), l'utilisateur de la console dont les traces sont lues), sans clé étrangère : le code la
-/// vérifie avant d'écrire. Seule une connexion RÉUSSIE s'inscrit.
+/// (SEC-60), l'utilisateur de la console dont les traces sont lues), sans clé étrangère, pour les trois
+/// cibles, cette dernière comprise : le code vérifie chacune avant d'écrire. Seule une connexion
+/// RÉUSSIE s'inscrit.
 model JournalAccesConsole {
   id                   String              @id @db.Uuid
   utilisateurConsoleId String?             @map("utilisateur_console_id") @db.Uuid
