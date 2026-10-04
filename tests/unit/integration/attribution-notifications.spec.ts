@@ -19,6 +19,12 @@ import { readdirSync, readFileSync } from 'node:fs';
 import type { PrismaClient } from '@prisma/client';
 import { GABARITS } from '../../../src/server/notifications/table-ssot';
 import {
+  dateEnClair,
+  motifDeLaDecision,
+  parametresDeLaNotification,
+} from '../../../src/server/attribution/notifications';
+import { MOTIFS_DES_DECISIONS } from '../../../src/content/micro-copy/courriels/notifications';
+import {
   CLES_ENVOYEES_PAR_LE_PASSAGE,
   envoyerLesNotificationsDeLEspace,
   portsDuPassage,
@@ -310,5 +316,137 @@ describe('REQ-UX-016 — une clé, un seul chemin d’envoi : le passage ou noti
     const passage = readFileSync('src/server/taches/envoyer-notifications-espace.ts', 'utf8');
     expect(passage).toContain('cle: { in: [...CLES_ENVOYEES_PAR_LE_PASSAGE] }');
     expect(passage).not.toMatch(/GABARITS/);
+  });
+});
+
+// ── le rendu ────────────────────────────────────────────────────────────────────────────────────
+
+describe('REQ-DM-006 — le motif d’une décision, mot pour mot (juriste, rattrapage 98)', () => {
+  it('REQ-DM-006 : anomalie_confirmee — l’article 3.7 et les faits retenus', () => {
+    expect(
+      motifDeLaDecision({ transition: 'anomalie_confirmee', faits: 'deux dépôts le même jour' })
+    ).toBe(
+      "À la vérification, ce dépôt ne remplit pas les conditions de l'article 3.7 du contrat. Faits retenus : deux dépôts le même jour"
+    );
+  });
+
+  it.each(['non_confirmee', 'non_confirmee_par_courriel'] as const)(
+    'REQ-DM-006 : %s — le même texte, sans paramètre',
+    (transition) => {
+      expect(motifDeLaDecision({ transition })).toBe(
+        "L'entreprise a indiqué expressément n'avoir eu aucun échange avec vous (contrat, article 3.7) ; vous pouvez demander à Axion-IA l'extrait de sa réponse"
+      );
+    }
+  );
+
+  it.each([
+    ['demande_de_l_apporteur', undefined, 'à votre demande'],
+    [
+      'declaration_en_double',
+      undefined,
+      'vous aviez déjà déposé cette entreprise, et ce dépôt faisait double emploi avec le premier',
+    ],
+    [
+      'entreprise_relevant_de_l_article_3_3_bis',
+      'Financeur public',
+      'Financeur public (contrat, article 3.3 bis), situation qui existait déjà à la date de votre dépôt',
+    ],
+  ] as const)(
+    'REQ-DM-006 : annulee_par_la_console, %s — sa raison, en clair',
+    (raison, categorie, attendu) => {
+      expect(
+        motifDeLaDecision({
+          transition: 'annulee_par_la_console',
+          raison,
+          ...(categorie ? { categorie } : {}),
+        })
+      ).toBe(
+        `Axion-IA a annulé ce dépôt avant sa confirmation, pour la raison suivante : ${attendu}`
+      );
+    }
+  );
+
+  it('REQ-DM-006 : erreur_de_saisie_de_la_societe — aucun libellé pour l’apporteur, aucune notification', () => {
+    expect(
+      motifDeLaDecision({
+        transition: 'annulee_par_la_console',
+        raison: 'erreur_de_saisie_de_la_societe',
+      })
+    ).toBeNull();
+  });
+
+  it('REQ-DM-006 : aucun texte ne finit par un point : le corps le pose', () => {
+    for (const t of Object.values(MOTIFS_DES_DECISIONS)) expect(t.endsWith('.')).toBe(false);
+  });
+
+  it.each([
+    ['un lien', 'voir https://exemple.test/x'],
+    ['une adresse de site', 'voir www.exemple.test'],
+    ['« fraude »', 'soupçon de Fraude'],
+    ['« anomalie »', 'une anomalie relevée'],
+    ['« sanction »', 'sanction appliquée'],
+    ['une valeur vide', '   '],
+  ])('REQ-DM-006 : TÉMOIN (sécurité) — des faits qui portent %s sont REFUSÉS', (_, faits) => {
+    expect(() => motifDeLaDecision({ transition: 'anomalie_confirmee', faits })).toThrow(
+      /faits_refuses/
+    );
+  });
+
+  it.each([
+    ['anomalie_confirmee sans faits', { transition: 'anomalie_confirmee' }],
+    [
+      'une raison sur une autre décision',
+      { transition: 'non_confirmee', raison: 'declaration_en_double' },
+    ],
+    ['annulee_par_la_console sans raison', { transition: 'annulee_par_la_console' }],
+    [
+      'une catégorie sans 3.3 bis',
+      { transition: 'annulee_par_la_console', raison: 'declaration_en_double', categorie: 'x' },
+    ],
+    [
+      '3.3 bis sans catégorie',
+      { transition: 'annulee_par_la_console', raison: 'entreprise_relevant_de_l_article_3_3_bis' },
+    ],
+    ['une transition qui n’est pas une décision', { transition: 'perimee' }],
+  ] as const)('REQ-DM-006 : %s — refusé, nommé', (_, e) => {
+    expect(() => motifDeLaDecision(e as never)).toThrow(/motif_incoherent/);
+  });
+});
+
+describe('REQ-DM-004 — la date limite, en clair, à Paris', () => {
+  it('REQ-DM-004 : le jour civil de Paris, le mois en toutes lettres', () => {
+    expect(dateEnClair(new Date('2027-05-25T08:00:00.000Z'))).toBe('25 mai 2027');
+    // 23 h 30 UTC le 31 décembre est déjà le 1er janvier à Paris
+    expect(dateEnClair(new Date('2026-12-31T23:30:00.000Z'))).toBe('1 janvier 2027');
+  });
+});
+
+describe('REQ-UX-016 — les paramètres de chaque clé, exactement', () => {
+  it('REQ-UX-016 : decision_attribution — l’entreprise et le motif', () => {
+    expect(
+      parametresDeLaNotification('decision_attribution', {
+        entreprise: 'Société Fictive',
+        motif: 'à votre demande',
+        envoyeLe: MAINTENANT,
+      })
+    ).toEqual({ entreprise: 'Société Fictive', motif: 'à votre demande' });
+  });
+
+  it('REQ-DM-004 : premier_rang_libere — l’entreprise et la date limite, prise de l’envoi + la fenêtre de la SSOT', () => {
+    expect(
+      parametresDeLaNotification('premier_rang_libere', {
+        entreprise: 'Société Fictive',
+        envoyeLe: new Date('2027-05-10T08:00:00.000Z'),
+      })
+    ).toEqual({ entreprise: 'Société Fictive', dateLimite: '25 mai 2027' });
+  });
+
+  it('REQ-UX-016 : une clé hors du passage, ou un motif manquant — refusé', () => {
+    expect(() =>
+      parametresDeLaNotification('attribution_liberee', { entreprise: 'x', envoyeLe: MAINTENANT })
+    ).toThrow(/cle_hors_passage/);
+    expect(() =>
+      parametresDeLaNotification('decision_attribution', { entreprise: 'x', envoyeLe: MAINTENANT })
+    ).toThrow(/motif_manquant/);
   });
 });
