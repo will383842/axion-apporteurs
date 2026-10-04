@@ -251,3 +251,23 @@ describe('REQ-JUR-007 — le fait fondateur de l’annulation', () => {
     expect(fondementAuDepot(faits, DEPOT)?.critere).toBe(critereAuDepot(faits, DEPOT));
   });
 });
+
+describe('REQ-JUR-007 — le fait fondateur ne dépend pas de l’ordre des faits reçus', () => {
+  it('REQ-JUR-007 : la facture la plus récente fonde « cliente », même reçue AVANT une plus ancienne', async () => {
+    const { fondementAuDepot } =
+      await import('../../../src/domain/entreprise-connue/anteriorite-retroactive');
+    const recente = { id: 'f-recente', at: ms(DEPOT, -1) };
+    const vieille = { id: 'f-vieille', at: ms(DEPOT, -3 * 86_400_000) };
+    expect(
+      fondementAuDepot(
+        {
+          facturesAt: [recente.at, vieille.at],
+          devis: [],
+          factures: [recente, vieille],
+          devisIdentifies: [],
+        },
+        DEPOT
+      )?.fait
+    ).toEqual({ nature: 'facture', id: 'f-recente', le: recente.at });
+  });
+});
