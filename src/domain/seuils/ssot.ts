@@ -408,21 +408,21 @@ export const SEUILS = {
   // une fenêtre « de l'ordre de la minute » (texte de la juriste, rattrapage 84). Les valeurs sont
   // celles de l'arbitrage : le plafond réseau tient compte d'une adresse partagée ; la session est
   // obligatoire, et dix dépôts à quinze secondes d'intervalle passent tous.
-  DEPOT_DEBIT_FENETRE_MINUTES: {
+  DEPOT_FENETRE_MINUTES: {
     valeur: 1,
     unite: 'minutes',
     source: 'arbitrage coordination du 2026-10-04, juriste et sécurité ; REQ-DM-009',
     renvois: [],
     verifieLe: '2026-10-04',
   },
-  DEPOT_DEBIT_IP_PAR_FENETRE: {
+  DEPOT_PAR_IP_PAR_FENETRE: {
     valeur: 10,
     unite: 'tentatives',
     source: 'arbitrage coordination du 2026-10-04, juriste et sécurité ; REQ-DM-009',
     renvois: [],
     verifieLe: '2026-10-04',
   },
-  DEPOT_DEBIT_SESSION_PAR_FENETRE: {
+  DEPOT_PAR_SESSION_PAR_FENETRE: {
     valeur: 5,
     unite: 'tentatives',
     source: 'arbitrage coordination du 2026-10-04, juriste et sécurité ; REQ-DM-009',

@@ -147,20 +147,20 @@ export const COMPTEURS = {
   // valeurs vivent dans la SSOT (RM-10), confrontées par la garde au texte de REQ-SEC-016.
   'depot:ip': {
     prefixe: 'depot:',
-    limite: SEUILS.DEPOT_DEBIT_IP_PAR_FENETRE.valeur,
-    fenetreSecondes: SEUILS.DEPOT_DEBIT_FENETRE_MINUTES.valeur * 60,
+    limite: SEUILS.DEPOT_PAR_IP_PAR_FENETRE.valeur,
+    fenetreSecondes: SEUILS.DEPOT_FENETRE_MINUTES.valeur * 60,
     surPanne: 'refuser',
     source: 'REQ-SEC-016',
-    ancre: 'par hash IP',
+    ancre: "compteur d'IP (hash IP)",
     verifieLe: '2026-10-04',
   },
   'depot:session': {
     prefixe: 'depot:',
-    limite: SEUILS.DEPOT_DEBIT_SESSION_PAR_FENETRE.valeur,
-    fenetreSecondes: SEUILS.DEPOT_DEBIT_FENETRE_MINUTES.valeur * 60,
+    limite: SEUILS.DEPOT_PAR_SESSION_PAR_FENETRE.valeur,
+    fenetreSecondes: SEUILS.DEPOT_FENETRE_MINUTES.valeur * 60,
     surPanne: 'refuser',
     source: 'REQ-SEC-016',
-    ancre: 'par empreinte de session',
+    ancre: 'compteur de SESSION',
     verifieLe: '2026-10-04',
   },
   'depot:identite': {

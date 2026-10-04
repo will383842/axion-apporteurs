@@ -97,20 +97,20 @@ function plafond(nom: 'depot:ip' | 'depot:session'): number {
 
 describe('REQ-DM-009 — une limite technique, jamais un compte par apporteur', () => {
   it('REQ-DM-009 : deux compteurs, réseau et session, sur une fenêtre de l’ordre de la minute, lus dans la SSOT', () => {
-    expect(SEUILS.DEPOT_DEBIT_FENETRE_MINUTES.valeur).toBe(1);
-    const fenetre = SEUILS.DEPOT_DEBIT_FENETRE_MINUTES.valeur * 60;
+    expect(SEUILS.DEPOT_FENETRE_MINUTES.valeur).toBe(1);
+    const fenetre = SEUILS.DEPOT_FENETRE_MINUTES.valeur * 60;
     expect(COMPTEURS['depot:ip']).toMatchObject({
       prefixe: 'depot:',
-      limite: SEUILS.DEPOT_DEBIT_IP_PAR_FENETRE.valeur,
+      limite: SEUILS.DEPOT_PAR_IP_PAR_FENETRE.valeur,
       fenetreSecondes: fenetre,
     });
     expect(COMPTEURS['depot:session']).toMatchObject({
       prefixe: 'depot:',
-      limite: SEUILS.DEPOT_DEBIT_SESSION_PAR_FENETRE.valeur,
+      limite: SEUILS.DEPOT_PAR_SESSION_PAR_FENETRE.valeur,
       fenetreSecondes: fenetre,
     });
-    expect(SEUILS.DEPOT_DEBIT_SESSION_PAR_FENETRE.valeur).toBe(5);
-    expect(SEUILS.DEPOT_DEBIT_IP_PAR_FENETRE.valeur).toBe(10);
+    expect(SEUILS.DEPOT_PAR_SESSION_PAR_FENETRE.valeur).toBe(5);
+    expect(SEUILS.DEPOT_PAR_IP_PAR_FENETRE.valeur).toBe(10);
     expect(COMPTEURS['depot:ip'].surPanne).toBe('refuser');
     expect(COMPTEURS['depot:session'].surPanne).toBe('refuser');
   });
