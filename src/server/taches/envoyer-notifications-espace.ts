@@ -19,6 +19,7 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { finDeLaFenetreDeRedeclaration } from '../../domain/attribution/fenetre-redeclaration';
 import { TAILLES_DE_LOT } from '../../domain/seuils/ssot';
+import type { MotifDeNonRendu } from '../attribution/notifications';
 import {
   depotDesCourriels,
   emettre,
@@ -32,6 +33,8 @@ export type NotificationAEnvoyer = {
   apporteurId: string;
   attributionId: string | null;
   evenementId: string | null;
+  /** L'anomalie confirmée qui fonde une `decision_attribution` ; nulle sinon, ou vidée. */
+  anomalieId: string | null;
 };
 
 export type IssueDeLEnvoi = {
@@ -44,8 +47,11 @@ export type IssueDeLEnvoi = {
 export type GestesDeLaTransaction = {
   /** Le verrou ; faux si la notification est prise ailleurs, ou déjà portée par un courriel non échoué. */
   verrouiller(n: NotificationAEnvoyer): Promise<boolean>;
-  /** Le texte, rendu à l'heure de l'envoi ; nul si un paramètre manque. */
-  rendre(n: NotificationAEnvoyer, envoyeLe: Date): Promise<{ sujet: string; corps: string } | null>;
+  /** Le texte, rendu à l'heure de l'envoi ; sinon le motif FERMÉ du non-rendu. */
+  rendre(
+    n: NotificationAEnvoyer,
+    envoyeLe: Date
+  ): Promise<{ sujet: string; corps: string } | { nonRendue: MotifDeNonRendu }>;
   /** L'envoi par l'émetteur unique, et sa ligne de courriel, liée à la notification. */
   envoyer(n: NotificationAEnvoyer, texte: { sujet: string; corps: string }): Promise<IssueDeLEnvoi>;
   /** La fenêtre de redéclaration, posée seulement si elle est encore nulle. */
@@ -71,16 +77,28 @@ type Bilan = {
   retenues: number;
   sautees: number;
   nonRendues: number;
+  /** Le motif fermé de chaque non-rendu, dans l'ordre du lot : sans contenu, il se lit au battement. */
+  motifsNonRendus: MotifDeNonRendu[];
 };
 
 export async function envoyerLesNotificationsDeLEspace(p: PortsDuPassage): Promise<Bilan> {
-  const bilan: Bilan = { envoyees: 0, echecs: 0, retenues: 0, sautees: 0, nonRendues: 0 };
+  const bilan: Bilan = {
+    envoyees: 0,
+    echecs: 0,
+    retenues: 0,
+    sautees: 0,
+    nonRendues: 0,
+    motifsNonRendus: [],
+  };
   const lot = await p.lireLot(TAILLES_DE_LOT.NOTIFICATIONS_ENVOI_LOT.valeur);
   for (const n of lot) {
     const issue = await p.dansUneTransaction(async (g) => {
       if (!(await g.verrouiller(n))) return 'sautee' as const;
       const texte = await g.rendre(n, p.maintenant());
-      if (texte === null) return 'nonRendue' as const;
+      if ('nonRendue' in texte) {
+        bilan.motifsNonRendus.push(texte.nonRendue);
+        return 'nonRendue' as const;
+      }
       const envoi = await g.envoyer(n, texte);
       if (envoi.statut !== 'envoye') return envoi.statut === 'echec' ? 'echec' : 'retenue';
       if (CLES_A_FENETRE.has(n.cle) && n.attributionId !== null && envoi.envoyeAt !== null) {
@@ -118,7 +136,7 @@ export type GestesExternes = {
     tx: Prisma.TransactionClient,
     n: NotificationAEnvoyer,
     envoyeLe: Date
-  ): Promise<{ sujet: string; corps: string } | null>;
+  ): Promise<{ sujet: string; corps: string } | { nonRendue: MotifDeNonRendu }>;
   envoyer(
     tx: Prisma.TransactionClient,
     n: NotificationAEnvoyer,
@@ -143,7 +161,14 @@ export function portsDuPassage(prisma: PrismaClient, externes: GestesExternes): 
         },
         orderBy: [{ creeAt: 'asc' }, { id: 'asc' }],
         take,
-        select: { id: true, cle: true, apporteurId: true, attributionId: true, evenementId: true },
+        select: {
+          id: true,
+          cle: true,
+          apporteurId: true,
+          attributionId: true,
+          evenementId: true,
+          anomalieId: true,
+        },
       });
       return lignes.map((l) => ({
         ...l,

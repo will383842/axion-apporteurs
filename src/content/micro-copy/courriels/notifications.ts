@@ -126,6 +126,14 @@ export const RAISONS_D_ANNULATION = {
 export const ENTREPRISE_DE_REPLI = 'Entreprise n° {numeroEntreprise}';
 
 /**
+ * DM-55 — à la place de `{faits}`, quand la justification de l'anomalie n'est plus conservée (juriste,
+ * MOT POUR MOT, sans point final) : la notification de l'espace, relue après la purge, renvoie au
+ * courriel qui les a portés.
+ */
+export const FAITS_NON_CONSERVES =
+  'les faits vous ont été indiqués dans le courriel qui vous a informé de cette décision';
+
+/**
  * DM-55 — le libellé de `{categorie}` (raison « article 3.3 bis »), par catégorie de la liste de la
  * Société (juriste, MOT POUR MOT). Ici la catégorie EST dite : la règle de SEC-22 ne vaut que pour
  * une vérification.

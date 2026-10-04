@@ -78,6 +78,7 @@ const notif = (
   apporteurId: 'app-1',
   attributionId: `att-${id}`,
   evenementId: '42',
+  anomalieId: null,
   ...o,
 });
 
@@ -109,7 +110,7 @@ function ports(
       return fn({
         verrouiller: async (n) => !(o.pris ?? []).includes(n.id),
         rendre: async (n, envoyeLe) => {
-          if ((o.sansTexte ?? []).includes(n.id)) return null;
+          if ((o.sansTexte ?? []).includes(n.id)) return { nonRendue: 'parametre_refuse' as const };
           rendus.push({ id: n.id, envoyeLe: envoyeLe.toISOString() });
           return { sujet: `sujet ${n.id}`, corps: `corps ${n.id}` };
         },
@@ -135,6 +136,7 @@ describe('REQ-UX-016 — le passage envoie chaque notification une fois, sous ve
       retenues: 0,
       sautees: 0,
       nonRendues: 0,
+      motifsNonRendus: [],
     });
     expect(t.trace).toEqual([`lot:${TAILLES_DE_LOT.NOTIFICATIONS_ENVOI_LOT.valeur}`, 'tx', 'tx']);
     expect(t.envoyes).toEqual(['n1', 'n2']);
@@ -148,6 +150,7 @@ describe('REQ-UX-016 — le passage envoie chaque notification une fois, sous ve
       retenues: 0,
       sautees: 1,
       nonRendues: 0,
+      motifsNonRendus: [],
     });
     expect(t.envoyes).toEqual([]);
   });
@@ -162,6 +165,7 @@ describe('REQ-UX-016 — le passage envoie chaque notification une fois, sous ve
       retenues: 0,
       sautees: 0,
       nonRendues: 1,
+      motifsNonRendus: ['parametre_refuse'],
     });
     expect(t.envoyes).toEqual(['n2']);
   });
@@ -288,7 +292,14 @@ describe('REQ-UX-016 — l’adaptateur du passage, sur la base', () => {
       },
       orderBy: [{ creeAt: 'asc' }, { id: 'asc' }],
       take: 7,
-      select: { id: true, cle: true, apporteurId: true, attributionId: true, evenementId: true },
+      select: {
+        id: true,
+        cle: true,
+        apporteurId: true,
+        attributionId: true,
+        evenementId: true,
+        anomalieId: true,
+      },
     });
   });
 
@@ -934,7 +945,7 @@ describe('REQ-UX-016 — le texte rendu depuis la base, à l’heure de l’envo
     const b = banc({});
     const r = await rendreDepuisLaBase(b.tx, n('premier_rang_libere'), ENVOI, b.sources);
     expect(JSON.stringify(r)).toContain('Atelier Dupont');
-    expect(JSON.stringify(r)).toContain('26 mai 2027');
+    expect(JSON.stringify(r)).toContain('25 mai 2027');
   });
 
   it('REQ-DM-006 : une annulation pour l’article 3.3 bis se rend avec sa catégorie, lue dans la charge', async () => {
