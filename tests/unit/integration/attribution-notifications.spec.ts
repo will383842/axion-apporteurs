@@ -34,9 +34,12 @@ import {
   ENTREPRISE_DE_REPLI,
   LIBELLES_DES_CATEGORIES,
   MOTIFS_DES_DECISIONS,
+  RAISONS_D_ANNULATION,
 } from '../../../src/content/micro-copy/courriels/notifications';
 import { rendreLaNotification } from '../../../src/server/notifications/envoyer';
 import { LEXIQUE_INTERDIT } from '../../../src/domain/lexique/lexique-interdit';
+import { MOTIFS_ANNULATION_CONSOLE } from '../../../src/domain/attribution/machine';
+import { CHARGES_PAR_TYPE } from '../../../src/domain/evenement/charges';
 import { motifDeLaForme } from '../../../scripts/gates/lexique-apporteurs';
 import {
   CLES_ENVOYEES_PAR_LE_PASSAGE,
@@ -620,4 +623,45 @@ describe('REQ-UX-016 — l’entreprise nommée dans la notification (juriste)',
       }
     }
   );
+});
+
+describe('REQ-DM-006 — le motif d’une annulation par la console, liste fermée dans la charge (forme d’A02)', () => {
+  const charge = CHARGES_PAR_TYPE.attribution_etat_modifie;
+  const acteur = { par: 'systeme' } as const;
+  const base = { de: 'provisoire', vers: 'annulee', transition: 'annulee_par_la_console', acteur };
+
+  it('REQ-DM-006 : la liste est FERMÉE, fixée avec la juriste, sans « autre »', () => {
+    expect([...MOTIFS_ANNULATION_CONSOLE]).toEqual([
+      'demande_de_l_apporteur',
+      'declaration_en_double',
+      'entreprise_relevant_de_l_article_3_3_bis',
+      'erreur_de_saisie_de_la_societe',
+    ]);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — annulee_par_la_console EXIGE son motif, et un motif de la liste', () => {
+    for (const motifAnnulation of MOTIFS_ANNULATION_CONSOLE) {
+      expect(charge.safeParse({ ...base, motifAnnulation }).success, motifAnnulation).toBe(true);
+    }
+    expect(charge.safeParse(base).success).toBe(false);
+    expect(charge.safeParse({ ...base, motifAnnulation: 'autre' }).success).toBe(false);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — un motif d’annulation sur une autre transition est INTERDIT', () => {
+    expect(
+      charge.safeParse({
+        de: 'provisoire',
+        vers: 'annulee',
+        transition: 'annulee_par_apporteur',
+        acteur,
+        motifAnnulation: 'declaration_en_double',
+      }).success
+    ).toBe(false);
+  });
+
+  it('REQ-DM-006 : chaque motif notifiable a son libellé, et l’erreur de saisie de la Société n’en a pas', () => {
+    expect(Object.keys(RAISONS_D_ANNULATION).sort()).toEqual(
+      MOTIFS_ANNULATION_CONSOLE.filter((m) => m !== 'erreur_de_saisie_de_la_societe').sort()
+    );
+  });
 });
