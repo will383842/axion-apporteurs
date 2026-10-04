@@ -12,7 +12,7 @@
 import type { PrismaClient } from '@prisma/client';
 import { SEUILS } from '../../domain/seuils/ssot';
 
-/** La taille d'un lot : une suppression bornée, relancée jusqu'à épuisement. */
+/** La taille d'un lot : un vidage borné des identifiants, relancé jusqu'à épuisement. */
 export const LOT_DE_PURGE_DU_JOURNAL_DES_ACCES = 500;
 
 /** La limite : une trace survenue AVANT elle a passé sa durée. Mois civils, en UTC. */
