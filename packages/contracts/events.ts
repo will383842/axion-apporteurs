@@ -4,7 +4,7 @@
  * REQ-INT-003 (l'enveloppe), REQ-INT-004 (la nomenclature), REQ-INT-029 (ce qui ne traverse pas),
  * REQ-INT-032 (les charges manquantes), REQ-QA-007 (la transcription tenue par une empreinte).
  *
- * LA LISTE EST FERMÉE, ET ELLE FAIT DOUZE, en `schema_version` 3. REQ-INT-004 énumère les types
+ * LA LISTE EST FERMÉE, ET ELLE FAIT TREIZE, en `schema_version` 4. REQ-INT-004 énumère les types
  * et les nomme sur les modèles RÉELS d'axionia — vérification rejouée dans
  * `docs/AFFIRMATIONS-AXIONIA.md`, repères `AFF-01` et `AFF-02` : les deux modèles anglais sur
  * lesquels quatre documents avaient bâti ce contrat n'existent plus, l'un n'a jamais eu de modèle et
@@ -20,17 +20,21 @@
  * DOUZE EN VERSION 3 (INT-T46-P, `HYP-ANTERIORITE-DEVIS`, décision de Williams du 2026-10-01) : `devis.emis`, le
  * devis ENVOYÉ, entre à la fin. C'est de lui que se lit l'antériorité « devis » (DM-10-P) ; il est
  * d'avant-signature, il ne porte donc AUCUN montant (REQ-INT-029).
+ *
+ * TREIZE EN VERSION 4 (INT-T76-P, lot OPCO ; forme d'A02, #656) : `financement.etape`, une étape d'un
+ * dossier de financement OPCO, entre à la fin. Son seul effet chez Partners est la prévision des
+ * commissions.
  */
 
 import { SCHEMA_VERSION, schemaEnveloppe, type FragmentSchema } from './enveloppe';
-import { CHARGES } from './payloads';
+import { CHARGES, DEF_OPCO, NOM_DEF_OPCO } from './payloads';
 import { defsApi } from './api';
 
 export { SCHEMA_VERSION };
 
 /**
- * Les DOUZE types, dans l'ordre de REQ-INT-004 — les quatre entrés en version 2 puis celui de la
- * version 3 à la fin, parce que
+ * Les TREIZE types, dans l'ordre de REQ-INT-004 — les quatre entrés en version 2, puis celui de la
+ * version 3 et celui de la version 4 à la fin, parce que
  * l'enum Postgres de la réception les reçoit par ajout, qui place une valeur en dernier, et que sa
  * correspondance avec cette liste est testée DANS L'ORDRE (partners/ADR-0022, point 10). C'est la
  * seule liste littérale de noms d'événements du dépôt : la garde `gov:termes-interdits` refuse tout
@@ -49,6 +53,7 @@ export const TYPES_EVENEMENT = [
   'facture.annulee',
   'client.fusionne',
   'devis.emis',
+  'financement.etape',
 ] as const;
 
 export type TypeEvenement = (typeof TYPES_EVENEMENT)[number];
@@ -274,6 +279,7 @@ export function contratJsonSchema(): FragmentSchema {
       then: { properties: { payload: { $ref: `#/$defs/${nomDefPayload(type)}` } } },
     })),
     // Les schémas des API voisinent avec ceux des charges : une seule empreinte tient le tout.
-    $defs: { ...defsPayloads(), ...defsApi() },
+    // Version 4 : la seule définition des OPCO, que la fiche du client et `financement.etape` référencent.
+    $defs: { ...defsPayloads(), [NOM_DEF_OPCO]: DEF_OPCO, ...defsApi() },
   };
 }

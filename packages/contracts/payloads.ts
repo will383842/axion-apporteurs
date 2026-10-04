@@ -75,6 +75,49 @@ function ferme(proprietes: Record<string, FragmentSchema>): FragmentSchema {
 
 const liste = (items: FragmentSchema): FragmentSchema => ({ type: 'array', items });
 
+/**
+ * Version 4 (INT-T76-P ; forme d'A02, #656 et #737) : les onze OPCO agréés, l'ÉNUMÉRATION FERMÉE de
+ * l'enum `Opco` d'axion-ia (`OPCO_IDS` de son référentiel), dans son ordre et en minuscules. C'est la
+ * SEULE définition du contrat : publiée une fois en `$defs` (`opco_id`), et référencée par la fiche du
+ * client comme par `financement.etape`. Contrairement aux autres valeurs d'énumération, la liste vit
+ * ICI : ajouter un OPCO, c'est une version.
+ */
+export const OPCO_IDS = [
+  'atlas',
+  'opco_ep',
+  'akto',
+  'opco2i',
+  'mobilites',
+  'afdas',
+  'uniformation',
+  'ocapiat',
+  'constructys',
+  'opcommerce',
+  'opco_sante',
+] as const;
+
+/** Le nom du `$defs` partagé des OPCO. */
+export const NOM_DEF_OPCO = 'opco_id';
+
+/** La projection publiée de la liste des OPCO. */
+export const DEF_OPCO: FragmentSchema = {
+  type: 'string',
+  enum: [...OPCO_IDS],
+  $comment:
+    'Version 4 : les onze OPCO agréés, énumération fermée de l’enum `Opco` d’axion-ia, dans son ordre. Ajouter un OPCO, c’est une version.',
+};
+
+/** Un code OPCO, par référence à la seule définition. */
+const opcoId: FragmentSchema = { $ref: `#/$defs/${NOM_DEF_OPCO}` };
+
+/** `nomDuChamp` est exigé non nul quand `etape` vaut `valeur`. */
+function exigeNonNul(valeur: string, nomDuChamp: string, schema: FragmentSchema): FragmentSchema {
+  return {
+    if: { properties: { etape: { const: valeur } }, required: ['etape'] },
+    then: { properties: { [nomDuChamp]: schema } },
+  };
+}
+
 // ── les morceaux partagés ────────────────────────────────────────────────────
 
 /** Un payeur et ce qu'on attend de lui — la ventilation d'une facture (REQ-INT-032). */
@@ -92,6 +135,9 @@ const client = ferme({
   taille: ouNul(chaine),
   creeLe: instant,
   misAJourLe: instant,
+  // Version 4 (A02, #737) : l'OPCO du client, clé EXIGÉE, `null` quand axion-ia ne le connaît pas.
+  // Aucune colonne chez Partners : la fiche est conservée telle que reçue, et aucune règle ne la lit.
+  opco: ouNul(opcoId),
 });
 
 /** Le verdict de commission d'une ligne de devis, tel que le producteur le résout. */
@@ -130,12 +176,12 @@ const ligneDeDevis = ferme({
   },
 });
 
-// ── les douze charges ────────────────────────────────────────────────────────
+// ── les treize charges ────────────────────────────────────────────────────────
 
 /**
  * La charge de chaque type, indexée par son nom de fil. Les clés sont TYPÉES sur l'union des types
  * du contrat (import de type seulement, sans cycle à l'exécution) : une clé qui manque, ou une clé
- * de plus, est une erreur de compilation. Ces douze clés ne sont donc pas une seconde liste : ce sont
+ * de plus, est une erreur de compilation. Ces treize clés ne sont donc pas une seconde liste : ce sont
  * celles de `TYPES_EVENEMENT`, vérifiées par le compilateur.
  */
 export const CHARGES: { readonly [T in TypeEvenement]: FragmentSchema } = {
@@ -248,4 +294,34 @@ export const CHARGES: { readonly [T in TypeEvenement]: FragmentSchema } = {
     siren: ouNul(chaine),
     emisLe: instant,
   }),
+  // Version 4 (INT-T76-P ; forme FERMÉE d'A02, #656) : une étape d'un dossier de financement OPCO.
+  // Son seul effet chez Partners est la PRÉVISION des commissions : ni affichage à l'apporteur, ni
+  // effet sur l'attribution. Aucune donnée de personne, aucun texte libre, aucun motif de refus.
+  'financement.etape': {
+    ...ferme({
+      dossierId: identifiant,
+      clientId: identifiant,
+      siren: ouNul(chaine),
+      etape: { type: 'string', enum: ['depot', 'accord', 'refus'] },
+      opco: opcoId,
+      regime: {
+        type: 'string',
+        enum: ['subrogation_possible', 'remboursement_entreprise', 'inconnu'],
+      },
+      depotFaitLe: ouNul(instant),
+      accordEcritLe: ouNul(instant),
+      montantAccordeCents: ouNul(centimes),
+    }),
+    // Les règles croisées : le dépôt est daté ; l'accord ne part qu'ÉCRIT (REQ-JUR-061), daté et
+    // chiffré ; le refus ne porte aucun montant.
+    allOf: [
+      exigeNonNul('depot', 'depotFaitLe', instant),
+      exigeNonNul('accord', 'accordEcritLe', instant),
+      exigeNonNul('accord', 'montantAccordeCents', centimes),
+      {
+        if: { properties: { etape: { const: 'refus' } }, required: ['etape'] },
+        then: { properties: { montantAccordeCents: { type: 'null' } } },
+      },
+    ],
+  },
 };
