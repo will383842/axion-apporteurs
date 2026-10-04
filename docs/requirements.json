@@ -100,7 +100,8 @@
         "DM-24",
         "DM-41",
         "DM-55",
-        "DM-67"
+        "DM-67",
+        "UX-P1-54"
       ]
     },
     {
@@ -441,6 +442,8 @@
       "phase": 1,
       "taches": [
         "CPL-T07",
+        "CPL-T07b",
+        "CPL-T24",
         "DM-11",
         "DM-19",
         "DM-51",
@@ -549,7 +552,8 @@
       "taches": [
         "DM-12",
         "DM-62",
-        "SEC-14"
+        "SEC-14",
+        "UX-P1-56"
       ]
     },
     {
@@ -1058,6 +1062,8 @@
         "SEC-31",
         "SEC-58",
         "SEC-60",
+        "UX-P1-53",
+        "UX-P1-56",
         "UX-P2-03",
         "UX-P3-05"
       ]
@@ -1106,6 +1112,7 @@
       "phase": 1,
       "taches": [
         "CPL-T07",
+        "CPL-T07b",
         "DM-58",
         "UX-P1-09"
       ]
@@ -3086,8 +3093,9 @@
       "remplaceePar": null,
       "module": 8,
       "etape": 10,
-      "phase": 2,
+      "phase": 1,
       "taches": [
+        "UX-P1-55",
         "UX-P2-01"
       ]
     },
@@ -3180,6 +3188,7 @@
         "UX-P1-09",
         "UX-P1-10",
         "UX-P1-11",
+        "UX-P1-54",
         "UX-P3-01",
         "UX-P3-06"
       ]
@@ -3359,6 +3368,7 @@
       "etape": 4,
       "phase": 1,
       "taches": [
+        "CPL-T24",
         "SEC-22",
         "SEC-49",
         "UX-P1-09"
@@ -5289,6 +5299,7 @@
       "phase": 1,
       "taches": [
         "CPL-T07",
+        "CPL-T07b",
         "EXT-T01",
         "EXT-T02a",
         "EXT-T02b",
@@ -5330,6 +5341,10 @@
         "UX-P1-46",
         "UX-P1-48",
         "UX-P1-51",
+        "UX-P1-53",
+        "UX-P1-54",
+        "UX-P1-55",
+        "UX-P1-56",
         "UX-P2-01",
         "UX-P2-02",
         "UX-P2-03",
@@ -6313,8 +6328,8 @@
     {
       "id": "REQ-JUR-061",
       "domaine": "juridique",
-      "texte": "**La commande sous condition suspensive (LOT OPCO, D-OPCO-8).** Une commande conclue sous condition suspensive (accord de financement de l'OPCO) est datée de sa SIGNATURE ; elle est réputée n'avoir jamais existé si la condition défaille (C. civ. art. 1304 et 1304-6), ce qui vaut annulation au sens de l'art. 3.3. La RENONCIATION du client à la condition avant la date limite (art. 1304-4) garde la convention et la date de la commande ; un accord APRÈS un refus de l'OPCO forme une NOUVELLE convention, datée de sa signature. L'avenant de l'art. 4.4 qui l'écrit est validé par Williams avant tout premier envoi en signature.",
-      "source": "Cahier OPCO du 2026-10-02 (§6.4) ; avis d'A07 (2026-10-02) ; D-OPCO-8",
+      "texte": "**La commande sous condition suspensive (LOT OPCO, D-OPCO-8).** Une commande conclue sous condition suspensive (accord de financement de l'OPCO) est datée de sa SIGNATURE ; elle est réputée n'avoir jamais existé si la condition défaille (C. civ. art. 1304 et 1304-6), ce qui vaut annulation au sens de l'art. 3.3. La RENONCIATION du client à la condition avant la date limite (art. 1304-4) garde la convention et la date de la commande ; un accord APRÈS un refus de l'OPCO forme une NOUVELLE convention, datée de sa signature. L'avenant de l'art. 4.4 qui l'écrit est validé par Williams avant tout premier envoi en signature. Depuis les CGV et conventions v4 d'axion-ia, une convention n'est pas subordonnée par défaut à l'accord de l'OPCO : le client reste débiteur du prix convenu, sous réserve de la clause de dédit et sauf manquement de l'organisme. Le refus, la prise en charge partielle ou la caducité de l'accord ne changent donc ni la date de la commande ni le droit à commission : ils ne changent que le payeur et l'échéance des encaissements. L'alinéa de l'art. 4.4 sur la condition suspensive ne vaut que pour une convention expressément conclue sous condition.",
+      "source": "Cahier OPCO du 2026-10-02 (§6.4) ; avis d'A07 (2026-10-02) ; D-OPCO-8 ; #656 (lot OPCO, avis A07 du 2026-10-04) ; CGV et conventions v4 d'axion-ia (#1278)",
       "statut": "active",
       "remplaceePar": null,
       "module": 11,
