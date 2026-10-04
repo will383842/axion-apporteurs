@@ -69,10 +69,10 @@ encore, l'accueil montre un état vide guidant qui dit ce qui arrive et à quel 
 
 | Route | Écran | Rôles | Phase | Statut | REQ | Maquette | Tâche | Écran principal |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `/console/connexion` | Connexion : adresse, lien et code à 6 chiffres ; message identique que l'adresse existe ou non | tous, sans session | 1 | prévue | REQ-UX-048, REQ-SEC-003 | `connexion-console.html` | SEC-29 | oui |
-| `/console/connexion/[jeton]` | Consommation du lien (usage unique), page « lien déjà utilisé », atterrissage sur l'URL demandée | tous, sans session | 1 | prévue | REQ-UX-048, REQ-UX-015 | `connexion-console.html` | SEC-29 | non |
-| `/console` | Accueil de repli par rôle et par phase | admin, qualifieur, comptable, lecteur | 1 | prévue | REQ-UX-048, REQ-UX-019 | `console-cadre.html` | UX-P1-16 | oui |
-| `/console/acces-refuse` | Accès refusé : ce que le rôle permet, qui peut le changer, le retour à l'accueil | tous, avec session | 1 | prévue | REQ-UX-048, REQ-SEC-023 | `acces-refuse.html` | UX-P1-16 | non |
+| `/console/connexion` | Connexion : adresse, lien et code à 6 chiffres ; message identique que l'adresse existe ou non | tous, sans session | 1 | livrée | REQ-UX-048, REQ-SEC-003 | `connexion-console.html` | SEC-29 | oui |
+| `/console/connexion/[jeton]` | Consommation du lien (usage unique), page « lien déjà utilisé », atterrissage sur l'URL demandée | tous, sans session | 1 | livrée | REQ-UX-048, REQ-UX-015 | `connexion-console.html` | SEC-29 | non |
+| `/console` | Accueil de repli par rôle et par phase | admin, qualifieur, comptable, lecteur | 1 | livrée | REQ-UX-048, REQ-UX-019 | `console-cadre.html` | UX-P1-16 | oui |
+| `/console/acces-refuse` | Accès refusé : ce que le rôle permet, qui peut le changer, le retour à l'accueil | tous, avec session | 1 | livrée | REQ-UX-048, REQ-SEC-023 | `acces-refuse.html` | UX-P1-16 | non |
 | `/console/votre-role` | Votre rôle, dérivé du glossaire §7 | admin, qualifieur, comptable, lecteur | 1 | prévue | REQ-UX-048 | `utilisateurs-console.html` (état « Votre rôle ») | UX-P1-20 | non |
 
 ## Écrans de la phase 1

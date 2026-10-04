@@ -112,6 +112,87 @@
       ],
       "type": "object"
     },
+    "api_relecture_parametres": {
+      "$comment": "Les paramètres de requête, en chiffres sur le fil : `after_sequence`, la dernière séquence déjà lue (0 au départ) ; `limit`, le nombre de lignes au plus, sous la borne nommée du serveur. Au-delà de la borne, ou un paramètre illisible : refus, jamais une page tronquée.",
+      "additionalProperties": false,
+      "properties": {
+        "after_sequence": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "limit": {
+          "maximum": 500,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "after_sequence",
+        "limit"
+      ],
+      "type": "object"
+    },
+    "api_relecture_reponse": {
+      "$comment": "Réponse 200 : une enveloppe du contrat par ligne (NDJSON), le corps stocké octet pour octet, séquences strictement croissantes au-delà de `after_sequence` ; `x-axionia-derniere-sequence` est celle de la dernière ligne rendue, ou `after_sequence` si rien n'est rendu ; `x-axionia-suite` vaut `1` s'il en reste. Rien n'est mis en cache. Chaque appel est journalisé côté axionia sans aucune donnée de personne : l'adresse appelante en empreinte, les deux paramètres, le nombre de lignes rendues.",
+      "items": {
+        "$ref": "#"
+      },
+      "maxItems": 500,
+      "type": "array"
+    },
+    "api_relecture_reponse_entetes": {
+      "$comment": "Réponse axionia → Partners, signée sous le secret d'émission ; `x-axionia-kid`, facultatif, désigne le secret employé. La signature couvre, dans cet ordre CANONIQUE, joints par un point : `<horodatage>.<after_sequence>.<limit>.<x-axionia-derniere-sequence>.<x-axionia-suite>.<corps exact>` — le corps, les deux en-têtes de la page, et les deux paramètres demandés, qui lient la réponse à SA requête : une page authentique d'une autre lecture ne se rejoue pas sur celle-ci. Les paramètres y sont écrits en chiffres, sans zéro de tête.",
+      "properties": {
+        "x-axionia-derniere-sequence": {
+          "pattern": "^[0-9]{1,18}$",
+          "type": "string"
+        },
+        "x-axionia-kid": {
+          "pattern": "^[0-9a-f]{8}$",
+          "type": "string"
+        },
+        "x-axionia-signature": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "x-axionia-suite": {
+          "enum": [
+            "0",
+            "1"
+          ],
+          "type": "string"
+        },
+        "x-axionia-timestamp": {
+          "pattern": "^[0-9]{1,20}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "x-axionia-timestamp",
+        "x-axionia-signature",
+        "x-axionia-derniere-sequence",
+        "x-axionia-suite"
+      ],
+      "type": "object"
+    },
+    "api_relecture_requete_entetes": {
+      "$comment": "Requête Partners → axionia, même authentification que la route des coordonnées : HMAC-SHA-256, sous le secret dédié à la relecture, de `<horodatage>.<cible exacte>`, la cible comprenant la requête (`after_sequence` et `limit`) ; tolérance de 300 s, comparaison à temps constant, liste d'autorisation d'adresses réseau.",
+      "properties": {
+        "x-partners-signature": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "x-partners-timestamp": {
+          "pattern": "^[0-9]{1,20}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "x-partners-timestamp",
+        "x-partners-signature"
+      ],
+      "type": "object"
+    },
     "payload_avoir_emis": {
       "$comment": "FERMÉ en schema_version 3 — la charge de `avoir.emis`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
       "additionalProperties": false,

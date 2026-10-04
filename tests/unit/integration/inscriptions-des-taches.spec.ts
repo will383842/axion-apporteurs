@@ -28,6 +28,8 @@ const m = vi.hoisted(() => ({
   purgerLesContacts: vi.fn(),
   purgerLesSirenRefuses: vi.fn(),
   purgerLesValeursDesDroits: vi.fn(),
+  purgerLesNotificationsDeLEspace: vi.fn(),
+  purgerLeJournalDesAccesConsole: vi.fn(),
   anonymiserLesAnomalies: vi.fn(),
   purgerLesContestations: vi.fn(),
   purgerLesDementis: vi.fn(),
@@ -67,6 +69,14 @@ vi.mock('../../../src/server/taches/purger-siren-refuses', () => ({
 }));
 vi.mock('../../../src/server/taches/purger-valeurs-droits-contact', () => ({
   purgerLesValeursDesDroits: m.purgerLesValeursDesDroits,
+}));
+vi.mock('../../../src/server/taches/purger-notifications-espace', async (original) => ({
+  ...(await original<object>()),
+  purgerLesNotificationsDeLEspace: m.purgerLesNotificationsDeLEspace,
+}));
+vi.mock('../../../src/server/taches/purger-journal-acces-console', async (original) => ({
+  ...(await original<object>()),
+  purgerLeJournalDesAccesConsole: m.purgerLeJournalDesAccesConsole,
 }));
 vi.mock('../../../src/server/taches/purger-contestations-anomalies', () => ({
   anonymiserLesAnomalies: m.anonymiserLesAnomalies,
@@ -110,9 +120,16 @@ beforeEach(() => {
 });
 
 describe('REQ-QA-027 — les traitants branchés', () => {
-  it('REQ-QA-027 : un seul traitant aujourd’hui, celui de la candidature reçue', () => {
+  it('REQ-QA-027 : les traitants branchés aujourd’hui — la candidature reçue, et la projection de l’antériorité (DM-10-P)', () => {
     expect(Object.keys(traitantsDeReception(PRISMA))).toEqual([
       TypeEvenementRecu.candidature_recue,
+      TypeEvenementRecu.client_cree,
+      TypeEvenementRecu.client_mis_a_jour,
+      TypeEvenementRecu.devis_emis,
+      TypeEvenementRecu.devis_signe,
+      TypeEvenementRecu.facture_emise,
+      TypeEvenementRecu.avoir_emis,
+      TypeEvenementRecu.facture_annulee,
     ]);
   });
 });
@@ -231,9 +248,11 @@ describe('REQ-QA-027 — les passages planifiés reçoivent le client et l’heu
     ['contacts_purger', 'purgerLesContacts'],
     ['siren_refuses_purger', 'purgerLesSirenRefuses'],
     ['droits_contact_purger', 'purgerLesValeursDesDroits'],
+    ['notifications_espace_purger', 'purgerLesNotificationsDeLEspace'],
     ['anomalies_anonymiser', 'anonymiserLesAnomalies'],
     ['contestations_purger', 'purgerLesContestations'],
     ['dementis_purger', 'purgerLesDementis'],
+    ['journal_acces_console_purger', 'purgerLeJournalDesAccesConsole'],
   ] as const;
 
   for (const [cle, purge] of PURGES) {

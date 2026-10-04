@@ -49,6 +49,18 @@ export const DUREES_DE_RETENTION = {
     verifieLe: '2026-10-02',
   },
   /**
+   * DM-61 (REQ-UX-016) : une notification reste visible dans l'espace douze mois après son
+   * inscription (`notifications_espace.cree_at`), puis elle est supprimée. La preuve d'un délai est
+   * le courriel envoyé, jamais cette copie d'affichage.
+   */
+  NOTIFICATIONS_ESPACE_CONSERVATION_MOIS: {
+    valeur: 12,
+    unite: 'mois',
+    source: 'REQ-UX-016, décision de Williams du 2026-10-03 (proposition d’A07)',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
+  /**
    * DM-59 (REQ-JUR-065) : le délai de réponse à une demande de droit du contact, compté de sa
    * réception. La nouvelle valeur d'une rectification ne survit pas au-delà, même sans traitement.
    */
@@ -115,6 +127,18 @@ export const DUREES_DE_RETENTION = {
     unite: 'ans',
     source:
       'REQ-DM-043, décision de Williams du 2026-10-03 (démenti d’un contact), forme d’A02 (DM-62)',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
+  /**
+   * SEC-58 : le journal des accès à la console (connexions, lectures de coordonnées), purgé à
+   * l'échéance. Le gel d'une ligne liée à un incident ou à un litige est une tâche à part.
+   */
+  JOURNAL_ACCES_CONSOLE_CONSERVATION_MOIS: {
+    valeur: 12,
+    unite: 'mois',
+    source:
+      'décision de Williams du 2026-10-03, après l’avis de la juriste (journalisation des accès)',
     renvois: [],
     verifieLe: '2026-10-03',
   },

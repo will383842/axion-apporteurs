@@ -101,6 +101,47 @@ export const COMPTEURS = {
     ancre: 'par email au code',
     verifieLe: '2026-10-03',
   },
+  // SEC-29 — la connexion de la CONSOLE : quatre compteurs propres, plus stricts que ceux de
+  // l'espace (REQ-SEC-062), dans la famille du lien magique qu'elle emploie. Un compteur est sa clé :
+  // la console ne partage aucun budget avec l'espace. Sujet : une empreinte. Échec fermé.
+  'magic:console-demande-ip': {
+    prefixe: 'magic:',
+    limite: 10,
+    fenetreSecondes: 900,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-062',
+    ancre: 'par hash IP à la demande de la console',
+    verifieLe: '2026-10-03',
+  },
+  'magic:console-demande-courriel': {
+    prefixe: 'magic:',
+    limite: 3,
+    fenetreSecondes: 900,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-062',
+    ancre: 'par email à la demande de la console',
+    verifieLe: '2026-10-03',
+  },
+  'magic:console-code-ip': {
+    prefixe: 'magic:',
+    limite: 10,
+    fenetreSecondes: 900,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-062',
+    ancre: 'par hash IP au code de la console',
+    verifieLe: '2026-10-03',
+  },
+  'magic:console-code-courriel': {
+    prefixe: 'magic:',
+    // L'ordre des champs diffère des autres entrées : le bloc « limite, fenêtre, conduite » de
+    // `magic:courriel` reste unique, et le témoin d'effet de rate-famille y retire la conduite.
+    surPanne: 'refuser',
+    limite: 5,
+    fenetreSecondes: 900,
+    source: 'REQ-SEC-062',
+    ancre: 'par email au code de la console',
+    verifieLe: '2026-10-03',
+  },
   'depot:ip': {
     prefixe: 'depot:',
     limite: 20,

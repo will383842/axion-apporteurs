@@ -78,7 +78,8 @@
 | Pièces du dossier de conformité (`pieces_kyc`) | Données à caractère hautement personnel : un document d'identité et des coordonnées bancaires, dont la compromission permet une usurpation d'identité ou une fraude au virement | REQ-DM-027 · HYP-DM06-IBAN |
 | Risque — détournement de RIB | Fraude au changement de coordonnées bancaires. Mesure : un nouveau RIB naît `a_verifier` pendant que l'ancien reste actif, avec une vérification hors bande avant activation | REQ-UX-027 · REQ-DM-027 |
 | Risque — fuite de pièces d'identité | Mesures : purge du fichier dès la validation, stockage privé, URL signées à courte durée | REQ-SEC-026 · REQ-JUR-029 |
-| Risque — accès interne excessif | Mesures : droits par rôle, défaut = refus ; accès journalisé : À compléter — mesure prévue par SEC-58 | REQ-SEC-023 |
+| Risque — accès interne excessif | Mesures : droits par rôle, défaut = refus, et accès journalisé : chaque connexion réussie à la console et chaque lecture des coordonnées d'un apporteur ou d'un contact laissent une trace par identifiants seuls (`journal_acces_console`), écrite avant la lecture, en ajout seul, purgée de ses identifiants après 12 mois | REQ-SEC-023 · table `journal_acces_console` |
+| Risque — courriel de confirmation parti à une mauvaise adresse | Si l'adresse saisie pour le contact est erronée, la demande de confirmation atteint une autre personne, qui apprend qu'un échange avec l'apporteur est déclaré au nom de son entreprise. Mesures : un seul envoi par déclaration et aucune relance au contact ; liste de suppression et liste d'opposition, consultées avant tout envoi ; un « Non » ne vaut qu'après un second geste de confirmation ; jetons et adresse réseau du clic gardés en empreinte seulement | HYP-W20-DESTINATAIRE · HYP-W20-NON · HYP-W20-OPPOSITION · REQ-DM-060 · docs/chantiers/W20-confirmation-par-email.md |
 | Cotation des risques | À compléter — source manquante. Question : quelle vraisemblance et quelle gravité Will retient-il, pour chacun des quatre objets de la section 2, d'un accès illégitime, d'une modification non désirée et d'une disparition des données ? | REQ-CPL-009 |
 | Mesures complémentaires | À compléter — source manquante. Question : au-delà des mesures sourcées ci-dessus, quelles mesures Will ajoute-t-il au vu de la cotation ? | REQ-CPL-009 |
 
@@ -93,7 +94,7 @@ retient l'intérêt légitime, cette mise en balance en porte les éléments ; e
 | Nécessité | Les seules coordonnées professionnelles de la personne rencontrée, chiffrées ; aucune donnée de l'article 9 | contrat art. 7.1 · contrat art. 7.3 · REQ-DM-031 |
 | Attentes raisonnables | La personne a été informée de la transmission par l'apporteur, puis l'est par Axion-IA au premier contact | contrat art. 7.1 · REQ-JUR-009 |
 | Garanties | Purge planifiée, chiffrement, droits d'accès et d'effacement par jeton, aucune coordonnée dans une notification ou un journal | HYP-RGPD-RETENTION · REQ-SEC-024 · REQ-SEC-030 · REQ-SEC-033 |
-| Opposition | À compléter — source manquante. Question : comment la personne rencontrée s'oppose-t-elle au traitement (article 21), et qu'advient-il alors de l'attribution ? | REQ-SEC-030 |
+| Opposition | Par le lien d'opposition du courriel de confirmation : ses empreintes d'e-mail et de téléphone entrent dans une liste d'opposition, plus aucun e-mail ni appel d'Axion-IA ne lui parvient au titre de Partners, et la déclaration suit le régime « ne se prononce pas » (contrat art. 3.2 alinéa 3) | REQ-SEC-030 · HYP-W20-OPPOSITION |
 
 Conclusion : À compléter — source manquante. Question : Will conclut-il que l'intérêt légitime de la Société l'emporte sur les droits de la personne rencontrée, et consigne-t-il cette décision au registre des décisions ?
 
