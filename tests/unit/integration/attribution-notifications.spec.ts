@@ -50,7 +50,13 @@ import { CHARGES_PAR_TYPE } from '../../../src/domain/evenement/charges';
 import { motifDeLaForme } from '../../../scripts/gates/lexique-apporteurs';
 import { randomBytes } from 'node:crypto';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
-import { clesPii, empreinteRecherche } from '../../../src/server/securite/pii';
+import { clesPii, empreinteRecherche, encryptPii } from '../../../src/server/securite/pii';
+import { lireLaChargeDUnFait } from '../../../src/server/evenement/journal';
+import {
+  MODELE_DE_LA_JUSTIFICATION,
+  lireLesFaitsPourLaNotification,
+} from '../../../src/server/anomalie/justification';
+import { composerLeCourriel } from '../../../src/server/notifications/envoyer';
 import {
   depotDesCourriels,
   emettre,
@@ -1048,5 +1054,166 @@ describe('REQ-UX-016 — le texte rendu depuis la base, à l’heure de l’envo
       nonRendues: 1,
       motifsNonRendus: ['faits_non_conserves'],
     });
+  });
+});
+
+describe('REQ-UX-016 — les trois sources du rendu : la charge, les faits, la composition', () => {
+  const ID_ANOMALIE = '0190f3a0-0000-7000-8000-0000000000d4';
+  const ATT = '0190f3a0-0000-7000-8000-0000000000a1';
+  const APP = '0190f3a0-0000-7000-8000-0000000000b2';
+  const AUTRE = '0190f3a0-0000-7000-8000-0000000000c3';
+  const clesDuBanc = () => {
+    const env: Record<string, string> = { NODE_ENV: 'test' };
+    for (const nom of NOMS_DES_SECRETS) env[nom] = randomBytes(32).toString('hex');
+    return clesPii(env);
+  };
+
+  it('REQ-UX-016 : la charge d’un fait est lue par l’écrivain unique du journal, par son identifiant', async () => {
+    const lus: unknown[] = [];
+    const client = {
+      evenement: {
+        findUnique: async (q: unknown) => {
+          lus.push(q);
+          return { type: 'attribution_etat_modifie', charge: { transition: 'non_confirmee' } };
+        },
+      },
+    } as unknown as PrismaClient;
+    expect(await lireLaChargeDUnFait(client, '42')).toEqual({
+      type: 'attribution_etat_modifie',
+      charge: { transition: 'non_confirmee' },
+    });
+    expect(lus).toStrictEqual([
+      { where: { id: BigInt(42) }, select: { type: true, charge: true } },
+    ]);
+  });
+
+  it('REQ-UX-016 : un fait absent se lit null', async () => {
+    const client = { evenement: { findUnique: async () => null } } as unknown as PrismaClient;
+    expect(await lireLaChargeDUnFait(client, '7')).toBeNull();
+  });
+
+  function anomalie(c: ReturnType<typeof clesDuBanc>, o: Record<string, unknown> = {}) {
+    return {
+      statut: 'confirmee',
+      attributionId: ATT,
+      apporteurId: APP,
+      anonymiseeAt: null,
+      justificationChiffre: encryptPii(
+        { modele: MODELE_DE_LA_JUSTIFICATION, champ: 'justificationChiffre', id: ID_ANOMALIE },
+        'deux dépôts le même jour',
+        c
+      ),
+      ...o,
+    };
+  }
+  const txAvec = (ligne: unknown) =>
+    ({ anomalie: { findUnique: async () => ligne } }) as unknown as PrismaClient;
+  const q = { anomalieId: ID_ANOMALIE, attributionId: ATT, apporteurId: APP };
+
+  it('REQ-DM-006 : TÉMOIN (face admise) — l’anomalie confirmée de CETTE attribution et de CET apporteur rend ses faits', async () => {
+    const c = clesDuBanc();
+    expect(await lireLesFaitsPourLaNotification(txAvec(anomalie(c)), q, c)).toEqual({
+      faits: 'deux dépôts le même jour',
+    });
+  });
+
+  it.each([
+    ['d’un autre apporteur', { apporteurId: AUTRE }],
+    ['d’une autre attribution', { attributionId: AUTRE }],
+    ['levée', { statut: 'levee' }],
+    ['ouverte', { statut: 'ouverte' }],
+  ])('REQ-DM-006 : TÉMOIN (face refusée) — une anomalie %s est refusée', async (_, o) => {
+    const c = clesDuBanc();
+    expect(await lireLesFaitsPourLaNotification(txAvec(anomalie(c, o)), q, c)).toBe('refusee');
+  });
+
+  it('REQ-DM-006 : une anomalie introuvable est refusée', async () => {
+    expect(await lireLesFaitsPourLaNotification(txAvec(null), q, clesDuBanc())).toBe('refusee');
+  });
+
+  it('REQ-DM-006 : TÉMOIN — une justification purgée, ou une anomalie anonymisée, rend « purgee »', async () => {
+    const c = clesDuBanc();
+    expect(
+      await lireLesFaitsPourLaNotification(
+        txAvec(anomalie(c, { justificationChiffre: null })),
+        q,
+        c
+      )
+    ).toBe('purgee');
+    expect(
+      await lireLesFaitsPourLaNotification(
+        txAvec(anomalie(c, { anonymiseeAt: new Date('2031-01-01T00:00:00.000Z') })),
+        q,
+        c
+      )
+    ).toBe('purgee');
+  });
+
+  it('REQ-DM-006 : TÉMOIN — le déchiffrement est lié à SA ligne : un bloc d’une autre anomalie est refusé', async () => {
+    const c = clesDuBanc();
+    const autreBloc = encryptPii(
+      { modele: MODELE_DE_LA_JUSTIFICATION, champ: 'justificationChiffre', id: AUTRE },
+      'les faits d’une autre',
+      c
+    );
+    expect(
+      await lireLesFaitsPourLaNotification(
+        txAvec(anomalie(c, { justificationChiffre: autreBloc })),
+        q,
+        c
+      )
+    ).toBe('refusee');
+  });
+
+  /** Les fichiers de src/ qui nomment le lecteur des faits, hors de sa définition. */
+  const importeursFautifs = (fichiers: readonly (readonly [string, string])[]) =>
+    fichiers
+      .filter(([chemin]) => chemin !== 'src/server/anomalie/justification.ts')
+      .filter(([, texte]) => /\blireLesFaitsPourLaNotification\b/.test(texte))
+      .map(([chemin]) => chemin)
+      .filter((chemin) => chemin !== 'src/server/taches/envoyer-notifications-espace.ts');
+  const sourcesDe = (dossier: string): string[] =>
+    readdirSync(dossier, { withFileTypes: true }).flatMap((e) => {
+      const chemin = `${dossier}/${e.name}`;
+      if (e.isDirectory()) return sourcesDe(chemin);
+      return /\.(ts|tsx)$/.test(e.name) ? [chemin] : [];
+    });
+
+  it('REQ-DM-006 : TÉMOIN (sécurité) — seul le passage d’envoi importe le lecteur des faits', () => {
+    const fichiers = sourcesDe('src').map((f) => [f, readFileSync(f, 'utf8')] as const);
+    expect(importeursFautifs(fichiers)).toEqual([]);
+    expect(
+      fichiers.some(
+        ([f, t]) =>
+          f === 'src/server/taches/envoyer-notifications-espace.ts' &&
+          t.includes('lireLesFaitsPourLaNotification')
+      )
+    ).toBe(true);
+  });
+
+  it('REQ-DM-006 : contre-témoin — un importeur de la console, de l’espace ou de la couche d’accès est NOMMÉ', () => {
+    const appel = "import { lireLesFaitsPourLaNotification } from '../anomalie/justification';";
+    expect(
+      importeursFautifs([
+        ['src/app/espace/page.tsx', appel],
+        ['src/server/console/anomalies.ts', appel],
+        ['src/server/acces/for-apporteur.ts', appel],
+        ['src/server/taches/envoyer-notifications-espace.ts', appel],
+      ])
+    ).toEqual([
+      'src/app/espace/page.tsx',
+      'src/server/console/anomalies.ts',
+      'src/server/acces/for-apporteur.ts',
+    ]);
+  });
+
+  it('REQ-UX-016 : la composition du courriel est celle de notifier() — titre en sujet, corps puis appel et lien', () => {
+    const url = new URL('https://espace.partners.test');
+    expect(
+      composerLeCourriel('premier_rang_libere', { titre: 'T', appel: 'A', corps: 'C' }, url)
+    ).toEqual({ sujet: 'T', corps: 'C\n\nA : https://espace.partners.test/deposer' });
+    expect(
+      composerLeCourriel('decision_attribution', { titre: 'T', appel: 'A', corps: null }, url)
+    ).toEqual({ sujet: 'T', corps: 'A' });
   });
 });
