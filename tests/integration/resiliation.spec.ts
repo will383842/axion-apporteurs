@@ -209,12 +209,16 @@ describe('REQ-JUR-006 — decisions_de_contrat : la forme de chaque geste, dans 
     const fait = await unFait(a);
     const inserer = () =>
       app.$executeRawUnsafe(
-        `INSERT INTO decisions_de_contrat (id, apporteur_id, geste, article, texte_chiffre, evenement_id)
-         VALUES ($1::uuid, $2::uuid, 'mise_en_demeure', '6', $3, $4)`,
+        `INSERT INTO decisions_de_contrat (id, apporteur_id, geste, article, texte_chiffre, evenement_id,
+           cle_idempotence, faits_empreinte)
+         VALUES ($1::uuid, $2::uuid, 'mise_en_demeure', '6', $3, $4, $5::uuid, $6)`,
         randomUUID(),
         a,
         randomBytes(40),
-        fait
+        fait,
+        // Une clé neuve à chaque appel : seul l'événement est partagé.
+        randomUUID(),
+        hex(32)
       );
     await inserer();
     expect(await refus(inserer())).toContain('evenement_id');
