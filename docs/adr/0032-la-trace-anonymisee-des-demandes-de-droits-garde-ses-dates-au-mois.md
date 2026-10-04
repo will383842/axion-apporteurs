@@ -2,9 +2,9 @@
 
 | Champ | Valeur |
 | --- | --- |
-| **Statut** | `propose` |
+| **Statut** | `accepte` |
 | **Date** | 2026-10-04 |
-| **Décideur** | `architecte` — proposé par l'auteur (A05) sous `role:architecte`, d'après la forme d'A02 versée aux rattrapages 108 et 109 et son arbitrage sur #711 (forme (ii)) ; à accepter par A02 avant le code |
+| **Décideur** | `architecte` — proposé par l'auteur (A05) sous `role:architecte`, d'après la forme d'A02 versée aux rattrapages 108 et 109 et son arbitrage sur #711 (forme (ii)) ; accepté par A02, #711, commentaire 5984256851 (2026-10-04) |
 | **Tâche** | DM-68 |
 | **Exigences servies** | REQ-JUR-065 |
 | **Décisions du registre citées** | — (la troncature est le texte de la juriste, versé au registre des tâches par le rattrapage 108 ; la cinquième date, la voie (a) d'A02 au rattrapage 109 ; la forme (ii), l'arbitrage d'A02 sur #711) |
@@ -144,4 +144,4 @@ d'`partners/ADR-0031` est inchangé.
 
 ## Reste à faire
 
-- L'acceptation par A02, avant le code (registre des tâches, DM-68).
+Rien.
