@@ -279,6 +279,12 @@ describe('REQ-UX-016 — une clé, un seul chemin d’envoi : le passage ou noti
       return /\.(ts|tsx)$/.test(e.name) ? [chemin] : [];
     });
 
+  /** Le code d'un fichier, sans ses commentaires : une mention en prose n'est pas un appel. */
+  const sansCommentaires = (f: string) =>
+    readFileSync(f, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
+
   it('REQ-UX-016 : la liste du passage est FERMÉE et nommée, chaque clé y a un canal courriel', () => {
     expect([...CLES_ENVOYEES_PAR_LE_PASSAGE]).toEqual([
       'decision_attribution',
@@ -292,8 +298,7 @@ describe('REQ-UX-016 — une clé, un seul chemin d’envoi : le passage ou noti
   it('REQ-UX-016 : TÉMOIN — aucun fichier qui appelle notifier() ne nomme une clé du passage', () => {
     const appelants = sources('src').filter(
       (f) =>
-        f !== 'src/server/notifications/envoyer.ts' &&
-        /\bnotifier\s*\(/.test(readFileSync(f, 'utf8'))
+        f !== 'src/server/notifications/envoyer.ts' && /\bnotifier\s*\(/.test(sansCommentaires(f))
     );
     const fautifs = appelants.filter((f) =>
       CLES_ENVOYEES_PAR_LE_PASSAGE.some((cle) => readFileSync(f, 'utf8').includes(`'${cle}'`))

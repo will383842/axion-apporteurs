@@ -19,7 +19,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { SEUILS, TAILLES_DE_LOT } from '../../domain/seuils/ssot';
 import { MS_PAR_JOUR } from '../../domain/temps/calendrier-civil';
-import { GABARITS } from '../notifications/table-ssot';
 
 /** Une notification à porter par courriel, telle que le passage la lit. */
 export type NotificationAEnvoyer = {
@@ -89,10 +88,15 @@ export async function envoyerLesNotificationsDeLEspace(p: PortsDuPassage): Promi
 
 // ── l'adaptateur Prisma ─────────────────────────────────────────────────────────────────────────
 
-/** Les clés de la table SSOT qui portent un courriel : seules leurs notifications sont lues. */
-export const CLES_PAR_COURRIEL: readonly string[] = Object.entries(GABARITS)
-  .filter(([, ligne]) => (ligne.canaux as readonly string[]).includes('email'))
-  .map(([cle]) => cle);
+/**
+ * La liste FERMÉE et nommée des clés dont le courriel part par ce passage (condition d'A02). Une clé
+ * a un seul chemin d'envoi : le passage, ou `notifier()` en synchrone, jamais les deux — un témoin
+ * statique le tient dans les deux sens. DM-25 y ajoutera `attribution_annulee_anteriorite`.
+ */
+export const CLES_ENVOYEES_PAR_LE_PASSAGE = [
+  'decision_attribution',
+  'premier_rang_libere',
+] as const;
 
 /** Ce que le passage ne sait pas faire seul : l'heure, le rendu du texte, l'envoi par l'émetteur. */
 export type GestesExternes = {
@@ -110,9 +114,9 @@ export type GestesExternes = {
 };
 
 /**
- * Les ports du passage sur la base. Le lot ne prend que les notifications qui PORTENT leur événement
- * (`evenement_id`, écrit avec la transition) : une notification écrite par un envoi synchrone, dont
- * le courriel est déjà parti par un autre chemin, n'est jamais renvoyée.
+ * Les ports du passage sur la base. Le lot ne prend que les clés de la liste fermée, et seulement
+ * les notifications qui PORTENT leur événement (`evenement_id`, écrit avec la transition ; le CHECK
+ * `notifications_espace_machine_a_son_evenement` l'exige déjà pour ces clés).
  */
 export function portsDuPassage(prisma: PrismaClient, externes: GestesExternes): PortsDuPassage {
   return {
@@ -120,7 +124,7 @@ export function portsDuPassage(prisma: PrismaClient, externes: GestesExternes): 
     lireLot: async (take) => {
       const lignes = await prisma.notificationEspace.findMany({
         where: {
-          cle: { in: [...CLES_PAR_COURRIEL] },
+          cle: { in: [...CLES_ENVOYEES_PAR_LE_PASSAGE] },
           evenementId: { not: null },
           courriels: { none: { statut: { not: 'echec' } } },
         },
