@@ -28,6 +28,7 @@ const m = vi.hoisted(() => ({
   purgerLesContacts: vi.fn(),
   purgerLesSirenRefuses: vi.fn(),
   purgerLesValeursDesDroits: vi.fn(),
+  purgerLesNotificationsDeLEspace: vi.fn(),
   anonymiserLesAnomalies: vi.fn(),
   purgerLesContestations: vi.fn(),
   purgerLesDementis: vi.fn(),
@@ -67,6 +68,10 @@ vi.mock('../../../src/server/taches/purger-siren-refuses', () => ({
 }));
 vi.mock('../../../src/server/taches/purger-valeurs-droits-contact', () => ({
   purgerLesValeursDesDroits: m.purgerLesValeursDesDroits,
+}));
+vi.mock('../../../src/server/taches/purger-notifications-espace', async (original) => ({
+  ...(await original<object>()),
+  purgerLesNotificationsDeLEspace: m.purgerLesNotificationsDeLEspace,
 }));
 vi.mock('../../../src/server/taches/purger-contestations-anomalies', () => ({
   anonymiserLesAnomalies: m.anonymiserLesAnomalies,
@@ -231,6 +236,7 @@ describe('REQ-QA-027 — les passages planifiés reçoivent le client et l’heu
     ['contacts_purger', 'purgerLesContacts'],
     ['siren_refuses_purger', 'purgerLesSirenRefuses'],
     ['droits_contact_purger', 'purgerLesValeursDesDroits'],
+    ['notifications_espace_purger', 'purgerLesNotificationsDeLEspace'],
     ['anomalies_anonymiser', 'anonymiserLesAnomalies'],
     ['contestations_purger', 'purgerLesContestations'],
     ['dementis_purger', 'purgerLesDementis'],
