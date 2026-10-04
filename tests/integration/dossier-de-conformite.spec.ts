@@ -9,6 +9,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
+import { readdirSync, readFileSync } from 'node:fs';
 import { PrismaClient } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
 import {
@@ -125,28 +126,38 @@ async function motif(p: Promise<unknown>): Promise<string> {
 }
 
 describe('REQ-DM-027 — vérifier une pièce, avec son événement', () => {
-  it('REQ-DM-027 : TÉMOIN À DEUX FACES — le RIB ne se valide pas sans l’IBAN au nom contrôlé ; contrôlé, il passe, et l’événement est écrit', async () => {
+  it('REQ-DM-027 : TÉMOIN À DEUX FACES — une pièce à vérifier se valide, avec son événement ; un RIB, ni validé ni refusé, est hors de ce geste', async () => {
     const a = await unApporteur('kyc_en_cours');
-    const rib = await unePiece(a, 'rib', 'a_verifier');
-    const verifier = (ibanAuNomControle: boolean) =>
-      verifierUnePiece(app, {
-        acteur: QUALIFIEUR,
-        pieceId: rib,
-        verdict: { decision: 'valider', ibanAuNomControle },
-        maintenant: MAINTENANT,
-      });
-    expect(await motif(verifier(false))).toBe('iban_au_nom_non_controle');
-    expect((await piece(rib)).statut).toBe('a_verifier');
-    await verifier(true);
-    expect(await piece(rib)).toMatchObject({ statut: 'valide', verifieeAt: MAINTENANT });
-    const [e] = await evenements(rib);
+    const siret = await unePiece(a, 'siret', 'a_verifier');
+    await verifierUnePiece(app, {
+      acteur: QUALIFIEUR,
+      pieceId: siret,
+      verdict: { decision: 'valider' },
+      maintenant: MAINTENANT,
+    });
+    expect(await piece(siret)).toMatchObject({ statut: 'valide', verifieeAt: MAINTENANT });
+    const [e] = await evenements(siret);
     expect(e).toMatchObject({ type: 'piece_kyc_statut_modifie', agregat: 'piece_kyc' });
     expect(e!.charge).toEqual({
       de: 'a_verifier',
       vers: 'valide',
-      type: 'rib',
+      type: 'siret',
       acteur: { par: 'utilisateur_console', id: QUALIFIEUR.id },
     });
+    // Condition de la sécurité : la validation d'un RIB est à quatre yeux, dans sa propre tâche.
+    const rib = await unePiece(a, 'rib', 'a_verifier');
+    for (const verdict of [
+      { decision: 'valider' },
+      { decision: 'refuser', motif: 'illisible' },
+    ] as const)
+      expect(
+        await motif(
+          verifierUnePiece(app, { acteur: ADMIN, pieceId: rib, verdict, maintenant: MAINTENANT })
+        ),
+        verdict.decision
+      ).toBe('rib_hors_de_ce_geste');
+    expect((await piece(rib)).statut).toBe('a_verifier');
+    expect(await evenements(rib)).toEqual([]);
   });
 
   it('REQ-DM-027 : TÉMOIN À DEUX FACES — une RC pro échue ne se valide pas ; à jour, elle passe', async () => {
@@ -191,8 +202,8 @@ describe('REQ-DM-027 — vérifier une pièce, avec son événement', () => {
 
   it('REQ-DM-027 : TÉMOIN — un refus À CÔTÉ d’une courante écarte la refusée : l’ancienne reste la seule courante', async () => {
     const a = await unApporteur('kyc_en_cours');
-    const ancien = await unePiece(a, 'rib', 'valide');
-    const nouveau = await unePiece(a, 'rib', 'a_verifier');
+    const ancien = await unePiece(a, 'siret', 'valide');
+    const nouveau = await unePiece(a, 'siret', 'a_verifier');
     await verifierUnePiece(app, {
       acteur: QUALIFIEUR,
       pieceId: nouveau,
@@ -205,12 +216,12 @@ describe('REQ-DM-027 — vérifier une pièce, avec son événement', () => {
 
   it('REQ-DM-027 : TÉMOIN — valider à côté d’une courante écarte l’ANCIENNE : la nouvelle devient la seule courante', async () => {
     const a = await unApporteur('kyc_en_cours');
-    const ancien = await unePiece(a, 'rib', 'valide');
-    const nouveau = await unePiece(a, 'rib', 'a_verifier');
+    const ancien = await unePiece(a, 'siret', 'valide');
+    const nouveau = await unePiece(a, 'siret', 'a_verifier');
     await verifierUnePiece(app, {
       acteur: QUALIFIEUR,
       pieceId: nouveau,
-      verdict: { decision: 'valider', ibanAuNomControle: true },
+      verdict: { decision: 'valider' },
       maintenant: MAINTENANT,
     });
     expect(await piece(ancien)).toMatchObject({ remplaceeAt: MAINTENANT });
@@ -339,5 +350,35 @@ describe('REQ-UX-047 — le dossier lu pour l’écran', () => {
     expect(await lireLeDossier(app, { apporteurId: randomUUID(), maintenant: MAINTENANT })).toBe(
       null
     );
+  });
+});
+
+describe('REQ-DM-027 — aucun chemin de code ne valide un RIB (condition de la sécurité)', () => {
+  /** Les sources TypeScript de `src/`, lues sur le disque. */
+  function sources(dossier = 'src'): string[] {
+    return readdirSync(dossier, { withFileTypes: true }).flatMap((e) => {
+      const chemin = `${dossier}/${e.name}`;
+      if (e.isDirectory()) return sources(chemin);
+      return /\.tsx?$/.test(e.name) ? [chemin] : [];
+    });
+  }
+  const ECRITURE_DE_PIECE =
+    /pieceKyc\.(create|createMany|update|updateMany|upsert)\b|(UPDATE|INSERT\s+INTO)\s+"?pieces_kyc/;
+
+  it('REQ-DM-027 : TÉMOIN — le SEUL écrivain des pièces est le dossier de conformité, et il refuse le RIB avant toute écriture', () => {
+    const ecrivains = sources().filter((f) => ECRITURE_DE_PIECE.test(readFileSync(f, 'utf8')));
+    expect(ecrivains).toEqual(['src/server/conformite/dossier.ts']);
+    const texte = readFileSync('src/server/conformite/dossier.ts', 'utf8');
+    const refus = texte.indexOf("if (piece.type === 'rib') throw");
+    expect(refus).toBeGreaterThan(0);
+    expect(refus).toBeLessThan(texte.search(ECRITURE_DE_PIECE));
+  });
+
+  it('REQ-DM-027 : TÉMOIN — la règle rougit sur un second écrivain', () => {
+    expect(ECRITURE_DE_PIECE.test("await tx.pieceKyc.update({ data: { statut: 'valide' } })")).toBe(
+      true
+    );
+    expect(ECRITURE_DE_PIECE.test('UPDATE "pieces_kyc" SET statut = \'valide\'')).toBe(true);
+    expect(ECRITURE_DE_PIECE.test('tx.pieceKyc.findMany({})')).toBe(false);
   });
 });

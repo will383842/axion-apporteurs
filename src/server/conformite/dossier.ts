@@ -3,11 +3,13 @@
  *
  * TROIS GESTES, CHACUN UNE TRANSACTION AVEC SON ÉVÉNEMENT :
  *  — VÉRIFIER une pièce `a_verifier` (`action:verifier_piece`) : la valider, ou la refuser avec UN
- *    motif fermé (`MOTIFS_REFUS_PIECE`), jamais un texte libre ; `piece_kyc_statut_modifie`. Le RIB
- *    ne se valide qu'IBAN au nom contrôlé ; une pièce à échéance (RC pro, vigilance) ne se valide pas
- *    échue. Valider une pièce alors qu'une autre est courante (changement de RIB) ÉCARTE l'ancienne
+ *    motif fermé (`MOTIFS_REFUS_PIECE`), jamais un texte libre ; `piece_kyc_statut_modifie`. Une
+ *    pièce à échéance (RC pro, vigilance) ne se valide pas échue. Le RIB n'est PAS vérifié ici : sa
+ *    validation, à quatre yeux et sous relèvement, appartient à une tâche dédiée (condition de la
+ *    sécurité) ; ce geste le refuse, nommé. Valider une pièce alors qu'une autre est courante ÉCARTE l'ancienne
  *    (`remplacee_at`) ; refuser une pièce alors qu'une autre est courante l'écarte ELLE, dans la même
- *    écriture : l'index `pieces_kyc_une_courante` n'admet qu'une courante (forme d'A02) ;
+ *    écriture : l'index `pieces_kyc_une_courante` n'admet qu'une courante (forme d'A02). Ici,
+ *    `remplacee_at` signifie donc « écartée du service, par remplacement OU par refus » ;
  *  — OUVRIR le KYC (`retenu` → `kyc_en_cours`) et le VALIDER (`kyc_en_cours` → `pret_a_signer`),
  *    par la matrice des statuts ; `apporteur_statut_modifie`. La validation exige les pièces de
  *    `manquesPourSigner` (selon la juriste) et nomme chaque pièce manquante, jamais un autre motif.
@@ -31,7 +33,7 @@ export type MotifDuDossier =
   | 'droit_absent'
   | 'introuvable'
   | 'piece_pas_a_verifier'
-  | 'iban_au_nom_non_controle'
+  | 'rib_hors_de_ce_geste'
   | 'echeance_passee'
   | 'transition_refusee'
   | 'pieces_manquantes';
@@ -57,7 +59,7 @@ export interface ActeurDuDossier {
 }
 
 export type VerdictDePiece =
-  | { readonly decision: 'valider'; readonly ibanAuNomControle?: boolean }
+  | { readonly decision: 'valider' }
   | { readonly decision: 'refuser'; readonly motif: MotifRefusPiece };
 
 type Tx = Prisma.TransactionClient;
@@ -81,11 +83,11 @@ export async function verifierUnePiece(
       select: { id: true, apporteurId: true, type: true, statut: true, expireAt: true },
     });
     if (piece === null) throw new ErreurDossierDeConformite('introuvable');
+    // Condition de la sécurité : aucun RIB ne change de statut par ce geste, ni validé ni refusé.
+    if (piece.type === 'rib') throw new ErreurDossierDeConformite('rib_hors_de_ce_geste');
     if (piece.statut !== 'a_verifier') throw new ErreurDossierDeConformite('piece_pas_a_verifier');
     const valider = d.verdict.decision === 'valider';
     if (valider) {
-      if (piece.type === 'rib' && d.verdict.decision === 'valider' && !d.verdict.ibanAuNomControle)
-        throw new ErreurDossierDeConformite('iban_au_nom_non_controle');
       const aEcheance = (TYPES_A_ECHEANCE as readonly TypePieceKyc[]).includes(piece.type);
       if (aEcheance && (piece.expireAt === null || piece.expireAt <= d.maintenant))
         throw new ErreurDossierDeConformite('echeance_passee');
