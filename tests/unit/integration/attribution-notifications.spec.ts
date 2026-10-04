@@ -15,9 +15,11 @@
 import { describe, it, expect } from 'vitest';
 import { SEUILS, TAILLES_DE_LOT } from '../../../src/domain/seuils/ssot';
 import { MS_PAR_JOUR } from '../../../src/domain/temps/calendrier-civil';
+import { readdirSync, readFileSync } from 'node:fs';
 import type { PrismaClient } from '@prisma/client';
+import { GABARITS } from '../../../src/server/notifications/table-ssot';
 import {
-  CLES_PAR_COURRIEL,
+  CLES_ENVOYEES_PAR_LE_PASSAGE,
   envoyerLesNotificationsDeLEspace,
   portsDuPassage,
   type NotificationAEnvoyer,
@@ -202,7 +204,7 @@ describe('REQ-UX-016 — l’adaptateur du passage, sur la base', () => {
     envoyer: async () => ({ statut: 'envoye' as const, envoyeAt: MAINTENANT }),
   };
 
-  it('REQ-UX-016 : le lot — clés à canal courriel, PORTANT leur événement, sans courriel non échoué, dans l’ordre d’inscription', async () => {
+  it('REQ-UX-016 : le lot — la liste fermée du passage, PORTANT leur événement, sans courriel non échoué, dans l’ordre d’inscription', async () => {
     const c = client({
       lignes: [
         {
@@ -226,7 +228,7 @@ describe('REQ-UX-016 — l’adaptateur du passage, sur la base', () => {
     ]);
     expect(c.appels[0]!.args).toEqual({
       where: {
-        cle: { in: CLES_PAR_COURRIEL },
+        cle: { in: [...CLES_ENVOYEES_PAR_LE_PASSAGE] },
         evenementId: { not: null },
         courriels: { none: { statut: { not: 'echec' } } },
       },
@@ -234,8 +236,6 @@ describe('REQ-UX-016 — l’adaptateur du passage, sur la base', () => {
       take: 7,
       select: { id: true, cle: true, apporteurId: true, attributionId: true, evenementId: true },
     });
-    expect(CLES_PAR_COURRIEL).toContain('decision_attribution');
-    expect(CLES_PAR_COURRIEL).toContain('premier_rang_libere');
   });
 
   it('REQ-UX-016 : le verrou — FOR UPDATE SKIP LOCKED, et seulement sans courriel non échoué', async () => {
@@ -268,5 +268,42 @@ describe('REQ-UX-016 — l’adaptateur du passage, sur la base', () => {
         },
       },
     ]);
+  });
+});
+
+describe('REQ-UX-016 — une clé, un seul chemin d’envoi : le passage ou notifier(), jamais les deux', () => {
+  const sources = (dossier: string): string[] =>
+    readdirSync(dossier, { withFileTypes: true }).flatMap((e) => {
+      const chemin = `${dossier}/${e.name}`;
+      if (e.isDirectory()) return sources(chemin);
+      return /\.(ts|tsx)$/.test(e.name) ? [chemin] : [];
+    });
+
+  it('REQ-UX-016 : la liste du passage est FERMÉE et nommée, chaque clé y a un canal courriel', () => {
+    expect([...CLES_ENVOYEES_PAR_LE_PASSAGE]).toEqual([
+      'decision_attribution',
+      'premier_rang_libere',
+    ]);
+    for (const cle of CLES_ENVOYEES_PAR_LE_PASSAGE) {
+      expect(GABARITS[cle].canaux, cle).toContain('email');
+    }
+  });
+
+  it('REQ-UX-016 : TÉMOIN — aucun fichier qui appelle notifier() ne nomme une clé du passage', () => {
+    const appelants = sources('src').filter(
+      (f) =>
+        f !== 'src/server/notifications/envoyer.ts' &&
+        /\bnotifier\s*\(/.test(readFileSync(f, 'utf8'))
+    );
+    const fautifs = appelants.filter((f) =>
+      CLES_ENVOYEES_PAR_LE_PASSAGE.some((cle) => readFileSync(f, 'utf8').includes(`'${cle}'`))
+    );
+    expect(fautifs).toEqual([]);
+  });
+
+  it('REQ-UX-016 : TÉMOIN — le passage n’envoie aucune autre clé : son lot lit la liste, et elle seule', () => {
+    const passage = readFileSync('src/server/taches/envoyer-notifications-espace.ts', 'utf8');
+    expect(passage).toContain('cle: { in: [...CLES_ENVOYEES_PAR_LE_PASSAGE] }');
+    expect(passage).not.toMatch(/GABARITS/);
   });
 });
