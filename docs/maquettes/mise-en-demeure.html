@@ -1,0 +1,3180 @@
+<!doctype html>
+<html lang="fr" data-theme="auto">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Maquette — Mise en demeure · Axion Partners</title>
+    <style>
+      /* charte:debut — bloc commun aux maquettes (console) : ne pas modifier ici seul, le propager aux autres fichiers */
+      :root {
+        color-scheme: light;
+        --fond: #faf8f3;
+        --surface: #ffffff;
+        --surface-2: #ddd1bf;
+        --texte: #2a2520;
+        --texte-doux: #5c544c;
+        --bord: #8a7f73;
+        --primaire: #c24a1b;
+        --sur-primaire: #ffffff;
+        --lien: #a83c12;
+        --ok-fond: #e2f2e7;
+        --ok-texte: #1b5e34;
+        --attente-fond: #fdf0d5;
+        --attente-texte: #704000;
+        --bloque-fond: #fee2e2;
+        --bloque-texte: #b91c1c;
+        --info-fond: #e6edfc;
+        --info-texte: #1a4dd9;
+        --neutre-fond: #eceef2;
+        --neutre-texte: #4a5261;
+        --focus: #1a4dd9;
+        --atelier-fond: #e4ded3;
+        --atelier-surface: #ffffff;
+        --atelier-texte: #1c1917;
+        --atelier-doux: #57534e;
+        --atelier-lien: #a8390b;
+        --atelier-bord: #a39a8f;
+        --atelier-fond-bouton: #ffffff;
+        --atelier-alerte-fond: #fff1d6;
+        --atelier-alerte-texte: #6e3b00;
+        --cadre: #1b1f24;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root[data-theme='auto'] {
+          color-scheme: dark;
+          --fond: #12161c;
+          --surface: #1b2129;
+          --surface-2: #2a313b;
+          --texte: #eef1f5;
+          --texte-doux: #c3cad4;
+          --bord: #7f8a99;
+          --primaire: #8db8f2;
+          --sur-primaire: #0d1724;
+          --lien: #9cc3f5;
+          --ok-fond: #15301f;
+          --ok-texte: #9fe0b4;
+          --attente-fond: #33280e;
+          --attente-texte: #f3d37a;
+          --bloque-fond: #3a1717;
+          --bloque-texte: #fca5a5;
+          --info-fond: #162a47;
+          --info-texte: #b3cff7;
+          --neutre-fond: #262c35;
+          --neutre-texte: #d0d6de;
+          --focus: #ffb366;
+          --atelier-fond: #0c0a09;
+          --atelier-surface: #1a1614;
+          --atelier-texte: #f5f1ea;
+          --atelier-doux: #cfc8bf;
+          --atelier-lien: #f7a06a;
+          --atelier-bord: #57504a;
+          --atelier-fond-bouton: #11161c;
+          --atelier-alerte-fond: #33240a;
+          --atelier-alerte-texte: #ffd58a;
+          --cadre: #3a424d;
+        }
+      }
+      :root[data-theme='sombre'] {
+        color-scheme: dark;
+        --fond: #12161c;
+        --surface: #1b2129;
+        --surface-2: #2a313b;
+        --texte: #eef1f5;
+        --texte-doux: #c3cad4;
+        --bord: #7f8a99;
+        --primaire: #8db8f2;
+        --sur-primaire: #0d1724;
+        --lien: #9cc3f5;
+        --ok-fond: #15301f;
+        --ok-texte: #9fe0b4;
+        --attente-fond: #33280e;
+        --attente-texte: #f3d37a;
+        --bloque-fond: #3a1717;
+        --bloque-texte: #fca5a5;
+        --info-fond: #162a47;
+        --info-texte: #b3cff7;
+        --neutre-fond: #262c35;
+        --neutre-texte: #d0d6de;
+        --focus: #ffb366;
+        --atelier-fond: #0c0a09;
+        --atelier-surface: #1a1614;
+        --atelier-texte: #f5f1ea;
+        --atelier-doux: #cfc8bf;
+        --atelier-lien: #f7a06a;
+        --atelier-bord: #57504a;
+        --atelier-fond-bouton: #11161c;
+        --atelier-alerte-fond: #33240a;
+        --atelier-alerte-texte: #ffd58a;
+        --cadre: #3a424d;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        font:
+          18px/1.5 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        background: var(--atelier-fond);
+        color: var(--atelier-texte);
+      }
+      a {
+        color: var(--atelier-lien);
+      }
+      :focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 2px;
+      }
+      .evitement {
+        position: absolute;
+        left: 8px;
+        top: -80px;
+        background: var(--atelier-surface);
+        padding: 12px 16px;
+        z-index: 10;
+        min-height: 48px;
+      }
+      .evitement:focus {
+        top: 8px;
+      }
+      .atelier-tete {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 24px;
+        padding: 12px 20px;
+        background: var(--atelier-surface);
+        border-bottom: 1px solid var(--atelier-bord);
+      }
+      .atelier-tete h1 {
+        font-size: 24px;
+        margin: 0;
+        line-height: 1.25;
+      }
+      .atelier-tete h1 small {
+        display: block;
+        font-size: 18px;
+        font-weight: 400;
+        color: var(--atelier-doux);
+      }
+      .atelier-tete .fil a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 48px;
+        font-weight: 600;
+      }
+      .fictif {
+        margin: 0;
+        padding: 6px 12px;
+        border-radius: 8px;
+        background: var(--atelier-alerte-fond);
+        color: var(--atelier-alerte-texte);
+        font-weight: 600;
+      }
+      .reglages {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-left: auto;
+      }
+      .reglages button {
+        min-height: 48px;
+        min-width: 48px;
+        padding: 0 14px;
+        font: inherit;
+        border-radius: 10px;
+        border: 2px solid var(--atelier-bord);
+        background: var(--atelier-fond-bouton);
+        color: var(--atelier-texte);
+        cursor: pointer;
+      }
+      .reglages button[aria-pressed='true'] {
+        background: var(--atelier-texte);
+        color: var(--atelier-surface);
+        border-color: var(--atelier-texte);
+      }
+      .atelier {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) minmax(280px, 380px);
+        min-height: calc(100vh - 90px);
+      }
+      .etats {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .scene {
+        grid-column: 2;
+        grid-row: 1;
+      }
+      .notes {
+        grid-column: 3;
+        grid-row: 1;
+      }
+      .etats {
+        background: var(--atelier-surface);
+        border-right: 1px solid var(--atelier-bord);
+        padding: 12px;
+        overflow-y: auto;
+      }
+      .etats h2,
+      .notes h2.notes-titre {
+        font-size: 18px;
+        margin: 4px 4px 8px;
+        text-transform: none;
+      }
+      .etats ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .etats .groupe {
+        margin: 12px 4px 4px;
+        font-weight: 700;
+        color: var(--atelier-doux);
+      }
+      .etats a {
+        display: flex;
+        align-items: center;
+        min-height: 48px;
+        padding: 6px 12px;
+        border-radius: 10px;
+        text-decoration: none;
+        color: var(--atelier-texte);
+      }
+      .etats a[aria-current='true'] {
+        background: var(--atelier-texte);
+        color: var(--atelier-surface);
+        font-weight: 700;
+      }
+      .scene {
+        position: relative;
+        overflow: hidden;
+        touch-action: none;
+        cursor: grab;
+        background-color: var(--atelier-fond);
+        background-image: radial-gradient(var(--atelier-bord) 1px, transparent 1px);
+        background-size: 24px 24px;
+      }
+      .scene.glisse {
+        cursor: grabbing;
+      }
+      .plateau {
+        display: flex;
+        justify-content: center;
+        transform-origin: 50% 0;
+        padding: 24px;
+        will-change: transform;
+      }
+      .telephone {
+        position: relative;
+        flex: none;
+        margin: 0;
+        width: var(--largeur, 390px);
+        height: var(--hauteur, 844px);
+        border: 12px solid var(--cadre);
+        border-radius: 44px;
+        overflow: hidden;
+        background: var(--fond);
+        color: var(--texte);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        container-type: inline-size;
+        cursor: auto;
+      }
+      .telephone.bureau {
+        border-width: 10px;
+        border-radius: 12px;
+      }
+      .notes {
+        background: var(--atelier-surface);
+        border-left: 1px solid var(--atelier-bord);
+        padding: 16px 20px;
+        overflow-y: auto;
+      }
+      .note h2 {
+        font-size: 22px;
+        margin: 0 0 8px;
+      }
+      .note h3 {
+        font-size: 18px;
+        margin: 16px 0 4px;
+      }
+      .note p,
+      .note li {
+        margin: 0 0 8px;
+      }
+      .note ul {
+        padding-left: 22px;
+        margin: 0 0 8px;
+      }
+      .note code {
+        font-size: 16px;
+        background: var(--atelier-fond);
+        padding: 1px 4px;
+        border-radius: 4px;
+        overflow-wrap: anywhere;
+      }
+      .note .req {
+        color: var(--atelier-doux);
+      }
+      .js .ecran[hidden],
+      .js .note[hidden] {
+        display: none;
+      }
+      .sans-js-titre {
+        display: none;
+      }
+      html:not(.js) .ecran {
+        margin-bottom: 32px;
+      }
+      html:not(.js) .sans-js-titre {
+        display: block;
+        font-weight: 700;
+        padding: 8px 16px;
+      }
+      @media (max-width: 1100px) {
+        .atelier {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .etats,
+        .scene,
+        .notes {
+          grid-column: auto;
+          grid-row: auto;
+        }
+        .etats {
+          border-right: 0;
+          border-bottom: 1px solid var(--atelier-bord);
+        }
+        .etats ul {
+          flex-direction: row;
+          flex-wrap: wrap;
+        }
+        .etats .groupe {
+          width: 100%;
+        }
+        .notes {
+          border-left: 0;
+          border-top: 1px solid var(--atelier-bord);
+        }
+        .scene {
+          min-height: 70vh;
+        }
+      }
+      @media (max-width: 640px) {
+        .reglages .zoom {
+          display: none;
+        }
+        .scene {
+          background-image: none;
+          cursor: auto;
+          touch-action: auto;
+          min-height: 0;
+        }
+        .plateau {
+          padding: 0;
+          transform: none !important;
+        }
+        .telephone,
+        .telephone.bureau {
+          width: 100% !important;
+          height: auto !important;
+          border: 0;
+          border-radius: 0;
+          box-shadow: none;
+        }
+        .telephone .app {
+          height: auto;
+        }
+        .telephone .defile {
+          overflow: visible;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+
+      .telephone {
+        font-size: 16px;
+        line-height: 1.5;
+      }
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background: var(--fond);
+        color: var(--texte);
+      }
+      .ico {
+        width: 20px;
+        height: 20px;
+        flex: none;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .c-tete {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 20px;
+        padding: 6px 20px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--surface-2);
+      }
+      .c-marque {
+        font-weight: 800;
+      }
+      .c-nav {
+        display: flex;
+        gap: 4px;
+      }
+      .c-nav a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 8px;
+        color: var(--texte);
+        text-decoration: none;
+      }
+      .c-nav a[aria-current='page'] {
+        background: var(--info-fond);
+        color: var(--info-texte);
+        font-weight: 700;
+      }
+      .c-qui {
+        margin-left: auto;
+        color: var(--texte-doux);
+      }
+      .defile {
+        flex: 1;
+        overflow: auto;
+        padding: 16px 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .defile > * {
+        margin: 0;
+      }
+      h2.c-titre {
+        font-size: 24px;
+        margin: 0;
+      }
+      h3 {
+        font-size: 18px;
+        margin: 0;
+      }
+      p {
+        margin: 0;
+      }
+      .doux {
+        color: var(--texte-doux);
+      }
+      .fort {
+        font-weight: 700;
+      }
+      .rangee {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+      }
+      .ecarte {
+        justify-content: space-between;
+      }
+      .carte {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 10px;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .ok {
+        --t: var(--ok-texte);
+        --f: var(--ok-fond);
+      }
+      .attente {
+        --t: var(--attente-texte);
+        --f: var(--attente-fond);
+      }
+      .bloque {
+        --t: var(--bloque-texte);
+        --f: var(--bloque-fond);
+      }
+      .info {
+        --t: var(--info-texte);
+        --f: var(--info-fond);
+      }
+      .neutre {
+        --t: var(--neutre-texte);
+        --f: var(--neutre-fond);
+      }
+      .pastille {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 10px 2px 6px;
+        border-radius: 999px;
+        background: var(--f);
+        color: var(--t);
+        font-weight: 700;
+        font-size: 15px;
+        white-space: nowrap;
+      }
+      .pastille .ico {
+        width: 16px;
+        height: 16px;
+      }
+      .encart {
+        background: var(--f);
+        border-left: 5px solid var(--t);
+        border-radius: 8px;
+        padding: 10px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .encart-titre {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        font-weight: 800;
+        color: var(--t);
+      }
+      .encart a:not(.c-bouton) {
+        color: var(--lien);
+        font-weight: 700;
+      }
+      .encart p a,
+      .carte p a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+      .c-bouton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        min-width: 44px;
+        padding: 6px 16px;
+        border-radius: 8px;
+        border: 2px solid var(--primaire);
+        background: var(--primaire);
+        color: var(--sur-primaire);
+        font: inherit;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .c-bouton.second {
+        background: var(--surface);
+        color: var(--lien);
+      }
+      .c-bouton.danger {
+        background: var(--surface);
+        color: var(--bloque-texte);
+        border-color: var(--bloque-texte);
+      }
+      .c-bouton.inactif {
+        background: var(--surface-2);
+        color: var(--texte-doux);
+        border: 2px dashed var(--bord);
+        cursor: not-allowed;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 10px;
+      }
+      caption {
+        text-align: left;
+        font-weight: 700;
+        padding: 0 0 8px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--surface-2);
+      }
+      th {
+        font-size: 15px;
+        color: var(--texte-doux);
+        font-weight: 700;
+      }
+      td.nombre,
+      th.nombre {
+        text-align: right;
+        white-space: nowrap;
+      }
+      tr.ouverte > td {
+        background: var(--info-fond);
+      }
+      tr.retard > td:first-child {
+        box-shadow: inset 5px 0 0 var(--bloque-texte);
+      }
+      td a {
+        color: var(--lien);
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+      .fiche {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+      }
+      .champ {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .champ > span.etiquette,
+      legend {
+        font-weight: 700;
+      }
+      fieldset {
+        border: 1px solid var(--surface-2);
+        border-radius: 8px;
+        padding: 8px 12px 12px;
+        margin: 0;
+      }
+      .champ input,
+      .champ textarea,
+      .champ select {
+        min-height: 44px;
+        padding: 8px 10px;
+        border: 2px solid var(--bord);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--texte);
+        font: inherit;
+        width: 100%;
+      }
+      .champ.erreur input,
+      .champ.erreur select,
+      .champ.erreur textarea {
+        border-color: var(--bloque-texte);
+        border-width: 3px;
+      }
+      .message-erreur {
+        color: var(--bloque-texte);
+        font-weight: 700;
+      }
+      .choix {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .choix label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 12px 0 4px;
+        border: 2px solid var(--bord);
+        border-radius: 8px;
+        background: var(--surface);
+        cursor: pointer;
+      }
+      .choix input {
+        width: 24px;
+        height: 24px;
+        margin: 0 0 0 6px;
+        accent-color: var(--primaire);
+      }
+      .choix label.coche {
+        border-color: var(--primaire);
+        background: var(--info-fond);
+        font-weight: 700;
+      }
+      .etapes {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .etapes li {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: var(--neutre-fond);
+        color: var(--neutre-texte);
+        font-weight: 600;
+      }
+      .etapes li.fait {
+        background: var(--ok-fond);
+        color: var(--ok-texte);
+      }
+      .etapes li.courant {
+        background: var(--primaire);
+        color: var(--sur-primaire);
+        font-weight: 800;
+      }
+      .definition {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2px 12px;
+        margin: 0;
+      }
+      .definition dt {
+        color: var(--texte-doux);
+      }
+      .definition dd {
+        margin: 0;
+        font-weight: 600;
+      }
+      .squelette {
+        border-radius: 8px;
+        background: var(--surface-2);
+      }
+      .dialogue {
+        border: 2px solid var(--texte);
+        border-radius: 12px;
+        background: var(--surface);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-width: 560px;
+        align-self: center;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      }
+      .mono {
+        font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+        font-size: 15px;
+        overflow-wrap: anywhere;
+      }
+      @container (max-width: 760px) {
+        .fiche {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .c-qui {
+          margin-left: 0;
+        }
+        table,
+        thead,
+        tbody,
+        tr,
+        th,
+        td,
+        caption {
+          display: block;
+        }
+        thead {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+        }
+        tr {
+          border-bottom: 2px solid var(--surface-2);
+          padding: 6px 0;
+        }
+        td {
+          border: 0;
+          padding: 4px 12px;
+        }
+        td[data-col]::before {
+          content: attr(data-col) ' : ';
+          color: var(--texte-doux);
+          font-weight: 700;
+        }
+        td.nombre {
+          text-align: left;
+        }
+      }
+
+      /* Le cadre de la console (UX-P1-18) : en-tête, recherche, compte, barre mobile, menu. */
+      .c-marque {
+        color: var(--texte);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+      .c-recherche {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        min-width: 220px;
+        padding: 0 12px;
+        border: 2px solid var(--bord);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--texte-doux);
+      }
+      .c-recherche input {
+        border: 0;
+        background: transparent;
+        color: var(--texte);
+        font: inherit;
+        min-height: 40px;
+        width: 100%;
+      }
+      .c-compte {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 8px;
+        border: 2px solid var(--surface-2);
+        background: var(--surface);
+        color: var(--texte);
+        font: inherit;
+        cursor: pointer;
+      }
+      .c-barre {
+        display: none;
+      }
+      .c-barre a,
+      .c-barre button {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-height: 56px;
+        padding: 4px 2px;
+        border: 0;
+        background: transparent;
+        color: var(--texte);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        text-align: center;
+        cursor: pointer;
+      }
+      .c-barre [aria-current='page'],
+      .c-barre [aria-expanded='true'] {
+        background: var(--primaire);
+        color: var(--sur-primaire);
+        font-weight: 800;
+      }
+      .c-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 0;
+        padding: 8px;
+        list-style: none;
+        background: var(--surface);
+        border: 2px solid var(--texte);
+        border-radius: 12px;
+      }
+      .c-menu a {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 48px;
+        padding: 0 12px;
+        border-radius: 8px;
+        color: var(--texte);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .c-menu .separe {
+        border-top: 1px solid var(--surface-2);
+        margin-top: 4px;
+        padding-top: 4px;
+      }
+      .vide {
+        align-items: flex-start;
+        background: var(--surface);
+        border: 1px dashed var(--bord);
+        border-radius: 10px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-width: 640px;
+      }
+      .vide h3 {
+        font-size: 20px;
+      }
+      .centre {
+        align-items: center;
+        justify-content: flex-start;
+      }
+      .panneau {
+        width: 100%;
+        max-width: 440px;
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .panneau h2 {
+        font-size: 24px;
+        margin: 0;
+      }
+      .code-saisie {
+        letter-spacing: 0.4em;
+        font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+        font-size: 22px !important;
+        text-align: center;
+      }
+      @container (max-width: 767px) {
+        .app.avec-barre .c-nav,
+        .app.avec-barre .c-recherche,
+        .app.avec-barre .c-compte {
+          display: none;
+        }
+        .app.avec-barre .c-barre {
+          display: flex;
+          border-top: 1px solid var(--surface-2);
+          background: var(--surface);
+        }
+        .c-recherche {
+          min-width: 0;
+        }
+      }
+
+      /* barre latérale (UX-P1-50, aperçu validé par Williams le 2026-10-03) : au bureau, la barre
+         mocha à sections, l'entrée courante terracotta ; sous 768 px, la barre du bas reste et son
+         « Menu » ouvre la même barre en tiroir (REQ-UX-048). */
+      .app.avec-barre {
+        position: relative;
+      }
+      .s-barre {
+        --b-fond: #2a2520;
+        --b-texte: #ece4d8;
+        --b-doux: #b5a999;
+        --b-survol: #3a332c;
+        --b-actif: #4b2c1e;
+        background: var(--b-fond);
+        color: var(--b-texte);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 16px 12px;
+        font-size: 15px;
+        overflow-y: auto;
+      }
+      .s-barre .ico {
+        width: 20px;
+        height: 20px;
+        stroke-width: 1.9;
+      }
+      .s-haut {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 0 4px 12px;
+        border-bottom: 1px solid rgba(236, 228, 216, 0.14);
+      }
+      .s-marque {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #ffffff;
+        text-decoration: none;
+        min-height: 44px;
+      }
+      .s-logo {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: #c24a1b;
+        color: #ffffff;
+        font-weight: 800;
+      }
+      .s-nom {
+        display: flex;
+        flex-direction: column;
+        font-weight: 800;
+        line-height: 1.15;
+      }
+      .s-nom small {
+        font-weight: 600;
+        color: var(--b-doux);
+        font-size: 13px;
+      }
+      .s-replier,
+      .s-qui-bouton {
+        background: transparent;
+        border: 0;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+      }
+      .s-replier {
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        color: var(--b-doux);
+      }
+      .s-replier:hover {
+        background: var(--b-survol);
+        color: var(--b-texte);
+      }
+      .s-recherche {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 10px;
+        border-radius: 10px;
+        background: var(--b-survol);
+        color: var(--b-doux);
+      }
+      .s-recherche input {
+        flex: 1;
+        min-width: 0;
+        background: transparent;
+        border: 0;
+        color: var(--b-texte);
+        font: inherit;
+      }
+      .s-recherche input::placeholder {
+        color: var(--b-doux);
+      }
+      .s-recherche input:focus {
+        outline: none;
+      }
+      .s-recherche:focus-within {
+        outline: 2px solid #f0a37f;
+        outline-offset: 2px;
+      }
+      .s-recherche kbd {
+        font:
+          600 12px/1 ui-monospace,
+          Consolas,
+          monospace;
+        color: var(--b-doux);
+        border: 1px solid rgba(236, 228, 216, 0.25);
+        border-radius: 6px;
+        padding: 4px 6px;
+      }
+      .s-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .s-titre {
+        margin: 0 0 6px;
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--b-doux);
+      }
+      .s-entree {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 44px;
+        padding: 0 10px 0 12px;
+        border-radius: 10px;
+        color: var(--b-texte);
+        text-decoration: none;
+      }
+      .s-entree:hover {
+        background: var(--b-survol);
+      }
+      .s-entree:focus-visible,
+      .s-qui-bouton:focus-visible,
+      .s-replier:focus-visible,
+      .s-marque:focus-visible {
+        outline: 2px solid #f0a37f;
+        outline-offset: 2px;
+      }
+      .s-entree[aria-current='page'] {
+        background: var(--b-actif);
+        color: #ffffff;
+        font-weight: 700;
+      }
+      .s-entree[aria-current='page']::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 8px;
+        bottom: 8px;
+        width: 3px;
+        border-radius: 3px;
+        background: #c24a1b;
+      }
+      .s-badge {
+        margin-left: auto;
+        min-width: 24px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #c24a1b;
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 700;
+        text-align: center;
+      }
+      .s-compte {
+        position: relative;
+        margin-top: auto;
+        padding-top: 12px;
+        border-top: 1px solid rgba(236, 228, 216, 0.14);
+      }
+      .s-qui-bouton {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        min-height: 52px;
+        padding: 4px 8px;
+        border-radius: 10px;
+        text-align: left;
+      }
+      .s-qui-bouton:hover {
+        background: var(--b-survol);
+      }
+      .s-avatar {
+        display: grid;
+        place-items: center;
+        flex: none;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #3a332c;
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 14px;
+        border: 1px solid rgba(236, 228, 216, 0.3);
+      }
+      .s-qui {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        line-height: 1.2;
+      }
+      .s-qui b {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .s-qui small {
+        color: var(--b-doux);
+        font-size: 13px;
+      }
+      .s-menu {
+        position: absolute;
+        bottom: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        background: #ffffff;
+        color: var(--texte);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        padding: 6px;
+        z-index: 3;
+      }
+      .s-menu a {
+        display: flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 8px;
+        color: var(--texte);
+        text-decoration: none;
+      }
+      .s-menu a:hover {
+        background: var(--fond);
+      }
+      .s-mobile,
+      .s-voile {
+        display: none;
+      }
+      @container (min-width: 768px) {
+        .app.avec-barre {
+          grid-template-columns: 264px minmax(0, 1fr) !important;
+        }
+        .app.avec-barre .c-tete.s-barre {
+          padding: 16px 12px;
+          gap: 14px;
+        }
+        .app.avec-barre.est-replie {
+          grid-template-columns: 76px minmax(0, 1fr) !important;
+        }
+        .est-replie .s-nom,
+        .est-replie .s-titre,
+        .est-replie .s-libelle,
+        .est-replie .s-recherche input,
+        .est-replie .s-recherche kbd,
+        .est-replie .s-qui,
+        .est-replie .s-qui-bouton > .ico {
+          display: none;
+        }
+        .est-replie .s-haut {
+          flex-direction: column;
+          padding-bottom: 8px;
+        }
+        .est-replie .s-recherche {
+          justify-content: center;
+          padding: 0;
+        }
+        .est-replie .s-entree {
+          justify-content: center;
+          padding: 0;
+        }
+        .est-replie .s-badge {
+          position: absolute;
+          top: 2px;
+          right: 2px;
+          min-width: 18px;
+          padding: 0 5px;
+          font-size: 11px;
+        }
+        .est-replie .s-qui-bouton {
+          justify-content: center;
+          padding: 4px 0;
+        }
+        /* Les infobulles du mode replié : le libellé, au survol comme au focus. */
+        .est-replie [data-libelle]:hover::after,
+        .est-replie [data-libelle]:focus-visible::after {
+          content: attr(data-libelle);
+          position: absolute;
+          left: calc(100% + 10px);
+          top: 50%;
+          transform: translateY(-50%);
+          background: #2a2520;
+          color: #ffffff;
+          border: 1px solid rgba(236, 228, 216, 0.3);
+          padding: 6px 10px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          white-space: nowrap;
+          z-index: 4;
+        }
+        .est-replie .s-qui-bouton {
+          position: relative;
+        }
+      }
+      @container (max-width: 767px) {
+        .ecran:not([hidden]) {
+          height: 100%;
+        }
+        .app.avec-barre {
+          min-height: 100%;
+        }
+        .app.avec-barre .s-mobile {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-height: 56px;
+          padding: 0 8px;
+          background: var(--surface);
+          border-bottom: 1px solid var(--surface-2);
+          font-weight: 800;
+        }
+        .app.avec-barre .c-tete.s-barre {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          width: min(300px, 86%);
+          z-index: 5;
+          transform: translateX(-105%);
+          transition: transform 0.2s ease;
+          box-shadow: 0 0 30px rgba(0, 0, 0, 0.35);
+          flex-wrap: nowrap;
+          align-items: stretch;
+        }
+        .app.avec-barre.est-ouvert .c-tete.s-barre {
+          transform: none;
+        }
+        .app.avec-barre.est-ouvert .s-voile {
+          display: block;
+          position: absolute;
+          inset: 0;
+          z-index: 4;
+          background: rgba(20, 16, 12, 0.5);
+        }
+        .s-replier {
+          display: none;
+        }
+      }
+      @container (min-width: 768px) {
+        .ecran:not([hidden]) {
+          height: 100%;
+        }
+        .app.avec-barre {
+          min-height: 100%;
+          display: grid;
+          grid-template-columns: 248px minmax(0, 1fr);
+          grid-template-rows: minmax(0, 1fr);
+        }
+        .app.avec-barre .c-tete {
+          grid-column: 1;
+          grid-row: 1;
+          flex-direction: column;
+          flex-wrap: nowrap;
+          align-items: stretch;
+          gap: 16px;
+          padding: 20px 14px;
+          background: #2a2520;
+          color: #f3ede4;
+          border-bottom: 0;
+        }
+        .app.avec-barre .defile {
+          grid-column: 2;
+          grid-row: 1;
+          padding: 24px 32px;
+        }
+        .app.avec-barre .c-barre {
+          display: none;
+        }
+        .c-titre {
+          font-size: 28px;
+          font-weight: 800;
+        }
+        .carte {
+          box-shadow:
+            0 1px 2px rgba(28, 25, 23, 0.08),
+            0 4px 12px rgba(28, 25, 23, 0.08);
+        }
+      }
+      /* La cible du champ de recherche est toute la hauteur de son étiquette (44 px). */
+      .s-recherche input {
+        align-self: stretch;
+      }
+      @container (min-width: 768px) {
+        .app.avec-barre .c-barre {
+          display: none;
+        }
+        .s-voile {
+          display: none !important;
+        }
+      }
+      @container (max-width: 767px) {
+        .app.avec-barre {
+          position: relative;
+        }
+        .app.avec-barre .c-barre {
+          display: flex;
+        }
+      }
+      /* epure:atelier — l'atelier replié par défaut (UX-P1-52) */
+      body:not(.atelier-ouvert) .atelier {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      body:not(.atelier-ouvert) .etats,
+      body:not(.atelier-ouvert) .notes {
+        display: none;
+      }
+      body:not(.atelier-ouvert) .scene {
+        grid-column: 1;
+      }
+      .atelier-tete h1 small {
+        display: none;
+      }
+      .atelier-tete {
+        padding: 8px 20px;
+      }
+      .atelier-tete h1 {
+        font-size: 20px;
+      }
+      .fictif {
+        font-size: 14px;
+        padding: 4px 10px;
+      }
+      #voir-atelier[aria-pressed='true'] {
+        background: var(--atelier-texte);
+        color: var(--atelier-surface);
+      }
+      /* epure:ecran — contraste et hiérarchie (UX-P1-52). Mocha franc sur ivoire, carte
+         blanche détachée, bouton terracotta plein ; aucun gris pâle pour une information utile. */
+      .defile.centre {
+        background: var(--fond);
+      }
+      .defile.centre .panneau {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 16px;
+        box-shadow:
+          0 2px 4px rgba(42, 37, 32, 0.08),
+          0 12px 32px rgba(42, 37, 32, 0.12);
+        padding: 32px;
+        width: min(420px, 100%);
+        gap: 20px;
+        color: var(--texte);
+      }
+      .defile.centre .panneau h2 {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+      .defile.centre .panneau .etiquette {
+        font-weight: 700;
+        color: var(--texte);
+      }
+      .defile.centre .panneau input {
+        min-height: 52px;
+        font-size: 18px;
+        border: 2px solid var(--bord);
+      }
+      .defile.centre .panneau .c-bouton {
+        min-height: 52px;
+        font-size: 18px;
+        width: 100%;
+      }
+      .defile.centre .panneau .aide {
+        margin: 0;
+        font-size: 15px;
+        color: var(--texte-doux);
+        text-align: center;
+      }
+      .defile.centre .panneau .doux {
+        color: var(--texte-doux);
+      }
+      /* Toutes les pages : le fond ivoire, des cartes blanches détachées, un titre qui domine. */
+      .app .defile {
+        background: var(--fond);
+      }
+      .app .defile .carte {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 14px;
+        box-shadow:
+          0 1px 2px rgba(42, 37, 32, 0.08),
+          0 6px 18px rgba(42, 37, 32, 0.1);
+      }
+      .app .c-titre {
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        color: var(--texte);
+      }
+      .app .doux {
+        color: var(--texte-doux);
+      }
+      /* Un état vide ou un refus : une carte pleine, pas un cadre pointillé. */
+      .app .defile .vide {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 14px;
+        box-shadow:
+          0 1px 2px rgba(42, 37, 32, 0.08),
+          0 6px 18px rgba(42, 37, 32, 0.1);
+      }
+      /* Les tableaux sur une carte blanche, les adresses dans la police du texte. */
+      .app .defile table {
+        background: var(--surface);
+        border-radius: 12px;
+        box-shadow:
+          0 1px 2px rgba(42, 37, 32, 0.08),
+          0 6px 18px rgba(42, 37, 32, 0.1);
+      }
+      .app .mono {
+        font-family: inherit;
+        font-size: 15px;
+      }
+      .defile.centre .panneau .rangee {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px 16px;
+        margin: 0;
+      }
+
+      /* charte:fin */
+      .cache {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <a class="evitement" href="#telephone">Aller à l'écran maquetté</a>
+    <header class="atelier-tete">
+      <p class="fil"><a href="index.html">← Toutes les maquettes</a></p>
+      <h1>
+        Mise en demeure<small
+          >Console · tâche UX-P1-57 · REQ-UX-047, REQ-JUR-006, REQ-SEC-023</small
+        >
+      </h1>
+      <p class="fictif">Données fictives : aucune entreprise, personne ni adresse réelles.</p>
+      <div class="reglages" role="group" aria-label="Réglages de la maquette">
+        <button type="button" id="voir-atelier" aria-pressed="false">États et notes</button>
+        <button type="button" data-largeur="1280" data-hauteur="800" aria-pressed="true">
+          Bureau 1280
+        </button>
+        <button type="button" data-largeur="375" data-hauteur="667" aria-pressed="false">
+          Téléphone 375
+        </button>
+        <button type="button" id="theme">Thème : automatique</button>
+        <button type="button" class="zoom" id="zoom-moins" aria-label="Dézoomer">−</button>
+        <button type="button" class="zoom" id="zoom-ajuster" aria-label="Ajuster à la fenêtre">
+          <span id="zoom-valeur">100 %</span>
+        </button>
+        <button type="button" class="zoom" id="zoom-plus" aria-label="Zoomer">+</button>
+      </div>
+    </header>
+    <main class="atelier">
+      <div
+        class="scene"
+        id="scene"
+        tabindex="0"
+        aria-label="Plan de travail : glisser hors du cadre pour déplacer, flèches du clavier pour déplacer, plus et moins pour zoomer, zéro pour ajuster"
+      >
+        <div class="plateau" id="plateau">
+          <div
+            class="telephone bureau"
+            id="telephone"
+            tabindex="-1"
+            data-hauteur="800"
+            style="--largeur: 1280px; --hauteur: 800px"
+          >
+            <section class="ecran" id="etat-nominal" aria-label="État : Formulaire">
+              <p class="sans-js-titre">État : Formulaire</p>
+              <div class="app avec-barre">
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-nominal">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="M20 20l-4.5-4.5" /></svg
+                    ><span class="cache">Rechercher dans la console</span
+                    ><input
+                      type="search"
+                      placeholder="Rechercher"
+                      aria-label="Rechercher dans la console"
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-nominal"
+                        aria-current="page"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Mise en demeure">
+                  <p><a href="console-cadre.html#etat-admin">← Fiche de l’apporteur</a></p>
+                  <h2 class="c-titre">Mettre en demeure</h2>
+                  <p class="doux">Apporteur : Jean Démo · contrat signé</p>
+                  <div class="panneau" style="max-width: 640px">
+                    <p>
+                      Une mise en demeure demande à l’apporteur d’exécuter une obligation précise de
+                      son contrat. Elle part par courriel, et elle est le préalable à toute
+                      résiliation pour manquement.
+                    </p>
+                    <label class="champ"
+                      ><span class="etiquette">Article du contrat en cause</span
+                      ><select name="article" required>
+                        <option value="" selected>Choisir l’article</option>
+                        <option value="3.7">Article 3.7</option>
+                        <option value="6">Article 6</option>
+                        <option value="7">Article 7</option>
+                        <option value="8">Article 8</option>
+                        <option value="9">Article 9</option>
+                        <option value="23">Article 23</option>
+                      </select></label
+                    >
+                    <label class="champ"
+                      ><span class="etiquette">Les faits</span
+                      ><textarea
+                        name="faits"
+                        rows="8"
+                        required
+                        aria-describedby="consigne"
+                      ></textarea>
+                    </label>
+                    <p class="doux" id="consigne">
+                      Décrivez les faits sans aucun lien, et ne nommez aucune autre personne que
+                      l’apporteur. 1000 caractères au plus.
+                    </p>
+                    <p class="info pastille">
+                      Le délai de 15 jours court à partir de l’envoi du courriel ; une résiliation
+                      pour manquement n’est possible qu’après.
+                    </p>
+                    <p class="rangee">
+                      <a class="c-bouton" href="#etat-enregistree">Envoyer la mise en demeure</a
+                      ><a class="c-bouton second" href="console-cadre.html#etat-admin">Annuler</a>
+                    </p>
+                  </div>
+                </div>
+                <nav class="c-barre" aria-label="Console, barre du bas">
+                  <a href="file-qualification.html#etat-nominal">Qualification</a>
+                  <a href="console-cadre.html#etat-admin">Apporteurs</a>
+                  <a href="console-cadre.html#etat-admin">Prospects</a>
+                  <button type="button" aria-expanded="false" aria-controls="barre-etat-nominal">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h16M4 12h16M4 17h16" /></svg
+                    >Menu
+                  </button>
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-saisi" aria-label="État : Formulaire rempli">
+              <p class="sans-js-titre">État : Formulaire rempli</p>
+              <div class="app avec-barre">
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-saisi">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="M20 20l-4.5-4.5" /></svg
+                    ><span class="cache">Rechercher dans la console</span
+                    ><input
+                      type="search"
+                      placeholder="Rechercher"
+                      aria-label="Rechercher dans la console"
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-saisi"
+                        aria-current="page"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Mise en demeure">
+                  <p><a href="console-cadre.html#etat-admin">← Fiche de l’apporteur</a></p>
+                  <h2 class="c-titre">Mettre en demeure</h2>
+                  <p class="doux">Apporteur : Jean Démo · contrat signé</p>
+                  <div class="panneau" style="max-width: 640px">
+                    <p>
+                      Une mise en demeure demande à l’apporteur d’exécuter une obligation précise de
+                      son contrat. Elle part par courriel, et elle est le préalable à toute
+                      résiliation pour manquement.
+                    </p>
+                    <label class="champ"
+                      ><span class="etiquette">Article du contrat en cause</span
+                      ><select name="article" required>
+                        <option value="">Choisir l’article</option>
+                        <option value="3.7">Article 3.7</option>
+                        <option value="6">Article 6</option>
+                        <option value="7">Article 7</option>
+                        <option value="8">Article 8</option>
+                        <option value="9" selected>Article 9</option>
+                        <option value="23">Article 23</option>
+                      </select></label
+                    >
+                    <label class="champ"
+                      ><span class="etiquette">Les faits</span
+                      ><textarea name="faits" rows="8" required aria-describedby="consigne">
+Les relevés mensuels prévus par le contrat ne sont pas parvenus pour août et septembre, malgré deux rappels écrits.</textarea>
+                    </label>
+                    <p class="doux" id="consigne">
+                      Décrivez les faits sans aucun lien, et ne nommez aucune autre personne que
+                      l’apporteur. 1000 caractères au plus.
+                    </p>
+                    <p class="info pastille">
+                      Le délai de 15 jours court à partir de l’envoi du courriel ; une résiliation
+                      pour manquement n’est possible qu’après.
+                    </p>
+                    <p class="rangee">
+                      <a class="c-bouton" href="#etat-enregistree">Envoyer la mise en demeure</a
+                      ><a class="c-bouton second" href="console-cadre.html#etat-admin">Annuler</a>
+                    </p>
+                  </div>
+                </div>
+                <nav class="c-barre" aria-label="Console, barre du bas">
+                  <a href="file-qualification.html#etat-nominal">Qualification</a>
+                  <a href="console-cadre.html#etat-admin">Apporteurs</a>
+                  <a href="console-cadre.html#etat-admin">Prospects</a>
+                  <button type="button" aria-expanded="false" aria-controls="barre-etat-saisi">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h16M4 12h16M4 17h16" /></svg
+                    >Menu
+                  </button>
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-trop-long" aria-label="État : Faits trop longs">
+              <p class="sans-js-titre">État : Faits trop longs</p>
+              <div class="app avec-barre">
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-trop-long">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="M20 20l-4.5-4.5" /></svg
+                    ><span class="cache">Rechercher dans la console</span
+                    ><input
+                      type="search"
+                      placeholder="Rechercher"
+                      aria-label="Rechercher dans la console"
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-trop-long"
+                        aria-current="page"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Mise en demeure">
+                  <p><a href="console-cadre.html#etat-admin">← Fiche de l’apporteur</a></p>
+                  <h2 class="c-titre">Mettre en demeure</h2>
+                  <p class="doux">Apporteur : Jean Démo · contrat signé</p>
+                  <div class="panneau" style="max-width: 640px">
+                    <p>
+                      Une mise en demeure demande à l’apporteur d’exécuter une obligation précise de
+                      son contrat. Elle part par courriel, et elle est le préalable à toute
+                      résiliation pour manquement.
+                    </p>
+                    <p class="message-erreur" role="alert">
+                      Les faits dépassent la longueur admise : raccourcissez-les avant d’envoyer.
+                    </p>
+                    <label class="champ"
+                      ><span class="etiquette">Article du contrat en cause</span
+                      ><select name="article" required>
+                        <option value="">Choisir l’article</option>
+                        <option value="3.7">Article 3.7</option>
+                        <option value="6">Article 6</option>
+                        <option value="7">Article 7</option>
+                        <option value="8">Article 8</option>
+                        <option value="9" selected>Article 9</option>
+                        <option value="23">Article 23</option>
+                      </select></label
+                    >
+                    <label class="champ erreur"
+                      ><span class="etiquette">Les faits</span
+                      ><textarea name="faits" rows="8" required aria-describedby="consigne">
+Les relevés mensuels prévus par le contrat ne sont pas parvenus pour août et septembre, malgré deux rappels écrits. Les relevés mensuels prévus par le contrat ne sont pas parvenus pour août et septembre, malgré deux rappels écrits. Les relevés mensuels prévus par le contrat ne sont pas parvenus pour août et septembre, malgré deux rappels écrits.</textarea>
+                    </label>
+                    <p class="doux" id="consigne">
+                      Décrivez les faits sans aucun lien, et ne nommez aucune autre personne que
+                      l’apporteur. 1000 caractères au plus.
+                    </p>
+                    <p class="info pastille">
+                      Le délai de 15 jours court à partir de l’envoi du courriel ; une résiliation
+                      pour manquement n’est possible qu’après.
+                    </p>
+                    <p class="rangee">
+                      <a class="c-bouton" href="#etat-enregistree">Envoyer la mise en demeure</a
+                      ><a class="c-bouton second" href="console-cadre.html#etat-admin">Annuler</a>
+                    </p>
+                  </div>
+                </div>
+                <nav class="c-barre" aria-label="Console, barre du bas">
+                  <a href="file-qualification.html#etat-nominal">Qualification</a>
+                  <a href="console-cadre.html#etat-admin">Apporteurs</a>
+                  <a href="console-cadre.html#etat-admin">Prospects</a>
+                  <button type="button" aria-expanded="false" aria-controls="barre-etat-trop-long">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h16M4 12h16M4 17h16" /></svg
+                    >Menu
+                  </button>
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-lien" aria-label="État : Lien refusé">
+              <p class="sans-js-titre">État : Lien refusé</p>
+              <div class="app avec-barre">
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-lien">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="M20 20l-4.5-4.5" /></svg
+                    ><span class="cache">Rechercher dans la console</span
+                    ><input
+                      type="search"
+                      placeholder="Rechercher"
+                      aria-label="Rechercher dans la console"
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-lien"
+                        aria-current="page"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Mise en demeure">
+                  <p><a href="console-cadre.html#etat-admin">← Fiche de l’apporteur</a></p>
+                  <h2 class="c-titre">Mettre en demeure</h2>
+                  <p class="doux">Apporteur : Jean Démo · contrat signé</p>
+                  <div class="panneau" style="max-width: 640px">
+                    <p>
+                      Une mise en demeure demande à l’apporteur d’exécuter une obligation précise de
+                      son contrat. Elle part par courriel, et elle est le préalable à toute
+                      résiliation pour manquement.
+                    </p>
+                    <p class="message-erreur" role="alert">
+                      Les faits contiennent un lien ou un mot refusé : retirez-le avant d’envoyer.
+                    </p>
+                    <label class="champ"
+                      ><span class="etiquette">Article du contrat en cause</span
+                      ><select name="article" required>
+                        <option value="">Choisir l’article</option>
+                        <option value="3.7">Article 3.7</option>
+                        <option value="6">Article 6</option>
+                        <option value="7">Article 7</option>
+                        <option value="8">Article 8</option>
+                        <option value="9" selected>Article 9</option>
+                        <option value="23">Article 23</option>
+                      </select></label
+                    >
+                    <label class="champ erreur"
+                      ><span class="etiquette">Les faits</span
+                      ><textarea name="faits" rows="8" required aria-describedby="consigne">
+Voir le tableau partagé : exemple.invalid/releves</textarea>
+                    </label>
+                    <p class="doux" id="consigne">
+                      Décrivez les faits sans aucun lien, et ne nommez aucune autre personne que
+                      l’apporteur. 1000 caractères au plus.
+                    </p>
+                    <p class="info pastille">
+                      Le délai de 15 jours court à partir de l’envoi du courriel ; une résiliation
+                      pour manquement n’est possible qu’après.
+                    </p>
+                    <p class="rangee">
+                      <a class="c-bouton" href="#etat-enregistree">Envoyer la mise en demeure</a
+                      ><a class="c-bouton second" href="console-cadre.html#etat-admin">Annuler</a>
+                    </p>
+                  </div>
+                </div>
+                <nav class="c-barre" aria-label="Console, barre du bas">
+                  <a href="file-qualification.html#etat-nominal">Qualification</a>
+                  <a href="console-cadre.html#etat-admin">Apporteurs</a>
+                  <a href="console-cadre.html#etat-admin">Prospects</a>
+                  <button type="button" aria-expanded="false" aria-controls="barre-etat-lien">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h16M4 12h16M4 17h16" /></svg
+                    >Menu
+                  </button>
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-enregistree" aria-label="État : Enregistrée">
+              <p class="sans-js-titre">État : Enregistrée</p>
+              <div class="app avec-barre">
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-enregistree">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="M20 20l-4.5-4.5" /></svg
+                    ><span class="cache">Rechercher dans la console</span
+                    ><input
+                      type="search"
+                      placeholder="Rechercher"
+                      aria-label="Rechercher dans la console"
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-enregistree"
+                        aria-current="page"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Mise en demeure">
+                  <p><a href="console-cadre.html#etat-admin">← Fiche de l’apporteur</a></p>
+                  <h2 class="c-titre">Mettre en demeure</h2>
+                  <p class="doux">Apporteur : Jean Démo · contrat signé</p>
+                  <div class="panneau" style="max-width: 640px">
+                    <p>
+                      Une mise en demeure demande à l’apporteur d’exécuter une obligation précise de
+                      son contrat. Elle part par courriel, et elle est le préalable à toute
+                      résiliation pour manquement.
+                    </p>
+                    <p class="pastille ok" role="status">
+                      La mise en demeure est enregistrée. Le courriel part à l’apporteur au prochain
+                      envoi, et le délai court à partir de cet envoi.
+                    </p>
+                    <label class="champ"
+                      ><span class="etiquette">Article du contrat en cause</span
+                      ><select name="article" required>
+                        <option value="" selected>Choisir l’article</option>
+                        <option value="3.7">Article 3.7</option>
+                        <option value="6">Article 6</option>
+                        <option value="7">Article 7</option>
+                        <option value="8">Article 8</option>
+                        <option value="9">Article 9</option>
+                        <option value="23">Article 23</option>
+                      </select></label
+                    >
+                    <label class="champ"
+                      ><span class="etiquette">Les faits</span
+                      ><textarea
+                        name="faits"
+                        rows="8"
+                        required
+                        aria-describedby="consigne"
+                      ></textarea>
+                    </label>
+                    <p class="doux" id="consigne">
+                      Décrivez les faits sans aucun lien, et ne nommez aucune autre personne que
+                      l’apporteur. 1000 caractères au plus.
+                    </p>
+                    <p class="info pastille">
+                      Le délai de 15 jours court à partir de l’envoi du courriel ; une résiliation
+                      pour manquement n’est possible qu’après.
+                    </p>
+                    <p class="rangee">
+                      <a class="c-bouton" href="#etat-enregistree">Envoyer la mise en demeure</a
+                      ><a class="c-bouton second" href="console-cadre.html#etat-admin">Annuler</a>
+                    </p>
+                  </div>
+                </div>
+                <nav class="c-barre" aria-label="Console, barre du bas">
+                  <a href="file-qualification.html#etat-nominal">Qualification</a>
+                  <a href="console-cadre.html#etat-admin">Apporteurs</a>
+                  <a href="console-cadre.html#etat-admin">Prospects</a>
+                  <button
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="barre-etat-enregistree"
+                  >
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h16M4 12h16M4 17h16" /></svg
+                    >Menu
+                  </button>
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-hors-contrat" aria-label="État : Hors contrat">
+              <p class="sans-js-titre">État : Hors contrat</p>
+              <div class="app avec-barre">
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-hors-contrat">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="M20 20l-4.5-4.5" /></svg
+                    ><span class="cache">Rechercher dans la console</span
+                    ><input
+                      type="search"
+                      placeholder="Rechercher"
+                      aria-label="Rechercher dans la console"
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-hors-contrat"
+                        aria-current="page"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Mise en demeure">
+                  <p><a href="console-cadre.html#etat-admin">← Fiche de l’apporteur</a></p>
+                  <div class="vide">
+                    <h3>Aucune mise en demeure possible</h3>
+                    <p>
+                      Cet apporteur n’est pas sous contrat : une mise en demeure ne vise qu’un
+                      apporteur dont le contrat est signé. Revenez à sa fiche.
+                    </p>
+                    <p class="rangee">
+                      <a class="c-bouton" href="console-cadre.html#etat-admin">Retour à la fiche</a>
+                    </p>
+                  </div>
+                </div>
+                <nav class="c-barre" aria-label="Console, barre du bas">
+                  <a href="file-qualification.html#etat-nominal">Qualification</a>
+                  <a href="console-cadre.html#etat-admin">Apporteurs</a>
+                  <a href="console-cadre.html#etat-admin">Prospects</a>
+                  <button
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="barre-etat-hors-contrat"
+                  >
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h16M4 12h16M4 17h16" /></svg
+                    >Menu
+                  </button>
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-introuvable" aria-label="État : Apporteur introuvable">
+              <p class="sans-js-titre">État : Apporteur introuvable</p>
+              <div class="app avec-barre">
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-introuvable">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="M20 20l-4.5-4.5" /></svg
+                    ><span class="cache">Rechercher dans la console</span
+                    ><input
+                      type="search"
+                      placeholder="Rechercher"
+                      aria-label="Rechercher dans la console"
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-introuvable"
+                        aria-current="page"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Mise en demeure">
+                  <div class="vide">
+                    <h3>Apporteur introuvable</h3>
+                    <p>Cet apporteur n’existe pas, ou plus. Revenez à la liste des apporteurs.</p>
+                    <p class="rangee">
+                      <a class="c-bouton" href="console-cadre.html#etat-admin"
+                        >Liste des apporteurs</a
+                      >
+                    </p>
+                  </div>
+                </div>
+                <nav class="c-barre" aria-label="Console, barre du bas">
+                  <a href="file-qualification.html#etat-nominal">Qualification</a>
+                  <a href="console-cadre.html#etat-admin">Apporteurs</a>
+                  <a href="console-cadre.html#etat-admin">Prospects</a>
+                  <button
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="barre-etat-introuvable"
+                  >
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h16M4 12h16M4 17h16" /></svg
+                    >Menu
+                  </button>
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-chargement" aria-label="État : Chargement">
+              <p class="sans-js-titre">État : Chargement</p>
+              <div class="app avec-barre">
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-chargement">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="M20 20l-4.5-4.5" /></svg
+                    ><span class="cache">Rechercher dans la console</span
+                    ><input
+                      type="search"
+                      placeholder="Rechercher"
+                      aria-label="Rechercher dans la console"
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-chargement"
+                        aria-current="page"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Mise en demeure">
+                  <p role="status" class="doux">Chargement…</p>
+                  <div class="squelette" style="height: 44px; max-width: 640px"></div>
+                  <div class="squelette" style="height: 180px; max-width: 640px"></div>
+                </div>
+                <nav class="c-barre" aria-label="Console, barre du bas">
+                  <a href="file-qualification.html#etat-nominal">Qualification</a>
+                  <a href="console-cadre.html#etat-admin">Apporteurs</a>
+                  <a href="console-cadre.html#etat-admin">Prospects</a>
+                  <button type="button" aria-expanded="false" aria-controls="barre-etat-chargement">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h16M4 12h16M4 17h16" /></svg
+                    >Menu
+                  </button>
+                </nav>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+      <nav class="etats" aria-label="États de l'écran">
+        <h2>États</h2>
+        <p class="groupe">Le geste</p>
+        <ul>
+          <li><a href="#etat-nominal">Formulaire</a></li>
+          <li><a href="#etat-saisi">Formulaire rempli</a></li>
+          <li><a href="#etat-enregistree">Enregistrée</a></li>
+        </ul>
+        <p class="groupe">Refus nommés</p>
+        <ul>
+          <li><a href="#etat-trop-long">Faits trop longs</a></li>
+          <li><a href="#etat-lien">Lien refusé</a></li>
+        </ul>
+        <p class="groupe">Vide et techniques</p>
+        <ul>
+          <li><a href="#etat-hors-contrat">Hors contrat</a></li>
+          <li><a href="#etat-introuvable">Apporteur introuvable</a></li>
+          <li><a href="#etat-chargement">Chargement</a></li>
+        </ul>
+      </nav>
+      <aside class="notes" aria-label="Notes de conception">
+        <h2 class="notes-titre">Notes pour la relecture</h2>
+        <section class="note" data-pour="etat-nominal">
+          <h2>Formulaire</h2>
+          <p>
+            <b>Geste minimal de la juriste</b> (#703, art. 11.2) : l’article, pris dans la liste
+            fermée (3.7, 6, 7, 8, 9, 23), et les faits. Réservé à l’administrateur ; l’envoi exige
+            une connexion récente (step-up), sinon la connexion revient avec cette page en suite.
+            Budget de saisie 8 : <b>3 interactions</b> (article, faits, envoyer).
+          </p>
+          <ul>
+            <li>
+              Le délai et la borne viennent des seuils (contrat art. 11.2, quinze jours ; mille
+              points de code).
+            </li>
+            <li>
+              Rien ne compte les mises en demeure : l’écran n’affiche ni leur nombre ni leur
+              historique.
+            </li>
+            <li>
+              Accès refusé : l’écran commun,
+              <a href="acces-refuse.html#etat-ecran">acces-refuse.html</a>.
+            </li>
+          </ul>
+        </section>
+        <section class="note" data-pour="etat-saisi">
+          <h2>Formulaire rempli</h2>
+          <p>
+            Données fictives. Les faits partent dans le courriel de SEC-19, chiffrés en base, jamais
+            au journal ni dans l’adresse de la page.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-trop-long">
+          <h2>Faits trop longs</h2>
+          <p>
+            Jugé À LA SAISIE (juriste) : au-delà de la borne, le champ est refusé avec ce message et
+            la personne raccourcit avant d’envoyer. Rien n’est écrit.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-lien">
+          <h2>Lien refusé</h2>
+          <p>
+            Condition de la sécurité : ni lien ni nom de tiers. Un nom ne se détecte pas : la
+            consigne sous le champ le dit.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-enregistree">
+          <h2>Enregistrée</h2>
+          <p>
+            La date qui fait foi est celle de l’envoi effectif du courriel : un courriel retenu ou
+            en échec ne fait courir aucun délai.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-hors-contrat">
+          <h2>Hors contrat</h2>
+          <p>
+            État vide : un apporteur dont le contrat n’est pas signé ne reçoit pas de mise en
+            demeure. Le geste suivant est le retour à sa fiche.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-introuvable">
+          <h2>Apporteur introuvable</h2>
+          <p>Un identifiant inconnu, ou un apporteur effacé : aucun formulaire.</p>
+        </section>
+        <section class="note" data-pour="etat-chargement">
+          <h2>Chargement</h2>
+          <p>Le repli de la page, le temps de lire l’apporteur.</p>
+        </section>
+      </aside>
+    </main>
+    <script>
+      (function () {
+        var racine = document.documentElement;
+        racine.classList.add('js');
+        var ecrans = Array.prototype.slice.call(document.querySelectorAll('.ecran'));
+        var notes = Array.prototype.slice.call(document.querySelectorAll('.note'));
+        var liens = Array.prototype.slice.call(document.querySelectorAll('.etats a'));
+        var scene = document.getElementById('scene');
+        var plateau = document.getElementById('plateau');
+        var tel = document.getElementById('telephone');
+        var etat = { x: 0, y: 0, s: 1 };
+        function appliquer() {
+          plateau.style.transform =
+            'translate(' + etat.x + 'px,' + etat.y + 'px) scale(' + etat.s + ')';
+          var z = document.getElementById('zoom-valeur');
+          if (z) z.textContent = Math.round(etat.s * 100) + ' %';
+        }
+        function montrer(id, pousser) {
+          var cible = document.getElementById(id) ? id : ecrans[0].id;
+          ecrans.forEach(function (el) {
+            el.hidden = el.id !== cible;
+          });
+          notes.forEach(function (el) {
+            el.hidden = el.getAttribute('data-pour') !== cible;
+          });
+          liens.forEach(function (a) {
+            if (a.getAttribute('href') === '#' + cible) a.setAttribute('aria-current', 'true');
+            else a.removeAttribute('aria-current');
+          });
+          if (pousser) history.replaceState(null, '', '#' + cible);
+          var d = document.querySelector('#' + cible + ' .defile');
+          if (d) d.scrollTop = 0;
+        }
+        liens.forEach(function (a) {
+          a.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            montrer(a.getAttribute('href').slice(1), true);
+            if (window.matchMedia('(max-width: 1100px)').matches)
+              scene.scrollIntoView({ block: 'start' });
+          });
+        });
+        window.addEventListener('hashchange', function () {
+          montrer(location.hash.slice(1), false);
+        });
+        montrer(location.hash.slice(1), false);
+        // Thème : automatique → clair → sombre (sans réseau, mémorisé sur ce poste seulement).
+        var bTheme = document.getElementById('theme');
+        var themes = ['auto', 'clair', 'sombre'];
+        var noms = { auto: 'automatique', clair: 'clair', sombre: 'sombre' };
+        function poserTheme(t) {
+          racine.setAttribute('data-theme', t);
+          if (bTheme) bTheme.textContent = 'Thème : ' + noms[t];
+          try {
+            localStorage.setItem('maquettes-theme', t);
+          } catch (x) {}
+        }
+        if (bTheme) {
+          var mem = null;
+          try {
+            mem = localStorage.getItem('maquettes-theme');
+          } catch (x) {}
+          poserTheme(themes.indexOf(mem) >= 0 ? mem : 'auto');
+          bTheme.addEventListener('click', function () {
+            poserTheme(themes[(themes.indexOf(racine.getAttribute('data-theme')) + 1) % 3]);
+          });
+        }
+        // Largeur du cadre.
+        Array.prototype.slice
+          .call(document.querySelectorAll('[data-largeur]'))
+          .forEach(function (b, i, tous) {
+            b.addEventListener('click', function () {
+              tel.style.setProperty('--largeur', b.getAttribute('data-largeur') + 'px');
+              tel.style.setProperty(
+                '--hauteur',
+                (b.getAttribute('data-hauteur') || tel.getAttribute('data-hauteur')) + 'px'
+              );
+              tous.forEach(function (o) {
+                o.setAttribute('aria-pressed', String(o === b));
+              });
+              ajuster();
+            });
+          });
+        // Pan et zoom.
+        function borner(s) {
+          return Math.min(2.5, Math.max(0.3, s));
+        }
+        function ajuster() {
+          var l = tel.offsetWidth + 48,
+            h = tel.offsetHeight + 48;
+          var s = Math.min(1, scene.clientWidth / l, Math.max(0.3, (scene.clientHeight || h) / h));
+          etat = { x: 0, y: 0, s: borner(s) };
+          appliquer();
+        }
+        var bm = document.getElementById('zoom-moins'),
+          bp = document.getElementById('zoom-plus'),
+          br = document.getElementById('zoom-ajuster');
+        if (bm)
+          bm.addEventListener('click', function () {
+            etat.s = borner(etat.s / 1.2);
+            appliquer();
+          });
+        if (bp)
+          bp.addEventListener('click', function () {
+            etat.s = borner(etat.s * 1.2);
+            appliquer();
+          });
+        if (br) br.addEventListener('click', ajuster);
+        var tire = null;
+        scene.addEventListener('pointerdown', function (ev) {
+          if (ev.target.closest('.telephone') && !ev.altKey) return;
+          if (window.matchMedia('(max-width: 640px)').matches) return;
+          tire = { x: ev.clientX - etat.x, y: ev.clientY - etat.y };
+          scene.classList.add('glisse');
+          scene.setPointerCapture(ev.pointerId);
+        });
+        scene.addEventListener('pointermove', function (ev) {
+          if (!tire) return;
+          etat.x = ev.clientX - tire.x;
+          etat.y = ev.clientY - tire.y;
+          appliquer();
+        });
+        scene.addEventListener('pointerup', function () {
+          tire = null;
+          scene.classList.remove('glisse');
+        });
+        scene.addEventListener(
+          'wheel',
+          function (ev) {
+            if (!ev.ctrlKey) return;
+            ev.preventDefault();
+            etat.s = borner(etat.s * (ev.deltaY < 0 ? 1.1 : 1 / 1.1));
+            appliquer();
+          },
+          { passive: false }
+        );
+        scene.addEventListener('keydown', function (ev) {
+          if (ev.target !== scene) return;
+          var pas = 40,
+            k = ev.key;
+          if (k === 'ArrowLeft') etat.x += pas;
+          else if (k === 'ArrowRight') etat.x -= pas;
+          else if (k === 'ArrowUp') etat.y += pas;
+          else if (k === 'ArrowDown') etat.y -= pas;
+          else if (k === '+' || k === '=') etat.s = borner(etat.s * 1.2);
+          else if (k === '-') etat.s = borner(etat.s / 1.2);
+          else if (k === '0') {
+            ajuster();
+            return;
+          } else return;
+          ev.preventDefault();
+          appliquer();
+        });
+        if (!window.matchMedia('(max-width: 640px)').matches) ajuster();
+      })();
+    </script>
+    <script>
+      // barre:script (UX-P1-50) — repli mémorisé, tiroir ouvert par le « Menu » de la barre du bas,
+      // menu du compte, Échap, raccourci Ctrl K / ⌘K.
+      (function () {
+        var CLE = 'maquettes-console-barre-repliee';
+        var lire = function () {
+          try {
+            return localStorage.getItem(CLE) === '1';
+          } catch (e) {
+            return false;
+          }
+        };
+        var ecrire = function (v) {
+          try {
+            localStorage.setItem(CLE, v ? '1' : '0');
+          } catch (e) {}
+        };
+        var apps = Array.prototype.slice.call(document.querySelectorAll('.app.avec-barre'));
+        var replier = function (v) {
+          apps.forEach(function (a) {
+            a.classList.toggle('est-replie', v);
+            var b = a.querySelector('.s-replier');
+            if (b) {
+              b.setAttribute('aria-pressed', String(v));
+              b.setAttribute('aria-label', v ? 'Déplier la barre' : 'Replier la barre');
+              b.title = b.getAttribute('aria-label');
+            }
+          });
+        };
+        replier(lire());
+        apps.forEach(function (a) {
+          var b = a.querySelector('.s-replier');
+          if (b)
+            b.addEventListener('click', function () {
+              var v = !a.classList.contains('est-replie');
+              replier(v);
+              ecrire(v);
+            });
+          var o = a.querySelector('.c-barre button[aria-controls^="barre-"]');
+          var voile = a.querySelector('.s-voile');
+          var fermer = function () {
+            a.classList.remove('est-ouvert');
+            if (o) o.setAttribute('aria-expanded', 'false');
+          };
+          if (o)
+            o.addEventListener('click', function () {
+              a.classList.add('est-ouvert');
+              o.setAttribute('aria-expanded', 'true');
+              var p = a.querySelector('.s-entree');
+              if (p) p.focus();
+            });
+          if (voile) {
+            voile.hidden = false;
+            voile.addEventListener('click', fermer);
+          }
+          var q = a.querySelector('.s-qui-bouton');
+          var m = a.querySelector('.s-menu');
+          if (q && m)
+            q.addEventListener('click', function () {
+              var ouvert = m.hidden;
+              m.hidden = !ouvert;
+              q.setAttribute('aria-expanded', String(ouvert));
+            });
+          a.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+              fermer();
+              if (m) {
+                m.hidden = true;
+                if (q) q.setAttribute('aria-expanded', 'false');
+              }
+            }
+          });
+        });
+        document.addEventListener('keydown', function (e) {
+          if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+            var champ = document.querySelector('.ecran:not([hidden]) .s-recherche input');
+            if (champ) {
+              e.preventDefault();
+              champ.focus();
+            }
+          }
+        });
+      })();
+    </script>
+    <script>
+      // epure:atelier — ouvrir ou replier la liste des états et les notes, puis réajuster l'écran.
+      (function () {
+        var b = document.getElementById('voir-atelier');
+        var ajuster = function () {
+          var z = document.getElementById('zoom-ajuster');
+          if (z) z.click();
+        };
+        if (b)
+          b.addEventListener('click', function () {
+            var ouvert = document.body.classList.toggle('atelier-ouvert');
+            b.setAttribute('aria-pressed', String(ouvert));
+            setTimeout(ajuster, 0);
+          });
+        window.addEventListener('load', function () {
+          setTimeout(ajuster, 50);
+        });
+      })();
+    </script>
+  </body>
+</html>
