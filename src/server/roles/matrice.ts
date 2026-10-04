@@ -49,6 +49,15 @@ export const MATRICE_DES_ROLES = {
   // d'UX-P1-16) et la déconnexion, ouverts aux quatre rôles : chacun doit pouvoir arriver et partir.
   'ecran:accueil': ['admin', 'qualifieur', 'comptable', 'lecteur'],
   'action:se_deconnecter': ['admin', 'qualifieur', 'comptable', 'lecteur'],
+  // UX-P1-16 : les écrans de la PHASE 1 de la navigation (`docs/CONSOLE-ROUTES.md`), répartis selon la
+  // carte ; une entrée n'apparaît que si l'écran est AUSSI livré. Les écrans des phases 2 et 3
+  // entrent avec la tâche qui les livre.
+  'ecran:qualification': ['admin', 'qualifieur', 'lecteur'],
+  'ecran:apporteurs': ['admin', 'qualifieur', 'comptable'],
+  'ecran:attributions': ['admin', 'qualifieur', 'lecteur'],
+  'ecran:utilisateurs_console': ['admin'],
+  // L'écran d'accès refusé, ouvert à tout rôle : il dit ce que le rôle permet et à qui s'adresser.
+  'ecran:acces_refuse': ['admin', 'qualifieur', 'comptable', 'lecteur'],
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, readonly ConsoleRole[]>>;
 
 /** Un droit DÉCLARÉ — le seul que le typage laisse passer à `requireRole`. */
