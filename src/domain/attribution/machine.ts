@@ -71,6 +71,9 @@ export const EVENEMENTS_ATTRIBUTION = [
   'paiement_recu',
   'commande_caduque',
   'commande_caduque_hors_fenetre',
+  // DM-67 (REQ-JUR-007, art. 3.3) : l'antériorité de la Société établie après l'enregistrement, par
+  // des faits datés avant le dépôt. Depuis tout état OCCUPANT ; les commissions acquises restent.
+  'anteriorite_etablie',
 ] as const;
 export type TransitionAttribution = (typeof EVENEMENTS_ATTRIBUTION)[number];
 
@@ -88,6 +91,7 @@ const SUITES_SANS_PERTE = {
   expiree: 'expiree',
   anomalie_confirmee: 'invalidee',
   figee: 'figee_resiliation',
+  anteriorite_etablie: 'annulee',
 } as const;
 
 /** La matrice : pour chaque état, les seules transitions acceptées et leur état d'arrivée. */
@@ -108,6 +112,7 @@ export const TRANSITIONS_ATTRIBUTION: {
     annulee_par_la_console: 'annulee',
     liberee_sans_confirmation: 'perimee',
     figee: 'figee_resiliation',
+    anteriorite_etablie: 'annulee',
   },
   active: { rdv_pris: 'rdv_pris', perimee: 'perimee', ...SUITES_SANS_PERTE },
   rdv_pris: SUITES_SANS_PERTE,
@@ -117,6 +122,7 @@ export const TRANSITIONS_ATTRIBUTION: {
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
     figee: 'figee_resiliation',
+    anteriorite_etablie: 'annulee',
   },
   signee: {
     paiement_recu: 'convertie',
@@ -124,9 +130,10 @@ export const TRANSITIONS_ATTRIBUTION: {
     figee: 'figee_resiliation',
     commande_caduque: 'active',
     commande_caduque_hors_fenetre: 'expiree',
+    anteriorite_etablie: 'annulee',
   },
-  convertie: { expiree: 'expiree', figee: 'figee_resiliation' },
-  figee_resiliation: { expiree: 'expiree' },
+  convertie: { expiree: 'expiree', figee: 'figee_resiliation', anteriorite_etablie: 'annulee' },
+  figee_resiliation: { expiree: 'expiree', anteriorite_etablie: 'annulee' },
   invalidee: {},
   perdue: {},
   perimee: {},
@@ -155,6 +162,13 @@ export const REFUSEES_AU_CONSEILLER = [
 /** La prise en charge est la naissance du conseiller, et de lui seul. */
 const REFUSEES_A_L_APPORTEUR: readonly TransitionAttribution[] = ['prise_en_charge'];
 
+/**
+ * DM-67 (REQ-JUR-007) : le critère de l'antériorité établie après coup, en enum INTERNE de l'événement
+ * `anteriorite_etablie` ; il n'apparaît jamais dans une notification.
+ */
+export const CRITERES_D_ANTERIORITE = ['cliente', 'devis', 'devis_signe'] as const;
+export type CritereDAnteriorite = (typeof CRITERES_D_ANTERIORITE)[number];
+
 export type CodeTransitionAttribution =
   | 'etat_inconnu'
   | 'transition_inconnue'
@@ -162,7 +176,8 @@ export type CodeTransitionAttribution =
   | 'naissance_refusee'
   | 'transition_refusee'
   | 'refusee_au_porteur'
-  | 'autre_commande_valable';
+  | 'autre_commande_valable'
+  | 'critere_incoherent';
 
 export class ErreurTransitionAttribution extends Error {
   readonly code: CodeTransitionAttribution;

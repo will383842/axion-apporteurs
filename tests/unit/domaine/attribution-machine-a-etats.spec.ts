@@ -36,6 +36,7 @@ import {
 import { SEUILS } from '../../../src/domain/seuils/ssot';
 import { MS_PAR_JOUR } from '../../../src/domain/temps/calendrier-civil';
 import { CHARGES_PAR_TYPE } from '../../../src/domain/evenement/charges';
+import { ETATS_OCCUPANTS } from '../../../src/domain/attribution/etats';
 
 /** LA TABLE ATTENDUE — validée par l'architecte le 2026-10-02 ; tout ce qui n'y est pas est refusé. */
 const NAISSANCES: Record<string, string> = {
@@ -56,6 +57,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     annulee_par_la_console: 'annulee',
     liberee_sans_confirmation: 'perimee',
     figee: 'figee_resiliation',
+    anteriorite_etablie: 'annulee',
   },
   active: {
     rdv_pris: 'rdv_pris',
@@ -66,6 +68,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
     figee: 'figee_resiliation',
+    anteriorite_etablie: 'annulee',
   },
   rdv_pris: {
     devis_envoye: 'proposition',
@@ -74,6 +77,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
     figee: 'figee_resiliation',
+    anteriorite_etablie: 'annulee',
   },
   proposition: {
     devis_signe: 'signee',
@@ -81,6 +85,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
     figee: 'figee_resiliation',
+    anteriorite_etablie: 'annulee',
   },
   signee: {
     paiement_recu: 'convertie',
@@ -88,9 +93,10 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     figee: 'figee_resiliation',
     commande_caduque: 'active',
     commande_caduque_hors_fenetre: 'expiree',
+    anteriorite_etablie: 'annulee',
   },
-  convertie: { expiree: 'expiree', figee: 'figee_resiliation' },
-  figee_resiliation: { expiree: 'expiree' },
+  convertie: { expiree: 'expiree', figee: 'figee_resiliation', anteriorite_etablie: 'annulee' },
+  figee_resiliation: { expiree: 'expiree', anteriorite_etablie: 'annulee' },
   invalidee: {},
   perdue: {},
   perimee: {},
@@ -204,6 +210,29 @@ describe('REQ-DM-006 — un couple absent lève une erreur typée qui le nomme, 
   it('REQ-DM-004 : TÉMOIN — la file ne promeut rien : aucune flèche en_attente → un état occupant', () => {
     for (const vers of Object.values(TRANSITIONS_ATTRIBUTION.en_attente)) {
       expect(['annulee', 'expiree']).toContain(vers);
+    }
+  });
+});
+
+describe('REQ-JUR-007 — l’antériorité établie après coup annule, depuis chaque état occupant', () => {
+  it.each(ETATS_OCCUPANTS)(
+    'REQ-JUR-007 : TÉMOIN — %s × anteriorite_etablie → annulee, pour un apporteur comme pour un conseiller',
+    (de) => {
+      for (const porteur of PORTEURS) {
+        expect(transitionnerAttribution({ de, transition: 'anteriorite_etablie', porteur })).toBe(
+          'annulee'
+        );
+      }
+    }
+  );
+
+  it('REQ-JUR-007 : un état qui n’occupe plus ne s’annule pas pour antériorité', () => {
+    for (const de of ETATS_ATTRIBUTION.filter(
+      (e) => !(ETATS_OCCUPANTS as readonly string[]).includes(e)
+    )) {
+      expect(() =>
+        transitionnerAttribution({ de, transition: 'anteriorite_etablie', porteur: 'apporteur' })
+      ).toThrow(ErreurTransitionAttribution);
     }
   });
 });
@@ -333,9 +362,11 @@ describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
   it('REQ-DM-006 : chaque code de la matrice est admis, un code inconnu refusé', () => {
     for (const transition of EVENEMENTS_ATTRIBUTION) {
       const de = transition in NAISSANCES_ATTRIBUTION ? null : 'active';
-      expect(charge.safeParse({ de, vers: 'active', transition, acteur }).success, transition).toBe(
-        true
-      );
+      const critere = transition === 'anteriorite_etablie' ? { critere: 'cliente' } : {};
+      expect(
+        charge.safeParse({ de, vers: 'active', transition, acteur, ...critere }).success,
+        transition
+      ).toBe(true);
     }
     expect(
       charge.safeParse({ de: 'active', vers: 'perdue', transition: 'inventee', acteur }).success
@@ -347,6 +378,24 @@ describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
     expect(charge.safeParse({ ...base, lienInteret: 'declare' }).success).toBe(true);
     expect(charge.safeParse({ ...base, lienInteret: true }).success).toBe(false);
     expect(charge.safeParse({ ...base, siren: '552100554' }).success).toBe(false);
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — anteriorite_etablie porte son critère, en enum fermé ; aucune autre transition n’en porte', () => {
+    const base = { de: 'signee', vers: 'annulee', transition: 'anteriorite_etablie', acteur };
+    for (const critere of ['cliente', 'devis', 'devis_signe']) {
+      expect(charge.safeParse({ ...base, critere }).success, critere).toBe(true);
+    }
+    expect(charge.safeParse(base).success).toBe(false);
+    expect(charge.safeParse({ ...base, critere: 'financeur' }).success).toBe(false);
+    expect(
+      charge.safeParse({
+        de: 'active',
+        vers: 'perdue',
+        transition: 'perdue',
+        acteur,
+        critere: 'cliente',
+      }).success
+    ).toBe(false);
   });
 
   it('REQ-DM-006 : de est nul si et seulement si la transition est une naissance', () => {
@@ -413,7 +462,7 @@ async function chargesRechargees(): Promise<ModuleCharges> {
 }
 
 describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
-  it('REQ-QA-004 : les treize états, les vingt-cinq transitions et les naissances, dans cet ordre', async () => {
+  it('REQ-QA-004 : les treize états, les vingt-six transitions et les naissances, dans cet ordre', async () => {
     const m = await machineRechargee();
     expect(m.ETATS_ATTRIBUTION).toEqual([
       'en_attente',
@@ -456,6 +505,7 @@ describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
       'paiement_recu',
       'commande_caduque',
       'commande_caduque_hors_fenetre',
+      'anteriorite_etablie',
     ]);
     expect(m.NAISSANCES_ATTRIBUTION).toEqual(NAISSANCES);
   });
@@ -773,6 +823,54 @@ describe('REQ-DM-006 — l’écrivain des transitions, en processus (client sim
     ]);
     expect(evenementsEcrits()[0]!.charge.lienInteret).toBe('declare');
   });
+
+  it('REQ-JUR-007 : TÉMOIN — anteriorite_etablie écrit son critère dans l’événement, et l’état annulee', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const { tx, mises } = txSimule([ligneDe({ statut: 'signee' })]);
+    const r = await transitionnerUneAttribution(tx, {
+      attributionId: ID,
+      transition: 'anteriorite_etablie',
+      critere: 'devis_signe',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(r).toStrictEqual({ de: 'signee', vers: 'annulee' });
+    expect((mises[0] as { data: { statut: string } }).data.statut).toBe('annulee');
+    expect(evenementsEcrits()[0]!.charge).toMatchObject({
+      de: 'signee',
+      vers: 'annulee',
+      transition: 'anteriorite_etablie',
+      critere: 'devis_signe',
+    });
+  });
+
+  it.each([
+    ['anteriorite_etablie sans critère', 'anteriorite_etablie', undefined],
+    ['un critère sur une autre transition', 'perdue', 'cliente'],
+  ] as const)(
+    'REQ-JUR-007 : TÉMOIN — %s : refusé, nommé, et RIEN n’est écrit',
+    async (_, transition, critere) => {
+      const { transitionnerUneAttribution } = await ecrivain();
+      const { tx, mises } = txSimule([ligneDe({ statut: 'active' })]);
+      let levee: unknown = null;
+      try {
+        await transitionnerUneAttribution(tx, {
+          attributionId: ID,
+          transition,
+          ...(critere ? { critere } : {}),
+          acteur: ACTEUR,
+          maintenant: MAINTENANT,
+        });
+      } catch (e) {
+        levee = e;
+      }
+      // L'écrivain est rechargé : sa classe d'erreur n'est pas celle importée ici, on lit son nom.
+      expect((levee as Error).name).toBe('ErreurTransitionAttribution');
+      expect((levee as ErreurTransitionAttribution).code).toBe('critere_incoherent');
+      expect(mises).toStrictEqual([]);
+      expect(evenementsEcrits()).toStrictEqual([]);
+    }
+  );
 
   it('REQ-DM-007 : les dates de la ligne passent au domaine et en reviennent, à la milliseconde', async () => {
     const { transitionnerUneAttribution } = await ecrivain();

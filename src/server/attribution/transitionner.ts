@@ -20,6 +20,7 @@
 import type { Prisma } from '@prisma/client';
 import {
   ErreurTransitionAttribution,
+  type CritereDAnteriorite,
   NAISSANCES_ATTRIBUTION,
   codeDeCaducite,
   effetsDeTransition,
@@ -67,6 +68,8 @@ export interface DemandeEcriture {
   readonly transition: TransitionAttribution;
   readonly acteur: Acteur;
   readonly maintenant: Date;
+  /** DM-67 : le critère de l'antériorité, exigé pour `anteriorite_etablie` et pour elle seule. */
+  readonly critere?: CritereDAnteriorite;
 }
 
 /** Une transition d'une attribution EXISTANTE. Rend l'état de départ et d'arrivée. */
@@ -74,7 +77,14 @@ export async function transitionnerUneAttribution(
   tx: Tx,
   demande: DemandeEcriture
 ): Promise<{ de: EtatAttribution; vers: EtatAttribution }> {
-  const { attributionId, transition, acteur, maintenant } = demande;
+  const { attributionId, transition, acteur, maintenant, critere } = demande;
+  // Jugé AVANT tout verrou et toute écriture : un critère manquant ou de trop ne laisse rien.
+  if ((transition === 'anteriorite_etablie') !== (critere !== undefined)) {
+    throw new ErreurTransitionAttribution(
+      'critere_incoherent',
+      `${transition} : le critère est exigé pour anteriorite_etablie, et pour elle seule`
+    );
+  }
   const l = await verrouiller(tx, attributionId);
   const de = l.statut;
   const vers = transitionnerAttribution({ de, transition, porteur: porteurDe(l) });
@@ -108,7 +118,14 @@ export async function transitionnerUneAttribution(
     agregat: 'attribution',
     agregatId: attributionId,
     survenuAt: maintenant,
-    charge: { de, vers, transition, acteur, lienInteret: lienDe(l) },
+    charge: {
+      de,
+      vers,
+      transition,
+      acteur,
+      lienInteret: lienDe(l),
+      ...(critere !== undefined ? { critere } : {}),
+    },
   });
   // DM-40 (HYP-W20-ANNULATION) : l'annulation de l'apporteur annule sa demande de confirmation,
   // dans la MÊME transaction ; une demande déjà envoyée fait tout tomber.
