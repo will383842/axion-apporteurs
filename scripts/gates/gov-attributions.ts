@@ -2112,7 +2112,7 @@ export const EXEMPTIONS_FIGEES: ExemptionFigee[] = [
   {
     nature: 'mention_paths_non_resolus',
     tache: 'JUR-T28',
-    site: 'docs/gates.json(tests/domain/acteur-humain.spec.ts).verifie:1',
+    site: 'docs/gates.json(tests/unit/domaine/resiliation-acteur-humain.spec.ts).verifie:1',
   },
   {
     nature: 'mention_paths_non_resolus',

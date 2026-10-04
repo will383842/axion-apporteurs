@@ -234,6 +234,25 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   // DM-55 : les faits retenus contre SON dépôt (art. 3.7), saisis par la console et lus au rendu ;
   // sans lien, sans nom de tiers, sans les mots refusés (sécurité, rattrapage 64).
   'courriels/notifications.ts › MOTIFS_DES_DECISIONS › anomalie_confirmee': ['faits'],
+  // SEC-19 (juriste, #703) : SA mise en demeure — l'article de la liste fermée de l'art. 11.2, les
+  // faits saisis par la console (règles de DM-55), le délai venu de la SSOT (RM-10).
+  'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure': [
+    'delaiMiseEnDemeure',
+    'article',
+    'faits',
+  ],
+  // SEC-19 (juriste, #703) : la fin de SON contrat — la date d'effet, la réception de SON écrit, et le
+  // motif de la décision motivée (règles de {faits}, DM-55).
+  'courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › ordinaire_apporteur': [
+    'dateReception',
+    'dateEffet',
+  ],
+  'courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › ordinaire_axion': ['dateEffet'],
+  'courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › manquement_grave': [
+    'motif',
+    'dateEffet',
+  ],
+  'courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › fin_de_plein_droit': ['dateEffet'],
   // DM-55 : la raison, de la liste fermée MotifAnnulationConsole, de l'annulation de SON dépôt.
   'courriels/notifications.ts › MOTIFS_DES_DECISIONS › annulee_par_la_console': ['raison'],
   // DM-55 : la catégorie (liste fermée MotifListeNoire) de l'entreprise de SON dépôt, art. 3.3 bis ;

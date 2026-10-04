@@ -71,16 +71,19 @@ const table = (): Record<string, LigneDeNotification> =>
   structuredClone(GABARITS) as Record<string, LigneDeNotification>;
 
 describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs règles', () => {
-  it('REQ-UX-016 : la table porte EXACTEMENT les treize clés arrêtées — les neuf de l’apporteur, dont la micro-copie porte les mêmes, et les quatre de la console', () => {
+  it('REQ-UX-016 : la table porte EXACTEMENT les quinze clés arrêtées — les onze de l’apporteur, dont la micro-copie porte les mêmes, et les quatre de la console', () => {
     const attendues = [
       'attribution_liberee',
       'decision_attribution',
       'depot_injoignable_j5',
       'lien_magique',
+      // SEC-19 (A02, #703) : la mise en demeure et la fin du contrat.
+      'mise_en_demeure',
       'premier_rang_libere',
       'rappel_rc_pro',
       'rattachement_decide',
       'refus_declaration',
+      'resiliation',
       'suspension_declarations',
     ];
     // SEC-29 : la dixième, destinée à la console ; ses textes vivent avec la console.
@@ -141,6 +144,8 @@ describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs rè
       suspension_declarations: 'T/T',
       rappel_rc_pro: 'F/F',
       rattachement_decide: 'T/F',
+      mise_en_demeure: 'T/T',
+      resiliation: 'T/T',
     });
   });
 
