@@ -61,18 +61,26 @@ export type PortsDuPassage = {
 /** Les clés dont l'envoi fait courir la fenêtre de redéclaration (art. 3.5 al. 2). */
 const CLES_A_FENETRE: ReadonlySet<string> = new Set(['premier_rang_libere']);
 
-type Bilan = { envoyees: number; echecs: number; retenues: number; sautees: number };
+/**
+ * `nonRendues` : un texte dont un paramètre manque n'envoie rien et se COMPTE — le lanceur rend le
+ * bilan, rien n'est tu —, sans bloquer les notifications suivantes du lot.
+ */
+type Bilan = {
+  envoyees: number;
+  echecs: number;
+  retenues: number;
+  sautees: number;
+  nonRendues: number;
+};
 
 export async function envoyerLesNotificationsDeLEspace(p: PortsDuPassage): Promise<Bilan> {
-  const bilan: Bilan = { envoyees: 0, echecs: 0, retenues: 0, sautees: 0 };
+  const bilan: Bilan = { envoyees: 0, echecs: 0, retenues: 0, sautees: 0, nonRendues: 0 };
   const lot = await p.lireLot(TAILLES_DE_LOT.NOTIFICATIONS_ENVOI_LOT.valeur);
   for (const n of lot) {
     const issue = await p.dansUneTransaction(async (g) => {
       if (!(await g.verrouiller(n))) return 'sautee' as const;
       const texte = await g.rendre(n, p.maintenant());
-      if (texte === null) {
-        throw new Error(`texte_introuvable : la notification ${n.id} (${n.cle}) ne se rend pas`);
-      }
+      if (texte === null) return 'nonRendue' as const;
       const envoi = await g.envoyer(n, texte);
       if (envoi.statut !== 'envoye') return envoi.statut === 'echec' ? 'echec' : 'retenue';
       if (CLES_A_FENETRE.has(n.cle) && n.attributionId !== null && envoi.envoyeAt !== null) {
@@ -83,6 +91,7 @@ export async function envoyerLesNotificationsDeLEspace(p: PortsDuPassage): Promi
       return 'envoyee' as const;
     });
     if (issue === 'sautee') bilan.sautees += 1;
+    else if (issue === 'nonRendue') bilan.nonRendues += 1;
     else if (issue === 'echec') bilan.echecs += 1;
     else if (issue === 'retenue') bilan.retenues += 1;
     else bilan.envoyees += 1;
