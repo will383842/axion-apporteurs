@@ -642,3 +642,75 @@ describe('REQ-JUR-006 — la mise en demeure préalable de l’art. 11.2', () =>
     }
   });
 });
+
+/**
+ * Les deux notifications du contrat (juriste, #703, 5980966503 ; A02, 5980982895 §1) : leur rendu.
+ * La mise en demeure pose son délai en toutes lettres depuis la SSOT ; la résiliation compose le
+ * paragraphe de son MOTIF, puis le paragraphe commun.
+ */
+describe('REQ-JUR-006 — le rendu de la mise en demeure et de la résiliation', () => {
+  it('REQ-JUR-006 : TÉMOIN — la mise en demeure rend « quinze jours » depuis la SSOT ; l’émetteur ne fournit que l’article et les faits', async () => {
+    const { rendreLaNotification, parametresDe } =
+      await import('../../../src/server/notifications/envoyer');
+    expect(parametresDe('mise_en_demeure')).toEqual(['article', 'faits']);
+    const t = rendreLaNotification('mise_en_demeure', { article: '6', faits: 'Le dépôt de mars' });
+    expect(t.corps).toContain('dans un délai de quinze jours à compter');
+    expect(t.corps).toContain("à l'article 6 du contrat : Le dépôt de mars.");
+  });
+
+  it('REQ-JUR-006 : TÉMOIN — les faits de la mise en demeure ont la borne de DM-55, au point de code près', async () => {
+    const { rendreLaNotification } = await import('../../../src/server/notifications/envoyer');
+    const { FAITS_ANOMALIE_CARACTERES_MAX } = await import('../../../src/domain/seuils/ssot');
+    const max = FAITS_ANOMALIE_CARACTERES_MAX.valeur;
+    expect(() =>
+      rendreLaNotification('mise_en_demeure', { article: '6', faits: 'é'.repeat(max) })
+    ).not.toThrow();
+    expect(() =>
+      rendreLaNotification('mise_en_demeure', { article: '6', faits: 'é'.repeat(max + 1) })
+    ).toThrow('parametre_invalide');
+  });
+
+  it('REQ-DM-011 : TÉMOIN — la résiliation compose le paragraphe de son MOTIF, puis le paragraphe commun ; chaque motif nomme ses paramètres', async () => {
+    const { rendreLaNotification, parametresDe } =
+      await import('../../../src/server/notifications/envoyer');
+    const { PARAGRAPHE_COMMUN_DE_LA_RESILIATION } =
+      await import('../../../src/content/micro-copy/courriels/notifications');
+    expect(parametresDe('resiliation', 'ordinaire_apporteur')).toEqual([
+      'dateEffet',
+      'dateReception',
+    ]);
+    expect(parametresDe('resiliation', 'ordinaire_axion')).toEqual(['dateEffet']);
+    expect(parametresDe('resiliation', 'manquement_grave')).toEqual(['dateEffet', 'motif']);
+    expect(parametresDe('resiliation', 'fin_de_plein_droit')).toEqual(['dateEffet']);
+    const t = rendreLaNotification(
+      'resiliation',
+      { dateEffet: '1er novembre 2026' },
+      'ordinaire_axion'
+    );
+    expect(t.titre).toBe("Fin de votre contrat d'apporteur");
+    expect(t.corps).toBe(
+      "Axion-IA résilie votre contrat d'apporteur, comme le permet l'article 11.1. Le préavis court à compter de l'envoi de ce message : le contrat prend fin le 1er novembre 2026. " +
+        PARAGRAPHE_COMMUN_DE_LA_RESILIATION
+    );
+    expect(t.corps).toContain(
+      "Vous gardez l'accès en lecture à votre espace jusqu'à l'extinction de vos droits : reconnectez-vous avec votre adresse e-mail pour y accéder."
+    );
+  });
+
+  it('REQ-DM-011 : la résiliation sans motif, ou avec une cause d’une autre clé, est refusée ; aucune autre clé ne reçoit de motif', async () => {
+    const { rendreLaNotification } = await import('../../../src/server/notifications/envoyer');
+    expect(() => rendreLaNotification('resiliation', { dateEffet: 'x' })).toThrow(
+      'cause_manquante'
+    );
+    expect(() =>
+      rendreLaNotification('resiliation', { dateEffet: 'x' }, 'demande_verifiee' as never)
+    ).toThrow('cause_manquante');
+    expect(() =>
+      rendreLaNotification(
+        'mise_en_demeure',
+        { article: '6', faits: 'x' },
+        'ordinaire_axion' as never
+      )
+    ).toThrow('cause_en_trop');
+  });
+});
