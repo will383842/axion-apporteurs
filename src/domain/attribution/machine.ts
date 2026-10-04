@@ -205,7 +205,10 @@ export type CodeTransitionAttribution =
   | 'refusee_au_porteur'
   | 'autre_commande_valable'
   | 'critere_incoherent'
-  | 'acteur_refuse';
+  | 'acteur_refuse'
+  | 'motif_incoherent'
+  | 'porteur_refuse'
+  | 'anomalie_refusee';
 
 export class ErreurTransitionAttribution extends Error {
   readonly code: CodeTransitionAttribution;

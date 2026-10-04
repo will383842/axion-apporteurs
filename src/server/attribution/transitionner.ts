@@ -11,7 +11,10 @@
  *   3. l'état et les colonnes de temps recalculées (`effetsDeTransition`) sont écrits, et le rang
  *      d'attente quitte la ligne avec la file ; à l'entrée dans un état LIBÉRÉ, `purge_contact_at` est
  *      posé par `echeanceDePurge(vers, maintenant)` (DM-48, REQ-DM-031) ;
- *   4. l'événement `attribution_etat_modifie` est écrit par l'écrivain unique du journal.
+ *   4. l'événement `attribution_etat_modifie` est écrit par l'écrivain unique du journal ;
+ *   5. DM-55 : une DÉCISION notifiée à l'apporteur écrit sa notification de l'espace, qui nomme cet
+ *      événement (et l'anomalie confirmée qui la fonde) ; son courriel part APRÈS le commit, par le
+ *      passage d'envoi des notifications de l'espace.
  *
  * CE QU'IL NE DÉCIDE PAS : quand une transition a lieu. Les passages planifiés (péremption, file,
  * confirmation tacite) et les déclencheurs (Qualification, devis, condition suspensive) sont à leurs
@@ -21,6 +24,8 @@ import type { Prisma } from '@prisma/client';
 import {
   ErreurTransitionAttribution,
   type CritereDAnteriorite,
+  type MotifAnnulationConsole,
+  type MotifListeNoire,
   NAISSANCES_ATTRIBUTION,
   codeDeCaducite,
   effetsDeTransition,
@@ -32,6 +37,7 @@ import {
 import { ajouterEvenement } from '../evenement/journal';
 import { annulerLaDemandeDe } from '../confirmation/demandes';
 import { ETATS_LIBERES, echeanceDePurge } from '../taches/purger-contacts';
+import { MOTIFS_DES_DECISIONS } from '../../content/micro-copy/courriels/notifications';
 
 type Tx = Prisma.TransactionClient;
 type Acteur = { par: 'systeme' } | { par: 'apporteur' | 'utilisateur_console'; id: string };
@@ -78,6 +84,15 @@ export interface DemandeEcriture {
   /** DM-67 : exigés pour `anteriorite_etablie`, et pour elle seule. */
   readonly critere?: CritereDAnteriorite;
   readonly fait?: FaitFondateur;
+  /** DM-55 : exigé pour `annulee_par_la_console`, et pour elle seule. */
+  readonly motifAnnulation?: MotifAnnulationConsole;
+  /** DM-55 : exigée avec le motif de l'article 3.3 bis, et lui seul. */
+  readonly categorieRelation?: MotifListeNoire;
+  /**
+   * DM-55 : exigée pour `anomalie_confirmee`, et pour elle seule. Elle va à la NOTIFICATION, jamais
+   * à la charge du journal (décision (d) de la juriste pour DM-12).
+   */
+  readonly anomalieId?: string;
 }
 
 /**
@@ -102,16 +117,80 @@ function jugerLAnteriorite(demande: DemandeEcriture): void {
   }
 }
 
+/**
+ * DM-55 : le motif, sa catégorie et l'anomalie accompagnent leur transition, et elle seule. Jugé
+ * AVANT tout verrou : un refus ne laisse rien.
+ */
+function jugerLeMotif(demande: DemandeEcriture): void {
+  const { transition, motifAnnulation, categorieRelation, anomalieId } = demande;
+  if (
+    (transition === 'annulee_par_la_console') !== (motifAnnulation !== undefined) ||
+    (motifAnnulation === 'entreprise_relevant_de_l_article_3_3_bis') !==
+      (categorieRelation !== undefined)
+  ) {
+    throw new ErreurTransitionAttribution(
+      'motif_incoherent',
+      `${transition} : le motif est exigé pour annulee_par_la_console seule, la catégorie pour l'article 3.3 bis seul`
+    );
+  }
+  if ((transition === 'anomalie_confirmee') !== (anomalieId !== undefined)) {
+    throw new ErreurTransitionAttribution(
+      'anomalie_refusee',
+      `${transition} : l'anomalie est exigée pour anomalie_confirmee, et pour elle seule`
+    );
+  }
+}
+
+/**
+ * DM-55 (sécurité, juriste) : sous le verrou, l'erreur de saisie de la Société n'annule que la prise en
+ * charge d'un CONSEILLER ; l'anomalie qui fonde une invalidation est CONFIRMÉE, de CETTE attribution et
+ * du MÊME apporteur. Sinon un refus nommé, et rien n'est écrit.
+ */
+async function jugerSousLeVerrou(tx: Tx, demande: DemandeEcriture, l: Ligne): Promise<void> {
+  if (
+    demande.motifAnnulation === 'erreur_de_saisie_de_la_societe' &&
+    porteurDe(l) !== 'conseiller'
+  ) {
+    throw new ErreurTransitionAttribution(
+      'porteur_refuse',
+      "erreur_de_saisie_de_la_societe : réservée à la prise en charge d'un conseiller"
+    );
+  }
+  if (demande.anomalieId === undefined) return;
+  const a = await tx.anomalie.findUnique({
+    where: { id: demande.anomalieId },
+    select: { statut: true, attributionId: true, apporteurId: true },
+  });
+  if (
+    a === null ||
+    a.statut !== 'confirmee' ||
+    a.attributionId !== demande.attributionId ||
+    a.apporteurId !== l.apporteur_id
+  ) {
+    throw new ErreurTransitionAttribution(
+      'anomalie_refusee',
+      "anomalie_confirmee : l'anomalie n'est pas confirmée, sur cette attribution, pour ce porteur"
+    );
+  }
+}
+
+/** Les transitions qui sont une DÉCISION notifiée à l'apporteur (`decision_attribution`). */
+const estUneDecisionNotifiee = (t: TransitionAttribution): boolean =>
+  Object.hasOwn(MOTIFS_DES_DECISIONS, t);
+
 /** Une transition d'une attribution EXISTANTE. Rend l'état de départ et d'arrivée. */
 export async function transitionnerUneAttribution(
   tx: Tx,
   demande: DemandeEcriture
 ): Promise<{ de: EtatAttribution; vers: EtatAttribution }> {
   const { attributionId, transition, acteur, maintenant, critere, fait } = demande;
+  const { motifAnnulation, categorieRelation, anomalieId } = demande;
   jugerLAnteriorite(demande);
+  jugerLeMotif(demande);
   const l = await verrouiller(tx, attributionId);
   const de = l.statut;
   const vers = transitionnerAttribution({ de, transition, porteur: porteurDe(l) });
+  await jugerSousLeVerrou(tx, demande, l);
   const t = effetsDeTransition(
     {
       premierContactAt: instant(l.premier_contact_at),
@@ -137,7 +216,7 @@ export async function transitionnerUneAttribution(
         : {}),
     },
   });
-  await ajouterEvenement(tx, {
+  const inscrit = await ajouterEvenement(tx, {
     type: 'attribution_etat_modifie',
     agregat: 'attribution',
     agregatId: attributionId,
@@ -150,8 +229,23 @@ export async function transitionnerUneAttribution(
       lienInteret: lienDe(l),
       ...(critere !== undefined ? { critere } : {}),
       ...(fait !== undefined ? { fait } : {}),
+      ...(motifAnnulation !== undefined ? { motifAnnulation } : {}),
+      ...(categorieRelation !== undefined ? { categorieRelation } : {}),
     },
   });
+  // DM-55 : la notification de la décision, dans la MÊME transaction. L'erreur de saisie de la
+  // Société ne notifie rien : elle ne vaut que pour un conseiller, qui n'a pas d'espace.
+  if (l.apporteur_id !== null && estUneDecisionNotifiee(transition)) {
+    await tx.notificationEspace.create({
+      data: {
+        apporteurId: l.apporteur_id,
+        cle: 'decision_attribution',
+        attributionId,
+        evenementId: BigInt(inscrit.id),
+        ...(anomalieId !== undefined ? { anomalieId } : {}),
+      },
+    });
+  }
   // DM-40 (HYP-W20-ANNULATION) : l'annulation de l'apporteur annule sa demande de confirmation,
   // dans la MÊME transaction ; une demande déjà envoyée fait tout tomber.
   if (transition === 'annulee_par_apporteur') {
