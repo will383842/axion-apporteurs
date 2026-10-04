@@ -46,7 +46,10 @@ import {
   MOTIFS_DES_DECISIONS,
   RAISONS_D_ANNULATION,
 } from '../../../src/content/micro-copy/courriels/notifications';
-import { rendreLaNotification } from '../../../src/server/notifications/envoyer';
+import {
+  LONGUEUR_DU_MOTIF_MAX,
+  rendreLaNotification,
+} from '../../../src/server/notifications/envoyer';
 import { LEXIQUE_INTERDIT } from '../../../src/domain/lexique/lexique-interdit';
 import { MotifListeNoire } from '@prisma/client';
 import {
@@ -1466,5 +1469,10 @@ describe('REQ-DM-006 — les paramètres du motif, à l’ENVOI, selon l’arbit
     const r = await rendreDepuisLaBase(b.tx, n, ENVOI, b.sources);
     expect('sujet' in r && r.corps.includes('deux dépôts')).toBe(true);
     expect(JSON.stringify(r)).not.toContain(String.fromCharCode(0x202e));
+  });
+
+  it('REQ-DM-006 : TÉMOIN — la borne de {motif} est CALCULÉE : la borne des faits plus le plus long gabarit de motif', () => {
+    const plusLong = Math.max(...Object.values(MOTIFS_DES_DECISIONS).map((t) => [...t].length));
+    expect(LONGUEUR_DU_MOTIF_MAX).toBe(FAITS_ANOMALIE_CARACTERES_MAX.valeur + plusLong);
   });
 });
