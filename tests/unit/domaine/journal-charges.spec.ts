@@ -53,6 +53,8 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
       'journal_ouvert',
       'piece_kyc_statut_modifie',
       'rattachement_manuel_modifie',
+      // SEC-30 : tout changement d'un utilisateur de la console, dans la transaction du geste.
+      'utilisateur_console_modifie',
     ]);
   });
 
@@ -202,5 +204,129 @@ describe('REQ-DM-033 REQ-DM-043 — le gel pour litige au journal : le geste, ja
         expect(cle, type).not.toMatch(/ref|litige/i);
       }
     }
+  });
+});
+
+// La passe de mutation (PR 667) a montré des refus jugés sans leur CHEMIN ni leur MESSAGE, et des
+// charges valides jamais acceptées. Chaque type : une charge juste passe ; chaque incohérence est
+// refusée avec son chemin et son message exacts.
+describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est nommée', () => {
+  const ID = '0190f0f0-0000-7000-8000-000000000001';
+  const CONSOLE = { par: 'utilisateur_console', id: ID } as const;
+  const SANS_ID = { par: 'utilisateur_console' } as const;
+  const H = 'a'.repeat(64);
+  const QUAND = '2026-10-04T08:00:00.000Z';
+  const refus = (type: keyof typeof CHARGES_PAR_TYPE, charge: unknown) => {
+    const r = CHARGES_PAR_TYPE[type].safeParse(charge);
+    return r.success ? [] : r.error.issues.map((i) => `${i.path.join('.')}:${i.message}`);
+  };
+  const passe = (type: keyof typeof CHARGES_PAR_TYPE, charge: unknown) =>
+    expect(CHARGES_PAR_TYPE[type].safeParse(charge).success, type).toBe(true);
+
+  it('REQ-DM-024 : l’antériorité établie porte son critère et son fait fondateur, de nature accordée', () => {
+    const base = {
+      de: 'active',
+      vers: 'active',
+      transition: 'anteriorite_etablie',
+      acteur: CONSOLE,
+    };
+    passe('attribution_etat_modifie', {
+      ...base,
+      critere: 'cliente',
+      fait: { nature: 'facture', ref: H, le: QUAND },
+    });
+    passe('attribution_etat_modifie', {
+      ...base,
+      critere: 'devis',
+      fait: { nature: 'devis', ref: H, le: QUAND },
+    });
+    expect(refus('attribution_etat_modifie', base)).toEqual(['critere:critere_incoherent']);
+    expect(
+      refus('attribution_etat_modifie', {
+        ...base,
+        critere: 'cliente',
+        fait: { nature: 'devis', ref: H, le: QUAND },
+      })
+    ).toEqual(['fait:fait_incoherent']);
+    expect(
+      refus('attribution_etat_modifie', {
+        ...base,
+        critere: 'cliente',
+        fait: { nature: 'autre', ref: H, le: QUAND },
+      }).length
+    ).toBeGreaterThan(0);
+  });
+
+  it('REQ-DM-024 : l’ouverture d’une anomalie a `de` nul, et elle seule', () => {
+    passe('anomalie_statut_modifie', { de: null, vers: 'ouverte', acteur: SANS_ID });
+    passe('anomalie_statut_modifie', { de: 'ouverte', vers: 'levee', acteur: SANS_ID });
+    expect(
+      refus('anomalie_statut_modifie', { de: 'ouverte', vers: 'ouverte', acteur: SANS_ID })
+    ).toEqual(['de:de_nul_a_la_naissance']);
+    expect(refus('anomalie_statut_modifie', { de: null, vers: 'levee', acteur: SANS_ID })).toEqual([
+      'de:de_nul_a_la_naissance',
+    ]);
+  });
+
+  it('REQ-DM-024 : l’acteur sans identité n’a QUE sa population, console ou système', () => {
+    for (const par of ['utilisateur_console', 'systeme'] as const)
+      passe('anomalie_gel_modifie', { vers: 'gel_pose', acteur: { par } });
+    expect(
+      refus('anomalie_gel_modifie', { vers: 'gel_pose', acteur: { par: 'apporteur' } }).length
+    ).toBeGreaterThan(0);
+    expect(
+      refus('anomalie_gel_modifie', { vers: 'gel_leve', acteur: CONSOLE }).length
+    ).toBeGreaterThan(0);
+  });
+
+  it('REQ-DM-024 : les autres types acceptent leur charge juste', () => {
+    passe('piece_kyc_statut_modifie', {
+      de: null,
+      vers: 'a_verifier',
+      type: 'rib',
+      acteur: CONSOLE,
+    });
+    passe('demande_confirmation_etat_modifie', { de: null, vers: 'planifiee', acteur: CONSOLE });
+    passe('contestation_modifiee', {
+      contestationId: ID,
+      de: null,
+      vers: 'recue',
+      acteur: CONSOLE,
+    });
+    passe('contestation_modifiee', {
+      contestationId: ID,
+      de: 'recue',
+      vers: 'gel_pose',
+      acteur: CONSOLE,
+    });
+    passe('rattachement_manuel_modifie', { rattachementId: ID, vers: 'decide', acteur: CONSOLE });
+  });
+
+  it('REQ-DM-024 : le changement d’un utilisateur de la console accorde `de` et `vers` à son geste, nommé', () => {
+    const u = (geste: string, de: string | null, vers: string | null) =>
+      refus('utilisateur_console_modifie', { geste, de, vers, acteur: CONSOLE });
+    // changer_role : les deux posés, et différents
+    expect(u('changer_role', 'lecteur', 'admin')).toEqual([]);
+    expect(u('changer_role', 'lecteur', 'lecteur')).toEqual([
+      'vers:roles_incoherents_avec_le_geste',
+    ]);
+    expect(u('changer_role', null, 'admin')).toEqual(['vers:roles_incoherents_avec_le_geste']);
+    expect(u('changer_role', 'lecteur', null)).toEqual(['vers:roles_incoherents_avec_le_geste']);
+    // inviter : `de` nul, `vers` posé
+    expect(u('inviter', null, 'admin')).toEqual([]);
+    expect(u('inviter', null, null)).toEqual(['vers:roles_incoherents_avec_le_geste']);
+    expect(u('inviter', 'lecteur', 'admin')).toEqual(['vers:roles_incoherents_avec_le_geste']);
+    // tout autre geste : les deux nuls
+    for (const geste of [
+      'relancer',
+      'activer',
+      'valider',
+      'desactiver',
+      'reactiver',
+      'revoquer_sessions',
+    ])
+      expect(u(geste, null, null), geste).toEqual([]);
+    expect(u('desactiver', 'lecteur', null)).toEqual(['vers:roles_incoherents_avec_le_geste']);
+    expect(u('desactiver', null, 'lecteur')).toEqual(['vers:roles_incoherents_avec_le_geste']);
   });
 });

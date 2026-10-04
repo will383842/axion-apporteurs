@@ -495,7 +495,14 @@ describe('REQ-QA-026 — la tâche quotidienne et son alerte', () => {
 
   it('REQ-QA-026 : les genres d’alerte sont ceux des signaux, et l’alerte ne montre qu’un genre, un motif fermé et un nombre', () => {
     expect([...GENRES_RECONCILIATION].sort()).toEqual(
-      ['relecture_bornee', 'relecture_echouee', 'rejeu_echoue', 'trou_rattrape'].sort()
+      [
+        'relecture_bornee',
+        'relecture_echouee',
+        'rejeu_echoue',
+        'trou_rattrape',
+        // INT-T73-P : le signal du passage des sommes, qui ne porte que son nombre.
+        'ecart_de_sommes',
+      ].sort()
     );
     const id = randomUUID();
     expect(

@@ -73,6 +73,10 @@ const ECARTES = [
   'REQ-JUR-035 : le binaire sur le dépôt sort en 0 et imprime les noms confrontés',
   'REQ-JUR-037 : le binaire `jur:lexique-social` sur le dépôt sort en 0 et imprime les fichiers lus',
   'REQ-SEC-029 : le dépôt réel — aucune faute, et un plancher de fichiers et d.attributs confrontés',
+  // SEC-30 : ce témoin LIT le texte des sources de la console (src/server/console, src/app/(console)) ;
+  // dans le bac, ce texte porte l'instrumentation de Stryker (vu rougir au run initial de la PR 667).
+  // Joué par pnpm test, sur le vrai texte.
+  'TÉMOIN STATIQUE — aucun code de la console ne pose valide_at à une création',
 ];
 
 export default defineConfig({
@@ -98,6 +102,9 @@ export default defineConfig({
       'tests/unit/juridique/**/*.spec.ts',
       // UX-P1-41 : les témoins du rendu de l'e-mail au contact (`src/domain/confirmation/`), en processus.
       'tests/unit/micro-copy/**/*.spec.ts',
+      // INT-T73-P : le témoin de la réconciliation des sommes, rangé sous tests/integration/ mais EN
+      // PROCESSUS (lignes simulées et faux client, aucune base, aucun dépôt git, aucun sous-processus).
+      'tests/integration/reconciliation-sommes.spec.ts',
       // UX-P1-16 : le témoin de la navigation de la console, en processus (aucun dépôt git ni sous-processus).
       'tests/unit/console/navigation-par-role.spec.ts',
     ],

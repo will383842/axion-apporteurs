@@ -80,6 +80,7 @@ enum TypeEvenementJournal {
   contestation_modifiee
   rattachement_manuel_modifie
   anomalie_gel_modifie
+  utilisateur_console_modifie
 
   @@map("type_evenement_journal")
 }
@@ -94,6 +95,7 @@ enum AgregatJournal {
   contrat
   demande_confirmation
   anomalie
+  utilisateur_console
 
   @@map("agregat_journal")
 }
@@ -304,6 +306,7 @@ model Apporteur {
   alertesLiberation       AlerteLiberation[]
   anomalies               Anomalie[]
   contestations           Contestation[]
+  appareilsConnus         AppareilConnu[]
 
   /// CPL-T06 (REQ-CPL-006) : les décisions sur la candidature, en ajout seul.
   decisionsCandidature DecisionCandidature[]
@@ -389,6 +392,27 @@ model SessionEspace {
   @@map("sessions_espace")
 }
 
+/// SEC-55 (REQ-SEC-003) : un appareil sur lequel une confirmation renforcée a eu lieu, par apporteur.
+/// Un signal de sécurité du COMPTE, jamais une anomalie : il n'est inscrit ni au dossier ni sur un
+/// dépôt, et n'a AUCUNE vue dans l'espace. Seule l'EMPREINTE de l'appareil est gardée — un HMAC
+/// tronqué à 128 bits, sous la clé dédiée des appareils (`kid`) —, jamais l'adresse réseau ni
+/// l'identifiant en clair (CHECK `appareils_connus_empreinte_forme`, SQL brut). La dernière vue
+/// avance à chaque reconnaissance ; la ligne est purgée une durée de session après elle
+/// (`appareils_purger`). Migration `20261003002800_appareils_connus`.
+model AppareilConnu {
+  id            String    @id @default(uuid()) @db.Uuid
+  apporteurId   String    @map("apporteur_id") @db.Uuid
+  apporteur     Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  empreinte     String    @db.Char(32)
+  kid           String    @db.Char(8)
+  confirmeAt    DateTime  @map("confirme_at") @db.Timestamptz(3)
+  derniereVueAt DateTime  @map("derniere_vue_at") @db.Timestamptz(3)
+
+  @@unique([apporteurId, empreinte, kid])
+  @@index([derniereVueAt])
+  @@map("appareils_connus")
+}
+
 // ── SEC-17 : les utilisateurs de la console ─────────────────────────────────
 
 /// Un utilisateur de la console (SEC-17, REQ-SEC-023, partners/ADR-0022) : la cible de toutes les
@@ -399,14 +423,27 @@ model SessionEspace {
 /// empreinte, ensemble) ne peut manquer que sur un utilisateur désactivé (DM-44, CHECK
 /// `utilisateurs_console_adresse_si_actif`).
 model UtilisateurConsole {
-  id           String      @id @default(uuid()) @db.Uuid
-  role         ConsoleRole
-  nomChiffre   Bytes?      @map("nom_chiffre")
-  emailChiffre Bytes?      @map("email_chiffre")
-  emailHash    String?     @unique @map("email_hash") @db.Char(64)
-  creeAt       DateTime    @map("cree_at") @db.Timestamptz(3)
+  id                     String               @id @default(uuid()) @db.Uuid
+  role                   ConsoleRole
+  nomChiffre             Bytes?               @map("nom_chiffre")
+  emailChiffre           Bytes?               @map("email_chiffre")
+  emailHash              String?              @unique @map("email_hash") @db.Char(64)
+  creeAt                 DateTime             @map("cree_at") @db.Timestamptz(3)
   /// Non nulle : l'utilisateur ne franchit plus la requête suivante, quelle que soit la date posée.
-  desactiveAt  DateTime?   @map("desactive_at") @db.Timestamptz(3)
+  desactiveAt            DateTime?            @map("desactive_at") @db.Timestamptz(3)
+  /// SEC-30 (REQ-SEC-003) : incrémentée par la BASE à tout changement de rôle et à toute
+  /// désactivation ; une session d'une version antérieure est refusée (`version_perimee`).
+  sessionVersion         Int                  @default(0) @map("session_version")
+  /// SEC-30 (REQ-DM-024) : l'invitation et l'activation ; l'échéance se dérive d'`inviteeAt` et de
+  /// `DUREES_AUTH.invitationConsoleMs`, jamais d'une colonne.
+  inviteeAt              DateTime?            @map("invitee_at") @db.Timestamptz(3)
+  activeeAt              DateTime?            @default(dbgenerated("clock_timestamp()")) @map("activee_at") @db.Timestamptz(3)
+  /// SEC-30 (quatre yeux, déclencheur `utilisateurs_console_quatre_yeux`) : un admin dont `valideAt`
+  /// est nul est EN ATTENTE ; il n'a aucun droit d'administrateur.
+  valideParId            String?              @map("valide_par_id") @db.Uuid
+  validePar              UtilisateurConsole?  @relation("ValidationDesAdministrateurs", fields: [valideParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  valideAt               DateTime?            @map("valide_at") @db.Timestamptz(3)
+  administrateursValides UtilisateurConsole[] @relation("ValidationDesAdministrateurs")
 
   liensMagiques           LienMagique[]
   sessionsEspace          SessionEspace[]
@@ -500,17 +537,21 @@ model PieceKyc {
 /// BASE (déclencheur), et fait courir le délai d'un mois de l'art. 12.3. Aucune donnée en clair :
 /// la nouvelle valeur d'une rectification est chiffrée, puis effacée à la clôture ou à l'échéance.
 model DemandeDroitContact {
-  id             String             @id @default(uuid()) @db.Uuid
-  attributionId  String             @map("attribution_id") @db.Uuid
-  attribution    Attribution        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  droit          DroitContact
-  recueAt        DateTime           @default(dbgenerated("clock_timestamp()")) @map("recue_at") @db.Timestamptz(3)
-  traiteeAt      DateTime?          @map("traitee_at") @db.Timestamptz(3)
-  issue          IssueDemandeDroit?
-  donneeVisee    DonneeContact?     @map("donnee_visee")
-  valeurChiffree Bytes?             @map("valeur_chiffree")
-  valeurPurgeeAt DateTime?          @map("valeur_purgee_at") @db.Timestamptz(3)
-  prolongeeAt    DateTime?          @map("prolongee_at") @db.Timestamptz(3)
+  id                String             @id @default(uuid()) @db.Uuid
+  /// NULL une fois la trace anonymisée (DM-60, partners/ADR-0031), avec `traceAnonymiseeAt` (CHECK).
+  attributionId     String?            @map("attribution_id") @db.Uuid
+  attribution       Attribution?       @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  droit             DroitContact
+  recueAt           DateTime           @default(dbgenerated("clock_timestamp()")) @map("recue_at") @db.Timestamptz(3)
+  traiteeAt         DateTime?          @map("traitee_at") @db.Timestamptz(3)
+  issue             IssueDemandeDroit?
+  donneeVisee       DonneeContact?     @map("donnee_visee")
+  valeurChiffree    Bytes?             @map("valeur_chiffree")
+  valeurPurgeeAt    DateTime?          @map("valeur_purgee_at") @db.Timestamptz(3)
+  prolongeeAt       DateTime?          @map("prolongee_at") @db.Timestamptz(3)
+  /// DM-60 (REQ-JUR-065) : l'anonymisation de la trace, cinq ans après sa clôture
+  /// (`DROITS_CONTACT_TRACE_ANS`), écrite une fois, liée au lien vidé (CHECK en SQL brut).
+  traceAnonymiseeAt DateTime?          @map("trace_anonymisee_at") @db.Timestamptz(3)
 
   @@index([attributionId])
   @@map("demandes_droits_contact")
