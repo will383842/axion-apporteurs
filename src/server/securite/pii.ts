@@ -45,7 +45,8 @@ export type MotifPii =
   | 'siret_invalide'
   | 'nom_personne_invalide'
   | 'agent_invalide'
-  | 'faits_invalides';
+  | 'faits_invalides'
+  | 'reference_gel_invalide';
 
 export class ErreurPii extends Error {
   constructor(
@@ -314,6 +315,17 @@ const normaliserAgent = (valeur: string): string => {
 };
 
 /**
+ * La référence d'un incident ou d'un litige qui gèle le journal des accès (SEC-61) : opaque, en
+ * capitales, la forme du CHECK `journal_acces_console_gels_reference_forme` ; bords retirés.
+ */
+const normaliserReferenceGel = (valeur: string): string => {
+  const normalise = valeur.trim().toUpperCase();
+  if (!/^[A-Z0-9][A-Z0-9-]{2,39}$/.test(normalise))
+    throw refus('reference_gel_invalide', 'la référence du gel');
+  return normalise;
+};
+
+/**
  * Un caractère de contrôle (sous 0x20, de 0x7f à 0x9f), un séparateur de ligne ou de paragraphe, ou un
  * caractère de FORMAT (catégorie Cf : U+202E retourne un texte, U+200B le cache).
  */
@@ -352,6 +364,7 @@ const NORMALISATIONS = {
   siret: normaliserSiret,
   nom_personne: normaliserNomPersonne,
   agent: normaliserAgent,
+  reference_gel: normaliserReferenceGel,
   // SEC-19 : un domaine dédié, `partners.empreinte.v1 ␟ faits_mise_en_demeure ␟ normalisé`.
   faits_mise_en_demeure: normaliserFaitsDeMiseEnDemeure,
 } satisfies Record<string, (valeur: string) => string>;

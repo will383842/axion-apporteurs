@@ -108,7 +108,16 @@ export type TypeEvenementJournal =
   | 'rattachement_manuel_modifie'
   | 'anomalie_gel_modifie'
   | 'utilisateur_console_modifie'
+  | 'journal_acces_gel_modifie'
   | 'apporteur_mis_en_demeure';
+
+/**
+ * SEC-61 : le gel du journal des accès à la console — ses gestes, ses motifs (les valeurs de
+ * `MotifGelJournal`, confrontées au schéma par la garde des énumérations) et le TYPE de sa portée.
+ */
+export const GESTES_GEL_JOURNAL = ['poser', 'lever'] as const;
+export const MOTIFS_GEL_JOURNAL = ['incident', 'litige'] as const;
+export const PORTEES_GEL_JOURNAL = ['utilisateur', 'cible'] as const;
 
 /** DM-08 : le porteur d'une attribution, une forme UNIQUE — sa population et son identifiant. */
 const PORTEUR = () =>
@@ -381,6 +390,20 @@ export const CHARGES_PAR_TYPE = {
           message: 'roles_incoherents_avec_le_geste',
         });
     }),
+  // SEC-61 (forme d'A02 et de la sécurité, mot pour mot) : la pose ou la levée d'un gel du journal des
+  // accès, sur l'agrégat `journal_acces_gel` (l'id du gel est `agregatId`). AUCUN identifiant
+  // d'employé : ni le poseur, ni celui qui lève, ni la personne visée, ni la cible ; la portée n'en
+  // dit que le TYPE, l'acteur que sa population, et la référence n'y est qu'en empreinte. Les
+  // identifiants vivent sur la ligne du gel et partent avec elle.
+  journal_acces_gel_modifie: z
+    .object({
+      geste: z.enum(GESTES_GEL_JOURNAL),
+      motif: z.enum(MOTIFS_GEL_JOURNAL),
+      portee: z.object({ type: z.enum(PORTEES_GEL_JOURNAL) }).strict(),
+      referenceEmpreinte: FORMES.empreinte(),
+      acteur: FORMES.acteurSansIdentite(),
+    })
+    .strict(),
   /**
    * SEC-19 (forme d'A02, #703, 5980982895 §2) : la mise en demeure datée d'un apporteur (art. 11.2),
    * agrégat `apporteur`. L'article, de la liste FERMÉE, et l'acteur de la console : NI les faits NI
