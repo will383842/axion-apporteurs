@@ -4,10 +4,10 @@
 /**
  * UX-P1-57 — le geste minimal de mise en demeure, dans la console (juriste, #703, 5980966503 §3 ;
  * conditions de la sécurité, #703, 5981620953). EN PROCESSUS : l'action de l'écran avec des doubles
- * de Next, du juge des rôles et du geste de SEC-19 ; l'écran rendu en HTML statique.
+ * de Next, du juge des rôles et du geste de la fin de contrat ; l'écran rendu en HTML statique.
  *
  * Le geste lui-même (le fait au journal sans les faits, la décision chiffrée, la notification) est
- * celui de SEC-19, jugé par ses propres témoins : ici, ce que l'écran y ajoute. Le droit réservé à
+ * celui de la fin de contrat (`mettreEnDemeure`), jugé par ses propres témoins : ici, ce que l'écran y ajoute. Le droit réservé à
  * l'admin sous step-up, posé AVANT tout travail ; l'article de la liste fermée ; les faits jugés À LA
  * SAISIE, bornés en points de code, avec un refus nommé ; des faits qui ne sortent jamais vers
  * l'adresse ; rien qui compte les mises en demeure.

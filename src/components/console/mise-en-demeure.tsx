@@ -51,6 +51,9 @@ export function EcranMiseEnDemeure({
         {retour}
         <h1>{T.horsContrat.titre}</h1>
         <p>{T.horsContrat.phrase}</p>
+        <p>
+          <a href={`/console/apporteurs/${apporteurId}`}>{T.horsContrat.action}</a>
+        </p>
       </main>
     );
   return (
