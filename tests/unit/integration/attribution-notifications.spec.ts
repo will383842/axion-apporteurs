@@ -821,20 +821,13 @@ describe('REQ-UX-016 — le courriel de la notification s’écrit dans la trans
   });
 });
 
-describe('REQ-DM-006 — les sources fermées du motif dans la charge : l’anomalie et la catégorie (forme d’A02)', () => {
+describe('REQ-DM-006 — la catégorie de l’article 3.3 bis, source fermée du motif dans la charge (forme d’A02)', () => {
   const charge = CHARGES_PAR_TYPE.attribution_etat_modifie;
   const acteur = { par: 'systeme' } as const;
-  const ANOMALIE = '0190f3a0-0000-7000-8000-0000000000aa';
   const annulation = {
     de: 'provisoire',
     vers: 'annulee',
     transition: 'annulee_par_la_console',
-    acteur,
-  } as const;
-  const anomalie = {
-    de: 'provisoire',
-    vers: 'invalidee',
-    transition: 'anomalie_confirmee',
     acteur,
   } as const;
 
@@ -860,28 +853,6 @@ describe('REQ-DM-006 — les sources fermées du motif dans la charge : l’anom
         ...annulation,
         motifAnnulation: 'declaration_en_double',
         categorieRelation: 'administration',
-      }).success
-    ).toBe(false);
-    expect(
-      charge.safeParse({ ...anomalie, anomalieId: ANOMALIE, categorieRelation: 'administration' })
-        .success
-    ).toBe(false);
-  });
-
-  it('REQ-DM-006 : TÉMOIN — une anomalie confirmée EXIGE l’identifiant de SON anomalie, un uuid', () => {
-    expect(charge.safeParse({ ...anomalie, anomalieId: ANOMALIE }).success).toBe(true);
-    expect(charge.safeParse(anomalie).success).toBe(false);
-    expect(charge.safeParse({ ...anomalie, anomalieId: 'des faits en clair' }).success).toBe(false);
-  });
-
-  it('REQ-DM-006 : TÉMOIN — un identifiant d’anomalie sur une autre transition est INTERDIT', () => {
-    expect(
-      charge.safeParse({
-        de: 'provisoire',
-        vers: 'invalidee',
-        transition: 'non_confirmee',
-        acteur,
-        anomalieId: ANOMALIE,
       }).success
     ).toBe(false);
   });

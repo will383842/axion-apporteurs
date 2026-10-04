@@ -181,6 +181,19 @@ export const MOTIFS_ANNULATION_CONSOLE = [
   'erreur_de_saisie_de_la_societe',
 ] as const;
 export type MotifAnnulationConsole = (typeof MOTIFS_ANNULATION_CONSOLE)[number];
+
+/**
+ * DM-55 (forme d'A02) : la catégorie d'une entreprise relevant de l'article 3.3 bis — le MÊME
+ * vocabulaire que l'enum `MotifListeNoire` de la base, confronté à elle par un témoin. Elle accompagne
+ * le motif `entreprise_relevant_de_l_article_3_3_bis`, et lui seul.
+ */
+export const MOTIFS_LISTE_NOIRE = [
+  'administration',
+  'financeur_public',
+  'financeur_paritaire',
+  'organisme_de_formation_partenaire',
+] as const;
+export type MotifListeNoire = (typeof MOTIFS_LISTE_NOIRE)[number];
 export type CritereDAnteriorite = (typeof CRITERES_D_ANTERIORITE)[number];
 
 export type CodeTransitionAttribution =

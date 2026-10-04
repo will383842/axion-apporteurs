@@ -31,6 +31,7 @@ import {
   CRITERES_D_ANTERIORITE,
   ETATS_ATTRIBUTION,
   MOTIFS_ANNULATION_CONSOLE,
+  MOTIFS_LISTE_NOIRE,
   EVENEMENTS_ATTRIBUTION,
   NAISSANCES_ATTRIBUTION,
 } from '../attribution/machine';
@@ -191,9 +192,11 @@ export const CHARGES_PAR_TYPE = {
     .extend({
       /** DM-55 : le motif fermé d'une annulation par la console, exigé pour elle seule. */
       motifAnnulation: z.enum(MOTIFS_ANNULATION_CONSOLE).optional(),
+      /** DM-55 : la catégorie de l'article 3.3 bis, exigée avec ce motif et lui seul. */
+      categorieRelation: z.enum(MOTIFS_LISTE_NOIRE).optional(),
     })
     .strict()
-    .superRefine(({ de, transition, critere, fait, motifAnnulation }, ctx) => {
+    .superRefine(({ de, transition, critere, fait, motifAnnulation, categorieRelation }, ctx) => {
       if ((de === null) !== NAISSANCES.includes(transition)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -216,6 +219,16 @@ export const CHARGES_PAR_TYPE = {
           code: z.ZodIssueCode.custom,
           path: ['motifAnnulation'],
           message: 'motif_annulation_incoherent',
+        });
+      }
+      if (
+        (motifAnnulation === 'entreprise_relevant_de_l_article_3_3_bis') !==
+        (categorieRelation !== undefined)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['categorieRelation'],
+          message: 'categorie_incoherente',
         });
       }
       if (fait?.nature !== natureAttendue) {
