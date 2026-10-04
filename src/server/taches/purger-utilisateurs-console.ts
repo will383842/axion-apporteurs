@@ -28,14 +28,18 @@ export function limiteDesComptesDesactives(maintenant: Date): Date {
   return limite;
 }
 
-/** Les comptes échus : désactivés à la limite ou avant, et portant encore une donnée de personne. */
+/**
+ * Les comptes échus : désactivés à la limite ou avant, et portant encore une donnée de personne. Le
+ * « non nul » s'écrit `NOT: { colonne: null }` : une colonne chiffrée ne reçoit, hors de `pii.ts`, que
+ * `null`, `true` ou `false` (`securite:schema-pii`).
+ */
 export function comptesEchus(limite: Date): Prisma.UtilisateurConsoleWhereInput {
   return {
     desactiveAt: { lte: limite },
     OR: [
-      { nomChiffre: { not: null } },
-      { emailChiffre: { not: null } },
-      { emailHash: { not: null } },
+      { NOT: { nomChiffre: null } },
+      { NOT: { emailChiffre: null } },
+      { NOT: { emailHash: null } },
     ],
   };
 }

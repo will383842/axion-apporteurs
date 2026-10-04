@@ -122,9 +122,9 @@ describe('REQ-JUR-068 — un accès désactivé de la console perd sa donnée de
     expect(comptesEchus(limite)).toEqual({
       desactiveAt: { lte: limite },
       OR: [
-        { nomChiffre: { not: null } },
-        { emailChiffre: { not: null } },
-        { emailHash: { not: null } },
+        { NOT: { nomChiffre: null } },
+        { NOT: { emailChiffre: null } },
+        { NOT: { emailHash: null } },
       ],
     });
   });
