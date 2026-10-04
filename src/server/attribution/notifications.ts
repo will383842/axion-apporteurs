@@ -25,6 +25,7 @@ import type { Instant } from '../../domain/temps/horloge';
 import type { Prisma } from '@prisma/client';
 import { CHARGES_PAR_TYPE } from '../../domain/evenement/charges';
 import { FAITS_ANOMALIE_CARACTERES_MAX } from '../../domain/seuils/ssot';
+import { nettoyerUnTexteSaisi } from '../securite/pii';
 import {
   NotificationRefusee,
   rendreLaNotification,
@@ -46,16 +47,6 @@ export type Decision = {
 /** {numeroEntreprise} : neuf chiffres, rien d'autre. */
 const NUMERO_D_ENTREPRISE = /^[0-9]{9}$/;
 
-/**
- * Un caractère de contrôle (sous 0x20, de 0x7f à 0x9f), un séparateur de ligne ou de paragraphe, ou un caractère de
- * FORMAT (catégorie Cf : U+202E retourne un texte, U+200B le cache) — que le rendu refuserait.
- */
-const FORMAT = /^\p{Cf}$/u;
-function estUnControle(ch: string): boolean {
-  const c = ch.codePointAt(0)!;
-  return c < 0x20 || (c >= 0x7f && c <= 0x9f) || c === 0x2028 || c === 0x2029 || FORMAT.test(ch);
-}
-
 const ECHAPPEMENTS: Readonly<Record<string, string>> = {
   '&': '&amp;',
   '<': '&lt;',
@@ -71,8 +62,7 @@ const ECHAPPEMENTS: Readonly<Record<string, string>> = {
  * `null` : aucun courriel, jamais une troncature —, puis le texte est échappé pour le HTML.
  */
 export function faitsPourLeCourriel(brut: string): string | null {
-  const points = [...brut].map((ch) => (estUnControle(ch) ? ' ' : ch));
-  const propre = points.join('').replace(/ {2,}/g, ' ').trim();
+  const propre = nettoyerUnTexteSaisi(brut);
   const longueur = [...propre].length;
   if (longueur === 0 || longueur > FAITS_ANOMALIE_CARACTERES_MAX.valeur) return null;
   return propre.replace(/[&<>"']/g, (c) => ECHAPPEMENTS[c]!);
@@ -80,6 +70,41 @@ export function faitsPourLeCourriel(brut: string): string | null {
 
 const LIEN = /https?:\/\/|www\.|\b[\w-]+\.(?:fr|com|net|org|io|test|eu)\b/i;
 const MOTS_INTERDITS = /\b(?:fraude|anomalie|sanction)s?\b/i;
+
+/** Les refus NOMMÉS d'un texte saisi par une personne (sécurité, #703, condition 2 ; DM-55). */
+export const REFUS_DES_FAITS = [
+  'faits_vides',
+  'faits_trop_longs',
+  'faits_avec_lien',
+  'faits_avec_mot_refuse',
+] as const;
+export type RefusDesFaits = (typeof REFUS_DES_FAITS)[number];
+
+/** Le contenu d'un texte : vide, avec un lien, avec un mot refusé — la règle de DM-55, une fois. */
+function contenuRefuse(texte: string): Exclude<RefusDesFaits, 'faits_trop_longs'> | null {
+  if (texte.trim() === '') return 'faits_vides';
+  if (LIEN.test(texte)) return 'faits_avec_lien';
+  if (MOTS_INTERDITS.test(texte)) return 'faits_avec_mot_refuse';
+  return null;
+}
+
+/**
+ * LE JUGE UNIQUE des faits SAISIS par une personne — les faits d'une anomalie (DM-55), d'une mise en
+ * demeure ou d'une décision motivée (SEC-19) : nettoyés comme à l'envoi, puis vides, au-delà de la
+ * borne de DM-55 en points de code, avec un lien ou un mot refusé — chaque refus NOMMÉ. L'écran
+ * l'appelle à la saisie ; l'émetteur, avant toute écriture.
+ */
+export function jugerLesFaitsSaisis(
+  brut: string
+): { ok: true } | { ok: false; motif: RefusDesFaits } {
+  const propre = nettoyerUnTexteSaisi(brut);
+  const contenu = contenuRefuse(propre);
+  if (contenu === 'faits_vides') return { ok: false, motif: contenu };
+  if ([...propre].length > FAITS_ANOMALIE_CARACTERES_MAX.valeur) {
+    return { ok: false, motif: 'faits_trop_longs' };
+  }
+  return contenu === null ? { ok: true } : { ok: false, motif: contenu };
+}
 
 class MotifRefuse extends Error {
   constructor(code: 'motif_incoherent' | 'faits_refuses', detail: string) {
@@ -120,10 +145,7 @@ export function motifDeLaDecision(d: Decision): string | null {
   if ((raison === 'entreprise_relevant_de_l_article_3_3_bis') !== (categorie !== undefined)) {
     throw new MotifRefuse('motif_incoherent', `catégorie avec la raison ${String(raison)}`);
   }
-  if (
-    faits !== undefined &&
-    (faits.trim() === '' || LIEN.test(faits) || MOTS_INTERDITS.test(faits))
-  ) {
+  if (faits !== undefined && contenuRefuse(faits) !== null) {
     throw new MotifRefuse('faits_refuses', 'un lien, un mot interdit ou une valeur vide');
   }
   if (raison === 'erreur_de_saisie_de_la_societe') return null;

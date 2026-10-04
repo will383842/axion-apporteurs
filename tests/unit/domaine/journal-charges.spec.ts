@@ -1,5 +1,6 @@
 // @req REQ-DM-024
 // @req REQ-DM-031
+// @req REQ-DM-027
 /**
  * `journal-charges.spec.ts` — les charges FERMÉES du journal (`src/domain/evenement/charges.ts`),
  * jugées valeur par valeur : la forme d'une empreinte, les constructeurs de formes, la charge de
@@ -43,6 +44,8 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
     expect(Object.keys(CHARGES_PAR_TYPE).sort()).toEqual([
       'anomalie_gel_modifie',
       'anomalie_statut_modifie',
+      // SEC-19 (A02, #703) : la mise en demeure datée d'un apporteur, par article.
+      'apporteur_mis_en_demeure',
       'apporteur_statut_modifie',
       'attribution_contact_purge',
       'attribution_etat_modifie',
@@ -201,9 +204,38 @@ describe('REQ-DM-033 REQ-DM-043 — le gel pour litige au journal : le geste, ja
       const shape = (schema as unknown as { shape?: object }).shape ?? forme.schema?.shape ?? {};
       expect(Object.keys(shape).length, `${type} : forme lue`).toBeGreaterThan(0);
       for (const cle of Object.keys(shape)) {
-        expect(cle, type).not.toMatch(/ref|litige/i);
+        // CPL-T07 : « refus » n'est pas une référence — le motif FERMÉ d'un refus de pièce
+        // (`motifRefus`, forme d'A02) passe ; « ref » seul, « reference », « litige » restent refusés.
+        expect(cle, type).not.toMatch(/ref(?!us)|litige/i);
       }
     }
+  });
+});
+
+describe('REQ-DM-027 — le refus d’une pièce porte un motif fermé, et lui seul', () => {
+  const charge = CHARGES_PAR_TYPE.piece_kyc_statut_modifie;
+  const base = {
+    de: 'a_verifier',
+    type: 'rib',
+    acteur: { par: 'utilisateur_console', id: '0190f0f0-0000-7000-8000-000000000001' },
+  } as const;
+
+  it('REQ-DM-027 : TÉMOIN À DEUX FACES — un refus SANS motif est refusé ; le même refus avec un motif de la liste passe', () => {
+    expect(charge.safeParse({ ...base, vers: 'refusee' }).success).toBe(false);
+    expect(charge.safeParse({ ...base, vers: 'refusee', motifRefus: 'illisible' }).success).toBe(
+      true
+    );
+  });
+
+  it('REQ-DM-027 : TÉMOIN — un motif hors refus, un texte libre ou « autre » sont refusés', () => {
+    expect(charge.safeParse({ ...base, vers: 'valide', motifRefus: 'illisible' }).success).toBe(
+      false
+    );
+    for (const libre of ['autre', 'La pièce est floue', ''])
+      expect(charge.safeParse({ ...base, vers: 'refusee', motifRefus: libre }).success, libre).toBe(
+        false
+      );
+    expect(charge.safeParse({ ...base, vers: 'valide' }).success).toBe(true);
   });
 });
 
@@ -328,5 +360,26 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
       expect(u(geste, null, null), geste).toEqual([]);
     expect(u('desactiver', 'lecteur', null)).toEqual(['vers:roles_incoherents_avec_le_geste']);
     expect(u('desactiver', null, 'lecteur')).toEqual(['vers:roles_incoherents_avec_le_geste']);
+  });
+
+  it('REQ-JUR-006 : la mise en demeure ne porte que l’article, pris dans la liste FERMÉE de l’art. 11.2, et l’acteur de la console', () => {
+    for (const article of ['3.7', '6', '7', '8', '9', '23']) {
+      passe('apporteur_mis_en_demeure', { article, acteur: CONSOLE });
+    }
+    expect(refus('apporteur_mis_en_demeure', { article: '10', acteur: CONSOLE })).toHaveLength(1);
+    expect(refus('apporteur_mis_en_demeure', { article: '11.2', acteur: CONSOLE })[0]).toMatch(
+      /^article:/
+    );
+    // NI les faits NI aucun texte libre : la charge est fermée.
+    expect(
+      refus('apporteur_mis_en_demeure', { article: '6', acteur: CONSOLE, faits: 'x' })
+    ).toHaveLength(1);
+    // Un utilisateur de la console, jamais le système ni l'apporteur.
+    expect(refus('apporteur_mis_en_demeure', { article: '6', acteur: { par: 'systeme' } })).toEqual(
+      ['acteur:acteur_console_attendu']
+    );
+    expect(
+      refus('apporteur_mis_en_demeure', { article: '6', acteur: { par: 'apporteur', id: ID } })
+    ).toEqual(['acteur:acteur_console_attendu']);
   });
 });

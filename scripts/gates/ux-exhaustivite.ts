@@ -127,6 +127,10 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
   // SEC-30 : l'écran des utilisateurs de la console et ses courriels, lus par ses utilisateurs seuls.
   'console/utilisateurs.ts':
     'administration des utilisateurs de la console et ses courriels, lus par ses utilisateurs seuls (portée dépôt, REQ-GOV-017)',
+  // CPL-T07 : le dossier de conformité, lu par Axion-IA seul ; les phrases des motifs que l'apporteur
+  // lira y sont celles de la juriste, mot pour mot, et repassent par l'espace quand il les affichera.
+  'console/conformite.ts':
+    'dossier de conformité, lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
   // JUR-T61 : la page publique des données de la console, lue par ses utilisateurs avant connexion.
   'console/vos-donnees.ts':
     'page « Vos données dans la console », lue par ses utilisateurs seuls : couverte par le témoin vos-donnees-console',
@@ -230,6 +234,25 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   // DM-55 : les faits retenus contre SON dépôt (art. 3.7), saisis par la console et lus au rendu ;
   // sans lien, sans nom de tiers, sans les mots refusés (sécurité, rattrapage 64).
   'courriels/notifications.ts › MOTIFS_DES_DECISIONS › anomalie_confirmee': ['faits'],
+  // SEC-19 (juriste, #703) : SA mise en demeure — l'article de la liste fermée de l'art. 11.2, les
+  // faits saisis par la console (règles de DM-55), le délai venu de la SSOT (RM-10).
+  'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure': [
+    'delaiMiseEnDemeure',
+    'article',
+    'faits',
+  ],
+  // SEC-19 (juriste, #703) : la fin de SON contrat — la date d'effet, la réception de SON écrit, et le
+  // motif de la décision motivée (règles de {faits}, DM-55).
+  'courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › ordinaire_apporteur': [
+    'dateReception',
+    'dateEffet',
+  ],
+  'courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › ordinaire_axion': ['dateEffet'],
+  'courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › manquement_grave': [
+    'motif',
+    'dateEffet',
+  ],
+  'courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › fin_de_plein_droit': ['dateEffet'],
   // DM-55 : la raison, de la liste fermée MotifAnnulationConsole, de l'annulation de SON dépôt.
   'courriels/notifications.ts › MOTIFS_DES_DECISIONS › annulee_par_la_console': ['raison'],
   // DM-55 : la catégorie (liste fermée MotifListeNoire) de l'entreprise de SON dépôt, art. 3.3 bis ;

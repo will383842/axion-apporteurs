@@ -452,8 +452,12 @@ describe('REQ-QA-011 → REQ-SEC-008 — la liste des modèles cloisonnés est c
     expect([...MODELES_CLOISONNES, ...MODELES_SANS_VUE_APPORTEUR].sort()).toEqual(portantApporteur);
   });
 
-  it('REQ-SEC-008 : TÉMOIN — les modèles sans vue sont EXACTEMENT l’anomalie (DM-12) et l’appareil connu (SEC-55)', () => {
-    expect([...MODELES_SANS_VUE_APPORTEUR]).toEqual(['anomalie', 'appareilConnu']);
+  it('REQ-SEC-008 : TÉMOIN — les modèles sans vue sont EXACTEMENT l’anomalie (DM-12), l’appareil connu (SEC-55) et la décision de contrat (SEC-19)', () => {
+    expect([...MODELES_SANS_VUE_APPORTEUR]).toEqual([
+      'anomalie',
+      'appareilConnu',
+      'decisionDeContrat',
+    ]);
   });
 
   it('REQ-SEC-008 : TÉMOIN — SEC-55 : l’appareil connu n’a AUCUNE vue dans l’espace, et aucune relation de l’espace n’y mène', () => {

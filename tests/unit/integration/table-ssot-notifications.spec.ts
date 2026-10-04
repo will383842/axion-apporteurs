@@ -78,12 +78,15 @@ describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles'
       'decision_attribution',
       'depot_injoignable_j5',
       'lien_magique',
+      // SEC-19 (A02, #703) : la mise en demeure et la fin du contrat.
+      'mise_en_demeure',
       // SEC-62 (texte du rattrapage 102) : l'avis de sécurité du compte, texte de la juriste.
       'nouvel_appareil',
       'premier_rang_libere',
       'rappel_rc_pro',
       'rattachement_decide',
       'refus_declaration',
+      'resiliation',
       'suspension_declarations',
     ];
     // SEC-29 et SEC-30 : les clés destinées à la console ; leurs textes vivent avec la console.
@@ -145,6 +148,8 @@ describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles'
       rappel_rc_pro: 'F/F',
       rattachement_decide: 'T/F',
       nouvel_appareil: 'T/F',
+      mise_en_demeure: 'T/T',
+      resiliation: 'T/T',
     });
   });
 
