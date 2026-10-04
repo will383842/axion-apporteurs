@@ -82,7 +82,6 @@ import {
   CONTRE_TEMOINS_D_UNIVERS,
   FAMILLES,
   LUE_EN_SSOT,
-  SENTINELLES_FERMEES,
   TEMOINS,
   analyser,
   exigenceDuCompteur,
@@ -264,11 +263,12 @@ describe('REQ-SEC-016 — le registre des compteurs', () => {
   });
 
   // GOV-149 : ce témoin figeait « 20 / 10 min, `laisser-passer` ». Il garde ses faces (le préfixe,
-  // la source, l'identité en `refuser`) et ne fige plus de valeur : `depot:ip` est CONFRONTÉ, soit au
-  // chiffre de REQ-SEC-016, soit à des seuils de la SSOT sourcés, et sa conduite est celle du texte.
-  it('REQ-SEC-016 — le dépôt : l’empreinte d’adresse sous `depot:`, confrontée au chiffre de l’exigence ou à la SSOT ; l’identité en `refuser`', async () => {
+  // la source) et ne fige plus de valeur : `depot:ip` est CONFRONTÉ, soit au chiffre de REQ-SEC-016,
+  // soit à des seuils de la SSOT sourcés, et sa conduite est celle du texte. SEC-12 : le compteur par
+  // identité a disparu du registre (REQ-DM-009 interdit tout compteur par identité).
+  it('REQ-SEC-016 — le dépôt : l’empreinte d’adresse sous `depot:`, confrontée au chiffre de l’exigence ou à la SSOT ; aucun compteur par identité', async () => {
     expect(COMPTEURS['depot:ip']).toMatchObject({ prefixe: 'depot:', source: 'REQ-SEC-016' });
-    expect(COMPTEURS['depot:identite']).toMatchObject({ prefixe: 'depot:', surPanne: 'refuser' });
+    expect(Object.keys(COMPTEURS)).not.toContain('depot:identite');
     // Le compteur sur lequel les témoins de la panne lisent la conduite OUVERTE l'est vraiment.
     expect(COMPTEURS[LAISSE_PASSER]).toMatchObject({ surPanne: 'laisser-passer' });
     expect(COMPTEURS[LAISSE_PASSER].limite).not.toBe(LIMITE_HORS_DEPOT);
@@ -338,16 +338,13 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
       const d = COMPTEURS[nom];
       expect(v.panne, nom).toBe(true);
       expect(v.autorise, nom).toBe(d.surPanne === 'laisser-passer');
-      expect(v.motif, nom).toBe(
-        d.limite === LIMITE_HORS_DEPOT ? 'limite_non_configuree' : 'cache_indisponible'
-      );
+      expect(v.motif, nom).toBe('cache_indisponible');
       constates.push(nom);
     }
     expect(constates).toEqual(NOMS);
-    // Le cache a été ATTEINT par chaque compteur dont la limite est écrite : pas un vert à vide.
-    const chiffres = NOMS.filter((n) => COMPTEURS[n].limite !== LIMITE_HORS_DEPOT);
-    expect(chiffres.length).toBeGreaterThan(0);
-    expect(cache.appels()).toBe(chiffres.length);
+    // Aucun compteur n'est hors dépôt : le cache a été ATTEINT par chacun — pas un vert à vide.
+    expect(NOMS.filter((n) => (COMPTEURS[n].limite as unknown) === LIMITE_HORS_DEPOT)).toEqual([]);
+    expect(cache.appels()).toBe(NOMS.length);
     expect(signaux.map((s) => s.prefixe)).toEqual(NOMS.map((n) => COMPTEURS[n].prefixe));
   });
 
@@ -388,21 +385,6 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
       motif: 'cache_indisponible',
     });
     expect(ecrit[0]).not.toContain(SUJET);
-  });
-
-  it('REQ-SEC-016 — `depot:identite` sans configuration : refus, `panne: true`, `limite_non_configuree`, cache non atteint', async () => {
-    const cache = magasinEnPanne();
-    const { signaux, signaler } = capteur();
-    const v = await limiter('depot:identite', SUJET, 0, cache.magasin, signaler);
-    expect(v).toEqual({
-      autorise: false,
-      restant: 0,
-      repriseAt: null,
-      panne: true,
-      motif: 'limite_non_configuree',
-    });
-    expect(cache.appels()).toBe(0);
-    expect(signaux).toEqual([{ prefixe: 'depot:', motif: 'limite_non_configuree' }]);
   });
 
   describe('REQ-SEC-016 — une panne réelle est RAPIDE', () => {
@@ -1298,12 +1280,21 @@ describe('REQ-SEC-016 — option 1 : une limite lue en SSOT est confrontée à d
       { exigence: 'Le témoin est limité par un compteur de témoin ; `surPanne: refuser`.' },
     ],
     [
-      'la sentinelle hors dépôt qui LAISSE PASSER : aucune limite opposée',
+      'un compteur hors dépôt qui LAISSE PASSER : aucune limite opposée',
       {
         exigence: 'Le témoin est limité par un compteur de témoin ; `surPanne: laisser-passer`.',
         limite: 'LIMITE_HORS_DEPOT',
         fenetre: 'LIMITE_HORS_DEPOT',
         surPanne: 'laisser-passer',
+        valeurs: { limite: 'hors-depot', fenetreSecondes: 'hors-depot' },
+      },
+    ],
+    [
+      'un compteur hors dépôt FERMÉ (`refuser`) : il n’y a plus de troisième voie',
+      {
+        exigence: 'Le témoin est limité par un compteur de témoin ; `surPanne: refuser`.',
+        limite: 'LIMITE_HORS_DEPOT',
+        fenetre: 'LIMITE_HORS_DEPOT',
         valeurs: { limite: 'hors-depot', fenetreSecondes: 'hors-depot' },
       },
     ],
@@ -1318,91 +1309,80 @@ describe('REQ-SEC-016 — option 1 : une limite lue en SSOT est confrontée à d
     expect(r.fautes).toEqual([]);
     expect(Object.keys(r.voies).sort()).toEqual([...NOMS].sort());
     for (const nom of NOMS) {
-      expect(['chiffre', 'ssot', 'hors-depot-ferme'], nom).toContain(r.voies[nom]);
-      // La sentinelle n'est admise que FERMÉE : elle refuse tout, elle n'ouvre rien.
-      if (r.voies[nom] === 'hors-depot-ferme') {
-        expect(COMPTEURS[nom].surPanne, nom).toBe('refuser');
-        expect(SENTINELLES_FERMEES as readonly string[], nom).toContain(nom);
-      }
+      expect(['chiffre', 'ssot'], nom).toContain(r.voies[nom]);
     }
     expect(r.confrontes).toHaveLength(NOMS.length);
   });
 });
 
-// ── REQ-SEC-016 : la sentinelle fermée, restreinte (GOV-149, arbitrage de la sécurité) ─────────
+// ── REQ-SEC-016 : le texte en vigueur, jamais une note [REMPLACÉ …] (SEC-12, sécurité) ──────────
 
 /**
- * La voie `hors-depot-ferme` est une liste FERMÉE d'un seul compteur, `depot:identite`, en
- * `refuser`, et que personne n'appelle : un compteur qui refuse tout et qu'aucun code n'atteint est
- * un compteur mort, fermé. Hors de la liste, la sentinelle rougit ; un appel à elle aussi.
+ * Une note entre crochets d'une exigence cite le texte qu'un amendement a REMPLACÉ. La garde la
+ * retire avant de chercher l'ancre, la conduite et les chiffres : une ancre qui ne vit que dans une
+ * note n'est pas trouvée, et un chiffre ou une conduite de la note ne se lit jamais. Témoin à deux
+ * faces, sur la fonction de la garde ET sur la garde entière.
  */
-describe('REQ-SEC-016 — la sentinelle hors dépôt : un compteur mort, nommé, en `refuser`', () => {
+describe('REQ-SEC-016 — la garde lit le texte en vigueur d’une exigence, jamais une note [REMPLACÉ …]', () => {
   const base = universDuDepot();
   const NOM = 'depot:temoin-ssot';
-  const sentinelle = {
-    exigence: 'Le témoin est limité par un compteur de témoin ; `surPanne: refuser`.',
-    limite: 'LIMITE_HORS_DEPOT',
-    fenetre: 'LIMITE_HORS_DEPOT',
-    valeurs: { limite: 'hors-depot', fenetreSecondes: 'hors-depot' },
-  } as const;
-  const appel = (nom: string) => ({
-    chemin: 'src/server/appel-sentinelle.ts',
-    texte:
-      "import { limiter } from './securite/rate-limit';\n" +
-      `export const f = (s: any) => limiter('${nom}', s, 0);\n`,
+  const NOTE =
+    ' [Amendée : remplace « limité à 20 / 10 min par compteur de témoin (`surPanne: laisser-passer`) ».]';
+
+  it('REQ-SEC-016 — FACE ROUGE : une ancre qui ne vit que dans une note n’est pas trouvée', () => {
+    const texte = 'Le témoin est limité par un compteur de SESSION ; `surPanne: refuser`.' + NOTE;
+    expect(exigenceDuCompteur(texte, 'compteur de témoin')).toBeNull();
+    expect(exigenceDuCompteur(texte, 'compteur de SESSION')).not.toBeNull();
   });
 
-  it('REQ-SEC-016 — la liste fermée ne porte que `depot:identite`', () => {
-    expect([...SENTINELLES_FERMEES]).toEqual(['depot:identite']);
+  it('REQ-SEC-016 — FACE VERTE : l’ancre du texte en vigueur se lit sans le chiffre ni la conduite de la note', () => {
+    const texte =
+      'Le témoin est limité par un compteur de témoin ; la fenêtre et le plafond sont lus en SSOT ; ' +
+      '`surPanne: refuser`.' +
+      NOTE;
+    expect(exigenceDuCompteur(texte, 'compteur de témoin')).toEqual({
+      limite: LUE_EN_SSOT,
+      fenetreSecondes: LUE_EN_SSOT,
+      surPanne: 'refuser',
+    });
   });
 
-  it('REQ-SEC-016 — CONTRE-TÉMOIN : `depot:identite`, en `refuser` et jamais appelé, prend la voie `hors-depot-ferme`', async () => {
-    const r = await analyser(base);
-    expect(r.fautes).toEqual([]);
-    expect(r.voies['depot:identite']).toBe('hors-depot-ferme');
-  });
-
-  it('REQ-SEC-016 — une sentinelle en `refuser` HORS de la liste : `compteur_sans_confrontation`, liste nommée', async () => {
-    const r = await analyser(universAvecUnCompteurLuEnSsot(base, sentinelle));
-    const m = r.fautes
-      .filter((f) => f.famille === 'compteur_sans_confrontation')
-      .map((f) => f.message);
+  it('REQ-SEC-016 — la garde entière : un compteur dont l’ancre ne vit que dans une note est sans source lisible', async () => {
+    const r = await analyser(
+      universAvecUnCompteurLuEnSsot(base, {
+        exigence: 'Le témoin est limité par un compteur de SESSION ; `surPanne: refuser`.' + NOTE,
+      })
+    );
+    const m = r.fautes.filter((f) => f.famille === 'ecart_a_l_exigence').map((f) => f.message);
     expect(m).toHaveLength(1);
     expect(m[0]).toContain(`\`${NOM}\``);
-    expect(m[0]).toContain('SENTINELLES_FERMEES');
+    expect(m[0]).toContain('ne se retrouve pas');
     expect(r.voies[NOM]).toBeUndefined();
   });
 
-  it('REQ-SEC-016 — `depot:identite` déclaré `laisser-passer` : la sentinelle n’est plus fermée, elle rougit', async () => {
-    const registre: Record<string, Record<string, unknown>> = JSON.parse(JSON.stringify(COMPTEURS));
-    registre['depot:identite']!.surPanne = 'laisser-passer';
-    const r = await analyser({
-      ...base,
-      registre,
-      executer: async (nom) =>
-        nom === 'depot:identite'
-          ? { ...(await base.executer(nom)), autorise: true }
-          : base.executer(nom),
-    });
-    const m = r.fautes
-      .filter((f) => f.famille === 'compteur_sans_confrontation')
-      .map((f) => f.message);
-    expect(m).toHaveLength(1);
-    expect(m[0]).toContain('`depot:identite`');
-    expect(r.voies['depot:identite']).toBeUndefined();
-  });
-
-  it('REQ-SEC-016 — un appel à `depot:identite` sous `src/` : `sentinelle_appelee`, fichier et ligne nommés', async () => {
-    const r = await analyser({ ...base, fichiers: [...base.fichiers, appel('depot:identite')] });
-    const m = r.fautes.filter((f) => f.famille === 'sentinelle_appelee').map((f) => f.message);
-    expect(m).toHaveLength(1);
-    expect(m[0]).toContain('src/server/appel-sentinelle.ts:2');
-    expect(m[0]).toContain('`depot:identite`');
-  });
-
-  it('REQ-SEC-016 — CONTRE-TÉMOIN : le même appel sur un compteur chiffré (`depot:ip`) reste vert', async () => {
-    const r = await analyser({ ...base, fichiers: [...base.fichiers, appel('depot:ip')] });
+  it('REQ-SEC-016 — CONTRE-TÉMOIN : la même note après un texte en vigueur lu en SSOT reste verte', async () => {
+    const r = await analyser(
+      universAvecUnCompteurLuEnSsot(base, {
+        exigence:
+          'Le témoin est limité par un compteur de témoin ; la fenêtre et le plafond sont lus en ' +
+          'SSOT, avec leur source ; `surPanne: refuser`.' +
+          NOTE,
+      })
+    );
     expect(r.fautes).toEqual([]);
+    expect(r.voies[NOM]).toBe('ssot');
+  });
+
+  it('REQ-SEC-016 — le dépôt réel : REQ-SEC-016 porte une note, et ses deux compteurs se lisent dans le texte en vigueur', async () => {
+    expect(base.exigences['REQ-SEC-016']).toMatch(/\[[^\]]*\]/);
+    const r = await analyser(base);
+    expect(r.fautes).toEqual([]);
+    expect(r.voies['depot:ip']).toBe('ssot');
+    expect(r.voies['depot:session']).toBe('ssot');
+  });
+
+  it('REQ-SEC-016 — plus de troisième voie : ni sentinelle, ni famille qui la garde', () => {
+    expect(FAMILLES as readonly string[]).not.toContain('sentinelle_appelee');
   });
 });
 

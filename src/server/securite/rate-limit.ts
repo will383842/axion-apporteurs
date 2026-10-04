@@ -166,15 +166,6 @@ export const COMPTEURS = {
     ancre: 'compteur de SESSION',
     verifieLe: '2026-10-04',
   },
-  'depot:identite': {
-    prefixe: 'depot:',
-    limite: LIMITE_HORS_DEPOT,
-    fenetreSecondes: LIMITE_HORS_DEPOT,
-    surPanne: 'refuser',
-    source: 'REQ-SEC-016',
-    ancre: 'par identité',
-    verifieLe: '2026-09-19',
-  },
   // INT-T09 — le mandataire de recherche d'entreprises, un geste du dépôt.
   //
   // ⚠️ CE COMMENTAIRE A DIT LE CONTRAIRE JUSQU'AU 2026-09-23, et sa condition est levée : il

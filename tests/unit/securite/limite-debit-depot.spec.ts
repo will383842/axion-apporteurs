@@ -25,7 +25,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { exigenceDuCompteur, SENTINELLES_FERMEES } from '../../../scripts/gates/rate-famille';
+import { exigenceDuCompteur } from '../../../scripts/gates/rate-famille';
 import type { PrismaClient } from '@prisma/client';
 import {
   COMPTEURS,
@@ -389,10 +389,7 @@ function luHorsDesNotes(texte: string, ancre: string): boolean {
 
 describe('REQ-SEC-016 — les compteurs du dépôt sont lus dans le texte en vigueur, jamais dans une note [REMPLACÉ …]', () => {
   const compteursDuDepot = Object.entries(COMPTEURS).filter(
-    ([nom, c]) =>
-      c.prefixe === 'depot:' &&
-      c.source === 'REQ-SEC-016' &&
-      !(SENTINELLES_FERMEES as readonly string[]).includes(nom)
+    ([, c]) => c.prefixe === 'depot:' && c.source === 'REQ-SEC-016'
   );
 
   it('REQ-SEC-016 : les deux compteurs du dépôt, `depot:ip` et `depot:session`, sont confrontés à REQ-SEC-016', () => {
@@ -410,7 +407,6 @@ describe('REQ-SEC-016 — les compteurs du dépôt sont lus dans le texte en vig
     const texte =
       'Le dépôt est limité par un compteur de SESSION (`surPanne: refuser`). ' +
       '[Amendée : remplace « limité à 20 / 10 min par hash IP (`surPanne: laisser-passer`) ».]';
-    expect(exigenceDuCompteur(texte, 'par hash IP')).not.toBeNull();
     expect(luHorsDesNotes(texte, 'par hash IP')).toBe(false);
     expect(luHorsDesNotes(texte, 'compteur de SESSION')).toBe(true);
   });
