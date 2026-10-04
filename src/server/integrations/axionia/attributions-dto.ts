@@ -1,5 +1,5 @@
 /**
- * Le lecteur de l'API 1 — INT-T07-P (REQ-INT-014, REQ-SEC-042).
+ * Le lecteur de l'API 1 — INT-T07-P (REQ-INT-014).
  *
  * Il ne fait QUE lire : la frontière (`api-entrante.ts`) authentifie, limite, juge la forme rendue
  * contre le contrat et reconstruit le corps champ par champ. Ce module rend la forme minimale, ou
@@ -10,8 +10,10 @@
  *     `convertie` rend `cliente`, tout autre état occupant `attribuee` ; aucune attribution
  *     occupante, `null`. L'API 1 ne parle que des attributions de Partners : une entreprise connue
  *     par antériorité n'est jamais rendue `cliente` ici ;
+ *   — une `cliente` n'expose AUCUN porteur : `until`, `apporteurRef` et `nomAffichable` nuls, et
+ *     rien n'est déchiffré (condition d'A02, relecture de la PR 710, posée en `if`/`then` au contrat) ;
  *   — `until` est le mois, à Paris, de la fin de fenêtre si elle est posée, sinon de la
- *     péremption ; `null` pour `cliente` ;
+ *     péremption ;
  *   — `apporteurRef` est un UUID DÉRIVÉ par HMAC, sous une clé dédiée, de l'identifiant du porteur :
  *     stable pour un même porteur, de même forme pour un apporteur et pour un conseiller salarié
  *     (W19), et sans lien lisible avec un identifiant interne. La revue sécurité (A09, #561) en a
@@ -32,6 +34,7 @@
  */
 import { createHmac } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
+import { API_ATTRIBUTIONS } from '../../../../packages/contracts/api';
 import { ETATS_OCCUPANTS } from '../../../domain/attribution/etats';
 import { versParis } from '../../../domain/temps/paris';
 import { clesPii, decryptPii, type ClesPii } from '../../securite/pii';
@@ -54,8 +57,13 @@ export type Population = 'apporteur' | 'console';
 /** 32 octets au moins, comme les autres secrets HMAC du dépôt. */
 const LONGUEUR_MIN_CLE = 32;
 
-/** La forme d'un nom d'affichage : celle du contrat (`api_attributions_reponse`). */
-const FORME_NOM = /^[\p{L}][\p{L} '’.-]{0,63}$/u;
+/** Le nom d'affichage du contrat (`api_attributions_reponse`) : son motif et sa longueur, lus. */
+const NOM_DU_CONTRAT = (
+  API_ATTRIBUTIONS.defs.api_attributions_reponse as {
+    properties: { nomAffichable: { anyOf: readonly { pattern: string; maxLength: number }[] } };
+  }
+).properties.nomAffichable.anyOf[0]!;
+const FORME_NOM = new RegExp(NOM_DU_CONTRAT.pattern, 'u');
 
 export interface DependancesDuLecteur {
   readonly cles: ClesPii;
@@ -95,7 +103,8 @@ const mots = (texte: string | null): string[] => (texte ?? '').split(/\s/u).filt
 const initiale = (mot: string): string => `${[...mot][0]!.toLocaleUpperCase('fr-FR')}.`;
 
 /** Le nom rendu, s'il tient la forme du contrat ; sinon rien. */
-const sousLaForme = (nom: string): string | null => (FORME_NOM.test(nom) ? nom : null);
+const sousLaForme = (nom: string): string | null =>
+  nom.length <= NOM_DU_CONTRAT.maxLength && FORME_NOM.test(nom) ? nom : null;
 
 /**
  * Le nom d'affichage d'un apporteur : le prénom, puis l'initiale du nom de famille. Sans
@@ -147,6 +156,11 @@ export function lecteurDeLaBase(
       },
     });
     if (a === null) return null;
+    // Une cliente n'expose aucun porteur (A02, relecture de la PR 710) : ni échéance, ni
+    // référence, ni nom — rien n'est déchiffré.
+    if (a.statut === 'convertie') {
+      return { statut: 'cliente', until: null, apporteurRef: null, nomAffichable: null };
+    }
 
     let population: Population;
     let idPorteur: string;
@@ -171,11 +185,10 @@ export function lecteurDeLaBase(
       throw new Error('attribution_sans_porteur');
     }
 
-    const cliente = a.statut === 'convertie';
     const fin = a.fenetreFinAt ?? a.peremptionAt;
     return {
-      statut: cliente ? 'cliente' : 'attribuee',
-      until: cliente || fin === null ? null : moisAParis(fin),
+      statut: 'attribuee',
+      until: fin === null ? null : moisAParis(fin),
       apporteurRef: referenceOpaque(population, idPorteur, d.cleReference),
       nomAffichable: nom,
     };

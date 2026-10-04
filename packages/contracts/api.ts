@@ -227,11 +227,30 @@ const MOTIF_MOIS = '^[0-9]{4}-(0[1-9]|1[0-2])$';
 /** Une référence opaque : un UUID, qui ne peut porter ni un nom ni une adresse de courriel. */
 const MOTIF_UUID = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
 /**
- * Un nom d'affichage : le prénom puis l'initiale du nom (« Paul D. »). Des lettres, des espaces,
- * des traits d'union, des apostrophes et un point — ni arobase ni chiffre : ni une adresse de
- * courriel ni un numéro ne passent.
+ * Un nom d'affichage : le ou les mots du prénom, puis UNE initiale suivie d'un point (« Paul D. »,
+ * « Jean-Paul D. ») — motif d'A02 (relecture de la PR 710). Le nom entier, un prénom seul, une
+ * adresse de courriel ou un numéro ne passent pas.
  */
-const MOTIF_NOM_AFFICHABLE = "^[\\p{L}][\\p{L} '’.-]{0,63}$";
+const MOTIF_NOM_AFFICHABLE = "^[\\p{L}][\\p{L}'’-]*( [\\p{L}][\\p{L}'’-]*)* \\p{L}\\.$";
+/** La longueur d'un nom d'affichage, au plus (A02). */
+const LONGUEUR_MAX_NOM_AFFICHABLE = 64;
+
+/** Les trois champs que le statut gouverne : tous nuls, ou tous posés. */
+const CHAMPS_DU_PORTEUR = ['until', 'apporteurRef', 'nomAffichable'] as const;
+/**
+ * `if`/`then` : quand `statut` vaut `statut`, les trois champs du porteur sont nuls, ou tous posés.
+ * Le contrat juge seul la cohérence — elle ne vit plus dans un `$comment`.
+ */
+function siLeStatut(statut: string, poses: boolean): FragmentSchema {
+  return {
+    if: { properties: { statut: { const: statut } }, required: ['statut'] },
+    then: {
+      properties: Object.fromEntries(
+        CHAMPS_DU_PORTEUR.map((c) => [c, poses ? { type: 'string' } : { type: 'null' }])
+      ),
+    },
+  };
+}
 
 /**
  * L'API 1, `GET /api/integrations/axionia/attributions?siren=` — REQ-INT-014, INT-T07-P.
@@ -274,11 +293,21 @@ export const API_ATTRIBUTIONS: ApiDuContrat = {
         statut: { type: 'string', enum: ['libre', 'attribuee', 'cliente'] },
         until: ouNul({ type: 'string', pattern: MOTIF_MOIS }),
         apporteurRef: ouNul({ type: 'string', pattern: MOTIF_UUID }),
-        nomAffichable: ouNul({ type: 'string', pattern: MOTIF_NOM_AFFICHABLE }),
+        nomAffichable: ouNul({
+          type: 'string',
+          pattern: MOTIF_NOM_AFFICHABLE,
+          maxLength: LONGUEUR_MAX_NOM_AFFICHABLE,
+        }),
       },
+      allOf: [
+        siLeStatut('libre', false),
+        siLeStatut('attribuee', true),
+        siLeStatut('cliente', false),
+      ],
       $comment:
-        'Réponse 200, fermée. `libre` : `until`, `apporteurRef` et `nomAffichable` nuls, la même ' +
-        'réponse pour un SIREN inconnu, au même instant. `apporteurRef` est opaque, de même forme ' +
+        'Réponse 200, fermée. `libre` et `cliente` : `until`, `apporteurRef` et `nomAffichable` ' +
+        'nuls (`allOf`), `libre` étant la même réponse pour un SIREN inconnu, au même instant, et ' +
+        '`cliente` n’exposant aucun porteur ; `attribuee` : les trois posés. `apporteurRef` est opaque, de même forme ' +
         'pour un apporteur et pour un conseiller salarié (W19) ; `nomAffichable` est le prénom et ' +
         'l’initiale du nom du porteur, sans mention de rôle (décisions de Williams du 2026-10-01) — ' +
         'jamais e-mail, téléphone, identifiant ni adresse. Côté axion-ia, le nom ne s’affiche qu’à ' +

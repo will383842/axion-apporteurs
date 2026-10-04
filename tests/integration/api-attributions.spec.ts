@@ -202,7 +202,7 @@ describe('REQ-INT-014 — le lecteur de l’API 1, sur la base, sous le rôle d�
     expect(JSON.stringify(r)).not.toContain(apporteurId);
   });
 
-  it('REQ-INT-014 : sans fin de fenêtre, until est le mois de la péremption ; une convertie rend cliente sans until', async () => {
+  it('REQ-INT-014 : sans fin de fenêtre, until est le mois de la péremption ; une convertie rend cliente, sans until, sans référence ni nom', async () => {
     const apporteurId = await unApporteur('Paul', 'Durand');
     const provisoire = unSiren();
     await uneAttribution(base.prisma, {
@@ -223,8 +223,8 @@ describe('REQ-INT-014 — le lecteur de l’API 1, sur la base, sous le rôle d�
     expect(await lecteurDeLaBase(app, DEPS)(convertie)).toEqual({
       statut: 'cliente',
       until: null,
-      apporteurRef: referenceOpaque('apporteur', apporteurId, CLE_REFERENCE),
-      nomAffichable: 'Paul D.',
+      apporteurRef: null,
+      nomAffichable: null,
     });
   });
 

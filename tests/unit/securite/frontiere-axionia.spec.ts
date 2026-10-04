@@ -250,6 +250,7 @@ describe('REQ-INT-014 — la forme de la réponse, jugée par le schéma', () =>
     ['attribuée, octobre', { ...juste, until: '2027-10' }],
     ['attribuée, janvier', { ...juste, until: '2027-01' }],
     ['libre, nue', { statut: 'libre', until: null, apporteurRef: null, nomAffichable: null }],
+    ['attribuée, prénom composé', { ...juste, nomAffichable: 'Jean-Paul D.' }],
   ])('acceptée : %s', (_q, r) => {
     expect(schemaReponseAttribution.safeParse(r).success).toBe(true);
   });
@@ -279,6 +280,24 @@ describe('REQ-INT-014 — la forme de la réponse, jugée par le schéma', () =>
       { statut: 'libre', until: null, apporteurRef: null, nomAffichable: 'Paul D.' },
     ],
     ['nom affichable absent', { statut: 'attribuee', until: '2027-03', apporteurRef: REF }],
+    [
+      'cliente avec une échéance',
+      { ...juste, statut: 'cliente', apporteurRef: null, nomAffichable: null },
+    ],
+    [
+      'cliente avec une référence',
+      { statut: 'cliente', until: null, apporteurRef: REF, nomAffichable: null },
+    ],
+    [
+      'cliente avec un nom',
+      { statut: 'cliente', until: null, apporteurRef: null, nomAffichable: 'Paul D.' },
+    ],
+    ['attribuée sans échéance', { ...juste, until: null }],
+    ['attribuée sans référence', { ...juste, apporteurRef: null }],
+    ['attribuée sans nom', { ...juste, nomAffichable: null }],
+    ['le nom entier au lieu de l’initiale', { ...juste, nomAffichable: 'Paul Durand' }],
+    ['un prénom seul', { ...juste, nomAffichable: 'Paul' }],
+    ['plus de 64 caractères', { ...juste, nomAffichable: `${'A'.repeat(62)} D.` }],
   ])('refusée : %s', (_q, r) => {
     expect(schemaReponseAttribution.safeParse(r).success).toBe(false);
   });

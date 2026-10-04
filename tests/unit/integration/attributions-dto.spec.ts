@@ -12,6 +12,7 @@
  *     autre champ n'est admis.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import Ajv from 'ajv';
 import { createHmac } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import type { PrismaClient } from '@prisma/client';
@@ -100,6 +101,65 @@ describe('REQ-INT-014 — l’API 1 est déclarée au contrat', () => {
     const props = r.properties as Record<string, Schema>;
     expect(props.statut).toEqual({ type: 'string', enum: ['libre', 'attribuee', 'cliente'] });
     expect(String(r.$comment)).toMatch(/jamais e-mail, téléphone, identifiant ni adresse/);
+  });
+});
+
+describe('REQ-INT-014 — le contrat juge seul la réponse : motif du nom et cohérence du statut (A02, #710)', () => {
+  const valide = () => {
+    const ajv = new Ajv({ strict: false, allErrors: true });
+    return ajv.compile({ $ref: '#/$defs/api_attributions_reponse', $defs: defs() });
+  };
+  const attribuee = {
+    statut: 'attribuee',
+    until: '2027-03',
+    apporteurRef: REF,
+    nomAffichable: 'Paul D.',
+  };
+  const nuls = { until: null, apporteurRef: null, nomAffichable: null };
+
+  it.each([
+    ['Paul D.', true],
+    ['Jean-Paul D.', true],
+    ['Anne-Marie L.', true],
+    ['Jean Paul M.', true],
+    ['N’Golo K.', true],
+    ['Paul Durand', false],
+    ['Paul', false],
+    ['Paul D', false],
+    ['Paul D.D.', false],
+    ['paul.dupont@example.test', false],
+    ['06 12 34 56 78', false],
+    [`${'A'.repeat(62)} D.`, false],
+  ])('REQ-INT-014 : le nom affichable « %s » — admis : %s', (nomAffichable, admis) => {
+    expect(valide()({ ...attribuee, nomAffichable })).toBe(admis);
+  });
+
+  it('REQ-INT-014 : le motif et la longueur sont ceux d’A02 — prénom(s), puis UNE initiale suivie d’un point, 64 au plus', () => {
+    const nom = (defs().api_attributions_reponse!.properties as Record<string, Schema>)
+      .nomAffichable as { anyOf: Schema[] };
+    expect(nom.anyOf[0]).toEqual({
+      type: 'string',
+      pattern: "^[\\p{L}][\\p{L}'’-]*( [\\p{L}][\\p{L}'’-]*)* \\p{L}\\.$",
+      maxLength: 64,
+    });
+  });
+
+  it.each([
+    ['libre, les trois nuls', { statut: 'libre', ...nuls }, true],
+    ['libre avec une référence', { statut: 'libre', ...nuls, apporteurRef: REF }, false],
+    ['libre avec une échéance', { statut: 'libre', ...nuls, until: '2027-03' }, false],
+    ['libre avec un nom', { statut: 'libre', ...nuls, nomAffichable: 'Paul D.' }, false],
+    ['attribuée, les trois posés', attribuee, true],
+    ['attribuée sans échéance', { ...attribuee, until: null }, false],
+    ['attribuée sans référence', { ...attribuee, apporteurRef: null }, false],
+    ['attribuée sans nom', { ...attribuee, nomAffichable: null }, false],
+    ['cliente, les trois nuls', { statut: 'cliente', ...nuls }, true],
+    ['cliente avec une échéance', { statut: 'cliente', ...nuls, until: '2027-03' }, false],
+    ['cliente avec une référence', { statut: 'cliente', ...nuls, apporteurRef: REF }, false],
+    ['cliente avec un nom', { statut: 'cliente', ...nuls, nomAffichable: 'Paul D.' }, false],
+  ])('REQ-INT-014 : `if`/`then` du contrat — %s', (_q, r, admis) => {
+    expect(valide()(r)).toBe(admis);
+    expect(schemaReponseAttribution.safeParse(r).success).toBe(admis);
   });
 });
 
@@ -234,9 +294,9 @@ describe('REQ-INT-014 — le statut se lit dans l’attribution qui OCCUPE le SI
     }
   );
 
-  it('REQ-INT-014 : `convertie` — `cliente`, sans échéance, le porteur nommé', async () => {
+  it('REQ-INT-014 : `convertie` — `cliente`, sans échéance, sans référence ni nom de porteur (A02, #710)', async () => {
     const r = await lire(parApporteur('convertie')).lecture;
-    expect(r).toMatchObject({ statut: 'cliente', until: null, nomAffichable: 'Paul D.' });
+    expect(r).toEqual({ statut: 'cliente', until: null, apporteurRef: null, nomAffichable: null });
     expect(schemaReponseAttribution.safeParse(r).success).toBe(true);
   });
 
@@ -270,10 +330,13 @@ describe('REQ-INT-014 — `until`, le mois à Paris de la fin de fenêtre, sinon
     expect(r).toMatchObject({ until: '2027-03' });
   });
 
-  it('REQ-INT-014 : ni fin de fenêtre ni péremption — null, jamais une date inventée', async () => {
+  it('REQ-INT-014 : ni fin de fenêtre ni péremption — null, jamais une date inventée, et la frontière la refuse (503)', async () => {
     const r = await lire(parApporteur('active', { fenetreFinAt: null, peremptionAt: null }))
       .lecture;
     expect(r).toMatchObject({ until: null });
+    // Une `attribuee` porte ses trois champs (`if`/`then` du contrat) : la lecture est rendue telle
+    // quelle, et la frontière la juge non conforme — échec fermé, jamais « libre ».
+    expect(schemaReponseAttribution.safeParse(r).success).toBe(false);
   });
 });
 
@@ -355,7 +418,7 @@ describe('REQ-INT-014 — `apporteurRef`, opaque, de même forme pour les deux p
     }
   });
 
-  it('REQ-SEC-042 : un conseiller au même stade répond comme un apporteur — même forme, hors la seule référence', async () => {
+  it('REQ-INT-014 : un conseiller au même stade répond comme un apporteur — même forme, hors la seule référence', async () => {
     const a = (await lire(parApporteur('active')).lecture) as Record<string, unknown>;
     const c = (await lire(parConseiller('active', 'Paul Durand')).lecture) as Record<
       string,
@@ -381,15 +444,15 @@ describe('REQ-INT-014 — `nomAffichable`, le prénom et l’initiale du nom, ri
       nomAffichable: 'Marie T.',
     });
     expect(await lire(parConseiller('active', 'Paul')).lecture).toMatchObject({
-      nomAffichable: 'Paul',
+      nomAffichable: null,
     });
   });
 
   it.each([
     ['un prénom et un nom', 'Jean-Pierre', 'dupont', 'Jean-Pierre D.'],
     ['des espaces en trop', '  Anne  ', '  le  Gall ', 'Anne L.'],
-    ['un prénom seul', 'Paul', null, 'Paul'],
-    ['un prénom composé de deux mots, sans nom', 'Jean Paul', null, 'Jean Paul'],
+    ['un prénom seul : rien, il faut l’initiale', 'Paul', null, null],
+    ['un prénom composé de deux mots, sans nom', 'Jean Paul', null, null],
     ['un prénom composé de deux mots, et un nom', 'Jean Paul', 'Martin', 'Jean Paul M.'],
     ['un nom seul : rien, l’initiale ne suffit pas', null, 'Dupont', null],
     ['ni l’un ni l’autre', null, null, null],
@@ -402,10 +465,13 @@ describe('REQ-INT-014 — `nomAffichable`, le prénom et l’initiale du nom, ri
   it('REQ-INT-014 : un prénom ou un nom absent de la fiche (colonne nulle) — rien n’est déchiffré, le nom suit la règle', async () => {
     const sansPrenom = parApporteur('active');
     (sansPrenom.apporteur as Ligne).prenomChiffre = null;
-    expect(await lire(sansPrenom).lecture).toMatchObject({ nomAffichable: null });
+    const r = await lire(sansPrenom).lecture;
+    expect(r).toMatchObject({ nomAffichable: null });
+    // Une `attribuee` sans nom n'est pas conforme : la frontière rend 503, jamais « libre ».
+    expect(schemaReponseAttribution.safeParse(r).success).toBe(false);
     const sansNom = parApporteur('active');
     (sansNom.apporteur as Ligne).nomChiffre = null;
-    expect(await lire(sansNom).lecture).toMatchObject({ nomAffichable: 'Paul' });
+    expect(await lire(sansNom).lecture).toMatchObject({ nomAffichable: null });
     const conseiller = parConseiller('active');
     (conseiller.utilisateurConsole as Ligne).nomChiffre = null;
     expect(await lire(conseiller).lecture).toMatchObject({ nomAffichable: null });

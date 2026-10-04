@@ -67,7 +67,14 @@ export type RouteDeLaFrontiere = (typeof ROUTES_DE_LA_FRONTIERE)[number];
  */
 const DEF_REPONSE = API_ATTRIBUTIONS.defs.api_attributions_reponse as {
   required: readonly string[];
-  properties: Record<string, { enum?: readonly string[]; anyOf?: readonly { pattern?: string }[] }>;
+  properties: Record<
+    string,
+    { enum?: readonly string[]; anyOf?: readonly { pattern?: string; maxLength?: number }[] }
+  >;
+  allOf: readonly {
+    if: { properties: { statut: { const: string } } };
+    then: { properties: Record<string, { type: 'string' | 'null' }> };
+  }[];
 };
 
 /** Le motif d'un champ nullable du contrat (`ouNul({type: 'string', pattern})`). */
@@ -76,6 +83,26 @@ function motifDuContrat(champ: string): RegExp {
   if (motif === undefined) throw new Error(`contrat : le champ ${champ} n'a pas de motif.`);
   return new RegExp(motif, 'u');
 }
+
+/** La longueur maximale d'un champ nullable du contrat. */
+function longueurDuContrat(champ: string): number {
+  const n = DEF_REPONSE.properties[champ]?.anyOf?.[0]?.maxLength;
+  if (n === undefined) throw new Error(`contrat : le champ ${champ} n'a pas de longueur.`);
+  return n;
+}
+
+/**
+ * Pour chaque statut, les champs que le contrat veut POSÉS (`true`) ou NULS (`false`) — lus dans
+ * ses `if`/`then`, jamais réécrits ici.
+ */
+const EXIGENCES_DU_STATUT: ReadonlyMap<string, Readonly<Record<string, boolean>>> = new Map(
+  DEF_REPONSE.allOf.map((r) => [
+    r.if.properties.statut.const,
+    Object.fromEntries(
+      Object.entries(r.then.properties).map(([champ, t]) => [champ, t.type === 'string'])
+    ),
+  ])
+);
 
 /** REQ-INT-014 : `statut: libre|attribuee|cliente`, lu dans le contrat. */
 export const STATUTS_D_ATTRIBUTION = DEF_REPONSE.properties.statut!.enum as readonly [
@@ -120,7 +147,11 @@ const formeDeLaReponse = z
     /** Opaque : un UUID ne peut porter ni un nom ni une adresse de courriel. */
     apporteurRef: z.string().regex(motifDuContrat('apporteurRef')).nullable(),
     /** Le prénom et l'initiale du nom : ni arobase ni chiffre (décision de Williams, 2026-10-01). */
-    nomAffichable: z.string().regex(motifDuContrat('nomAffichable')).nullable(),
+    nomAffichable: z
+      .string()
+      .max(longueurDuContrat('nomAffichable'))
+      .regex(motifDuContrat('nomAffichable'))
+      .nullable(),
   })
   .strict();
 
@@ -132,15 +163,19 @@ if (
 ) {
   throw new Error('api-entrante : la forme admise diverge des champs du contrat.');
 }
+if (STATUTS_D_ATTRIBUTION.some((st) => !EXIGENCES_DU_STATUT.has(st))) {
+  throw new Error('api-entrante : un statut du contrat n’a pas sa règle `if`/`then`.');
+}
 
 /**
- * Un « libre » ne porte ni échéance, ni référence, ni nom : c'est ce qui le rend identique à
- * « inconnu ».
+ * La cohérence du statut, telle que le contrat la pose : un « libre » ne porte ni échéance, ni
+ * référence, ni nom — c'est ce qui le rend identique à « inconnu » ; une « cliente » n'expose aucun
+ * porteur ; une « attribuee » porte les trois.
  */
-export const schemaReponseAttribution = formeDeLaReponse.refine(
-  (r) =>
-    r.statut !== 'libre' ||
-    (r.until === null && r.apporteurRef === null && r.nomAffichable === null)
+export const schemaReponseAttribution = formeDeLaReponse.refine((r) =>
+  Object.entries(EXIGENCES_DU_STATUT.get(r.statut)!).every(
+    ([champ, pose]) => (r[champ as keyof typeof r] !== null) === pose
+  )
 );
 export type ReponseAttribution = z.infer<typeof formeDeLaReponse>;
 
