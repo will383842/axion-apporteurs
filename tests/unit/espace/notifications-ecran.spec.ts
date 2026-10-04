@@ -14,7 +14,11 @@
  *      erreur, qui dit ce qui est sûr et quoi faire ;
  *   4. `premier_rang_libere`, TÉMOIN À DEUX FACES (consigne de la juriste, rattrapage 104) : une
  *      fenêtre posée affiche son jour, par `jourLimiteDeLaFenetre` ; une fenêtre NULLE n'affiche
- *      AUCUNE date (avant le premier envoi effectif du courriel, art. 20).
+ *      AUCUNE date (avant le premier envoi effectif du courriel, art. 20). La juriste a retenu
+ *      l'option (a) : tant que la fenêtre est NULLE, la carte N'APPARAÎT PAS dans la liste ;
+ *   5. LE LECTEUR DÉDIÉ (arbitrage de la coordination) : il ne lit que les notifications de
+ *      l'apporteur de la session, écarte celle dont l'attribution n'est pas la sienne, et ne rend
+ *      jamais d'identifiant d'attribution à l'écran.
  */
 import { describe, it, expect } from 'vitest';
 import { createElement } from 'react';
@@ -28,7 +32,11 @@ import {
 import { NOTIFICATIONS } from '../../../src/content/micro-copy/espace/notifications';
 import { ETATS_VIDES_ESPACE } from '../../../src/content/micro-copy/espace/etats-vides';
 import { BUDGETS_UX } from '../../../src/domain/seuils/ssot';
-import { entreeDeLEspace } from '../../../src/server/notifications/espace';
+import {
+  entreeDeLEspace,
+  notificationsDeLEspace,
+  type ClientDesNotifications,
+} from '../../../src/server/notifications/espace';
 
 const UNE: NotificationDeLEspace = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -127,8 +135,9 @@ describe('REQ-DM-006 — `premier_rang_libere` : la date limite, seulement quand
     expect(e!.route).toBe('/deposer');
   });
 
-  it('REQ-DM-006 : TÉMOIN — une fenêtre NULLE n’affiche AUCUNE date', () => {
+  it('REQ-DM-006 : TÉMOIN — une fenêtre NULLE n’affiche AUCUNE date : la carte n’apparaît pas (option (a) de la juriste)', () => {
     const e = entreeDeLEspace(ligne(null));
+    expect(e).toBeNull();
     const rendu = e === null ? '' : liste([e]);
     expect(rendu).not.toMatch(/\{dateLimite\}/);
     expect(rendu).not.toMatch(
@@ -140,5 +149,84 @@ describe('REQ-DM-006 — `premier_rang_libere` : la date limite, seulement quand
 
   it('REQ-DM-006 : une clé que l’espace ne rend pas est écartée, sans lever', () => {
     expect(entreeDeLEspace({ ...ligne(null), cle: 'cle_inconnue' })).toBeNull();
+  });
+});
+
+describe('REQ-UX-016 — le lecteur dédié : l’apporteur de la session, et des textes seulement', () => {
+  const MOI = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const AUTRE = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const FIN = new Date('2027-05-25T22:00:00.000Z');
+  type Ligne = {
+    id: string;
+    apporteurId: string;
+    cle: string;
+    creeAt: Date;
+    attribution: {
+      apporteurId: string;
+      raisonSociale: string | null;
+      siren: string;
+      fenetreRedeclarationFinAt: Date | null;
+    } | null;
+  };
+  const ligneDe = (id: string, apporteurDeLAttribution: string, fin: Date | null): Ligne => ({
+    id,
+    apporteurId: MOI,
+    cle: 'premier_rang_libere',
+    creeAt: new Date('2027-05-10T08:00:00.000Z'),
+    attribution: {
+      apporteurId: apporteurDeLAttribution,
+      raisonSociale: 'Garage Témoin',
+      siren: '552100554',
+      fenetreRedeclarationFinAt: fin,
+    },
+  });
+
+  /** Un faux client : il garde la requête et rend les lignes de l'apporteur demandé. */
+  function client(lignes: Ligne[]) {
+    const requetes: unknown[] = [];
+    const c = {
+      notificationEspace: {
+        findMany: async (args: { where: { apporteurId: string } }) => {
+          requetes.push(args);
+          return lignes
+            .filter((l) => l.apporteurId === args.where.apporteurId)
+            .map(({ apporteurId: _a, ...l }) => l);
+        },
+      },
+    } as unknown as ClientDesNotifications;
+    return { c, requetes };
+  }
+
+  it('REQ-UX-016 : la lecture porte l’apporteur de la session dans son filtre, et ne demande jamais la date de lecture', async () => {
+    const { c, requetes } = client([ligneDe('1', MOI, FIN)]);
+    await notificationsDeLEspace(c, MOI);
+    expect(requetes).toHaveLength(1);
+    const r = requetes[0] as { where: { apporteurId: string }; select: Record<string, unknown> };
+    expect(r.where.apporteurId).toBe(MOI);
+    expect(JSON.stringify(r.select)).not.toMatch(/lue/i);
+  });
+
+  it('REQ-UX-016 : une notification dont l’attribution est celle d’un autre apporteur est écartée', async () => {
+    const { c } = client([ligneDe('1', MOI, FIN), ligneDe('2', AUTRE, FIN)]);
+    const rendues = await notificationsDeLEspace(c, MOI);
+    expect(rendues.map((n) => n.id)).toEqual(['1']);
+  });
+
+  it('REQ-DM-006 : la liste ne contient la carte de `premier_rang_libere` qu’une fois la fenêtre posée', async () => {
+    const avant = await notificationsDeLEspace(client([ligneDe('1', MOI, null)]).c, MOI);
+    expect(avant).toEqual([]);
+    const apres = await notificationsDeLEspace(client([ligneDe('1', MOI, FIN)]).c, MOI);
+    expect(apres).toHaveLength(1);
+    expect(apres[0]!.titre).toContain('25 mai 2027');
+  });
+
+  it('REQ-UX-016 : l’écran ne reçoit que des textes — aucun identifiant d’attribution ni numéro d’entreprise', async () => {
+    const rendues = await notificationsDeLEspace(client([ligneDe('1', MOI, FIN)]).c, MOI);
+    expect(Object.keys(rendues[0]!).sort()).toEqual(
+      ['appel', 'corps', 'id', 'quand', 'route', 'titre'].sort()
+    );
+    const h = liste(rendues);
+    expect(h).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/);
+    expect(h).not.toContain('552100554');
   });
 });
