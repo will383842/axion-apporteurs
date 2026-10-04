@@ -16,8 +16,10 @@
  * Un plantage entre le relais et le commit n'écrit rien : le passage suivant renvoie. Le doublon
  * possible est un second courriel d'INFORMATION, jamais un délai raccourci.
  */
+import type { Prisma, PrismaClient } from '@prisma/client';
 import { SEUILS, TAILLES_DE_LOT } from '../../domain/seuils/ssot';
 import { MS_PAR_JOUR } from '../../domain/temps/calendrier-civil';
+import { GABARITS } from '../notifications/table-ssot';
 
 /** Une notification à porter par courriel, telle que le passage la lit. */
 export type NotificationAEnvoyer = {
@@ -83,4 +85,77 @@ export async function envoyerLesNotificationsDeLEspace(p: PortsDuPassage): Promi
     else bilan.envoyees += 1;
   }
   return bilan;
+}
+
+// ── l'adaptateur Prisma ─────────────────────────────────────────────────────────────────────────
+
+/** Les clés de la table SSOT qui portent un courriel : seules leurs notifications sont lues. */
+export const CLES_PAR_COURRIEL: readonly string[] = Object.entries(GABARITS)
+  .filter(([, ligne]) => (ligne.canaux as readonly string[]).includes('email'))
+  .map(([cle]) => cle);
+
+/** Ce que le passage ne sait pas faire seul : l'heure, le rendu du texte, l'envoi par l'émetteur. */
+export type GestesExternes = {
+  maintenant(): Date;
+  rendre(
+    tx: Prisma.TransactionClient,
+    n: NotificationAEnvoyer,
+    envoyeLe: Date
+  ): Promise<{ sujet: string; corps: string } | null>;
+  envoyer(
+    tx: Prisma.TransactionClient,
+    n: NotificationAEnvoyer,
+    texte: { sujet: string; corps: string }
+  ): Promise<IssueDeLEnvoi>;
+};
+
+/**
+ * Les ports du passage sur la base. Le lot ne prend que les notifications qui PORTENT leur événement
+ * (`evenement_id`, écrit avec la transition) : une notification écrite par un envoi synchrone, dont
+ * le courriel est déjà parti par un autre chemin, n'est jamais renvoyée.
+ */
+export function portsDuPassage(prisma: PrismaClient, externes: GestesExternes): PortsDuPassage {
+  return {
+    maintenant: externes.maintenant,
+    lireLot: async (take) => {
+      const lignes = await prisma.notificationEspace.findMany({
+        where: {
+          cle: { in: [...CLES_PAR_COURRIEL] },
+          evenementId: { not: null },
+          courriels: { none: { statut: { not: 'echec' } } },
+        },
+        orderBy: [{ creeAt: 'asc' }, { id: 'asc' }],
+        take,
+        select: { id: true, cle: true, apporteurId: true, attributionId: true, evenementId: true },
+      });
+      return lignes.map((l) => ({
+        ...l,
+        evenementId: l.evenementId === null ? null : l.evenementId.toString(),
+      }));
+    },
+    dansUneTransaction: (fn) =>
+      prisma.$transaction((tx) =>
+        fn({
+          verrouiller: async (n) => {
+            const pris = await tx.$queryRaw<{ id: string }[]>`
+              SELECT n.id::text AS id FROM notifications_espace n
+              WHERE n.id = ${n.id}::uuid
+                AND NOT EXISTS (
+                  SELECT 1 FROM courriels_envoyes c
+                  WHERE c.notification_espace_id = n.id AND c.statut <> 'echec'
+                )
+              FOR UPDATE SKIP LOCKED`;
+            return pris.length === 1;
+          },
+          rendre: (n, envoyeLe) => externes.rendre(tx, n, envoyeLe),
+          envoyer: (n, texte) => externes.envoyer(tx, n, texte),
+          poserLaFenetre: async (attributionId, finAt) => {
+            await tx.attribution.updateMany({
+              where: { id: attributionId, fenetreRedeclarationFinAt: null },
+              data: { fenetreRedeclarationFinAt: finAt },
+            });
+          },
+        })
+      ),
+  };
 }
