@@ -25,6 +25,7 @@ import {
 } from '../../src/server/deploiement/role-d-execution';
 import { NOMS_DES_SECRETS, kidDe } from '../../src/lib/env';
 import { clesPii } from '../../src/server/securite/pii';
+import { DUREES_AUTH } from '../../src/server/auth/durees';
 import { empreinteDeSessionConsole, tirerJeton } from '../../src/server/auth/lien-magique';
 import { transactionDeConsommationConsole } from '../../src/server/auth/lien-magique-depot';
 import { depotDeSessionsConsole, requireRole } from '../../src/server/roles/require-role';
@@ -560,21 +561,38 @@ describe('REQ-SEC-003 — SEC-30 : une seule session de console vivante par pers
     expect(await role(sAutre)).toBe('comptable');
   });
 
-  it('REQ-SEC-003 : TÉMOIN — une ouverture refusée (utilisateur désactivé) ne révoque rien', async () => {
+  it('REQ-SEC-003 : TÉMOIN — une ouverture refusée (utilisateur désactivé, ou invitation échue) ne révoque rien et n’active rien', async () => {
+    const sessions = (id: string) =>
+      base.prisma.sessionEspace.findMany({
+        where: { utilisateurConsoleId: id },
+        select: { revoqueAt: true },
+      });
     await tronquer();
-    const c = await utilisateur('comptable');
-    const s1 = await jetonDe(c);
+    const desactive = await utilisateur('comptable');
+    await jetonDe(desactive);
     await base.prisma.$executeRawUnsafe(
       'UPDATE utilisateurs_console SET desactive_at = clock_timestamp() WHERE id = $1::uuid',
-      c
+      desactive
     );
-    await ouvrir(c);
-    const lignes = await base.prisma.sessionEspace.findMany({
-      where: { utilisateurConsoleId: c },
-      select: { revoqueAt: true },
+    await ouvrir(desactive);
+    expect(await sessions(desactive)).toEqual([{ revoqueAt: null }]);
+
+    // Une invitation échue (non activée, invitée il y a le délai d'invitation) : refusée à
+    // utilisateurActif, avant l'activation et avant la révocation.
+    const echue = await utilisateur('comptable');
+    await jetonDe(echue);
+    await base.prisma.$executeRawUnsafe(
+      'UPDATE utilisateurs_console SET activee_at = NULL, invitee_at = $2 WHERE id = $1::uuid',
+      echue,
+      new Date(t0 - DUREES_AUTH.invitationConsoleMs.valeur)
+    );
+    await ouvrir(echue);
+    expect(await sessions(echue)).toEqual([{ revoqueAt: null }]);
+    const l = await base.prisma.utilisateurConsole.findUniqueOrThrow({
+      where: { id: echue },
+      select: { activeeAt: true },
     });
-    expect(lignes).toEqual([{ revoqueAt: null }]);
-    expect(s1).toBeTruthy();
+    expect(l.activeeAt).toBeNull();
   });
 
   it('REQ-SEC-003 : TÉMOIN — une session de l’ESPACE n’est jamais touchée par la rotation de la console', async () => {

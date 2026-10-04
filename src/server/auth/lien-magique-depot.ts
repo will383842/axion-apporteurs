@@ -268,18 +268,10 @@ function consommationConsoleSur(tx: Prisma.TransactionClient): TransactionDeCons
     async ouvrirSessionConsole(session) {
       const neuve = await tx.sessionEspace.create({ data: session, select: { id: true } });
       if (session.utilisateurConsoleId == null) return;
-      // SEC-30 (option (a) de la sécurité) : UNE session de console vivante par personne. Dans la
-      // transaction d'ouverture, les AUTRES sessions ouvertes du même utilisateur sont révoquées ;
-      // le filtre porte sur l'utilisateur de la console, jamais une session de l'espace n'est
-      // touchée. Le relèvement (step-up) en hérite : sa session neuve révoque l'ancienne.
-      await tx.sessionEspace.updateMany({
-        where: {
-          utilisateurConsoleId: session.utilisateurConsoleId,
-          revoqueAt: null,
-          id: { not: neuve.id },
-        },
-        data: { revoqueAt: session.creeAt },
-      });
+      // L'ordre (relecture de la sécurité) : `utilisateurActif` a déjà jugé, avant cette écriture ;
+      // puis l'activation ; puis seulement la révocation des autres sessions. Un compte refusé
+      // (désactivé, invitation échue) n'arrive jamais ici et ne révoque rien.
+      //
       // SEC-30 : la première connexion ACTIVE le compte invité, une seule fois, dans la transaction
       // qui ouvre la session ; le geste est journalisé, l'utilisateur étant son propre acteur.
       const { count } = await tx.utilisateurConsole.updateMany({
@@ -299,6 +291,18 @@ function consommationConsoleSur(tx: Prisma.TransactionClient): TransactionDeCons
             acteur: { par: 'utilisateur_console', id: session.utilisateurConsoleId },
           },
         });
+      // SEC-30 (option (a) de la sécurité) : UNE session de console vivante par personne. Dans la
+      // transaction d'ouverture, les AUTRES sessions ouvertes du même utilisateur sont révoquées ;
+      // le filtre porte sur l'utilisateur de la console, jamais une session de l'espace n'est
+      // touchée. Le relèvement (step-up) en hérite : sa session neuve révoque l'ancienne.
+      await tx.sessionEspace.updateMany({
+        where: {
+          utilisateurConsoleId: session.utilisateurConsoleId,
+          revoqueAt: null,
+          id: { not: neuve.id },
+        },
+        data: { revoqueAt: session.creeAt },
+      });
     },
   };
 }
