@@ -866,6 +866,81 @@ describe('REQ-DM-006 — l’écrivain des transitions, en processus (client sim
     expect(evenementsEcrits()[0]!.charge.lienInteret).toBe('declare');
   });
 
+  it('REQ-DM-006 : TÉMOIN — anteriorite_etablie, par le SYSTÈME : annulee, et l’événement porte le critère et le fait fondateur', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const { tx, mises } = txSimule([ligneDe({ statut: 'signee' })]);
+    const r = await transitionnerUneAttribution(tx, {
+      attributionId: ID,
+      transition: 'anteriorite_etablie',
+      critere: 'devis_signe',
+      fait: DEVIS,
+      acteur: { par: 'systeme' },
+      maintenant: MAINTENANT,
+    });
+    expect(r).toStrictEqual({ de: 'signee', vers: 'annulee' });
+    expect((mises[0] as { data: { statut: string } }).data.statut).toBe('annulee');
+    expect(evenementsEcrits()[0]!.charge).toMatchObject({
+      de: 'signee',
+      vers: 'annulee',
+      transition: 'anteriorite_etablie',
+      critere: 'devis_signe',
+      fait: DEVIS,
+      acteur: { par: 'systeme' },
+    });
+  });
+
+  it.each([
+    [
+      'un utilisateur de la console',
+      { par: 'utilisateur_console', id: '0190a5c0-0000-7000-8000-0000000000c1' },
+    ],
+    ['un apporteur', { par: 'apporteur', id: '0190a5c0-0000-7000-8000-0000000000a1' }],
+  ] as const)(
+    'REQ-DM-006 : TÉMOIN (sécurité) — anteriorite_etablie par %s : refusée, nommée, et RIEN n’est écrit',
+    async (_, acteur) => {
+      const { transitionnerUneAttribution } = await ecrivain();
+      const { tx, mises } = txSimule([ligneDe({ statut: 'active' })]);
+      const e = await transitionnerUneAttribution(tx, {
+        attributionId: ID,
+        transition: 'anteriorite_etablie',
+        critere: 'cliente',
+        fait: FACTURE,
+        acteur,
+        maintenant: MAINTENANT,
+      }).catch((x: unknown) => x);
+      expect((e as Error).name).toBe('ErreurTransitionAttribution');
+      expect((e as { code: string }).code).toBe('acteur_refuse');
+      expect(mises).toStrictEqual([]);
+      expect(evenementsEcrits()).toStrictEqual([]);
+    }
+  );
+
+  it.each([
+    ['sans critère', 'anteriorite_etablie', { fait: FACTURE }],
+    ['sans fait fondateur', 'anteriorite_etablie', { critere: 'cliente' }],
+    ['un critère sur une autre transition', 'perdue', { critere: 'cliente' }],
+    ['un fait sur une autre transition', 'perdue', { fait: FACTURE }],
+  ] as const)(
+    'REQ-DM-006 : TÉMOIN — %s : refusé avant tout verrou, nommé, et RIEN n’est écrit',
+    async (_, transition, extra) => {
+      const { transitionnerUneAttribution } = await ecrivain();
+      const { tx, mises, verrous } = txSimule([ligneDe({ statut: 'active' })]);
+      const demande: Parameters<typeof transitionnerUneAttribution>[1] = {
+        attributionId: ID,
+        transition,
+        ...extra,
+        acteur: { par: 'systeme' },
+        maintenant: MAINTENANT,
+      };
+      const e = await transitionnerUneAttribution(tx, demande).catch((x: unknown) => x);
+      expect((e as Error).name).toBe('ErreurTransitionAttribution');
+      expect((e as { code: string }).code).toBe('critere_incoherent');
+      expect(verrous).toStrictEqual([]);
+      expect(mises).toStrictEqual([]);
+      expect(evenementsEcrits()).toStrictEqual([]);
+    }
+  );
+
   it('REQ-DM-007 : les dates de la ligne passent au domaine et en reviennent, à la milliseconde', async () => {
     const { transitionnerUneAttribution } = await ecrivain();
     const confirmeeAt = new Date('2026-05-01T08:00:00.000Z');
