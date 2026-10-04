@@ -482,7 +482,11 @@ describe('REQ-SEC-003 — voie (b) de la lentille sécurité, en base réelle : 
       tirerIdentifiantDAppareil(),
       d('2026-10-03T13:40:00.000Z'),
       async () => {
-        await base.prisma.apporteur.update({ where: { id: a }, data: { statut: 'resilie' } });
+        // La base exige le motif d'une résiliation (`apporteurs_motif_si_resilie`).
+        await base.prisma.apporteur.update({
+          where: { id: a },
+          data: { statut: 'resilie', resiliationMotif: 'ordinaire_apporteur' },
+        });
       }
     );
     expect(connexion.resultat).toMatchObject({
