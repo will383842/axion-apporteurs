@@ -29,6 +29,7 @@ import {
 } from '../../../src/server/notifications/table-ssot';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
 import { TEXTES_DES_NOTIFICATIONS } from '../../../src/content/micro-copy/courriels/notifications';
+import { CONNEXION_CONSOLE } from '../../../src/content/micro-copy/console/connexion';
 import {
   ecrirePreference,
   notifier,
@@ -45,12 +46,24 @@ const ROUTES = [...readFileSync('docs/ESPACE-ROUTES.md', 'utf8').matchAll(/\|\s*
   (m) => m[1]!
 );
 
-const CONTEXTE = { registre: REGISTRE, routes: ROUTES, textes: TEXTES_DES_NOTIFICATIONS };
+// SEC-29 : la notification de la console se juge sur les routes et la micro-copie de la console.
+const ROUTES_CONSOLE = [
+  ...readFileSync('docs/CONSOLE-ROUTES.md', 'utf8').matchAll(/\|\s*`(\/[^`]*)`/g),
+].map((m) => m[1]!);
+const CONTEXTE = {
+  registre: REGISTRE,
+  routes: ROUTES,
+  textes: TEXTES_DES_NOTIFICATIONS,
+  console: {
+    routes: ROUTES_CONSOLE,
+    textes: { lien_magique_console: CONNEXION_CONSOLE.courriel },
+  },
+};
 const table = (): Record<string, LigneDeNotification> =>
   structuredClone(GABARITS) as Record<string, LigneDeNotification>;
 
 describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs règles', () => {
-  it('REQ-UX-016 : la table porte EXACTEMENT les neuf clés arrêtées par A02, et la micro-copie les mêmes', () => {
+  it('REQ-UX-016 : la table porte EXACTEMENT les dix clés arrêtées — les neuf de l’apporteur, dont la micro-copie porte les mêmes, et le lien de la console', () => {
     const attendues = [
       'attribution_liberee',
       'decision_attribution',
@@ -62,14 +75,27 @@ describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs rè
       'refus_declaration',
       'suspension_declarations',
     ];
-    expect(Object.keys(GABARITS).sort()).toEqual(attendues);
+    // SEC-29 : la dixième, destinée à la console ; ses textes vivent avec la console.
+    expect(Object.keys(GABARITS).sort()).toEqual([...attendues, 'lien_magique_console'].sort());
     expect(Object.keys(TEXTES_DES_NOTIFICATIONS).sort()).toEqual(attendues);
+    expect(GABARITS.lien_magique_console.destinataire).toBe('utilisateur_console');
     for (const c of attendues) expect(schemaGabarit.safeParse(c).success).toBe(true);
     expect(schemaGabarit.safeParse('relance_dormance').success).toBe(false);
   });
 
   it('REQ-UX-016 REQ-JUR-039 : la table réelle ne porte aucune faute', () => {
     expect(fautesDeLaTable(GABARITS, CONTEXTE)).toEqual([]);
+  });
+
+  it('REQ-UX-016 : TÉMOIN — la ligne de la console n’est jamais jugée sur l’espace : sans le contexte de la console, elle est une faute nommée', () => {
+    const sansConsole = {
+      registre: CONTEXTE.registre,
+      routes: CONTEXTE.routes,
+      textes: CONTEXTE.textes,
+    };
+    const fautes = fautesDeLaTable(GABARITS, sansConsole).map((f) => f.split(' :')[0]);
+    expect(fautes).toContain('contexte_console_absent');
+    expect(fautes).toContain('route_non_declaree');
   });
 
   it('REQ-UX-016 : les deux notions se lisent comme A02 les a arrêtées (obligatoire / délai)', () => {
@@ -81,6 +107,7 @@ describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs rè
     );
     expect(lu).toEqual({
       lien_magique: 'T/F',
+      lien_magique_console: 'T/F',
       depot_injoignable_j5: 'F/F',
       attribution_liberee: 'T/F',
       decision_attribution: 'T/F',
