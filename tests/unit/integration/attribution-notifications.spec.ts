@@ -13,7 +13,12 @@
  *     courte que la vraie.
  */
 import { describe, it, expect } from 'vitest';
-import { FUSEAU_DES_DELAIS, SEUILS, TAILLES_DE_LOT } from '../../../src/domain/seuils/ssot';
+import {
+  FAITS_ANOMALIE_CARACTERES_MAX,
+  FUSEAU_DES_DELAIS,
+  SEUILS,
+  TAILLES_DE_LOT,
+} from '../../../src/domain/seuils/ssot';
 import {
   fenetreOuverte,
   finDeLaFenetreDeRedeclaration,
@@ -1325,5 +1330,119 @@ describe('REQ-DM-004 — le texte de l’espace pour premier_rang_libere : la da
     expect(JSON.stringify(texteDuPremierRangDansLEspace('Atelier Dupont', fin))).toContain(
       '2 juin 2027'
     );
+  });
+});
+
+describe('REQ-DM-006 — les paramètres du motif, à l’ENVOI, selon l’arbitrage de la sécurité (REQ-SEC-022)', () => {
+  const ATT = '0190f3a0-0000-7000-8000-0000000000a1';
+  const APP = '0190f3a0-0000-7000-8000-0000000000b2';
+  const ANO = '0190f3a0-0000-7000-8000-0000000000d4';
+  const acteur = { par: 'utilisateur_console', id: '0190f3a0-0000-7000-8000-0000000000e5' };
+  const anomalie = {
+    de: 'provisoire',
+    vers: 'invalidee',
+    transition: 'anomalie_confirmee',
+    acteur,
+    lienInteret: 'non_declare',
+  };
+  const banc = (
+    faits: string,
+    attribution = { apporteurId: APP, raisonSociale: 'Atelier Dupont', siren: '123456789' }
+  ) => ({
+    tx: { attribution: { findUnique: async () => attribution } } as unknown as PrismaClient,
+    sources: {
+      chargeDuFait: async () => anomalie,
+      faitsDe: async () => ({ faits }),
+      composer: (_cle: string, t: { titre: string; appel: string; corps: string | null }) => ({
+        sujet: t.titre,
+        corps: [t.corps ?? '', t.appel].join(' | '),
+      }),
+    } satisfies SourcesDuRendu,
+  });
+  const n = {
+    cle: 'decision_attribution',
+    apporteurId: APP,
+    attributionId: ATT,
+    evenementId: '42',
+    anomalieId: ANO,
+  };
+  const ENVOI = new Date('2027-05-10T08:00:00.000Z');
+
+  it('REQ-DM-006 : {raison} est FERMÉ — une raison hors de la liste est refusée', () => {
+    expect(() =>
+      motifDeLaDecision({ transition: 'annulee_par_la_console', raison: 'inventee' as never })
+    ).toThrow(/motif_incoherent/);
+  });
+
+  it('REQ-DM-006 : {categorie} est FERMÉE — une catégorie hors de la liste est refusée, jamais un nom d’organisme', () => {
+    expect(() =>
+      motifDeLaDecision({
+        transition: 'annulee_par_la_console',
+        raison: 'entreprise_relevant_de_l_article_3_3_bis',
+        categorie: 'Le Grand Organisme' as never,
+      })
+    ).toThrow(/motif_incoherent/);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — {numeroEntreprise} a la forme fermée de neuf chiffres, sinon refusé', () => {
+    expect(entrepriseDeLaNotification(null, '123456789')).toContain('123456789');
+    for (const faux of ['12345678', '1234567890', '12345678A', '<b>12345</b>']) {
+      expect(() => entrepriseDeLaNotification(null, faux), faux).toThrow(
+        /numero_entreprise_invalide/
+      );
+    }
+  });
+
+  it('REQ-DM-006 : TÉMOIN — un numéro hors forme, sans raison sociale : le courriel ne part pas, motif NOMMÉ', async () => {
+    const b = banc('deux dépôts le même jour', {
+      apporteurId: APP,
+      raisonSociale: null as never,
+      siren: '12345678',
+    });
+    expect(await rendreDepuisLaBase(b.tx, n, ENVOI, b.sources)).toStrictEqual({
+      nonRendue: 'numero_entreprise_invalide',
+    });
+  });
+
+  it('REQ-DM-006 : TÉMOIN (texte piégé) — balise échappée, caractères de contrôle et retours à la ligne forcés retirés', async () => {
+    const piege = '<b onclick="x()">deux</b> dépôts' + String.fromCharCode(7) + '\r\nle même\tjour';
+    const b = banc(piege);
+    const r = await rendreDepuisLaBase(b.tx, n, ENVOI, b.sources);
+    const texte = JSON.stringify(r);
+    expect(texte).toContain('&lt;b onclick=&quot;x()&quot;&gt;deux&lt;/b&gt; dépôts le même jour');
+    expect(texte).not.toContain('<b');
+    expect(texte).not.toContain(String.fromCharCode(7));
+    expect('sujet' in r && r.corps.includes('\r')).toBe(false);
+  });
+
+  it('REQ-DM-006 : TÉMOIN (texte piégé) — un lien dans les faits : refusé, nommé', async () => {
+    const b = banc('voir https://ailleurs.test/page');
+    expect(await rendreDepuisLaBase(b.tx, n, ENVOI, b.sources)).toStrictEqual({
+      nonRendue: 'faits_refuses',
+    });
+  });
+
+  it('REQ-DM-006 : TÉMOIN — la longueur est revérifiée à l’envoi : la borne passe, un caractère de plus est refusé, jamais tronqué', async () => {
+    const max = FAITS_ANOMALIE_CARACTERES_MAX.valeur;
+    const pile = banc('d'.repeat(max));
+    expect('sujet' in (await rendreDepuisLaBase(pile.tx, n, ENVOI, pile.sources))).toBe(true);
+    const deTrop = banc('d'.repeat(max + 1));
+    expect(await rendreDepuisLaBase(deTrop.tx, n, ENVOI, deTrop.sources)).toStrictEqual({
+      nonRendue: 'faits_refuses',
+    });
+  });
+
+  it('REQ-DM-006 : TÉMOIN — la longueur se compte en points de code : 1 000 émojis (2 000 unités UTF-16) partent entiers', async () => {
+    const max = FAITS_ANOMALIE_CARACTERES_MAX.valeur;
+    const emojis = String.fromCodePoint(0x1f600).repeat(max);
+    expect(emojis.length).toBe(2 * max);
+    const b = banc(emojis);
+    const r = await rendreDepuisLaBase(b.tx, n, ENVOI, b.sources);
+    expect('sujet' in r && r.corps.includes(emojis)).toBe(true);
+  });
+
+  it('REQ-DM-006 : la borne de la SSOT est celle de la juriste : 1 000, comptés en points de code', () => {
+    expect(FAITS_ANOMALIE_CARACTERES_MAX.valeur).toBe(1000);
+    expect(FAITS_ANOMALIE_CARACTERES_MAX.unite).toBe('points_de_code');
   });
 });
