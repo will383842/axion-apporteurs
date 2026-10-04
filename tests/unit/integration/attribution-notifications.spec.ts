@@ -35,6 +35,7 @@ import {
 import {
   ENTREPRISE_DE_REPLI,
   FAITS_NON_CONSERVES,
+  MOIS_EN_TOUTES_LETTRES,
   LIBELLES_DES_CATEGORIES,
   MOTIFS_DES_DECISIONS,
   RAISONS_D_ANNULATION,
@@ -1213,5 +1214,87 @@ describe('REQ-UX-016 — les trois sources du rendu : la charge, les faits, la c
     expect(
       composerLeCourriel('decision_attribution', { titre: 'T', appel: 'A', corps: null }, url)
     ).toEqual({ sujet: 'T', corps: 'A' });
+  });
+});
+
+describe('REQ-DM-004 — UNE heure par notification : le texte et la fenêtre disent la même date (juriste)', () => {
+  // 23 h 59 min 59 s à Paris (heure d'été, UTC+2) : un relais qui dure deux secondes passe minuit.
+  const AVANT_MINUIT = new Date('2027-05-10T21:59:59.000Z');
+  const APRES_MINUIT = new Date('2027-05-10T22:00:01.000Z');
+
+  it('REQ-DM-004 : TÉMOIN — le passage lit l’heure UNE fois par notification, et la donne au rendu ET à l’émetteur', async () => {
+    const heures = [AVANT_MINUIT, APRES_MINUIT];
+    let lues = 0;
+    const vus: { rendu?: string; envoi?: string } = {};
+    const fenetres: Date[] = [];
+    const p: PortsDuPassage = {
+      maintenant: () => heures[Math.min(lues++, heures.length - 1)]!,
+      lireLot: async () => [notif('n1', 'premier_rang_libere')],
+      dansUneTransaction: async (fn) =>
+        fn({
+          verrouiller: async () => true,
+          rendre: async (_n, envoyeLe) => {
+            vus.rendu = envoyeLe.toISOString();
+            return { sujet: 's', corps: 'c' };
+          },
+          envoyer: async (_n, _t, envoyeLe) => {
+            vus.envoi = envoyeLe.toISOString();
+            return { statut: 'envoye', envoyeAt: envoyeLe };
+          },
+          poserLaFenetre: async (_a, finAt) => {
+            fenetres.push(finAt);
+          },
+        }),
+    };
+    await envoyerLesNotificationsDeLEspace(p);
+    expect(lues).toBe(1);
+    expect(vus).toEqual({ rendu: AVANT_MINUIT.toISOString(), envoi: AVANT_MINUIT.toISOString() });
+    // Le jour de la fenêtre est celui que le texte affiche.
+    const jour = jourLimiteDeLaFenetre(fenetres[0]!.getTime());
+    expect(
+      parametresDeLaNotification('premier_rang_libere', { entreprise: 'E', envoyeLe: AVANT_MINUIT })
+        .dateLimite
+    ).toBe(`${jour.jour} ${MOIS_EN_TOUTES_LETTRES[jour.mois - 1]} ${jour.annee}`);
+  });
+
+  it('REQ-DM-004 : TÉMOIN — un relais qui dure au-delà de minuit : le courriel consigné porte l’heure DONNÉE, pas celle d’après le relais', async () => {
+    let horloge = AVANT_MINUIT;
+    const lignes: LigneCourriel[] = [];
+    const tx = {
+      courrielEnvoye: {
+        create: async (q: { data: LigneCourriel }) => {
+          lignes.push(q.data);
+          return q.data;
+        },
+      },
+      suppressionCourriel: { findUnique: async () => null },
+    } as unknown as PrismaClient;
+    const env: Record<string, string> = { NODE_ENV: 'test' };
+    for (const nom of NOMS_DES_SECRETS) env[nom] = randomBytes(32).toString('hex');
+    const envoyer = envoyerParLEmetteur(
+      {
+        configuration: { expediteur: 'camille@envoi.partners.test', dmarcVerifie: true },
+        relais: {
+          async envoyer() {
+            horloge = APRES_MINUIT; // le relais « dure » : l'horloge du monde a passé minuit
+            return { messageId: 'msg-1' };
+          },
+        },
+        cles: clesPii(env),
+        nouvelId: () => '0190f3a0-0000-7000-8000-00000000c0c0',
+      },
+      async () => 'destinataire@envoi.partners.test'
+    );
+    const issue = await envoyer(
+      tx,
+      notif('0190f3a0-0000-7000-8000-00000000b0b0', 'premier_rang_libere', {
+        apporteurId: '0190f3a0-0000-7000-8000-00000000a0a0',
+      }),
+      { sujet: 's', corps: 'c' },
+      AVANT_MINUIT
+    );
+    expect(horloge).toEqual(APRES_MINUIT);
+    expect(issue).toEqual({ statut: 'envoye', envoyeAt: AVANT_MINUIT });
+    expect(lignes[0]).toMatchObject({ demandeAt: AVANT_MINUIT, envoyeAt: AVANT_MINUIT });
   });
 });
