@@ -42,6 +42,8 @@ export const TACHES = {
   notifications_espace_envoyer: { req: 'REQ-UX-016' },
   /** DM-59 — l'effacement, à échéance, de la valeur d'une rectification demandée par le contact. */
   droits_contact_purger: { req: 'REQ-JUR-065' },
+  /** DM-60 — l'anonymisation, cinq ans après sa clôture, de la trace d'une demande de droit du contact. */
+  droits_contact_anonymiser: { req: 'REQ-JUR-065' },
   /** SEC-55 — la purge des appareils connus, une durée de session après leur dernière vue. */
   appareils_purger: { req: 'REQ-SEC-003' },
   /** SEC-58 — la purge, à échéance, du journal des accès à la console. */

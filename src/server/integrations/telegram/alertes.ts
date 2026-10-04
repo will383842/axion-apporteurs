@@ -131,12 +131,16 @@ export const CATEGORIES_ALERTE = [
   'notification_non_rendue',
 ] as const;
 
-/** Les genres d'une alerte de réconciliation : ceux des signaux de `reconcilier` (INT-T08-P). */
+/**
+ * Les genres d'une alerte de réconciliation : ceux des signaux de `reconcilier` (INT-T08-P), et
+ * l'écart de sommes de `passageDesSommes` (INT-T73-P), qui ne porte que son NOMBRE.
+ */
 export const GENRES_RECONCILIATION = [
   'relecture_echouee',
   'rejeu_echoue',
   'trou_rattrape',
   'relecture_bornee',
+  'ecart_de_sommes',
 ] as const;
 
 /** La forme d'un motif de réconciliation : un code en minuscules (`statut_503`), rien d'autre. */
