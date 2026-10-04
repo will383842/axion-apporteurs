@@ -12,7 +12,7 @@
  * `apporteur-matrice-et-statuts.spec.ts` ; ce fichier tient le verrou lexical, avec son contre-témoin.
  */
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { MOTIFS_RESILIATION } from '../../../src/domain/apporteur/statut';
 
 // La garde d'acceptation (SEC-53) est hors du sujet ici : elle passe, pour que seul le niveau juge.
@@ -1226,5 +1226,39 @@ describe('REQ-SEC-032 — la garde de l’appareil refuse la lecture', () => {
       motif: 'lecture_seule',
     });
     expect(lus).toStrictEqual([]);
+  });
+});
+
+/**
+ * La sécurité (#703, critère 2) : TÉMOIN STATIQUE — tout fichier `'use server'` de l'espace passe par
+ * `actionEspace` ou par une garde qui juge le niveau (`exigerSessionRelevee`, `exigerAppareilConfirme`),
+ * sinon il rougit. Seule exemption NOMMÉE : la connexion, qui OUVRE une session au lieu d'en porter
+ * une (demande et consommation du lien).
+ */
+describe('REQ-SEC-032 — aucune action serveur de l’espace n’échappe au jugement du niveau', () => {
+  const GARDES = /\b(?:actionEspace|exigerSessionRelevee|exigerAppareilConfirme)\(/;
+  const EXEMPTIONS: Record<string, string> = {
+    'src/app/(espace)/connexion/actions.ts':
+      'la connexion ouvre la session (lien et code) : aucune session à juger',
+  };
+
+  function fichiersDe(dossier: string): string[] {
+    return readdirSync(dossier).flatMap((nom) => {
+      const chemin = `${dossier}/${nom}`;
+      return statSync(chemin).isDirectory() ? fichiersDe(chemin) : [chemin];
+    });
+  }
+
+  it('REQ-SEC-032 : TÉMOIN — chaque fichier « use server » de l’espace juge le niveau, ou est une exemption nommée', () => {
+    const actions = fichiersDe('src/app/(espace)').filter(
+      (f) => /\.tsx?$/.test(f) && /^\s*['"]use server['"]/m.test(readFileSync(f, 'utf8'))
+    );
+    expect(actions.length).toBeGreaterThan(0);
+    for (const f of actions) {
+      if (Object.hasOwn(EXEMPTIONS, f)) continue;
+      expect(readFileSync(f, 'utf8'), f).toMatch(GARDES);
+    }
+    // Chaque exemption existe encore, et reste une action serveur : une exemption morte rougit.
+    for (const f of Object.keys(EXEMPTIONS)) expect(actions, f).toContain(f);
   });
 });
