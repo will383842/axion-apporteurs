@@ -153,3 +153,101 @@ describe('REQ-DM-043 — l’information de l’annulation, selon le porteur', (
     expect(canalDInformation('conseiller')).toBe('console');
   });
 });
+
+/**
+ * DM-67, condition (c) de la sécurité : l'annulation porte la RÉFÉRENCE de son fait fondateur (devis
+ * ou facture, et sa date). La règle rend le critère AVEC ce fait : pour « cliente », la DERNIÈRE
+ * facture antérieure au dépôt ; pour « devis_signe », le devis signé non entièrement facturé le plus
+ * récemment signé ; pour « devis », le devis émis le plus récemment avant le dépôt. Un fait sans
+ * identifiant ne fonde rien : jamais une annulation qu'on ne saurait citer.
+ */
+describe('REQ-JUR-007 — le fait fondateur de l’annulation', () => {
+  const avecIds = (
+    factures: { id: string | null; at: Date }[],
+    devisIds: { id: string | null; devis: ReturnType<typeof devis> }[]
+  ) => ({
+    facturesAt: factures.map((f) => f.at),
+    devis: devisIds.map((d) => d.devis),
+    factures,
+    devisIdentifies: devisIds,
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — « cliente » est fondée par la DERNIÈRE facture antérieure au dépôt, datée par elle', async () => {
+    const { fondementAuDepot } =
+      await import('../../../src/domain/entreprise-connue/anteriorite-retroactive');
+    const vieille = { id: 'f-vieille', at: ms(DEPOT, -3 * 86_400_000) };
+    const recente = { id: 'f-recente', at: ms(DEPOT, -1) };
+    const apres = { id: 'f-apres', at: ms(DEPOT, 1) };
+    expect(fondementAuDepot(avecIds([vieille, apres, recente], []), DEPOT)).toEqual({
+      critere: 'cliente',
+      fait: { nature: 'facture', id: 'f-recente', le: recente.at },
+    });
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — « devis » est fondé par le devis émis le plus récemment AVANT le dépôt', async () => {
+    const { fondementAuDepot } =
+      await import('../../../src/domain/entreprise-connue/anteriorite-retroactive');
+    const ancien = devis(ms(DEPOT, -5 * 86_400_000));
+    const recent = devis(ms(DEPOT, -1));
+    const apres = devis(ms(DEPOT, 1));
+    expect(
+      fondementAuDepot(
+        avecIds(
+          [],
+          [
+            { id: 'd-ancien', devis: ancien },
+            { id: 'd-apres', devis: apres },
+            { id: 'd-recent', devis: recent },
+          ]
+        ),
+        DEPOT
+      )
+    ).toEqual({ critere: 'devis', fait: { nature: 'devis', id: 'd-recent', le: recent.emisAt } });
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — « devis_signe » est fondé par le devis signé non entièrement facturé, daté de sa SIGNATURE', async () => {
+    const { fondementAuDepot } =
+      await import('../../../src/domain/entreprise-connue/anteriorite-retroactive');
+    const signe = devis(ms(DEPOT, -10 * 86_400_000), {
+      signeAt: ms(DEPOT, -2 * 86_400_000),
+      montant: 100_000,
+      factureAvantLeDepot: 0,
+    });
+    const emisSeul = devis(ms(DEPOT, -1));
+    expect(
+      fondementAuDepot(
+        avecIds(
+          [],
+          [
+            { id: 'd-signe', devis: signe },
+            { id: 'd-emis', devis: emisSeul },
+          ]
+        ),
+        DEPOT
+      )
+    ).toEqual({
+      critere: 'devis_signe',
+      fait: { nature: 'devis', id: 'd-signe', le: signe.signeAt },
+    });
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — sans antériorité, rien ; un fait fondateur SANS identifiant ne fonde rien', async () => {
+    const { fondementAuDepot } =
+      await import('../../../src/domain/entreprise-connue/anteriorite-retroactive');
+    expect(fondementAuDepot(avecIds([], []), DEPOT)).toBeNull();
+    expect(fondementAuDepot(avecIds([{ id: null, at: ms(DEPOT, -1) }], []), DEPOT)).toBeNull();
+    expect(
+      fondementAuDepot(avecIds([], [{ id: null, devis: devis(ms(DEPOT, -1)) }]), DEPOT)
+    ).toBeNull();
+  });
+
+  it('REQ-JUR-007 : le critère du fondement est TOUJOURS celui de critereAuDepot', async () => {
+    const { fondementAuDepot } =
+      await import('../../../src/domain/entreprise-connue/anteriorite-retroactive');
+    const faits = avecIds(
+      [{ id: 'f', at: ms(DEPOT, -1) }],
+      [{ id: 'd', devis: devis(ms(DEPOT, -1)) }]
+    );
+    expect(fondementAuDepot(faits, DEPOT)?.critere).toBe(critereAuDepot(faits, DEPOT));
+  });
+});
