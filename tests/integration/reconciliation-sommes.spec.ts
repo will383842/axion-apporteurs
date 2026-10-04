@@ -32,6 +32,10 @@ import {
 } from '../../src/server/integrations/axionia/reconciliation-sommes';
 import { RECOUVREMENT_SEQUENCES } from '../../src/server/integrations/axionia/reconciliation';
 import type { PrismaClient } from '@prisma/client';
+import {
+  GENRES_RECONCILIATION,
+  messageDAlerte,
+} from '../../src/server/integrations/telegram/alertes';
 
 const MAINTENANT = new Date('2026-10-03T06:00:00.000Z');
 const JOUR = 24 * 60 * 60 * 1000;
@@ -277,5 +281,19 @@ describe('REQ-INT-013 — les ports en base lisent la source axion-ia seule', ()
     const recus = await p.evenementsRecus(['paiement.recu', 'paiement.rembourse']);
     expect(recus).toEqual([{ eventId: 'e1', eventType: 'paiement.recu', charge: {} }]);
     expect(await p.sirensAttribues()).toEqual(new Set([SIREN_A, SIREN_B]));
+  });
+});
+
+describe('REQ-INT-013 — l’alerte d’un écart de sommes ne montre que son nombre', () => {
+  it('REQ-INT-013 : TÉMOIN — ecart_de_sommes est un genre d’alerte de la réconciliation, rendu avec son seul nombre', () => {
+    expect(GENRES_RECONCILIATION).toContain('ecart_de_sommes');
+    const id = '00000000-0000-4000-8000-000000000073';
+    const message = messageDAlerte('alerte', {
+      categorie: 'reconciliation',
+      id,
+      reconciliation: { genre: 'ecart_de_sommes', nombre: 2 },
+    });
+    expect(message).toBe(`[reconciliation] objet ${id} · réconciliation ecart_de_sommes · 2`);
+    expect(message).not.toContain(SIREN_A);
   });
 });
