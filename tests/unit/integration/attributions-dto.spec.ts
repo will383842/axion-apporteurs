@@ -112,7 +112,8 @@ describe('REQ-INT-014 — la forme admise par la frontière est dérivée du con
       nomAffichable: 'Paul D.',
     };
     expect(schemaReponseAttribution.safeParse({ ...juste, email: 'p@x.test' }).success).toBe(false);
-    const { nomAffichable: _n, ...sansNom } = juste;
+    const sansNom: Partial<typeof juste> = { ...juste };
+    delete sansNom.nomAffichable;
     expect(schemaReponseAttribution.safeParse(sansNom).success).toBe(false);
   });
 
