@@ -150,7 +150,7 @@ describe('REQ-INT-014 — le contrat juge seul la réponse : motif du nom et coh
     ['libre avec une échéance', { statut: 'libre', ...nuls, until: '2027-03' }, false],
     ['libre avec un nom', { statut: 'libre', ...nuls, nomAffichable: 'Paul D.' }, false],
     ['attribuée, les trois posés', attribuee, true],
-    ['attribuée sans échéance', { ...attribuee, until: null }, false],
+    ['attribuée, fin pas encore fixée (A02, 5981872875)', { ...attribuee, until: null }, true],
     ['attribuée sans référence', { ...attribuee, apporteurRef: null }, false],
     ['attribuée sans nom lisible (A02, 5981837236)', { ...attribuee, nomAffichable: null }, true],
     [
@@ -336,9 +336,9 @@ describe('REQ-INT-014 — `until`, le mois à Paris de la fin de fenêtre, sinon
     expect(r).toMatchObject({ until: '2027-03' });
   });
 
-  it('REQ-INT-014 : sans fin de fenêtre, la péremption', async () => {
+  it('REQ-INT-014 : CAS D’INCOHÉRENCE NOMMÉ (la machine ne le produit pas) — sans fin de fenêtre, la péremption fait l’échéance', async () => {
     const r = await lire(
-      parApporteur('provisoire', {
+      parApporteur('active', {
         fenetreFinAt: null,
         peremptionAt: new Date('2026-12-01T12:00:00Z'),
       })
@@ -353,13 +353,30 @@ describe('REQ-INT-014 — `until`, le mois à Paris de la fin de fenêtre, sinon
     expect(r).toMatchObject({ until: '2027-03' });
   });
 
-  it('REQ-INT-014 : ni fin de fenêtre ni péremption — null, jamais une date inventée, et la frontière la refuse (503)', async () => {
-    const r = await lire(parApporteur('active', { fenetreFinAt: null, peremptionAt: null }))
-      .lecture;
-    expect(r).toMatchObject({ until: null });
-    // Une `attribuee` porte ses trois champs (`if`/`then` du contrat) : la lecture est rendue telle
-    // quelle, et la frontière la juge non conforme — échec fermé, jamais « libre ».
-    expect(schemaReponseAttribution.safeParse(r).success).toBe(false);
+  it('REQ-INT-014 : une `provisoire` n’a jamais de fin — `attribuee`, `until` nul, AUCUNE alerte (A02, 5981872875)', async () => {
+    const l = lire(parApporteur('provisoire', { fenetreFinAt: null, peremptionAt: null }));
+    const r = await l.lecture;
+    expect(r).toMatchObject({ statut: 'attribuee', until: null, nomAffichable: 'Paul D.' });
+    expect(schemaReponseAttribution.safeParse(r).success).toBe(true);
+    expect(l.signaler).not.toHaveBeenCalled();
+  });
+
+  it.each(['active', 'rdv_pris', 'proposition', 'signee', 'figee_resiliation'])(
+    'REQ-INT-014 : `%s` sans aucune fin — incohérence : 200, `until` nul, jamais une date inventée, et l’alerte `echeance_indisponible` de charge fermée `{ etat }`',
+    async (etat) => {
+      const l = lire(parApporteur(etat, { fenetreFinAt: null, peremptionAt: null }));
+      const r = await l.lecture;
+      expect(r).toMatchObject({ statut: 'attribuee', until: null });
+      expect(schemaReponseAttribution.safeParse(r).success).toBe(true);
+      expect(l.signaler).toHaveBeenCalledTimes(1);
+      expect(l.signaler).toHaveBeenCalledWith({ genre: 'echeance_indisponible', etat });
+    }
+  );
+
+  it('REQ-INT-014 : une `cliente` n’a pas d’échéance par règle — aucune alerte d’échéance', async () => {
+    const l = lire(parApporteur('convertie', { fenetreFinAt: null, peremptionAt: null }));
+    await l.lecture;
+    expect(l.signaler).not.toHaveBeenCalled();
   });
 });
 
@@ -583,6 +600,23 @@ describe('REQ-INT-014 — le lecteur de production : clés relues à chaque appe
     });
     await lecteurDeProduction(SIREN_TEMOIN);
     expect(prod.constructions).toBe(1);
+  });
+
+  it('REQ-INT-014 : en production, l’alerte est UNE ligne sur stderr — le genre et sa charge fermée, rien d’autre', async () => {
+    environnement(CLE_REF.APPORTEUR_REF_KEY);
+    const ecrit = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    try {
+      prod.ligne = parApporteur('active', { fenetreFinAt: null, peremptionAt: null });
+      await lecteurDeProduction(SIREN_TEMOIN);
+      prod.ligne = parConseiller('active', 'Paul');
+      await lecteurDeProduction(SIREN_TEMOIN);
+      expect(ecrit.mock.calls.map((c) => c[0])).toEqual([
+        '{"alerte":"echeance_indisponible","etat":"active"}\n',
+        '{"alerte":"nom_affichable_indisponible","nombre":1}\n',
+      ]);
+    } finally {
+      ecrit.mockRestore();
+    }
   });
 
   it('REQ-INT-014 : la clé absente — la lecture lève (503), jamais une référence sous une clé vide', async () => {

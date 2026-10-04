@@ -203,16 +203,26 @@ describe('REQ-INT-014 — le lecteur de l’API 1, sur la base, sous le rôle d�
     expect(JSON.stringify(r)).not.toContain(apporteurId);
   });
 
-  it('REQ-INT-014 : sans fin de fenêtre, until est le mois de la péremption ; une convertie rend cliente, sans until, le porteur nommé', async () => {
+  it('REQ-INT-014 : une active confirmée (fenêtre et péremption) rend le mois de la fenêtre ; une provisoire n’a pas de fin ; une convertie rend cliente, sans until, le porteur nommé', async () => {
     const apporteurId = await unApporteur('Paul', 'Durand');
-    const provisoire = unSiren();
+    const active = unSiren();
     await uneAttribution(base.prisma, {
-      siren: provisoire,
-      statut: 'provisoire',
+      siren: active,
+      statut: 'active',
       apporteurId,
+      fenetreFinAt: new Date('2027-04-03T08:00:00.000Z'),
       peremptionAt: new Date('2027-01-10T12:00:00.000Z'),
     });
-    expect(await lecteurDeLaBase(app, DEPS)(provisoire)).toMatchObject({ until: '2027-01' });
+    expect(await lecteurDeLaBase(app, DEPS)(active)).toMatchObject({ until: '2027-04' });
+
+    // Une `provisoire` n'a jamais de fin (machine.ts) : `attribuee`, `until` nul, aucune alerte.
+    const provisoire = unSiren();
+    await uneAttribution(base.prisma, { siren: provisoire, statut: 'provisoire', apporteurId });
+    const signaux: unknown[] = [];
+    expect(
+      await lecteurDeLaBase(app, { ...DEPS, signaler: (x) => signaux.push(x) })(provisoire)
+    ).toMatchObject({ statut: 'attribuee', until: null, nomAffichable: 'Paul D.' });
+    expect(signaux).toEqual([]);
 
     const convertie = unSiren();
     await uneAttribution(base.prisma, {

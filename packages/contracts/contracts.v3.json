@@ -16,7 +16,7 @@
       "type": "object"
     },
     "api_attributions_reponse": {
-      "$comment": "Réponse 200, fermée. `libre` : `until`, `apporteurRef` et `nomAffichable` nuls (`allOf`), la même réponse pour un SIREN inconnu, au même instant ; `attribuee` : `until` et `apporteurRef` posés ; `cliente` : `apporteurRef` posé, `until` nul. `nomAffichable` est nul quand le porteur n’a pas de nom lisible. `apporteurRef` est opaque, de même forme pour un apporteur et pour un conseiller salarié (W19) ; `nomAffichable` est le prénom et l’initiale du nom du porteur, sans mention de rôle (décisions de Williams du 2026-10-01) — jamais e-mail, téléphone, identifiant ni adresse. Côté axion-ia, le nom ne s’affiche qu’à qui crée ou lit un devis, n’entre dans aucun journal ni rapport d’erreur, ni dans aucun document ou message au client, et n’est conservé que le temps du cache (5 minutes).",
+      "$comment": "Réponse 200, fermée. `libre` : `until`, `apporteurRef` et `nomAffichable` nuls (`allOf`), la même réponse pour un SIREN inconnu, au même instant ; `attribuee` : `apporteurRef` posé, et `until` nul signifie « attribuée, fin pas encore fixée (attribution non confirmée) » — jamais `libre` ; `cliente` : `apporteurRef` posé, `until` nul. `nomAffichable` est nul quand le porteur n’a pas de nom lisible. `apporteurRef` est opaque, de même forme pour un apporteur et pour un conseiller salarié (W19) ; `nomAffichable` est le prénom et l’initiale du nom du porteur, sans mention de rôle (décisions de Williams du 2026-10-01) — jamais e-mail, téléphone, identifiant ni adresse. Côté axion-ia, le nom ne s’affiche qu’à qui crée ou lit un devis, n’entre dans aucun journal ni rapport d’erreur, ni dans aucun document ou message au client, et n’est conservé que le temps du cache (5 minutes).",
       "additionalProperties": false,
       "allOf": [
         {
@@ -58,9 +58,6 @@
           "then": {
             "properties": {
               "apporteurRef": {
-                "type": "string"
-              },
-              "until": {
                 "type": "string"
               }
             }

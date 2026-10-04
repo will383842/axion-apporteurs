@@ -256,6 +256,7 @@ describe('REQ-INT-014 — la forme de la réponse, jugée par le schéma', () =>
     ['libre, nue', { statut: 'libre', until: null, apporteurRef: null, nomAffichable: null }],
     ['attribuée, prénom composé', { ...juste, nomAffichable: 'Jean-Paul D.' }],
     ['attribuée, nom illisible (A02)', { ...juste, nomAffichable: null }],
+    ['attribuée, fin pas encore fixée (A02)', { ...juste, until: null }],
   ])('acceptée : %s', (_q, r) => {
     expect(schemaReponseAttribution.safeParse(r).success).toBe(true);
   });
@@ -290,7 +291,6 @@ describe('REQ-INT-014 — la forme de la réponse, jugée par le schéma', () =>
       'cliente sans référence',
       { statut: 'cliente', until: null, apporteurRef: null, nomAffichable: 'Paul D.' },
     ],
-    ['attribuée sans échéance', { ...juste, until: null }],
     ['attribuée sans référence', { ...juste, apporteurRef: null }],
     ['le nom entier au lieu de l’initiale', { ...juste, nomAffichable: 'Paul Durand' }],
     ['un prénom seul', { ...juste, nomAffichable: 'Paul' }],

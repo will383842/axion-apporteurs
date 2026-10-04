@@ -307,7 +307,9 @@ export const API_ATTRIBUTIONS: ApiDuContrat = {
       // statut et la référence passent toujours.
       allOf: [
         siLeStatut('libre', { until: 'nul', apporteurRef: 'nul', nomAffichable: 'nul' }),
-        siLeStatut('attribuee', { until: 'pose', apporteurRef: 'pose' }),
+        // A02 (5981872875) : `until` nul = attribuée, fin pas encore fixée (attribution non
+        // confirmée) — jamais lu comme `libre`.
+        siLeStatut('attribuee', { apporteurRef: 'pose' }),
         // Décision B de Williams : « Apportée par Paul » sur la fiche client — une `cliente` a un
         // porteur ; elle n'a plus d'échéance.
         siLeStatut('cliente', { until: 'nul', apporteurRef: 'pose' }),
@@ -315,7 +317,8 @@ export const API_ATTRIBUTIONS: ApiDuContrat = {
       $comment:
         'Réponse 200, fermée. `libre` : `until`, `apporteurRef` et `nomAffichable` ' +
         'nuls (`allOf`), la même réponse pour un SIREN inconnu, au même instant ; `attribuee` : ' +
-        '`until` et `apporteurRef` posés ; `cliente` : `apporteurRef` posé, `until` nul. ' +
+        '`apporteurRef` posé, et `until` nul signifie « attribuée, fin pas encore fixée (attribution ' +
+        'non confirmée) » — jamais `libre` ; `cliente` : `apporteurRef` posé, `until` nul. ' +
         '`nomAffichable` est nul quand le porteur n’a pas de nom lisible. `apporteurRef` est opaque, de même forme ' +
         'pour un apporteur et pour un conseiller salarié (W19) ; `nomAffichable` est le prénom et ' +
         'l’initiale du nom du porteur, sans mention de rôle (décisions de Williams du 2026-10-01) — ' +

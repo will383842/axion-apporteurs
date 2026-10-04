@@ -14,7 +14,8 @@
  *     client) : `apporteurRef` et `nomAffichable`, et `until` nul (conditions d'A02, PR 710,
  *     commentaire 5981840348, posées en `if`/`then` au contrat) ;
  *   — `until` est le mois, à Paris, de la fin de fenêtre si elle est posée, sinon de la
- *     péremption, pour une `attribuee` ;
+ *     péremption, pour une `attribuee` ; nul pour une `provisoire`, qui n'a pas encore de fin, et
+ *     nul avec l'alerte `echeance_indisponible` (`{ etat }`) pour un état confirmé sans fin ;
  *   — un porteur sans nom lisible rend `nomAffichable` nul et lève l'alerte technique
  *     `nom_affichable_indisponible` (`{ genre, nombre }`, rien d'autre) ;
  *   — `apporteurRef` est un UUID DÉRIVÉ par HMAC, sous une clé dédiée, de l'identifiant du porteur :
@@ -72,10 +73,10 @@ const FORME_NOM = new RegExp(NOM_DU_CONTRAT.pattern, 'u');
  * L'alerte technique d'un nom indisponible (A02, PR 710, 5981840348) : son genre et un NOMBRE, rien d'autre —
  * ni SIREN, ni nom, ni identifiant.
  */
-export type SignalDuLecteur = {
-  readonly genre: 'nom_affichable_indisponible';
-  readonly nombre: number;
-};
+export type SignalDuLecteur =
+  | { readonly genre: 'nom_affichable_indisponible'; readonly nombre: number }
+  /** A02 (5981872875) : un état confirmé sans aucune fin — sa charge est l'ÉTAT, rien d'autre. */
+  | { readonly genre: 'echeance_indisponible'; readonly etat: string };
 
 export interface DependancesDuLecteur {
   readonly cles: ClesPii;
@@ -199,6 +200,12 @@ export function lecteurDeLaBase(
     if (nom === null) d.signaler({ genre: 'nom_affichable_indisponible', nombre: 1 });
     const cliente = a.statut === 'convertie';
     const fin = a.fenetreFinAt ?? a.peremptionAt;
+    // A02 (5981872875) : une `provisoire` n'a jamais de fin (seule une confirmation pose
+    // `fenetreFinAt`) — `until` nul, sans alerte. Un état confirmé sans aucune fin est une
+    // incohérence : `until` nul aussi (jamais 503), et l'alerte nomme l'état, et lui seul.
+    if (!cliente && fin === null && a.statut !== 'provisoire') {
+      d.signaler({ genre: 'echeance_indisponible', etat: a.statut });
+    }
     return {
       statut: cliente ? 'cliente' : 'attribuee',
       until: cliente || fin === null ? null : moisAParis(fin),
@@ -220,9 +227,10 @@ export const lecteurDeProduction: LecteurDAttribution = async (siren) => {
   return lecteurDeLaBase(client, {
     cles: clesPii(process.env),
     cleReference: { APPORTEUR_REF_KEY: process.env[VARIABLE_CLE_REFERENCE] ?? '' },
-    // Le canal de la frontière (son puits) : une ligne, le genre et le nombre.
+    // Le canal de la frontière (son puits) : une ligne, le genre et sa charge fermée.
     signaler: (s) => {
-      process.stderr.write(`${JSON.stringify({ alerte: s.genre, nombre: s.nombre })}\n`);
+      const { genre, ...charge } = s;
+      process.stderr.write(`${JSON.stringify({ alerte: genre, ...charge })}\n`);
     },
   })(siren);
 };
