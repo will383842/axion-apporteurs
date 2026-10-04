@@ -550,13 +550,18 @@ describe('REQ-UX-048 — le courriel de la console, ligne de la table des notifi
   it('REQ-UX-048 : TÉMOIN — une ligne de la console n’a que l’e-mail, n’est jamais désactivable, et sa route est déclarée dans la carte de la console', () => {
     const carte = readFileSync('docs/CONSOLE-ROUTES.md', 'utf8');
     const console_ = lignes.filter(([, l]) => l.destinataire === 'utilisateur_console');
-    expect(console_.map(([cle]) => cle)).toEqual(['lien_magique_console']);
+    // SEC-30 : l'invitation et la création d'un administrateur rejoignent le lien de la console.
+    expect(console_.map(([cle]) => cle).sort()).toEqual([
+      'admin_cree',
+      'invitation_console',
+      'lien_magique_console',
+    ]);
     for (const [cle, l] of console_) {
       expect(cle).toMatch(/^[a-z][a-z0-9_]*$/);
       expect(l.canaux, cle).toEqual(['email']);
       expect(l.desactivable, cle).toBe(false);
       expect(l.notificationObligatoire, cle).toBe(true);
-      expect(l.emetteur, cle).toBe('SEC-29');
+      expect(l.emetteur, cle).toBe(cle === 'lien_magique_console' ? 'SEC-29' : 'SEC-30');
       expect(carte, cle).toContain(`\`${l.route}\``);
     }
     expect(GABARITS.lien_magique_console.actions).toEqual([
@@ -575,7 +580,7 @@ describe('REQ-UX-048 — le courriel de la console, ligne de la table des notifi
     expect(fautes({ ...ligne, desactivable: true })).toBe(true);
     expect(fautes(ligne)).toBe(false);
     expect(lignes.filter(([, l]) => l.destinataire === 'apporteur')).toHaveLength(
-      lignes.length - 1
+      lignes.length - 3
     );
   });
 });

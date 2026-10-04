@@ -266,10 +266,22 @@ function consommationConsoleSur(tx: Prisma.TransactionClient): TransactionDeCons
       return true;
     },
     async ouvrirSessionConsole(session) {
-      await tx.sessionEspace.create({ data: session });
+      const neuve = await tx.sessionEspace.create({ data: session, select: { id: true } });
+      if (session.utilisateurConsoleId == null) return;
+      // SEC-30 (option (a) de la sécurité) : UNE session de console vivante par personne. Dans la
+      // transaction d'ouverture, les AUTRES sessions ouvertes du même utilisateur sont révoquées ;
+      // le filtre porte sur l'utilisateur de la console, jamais une session de l'espace n'est
+      // touchée. Le relèvement (step-up) en hérite : sa session neuve révoque l'ancienne.
+      await tx.sessionEspace.updateMany({
+        where: {
+          utilisateurConsoleId: session.utilisateurConsoleId,
+          revoqueAt: null,
+          id: { not: neuve.id },
+        },
+        data: { revoqueAt: session.creeAt },
+      });
       // SEC-30 : la première connexion ACTIVE le compte invité, une seule fois, dans la transaction
       // qui ouvre la session ; le geste est journalisé, l'utilisateur étant son propre acteur.
-      if (session.utilisateurConsoleId == null) return;
       const { count } = await tx.utilisateurConsole.updateMany({
         where: { id: session.utilisateurConsoleId, activeeAt: null },
         data: { activeeAt: session.creeAt },

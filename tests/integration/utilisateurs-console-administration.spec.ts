@@ -25,7 +25,8 @@ import {
 } from '../../src/server/deploiement/role-d-execution';
 import { NOMS_DES_SECRETS, kidDe } from '../../src/lib/env';
 import { clesPii } from '../../src/server/securite/pii';
-import { tirerJeton } from '../../src/server/auth/lien-magique';
+import { empreinteDeSessionConsole, tirerJeton } from '../../src/server/auth/lien-magique';
+import { transactionDeConsommationConsole } from '../../src/server/auth/lien-magique-depot';
 import { depotDeSessionsConsole, requireRole } from '../../src/server/roles/require-role';
 import { semerSessionConsole, semerUtilisateurConsole } from '../../prisma/seed/06-console';
 import {
@@ -490,5 +491,141 @@ describe('REQ-UX-047 REQ-UX-048 — SEC-30 : le budget d’interactions de l’�
       createElement(FormulaireDeDesactivation, { action, cibleId: randomUUID() })
     );
     expect(interactions(html)).toBeLessThanOrEqual(3);
+  });
+});
+
+// Sécurité, point 2, option (a) : UNE session de console vivante par personne. L'ouverture d'une
+// session neuve révoque les autres sessions ouvertes du même utilisateur, dans sa transaction.
+describe('REQ-SEC-003 — SEC-30 : une seule session de console vivante par personne', () => {
+  const jetonDe = async (utilisateurConsoleId: string) => {
+    const jetonSession = tirerJeton();
+    await semerSessionConsole(base.prisma, {
+      utilisateurConsoleId,
+      jetonLien: tirerJeton(),
+      jetonSession,
+      consommeAt: new Date(t0),
+      ipHash: null,
+      configuration: CONFIGURATION,
+    });
+    return jetonSession;
+  };
+  const role = async (jeton: string) => {
+    const v = await requireRole('ecran:accueil', jeton, {
+      maintenant: () => maintenant,
+      depot: depotDeSessionsConsole(base.prisma),
+      configuration: CONFIGURATION.session,
+    });
+    return v.ok ? v.utilisateur.role : v.motif;
+  };
+  /** Une ouverture par le dépôt, comme la consommation d'un lien la fait. */
+  const ouvrir = async (utilisateurConsoleId: string) => {
+    const lien = await base.prisma.lienMagique.create({
+      data: {
+        utilisateurConsoleId,
+        tokenHash: randomBytes(32).toString('hex'),
+        kid: CONFIGURATION.lien.kid,
+        creeAt: new Date(t0),
+        expireAt: new Date(t0 + 15 * 60_000),
+        consommeAt: new Date(t0),
+      },
+      select: { id: true },
+    });
+    const jeton = tirerJeton();
+    await transactionDeConsommationConsole(app)(async (tx) => {
+      if (!(await tx.utilisateurActif(utilisateurConsoleId, new Date(t0)))) return;
+      await tx.ouvrirSessionConsole({
+        utilisateurConsoleId,
+        lienMagiqueId: lien.id,
+        tokenHash: empreinteDeSessionConsole(jeton, CONFIGURATION.session.secret),
+        kid: CONFIGURATION.session.kid,
+        ipHash: null,
+        creeAt: new Date(t0 + 1000),
+        expireAt: new Date(t0 + 60 * 60_000),
+        derniereVueAt: new Date(t0 + 1000),
+      });
+    });
+    return jeton;
+  };
+
+  it('REQ-SEC-003 : TÉMOIN — deux sessions, puis une troisième ouverture : les deux premières sont révoquées et refusées à la requête suivante ; celle d’un AUTRE utilisateur reste vivante', async () => {
+    await tronquer();
+    const c = await utilisateur('comptable');
+    const autre = await utilisateur('comptable');
+    const [s1, s2, sAutre] = [await jetonDe(c), await jetonDe(c), await jetonDe(autre)];
+    expect(await role(s1)).toBe('comptable');
+    const s3 = await ouvrir(c);
+    expect(await role(s1)).toBe('revoquee');
+    expect(await role(s2)).toBe('revoquee');
+    expect(await role(s3)).toBe('comptable');
+    expect(await role(sAutre)).toBe('comptable');
+  });
+
+  it('REQ-SEC-003 : TÉMOIN — une ouverture refusée (utilisateur désactivé) ne révoque rien', async () => {
+    await tronquer();
+    const c = await utilisateur('comptable');
+    const s1 = await jetonDe(c);
+    await base.prisma.$executeRawUnsafe(
+      'UPDATE utilisateurs_console SET desactive_at = clock_timestamp() WHERE id = $1::uuid',
+      c
+    );
+    await ouvrir(c);
+    const lignes = await base.prisma.sessionEspace.findMany({
+      where: { utilisateurConsoleId: c },
+      select: { revoqueAt: true },
+    });
+    expect(lignes).toEqual([{ revoqueAt: null }]);
+    expect(s1).toBeTruthy();
+  });
+
+  it('REQ-SEC-003 : TÉMOIN — une session de l’ESPACE n’est jamais touchée par la rotation de la console', async () => {
+    await tronquer();
+    const c = await utilisateur('comptable');
+    await jetonDe(c);
+    // Une session de l'espace, d'un apporteur minimal : elle doit rester ouverte.
+    const apporteurId = randomUUID();
+    await base.prisma.apporteur.create({
+      data: {
+        id: apporteurId,
+        statut: 'signe',
+        codeParrainage: 'AX7SEC30',
+        isTest: true,
+        candidatureId: randomUUID(),
+        reponsesJson: { version: 1 },
+        scoreInitial: 50,
+        scorePartsJson: { carnet: 50 },
+        scoreBaremeVersion: 'bareme-essai',
+        sourceCanal: null,
+        parrainCodeCapture: null,
+        creeAt: new Date(t0),
+      },
+    });
+    const lienEspace = await base.prisma.lienMagique.create({
+      data: {
+        apporteurId,
+        tokenHash: randomBytes(32).toString('hex'),
+        kid: CONFIGURATION.lien.kid,
+        creeAt: new Date(t0),
+        expireAt: new Date(t0 + 15 * 60_000),
+        consommeAt: new Date(t0),
+      },
+      select: { id: true },
+    });
+    const espace = await base.prisma.sessionEspace.create({
+      data: {
+        apporteurId,
+        lienMagiqueId: lienEspace.id,
+        tokenHash: randomBytes(32).toString('hex'),
+        kid: CONFIGURATION.session.kid,
+        creeAt: new Date(t0),
+        expireAt: new Date(t0 + 60 * 60_000),
+      },
+      select: { id: true },
+    });
+    await ouvrir(c);
+    const apres = await base.prisma.sessionEspace.findUniqueOrThrow({
+      where: { id: espace.id },
+      select: { revoqueAt: true },
+    });
+    expect(apres.revoqueAt).toBeNull();
   });
 });

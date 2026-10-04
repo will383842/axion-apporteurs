@@ -103,16 +103,18 @@ export const UTILISATEURS_CONSOLE = {
      */
     adminCree: {
       sujet: 'Un nouvel administrateur a été créé dans la console',
+      // Arbitrage de la juriste (2026-10-04, au 97) : {identiteCree} et {identiteAuteur} valent
+      // « Prénom Nom (adresse) » quand le nom existe, l'adresse seule sinon ; le mot que le GLOSSAIRE
+      // interdit (§ des synonymes) devient « n'a aucun droit d'administrateur ».
       corps: (d: {
-        prenomNomCree: string;
-        courrielCree: string;
-        prenomNomAuteur: string;
+        identiteCree: string;
+        identiteAuteur: string;
         dateHeure: string;
         secondAdministrateur: boolean;
       }) =>
-        `${d.prenomNomCree} (${d.courrielCree}) a reçu le rôle d'administrateur de la console d'Axion Partners. Ce compte a été créé par ${d.prenomNomAuteur}, le ${d.dateHeure}.` +
+        `${d.identiteCree} a reçu le rôle d'administrateur de la console d'Axion Partners. Ce compte a été créé par ${d.identiteAuteur}, le ${d.dateHeure}.` +
         (d.secondAdministrateur
-          ? " Ce compte reste inactif tant qu'un autre administrateur que son auteur ne l'a pas validé. Si vous n'attendiez pas ce compte, ne le validez pas, et désactivez-le depuis la console (Utilisateurs)."
+          ? " Ce compte n'a aucun droit d'administrateur tant qu'un autre administrateur que son auteur ne l'a pas validé. Si vous n'attendiez pas ce compte, ne le validez pas, et désactivez-le depuis la console (Utilisateurs)."
           : '') +
         " Si vous ne reconnaissez pas cette création, prévenez aussitôt la direction d'Axion-IA : un administrateur a accès aux données des apporteurs et des contacts.",
       appel: 'Utilisateurs',
@@ -124,13 +126,10 @@ export const UTILISATEURS_CONSOLE = {
      */
     invitation: {
       sujet: "Votre accès à la console d'Axion Partners",
-      corps: (d: {
-        libelleRole: string;
-        adresseConnexion: string;
-        dateExpiration: string;
-        adressePolitique: string;
-      }) =>
-        `Axion-IA vous a ouvert un accès à la console d'Axion Partners, avec le rôle ${d.libelleRole}. Pour vous connecter, ouvrez ${d.adresseConnexion} et saisissez cette adresse e-mail : vous recevrez un lien et un code de connexion. Cette invitation expire le ${d.dateExpiration} ; passé ce délai, demandez une nouvelle invitation. Si vous n'attendiez pas ce message, ignorez-le. La façon dont Axion-IA traite vos données de connexion est décrite dans ${d.adressePolitique}.`,
+      // Arbitrage de la juriste (2026-10-04, au 97) : la phrase de la politique est RETIRÉE tant
+      // qu'aucune page ne décrit le traitement de la console ; elle reviendra avec la page.
+      corps: (d: { libelleRole: string; adresseConnexion: string; dateExpiration: string }) =>
+        `Axion-IA vous a ouvert un accès à la console d'Axion Partners, avec le rôle ${d.libelleRole}. Pour vous connecter, ouvrez ${d.adresseConnexion} et saisissez cette adresse e-mail : vous recevrez un lien et un code de connexion. Cette invitation expire le ${d.dateExpiration} ; passé ce délai, demandez une nouvelle invitation. Si vous n'attendiez pas ce message, ignorez-le.`,
       appel: 'Se connecter',
     },
   },
