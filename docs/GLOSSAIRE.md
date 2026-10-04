@@ -192,7 +192,7 @@ qui nomme un événement pointé — `attribution.confirmee_tacitement` (REQ-DM-
 | `contestation_modifiee` | `apporteur` | DM-12 | `{contestationId, de?, vers, acteur}` ; `vers` : `recue`, `repondue`, ou le gel pour litige `gel_pose` ou `gel_leve`, jamais sa référence |
 | `anomalie_gel_modifie` | `anomalie` | DM-12 | `{vers, acteur}` ; `vers` : `gel_pose` ou `gel_leve` ; `acteur` sans identifiant, et jamais la référence du litige (exigence de la juriste, forme d’A02) |
 | `rattachement_manuel_modifie` | `attribution` | DM-12 | `{rattachementId, vers, acteur}` ; `vers` : `decide` ou `revoque` |
-| `piece_kyc_statut_modifie` | `piece_kyc` | DM-11 | `{de, vers, type, acteur}` ; `vers` : `StatutPieceKyc` ; `type` : `TypePieceKyc` |
+| `piece_kyc_statut_modifie` | `piece_kyc` | DM-11, CPL-T07 | `{de, vers, type, motifRefus?, acteur}` ; `vers` : `StatutPieceKyc` ; `type` : `TypePieceKyc` ; `motifRefus` : `illisible`, `au_nom_d_un_tiers`, `perimee`, `incomplete` ou `non_conforme` (`MOTIFS_REFUS_PIECE`, valeurs de la juriste), exigé si et seulement si `vers` vaut `refusee`, jamais un texte libre ni « autre » ; l'espace relit le motif dans le dernier événement de l'agrégat de la pièce (forme d'A02) |
 | `contrat_statut_modifie` | `contrat` | DM-23 | `{de?, vers, acteur}` ; `vers` : `StatutContrat` |
 | `grille_contrat_modifiee` | `contrat` | DM-23 | `{grilleContratId, lignes, acteur}` ; `lignes` : les identifiants des lignes modifiées, jamais un compte |
 | `echange_saisi` | `attribution` | EXT-T01 | `{echangeId, canal}` ; `canal` : `CanalEchange` |
