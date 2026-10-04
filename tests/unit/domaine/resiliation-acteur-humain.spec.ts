@@ -1095,3 +1095,61 @@ describe('REQ-JUR-006 — le rendu par le passage, depuis la décision', () => {
     expect(await rendre({ ...juste, evenementId: 99n })).toEqual({ nonRendue: 'fait_introuvable' });
   });
 });
+
+/**
+ * La sécurité (#703, 5981521068, condition 1) : la reconnexion par lien reste OUVERTE au résilié dont
+ * les droits courent — en demande de lien comme en consommation —, et la session neuve naît au niveau
+ * LECTURE, jamais PLEIN. Les droits ne sont lus que pour un résilié ; un port absent vaut « aucun
+ * droit » : défaut fermé.
+ */
+describe('REQ-SEC-032 — la reconnexion par lien d’un résilié', () => {
+  it('REQ-SEC-032 : TÉMOIN — un résilié dont les droits courent peut recevoir et consommer un lien ; sans droits, non', async () => {
+    const { ouvertureDuCompte } = await import('../../../src/server/auth/lien-magique');
+    const lus: string[] = [];
+    const droits = (v: boolean) => async (id: string) => {
+      lus.push(id);
+      return v;
+    };
+    expect(await ouvertureDuCompte('resilie', 'a-1', droits(true))).toBe(true);
+    expect(await ouvertureDuCompte('resilie', 'a-1', droits(false))).toBe(false);
+    // Port absent : aucun droit, défaut fermé.
+    expect(await ouvertureDuCompte('resilie', 'a-1', undefined)).toBe(false);
+    expect(lus).toStrictEqual(['a-1', 'a-1']);
+  });
+
+  it('REQ-SEC-032 : les droits ne sont lus QUE pour un résilié ; les autres statuts gardent leur jugement', async () => {
+    const { ouvertureDuCompte } = await import('../../../src/server/auth/lien-magique');
+    const lire = vi.fn(async () => true);
+    expect(await ouvertureDuCompte('signe', 'a-1', lire)).toBe(true);
+    expect(await ouvertureDuCompte('kyc_en_cours', 'a-1', lire)).toBe(true);
+    expect(await ouvertureDuCompte('refuse', 'a-1', lire)).toBe(false);
+    expect(await ouvertureDuCompte(null, 'a-1', lire)).toBe(false);
+    expect(lire).not.toHaveBeenCalled();
+  });
+
+  it('REQ-SEC-032 : TÉMOIN — la session neuve d’un résilié naît au niveau LECTURE, jamais PLEIN', async () => {
+    const { jugerSession } = await import('../../../src/server/auth/session');
+    const v = jugerSession(
+      {
+        id: 's-1',
+        apporteurId: 'a-1',
+        kid: 'k1',
+        expireAt: new Date('2027-03-02T00:00:00.000Z'),
+        revoqueAt: null,
+        sessionVersion: 3,
+        apporteur: { statut: 'resilie', sessionVersion: 3, droitsEnCours: true },
+        lienMagique: { consommeAt: MAINTENANT },
+      },
+      MAINTENANT,
+      'k1'
+    );
+    expect(v.ok && v.session.niveau).toBe('lecture');
+  });
+
+  it('REQ-SEC-032 : TÉMOIN STATIQUE — la demande ET la consommation du lien passent par ouvertureDuCompte, jamais par peutOuvrirLEspace seul', () => {
+    const source = readFileSync('src/server/auth/lien-magique.ts', 'utf8');
+    expect(source.match(/await ouvertureDuCompte\(/g) ?? []).toHaveLength(2);
+    const horsDuJuge = source.split('export async function ouvertureDuCompte')[0]!;
+    expect(horsDuJuge).not.toMatch(/peutOuvrirLEspace\(/);
+  });
+});
