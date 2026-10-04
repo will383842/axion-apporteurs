@@ -5,7 +5,7 @@
 // @req REQ-UX-048
 /**
  * SEC-30 — les QUATRE YEUX sur les administrateurs de la console, et la version de session, en base
- * RÉELLE (forme d'A02, migration 20261003002300).
+ * RÉELLE (forme d'A02, migration 20261003003300).
  *
  * Les écritures jugées passent sous `partners_app`, provisionné comme en production ; les fixtures et
  * les lectures restent sous le propriétaire. Chaque refus est attendu sur son NOM.
@@ -417,7 +417,7 @@ describe('REQ-SEC-023 — SEC-30 : la ligne de données de la migration ne valid
     const ancien = await utilisateur('admin', new Date(t0 - 60_000));
     const recent = await utilisateur('admin', new Date(t0));
     const migration = readFileSync(
-      join(RACINE, 'prisma/migrations/20261003002300_gestion_utilisateurs_console/migration.sql'),
+      join(RACINE, 'prisma/migrations/20261003003300_gestion_utilisateurs_console/migration.sql'),
       'utf8'
     );
     const ligne = migration.slice(migration.lastIndexOf('UPDATE "utilisateurs_console"'));
