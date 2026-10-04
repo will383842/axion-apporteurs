@@ -30,6 +30,14 @@ export const TEXTES_DES_NOTIFICATIONS = {
     corps:
       "Axion-IA n'a pas encore pu joindre {contact}. Votre dépôt garde son heure d'enregistrement.",
   },
+  // DM-25 — l'annulation pour antériorité de la Société (art. 3.3) : texte de la juriste, MOT POUR
+  // MOT. Le critère n'y figure pas (règle de SEC-12) ; {delaiReponse} vient de la SSOT.
+  attribution_annulee_anteriorite: {
+    titre: '{entreprise} : votre dépôt est annulé — antériorité de la Société',
+    appel: 'Voir Mes entreprises',
+    corps:
+      "Axion-IA connaissait déjà cette entreprise à la date de votre dépôt (contrat, article 3.3) : votre dépôt est annulé, et aucune commission nouvelle n'est due à son titre. Les commissions déjà acquises restent acquises. Vous pouvez contester cette décision par écrit ; Axion-IA vous répond de façon motivée dans les {delaiReponse}.",
+  },
   attribution_liberee: {
     titre: '{entreprise} : réservation terminée',
     appel: 'Voir Mes entreprises',
