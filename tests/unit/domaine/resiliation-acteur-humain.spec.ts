@@ -1182,3 +1182,49 @@ describe('REQ-JUR-006 — ordinaire_axion attend la notification préalable', ()
     expect(journalSimule.ajouterEvenement).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * La sécurité (#703, critère 2) : la garde des actions sensibles de l'appareil appelle `exigerSession`
+ * directement ; elle REFUSE donc elle-même le niveau `lecture` (`lecture_seule`), AVANT de juger
+ * l'appareil.
+ */
+describe('REQ-SEC-032 — la garde de l’appareil refuse la lecture', () => {
+  it('REQ-SEC-032 : TÉMOIN — exigerAppareilConfirme rend lecture_seule pour un résilié en lecture, sans lire l’appareil', async () => {
+    const { exigerAppareilConfirme } = await import('../../../src/server/auth/appareil');
+    const lus: string[] = [];
+    const session = {
+      maintenant: () => MAINTENANT,
+      configuration: { secret: 'secret-de-test-factice-de-trente-deux-caracteres', kid: 'k1' },
+      depot: {
+        lire: async () => ({
+          id: 's-1',
+          apporteurId: 'a-1',
+          kid: 'k1',
+          expireAt: new Date('2027-03-02T00:00:00.000Z'),
+          revoqueAt: null,
+          sessionVersion: 3,
+          apporteur: { statut: 'resilie', sessionVersion: 3, droitsEnCours: true },
+          lienMagique: { consommeAt: MAINTENANT },
+        }),
+        marquerVue: async () => {},
+        lister: async () => [],
+        revoquer: async () => 0,
+        incrementerVersion: async () => {},
+      },
+    };
+    const ports = new Proxy(
+      { session },
+      {
+        get(cible, cle) {
+          if (cle !== 'session' && cle !== 'then') lus.push(String(cle));
+          return (cible as Record<string | symbol, unknown>)[cle];
+        },
+      }
+    );
+    expect(await exigerAppareilConfirme('jeton', 'appareil-1', ports as never)).toEqual({
+      ok: false,
+      motif: 'lecture_seule',
+    });
+    expect(lus).toStrictEqual([]);
+  });
+});

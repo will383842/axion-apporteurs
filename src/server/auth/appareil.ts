@@ -204,7 +204,8 @@ export async function confirmerALaConsommation(
 
 /**
  * La session de la requête, sur un appareil CONNU : la session d'abord, relue en base, puis
- * `jugerAppareil`. Une session refusée est rendue telle quelle.
+ * `jugerAppareil`. Une session refusée est rendue telle quelle. Une action sensible ÉCRIT : une
+ * session en LECTURE (SEC-19, résilié) est refusée ici même, `lecture_seule`, avant l'appareil.
  */
 export async function exigerAppareilConfirme(
   jeton: string | undefined,
@@ -213,6 +214,7 @@ export async function exigerAppareilConfirme(
 ): Promise<VerdictDAppareil> {
   const verdict = await exigerSession(jeton, ports.session);
   if (!verdict.ok) return verdict;
+  if (verdict.session.niveau === 'lecture') return { ok: false, motif: 'lecture_seule' };
   const appareil = await jugerAppareil(verdict.session, identifiant, ports);
   return appareil.ok ? verdict : appareil;
 }
