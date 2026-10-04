@@ -1,6 +1,7 @@
 /**
- * Les ports de « Vérifier une entreprise » (SEC-16) sur la base. L'antériorité et l'état de
- * l'entreprise au registre public ont leurs propres ports, câblés à part.
+ * Les ports de « Vérifier une entreprise » (SEC-16) sur la base. L'état de l'entreprise au registre
+ * public a son port (`registre-public.ts`) ; l'antériorité et la liste de la Société se lisent sur
+ * les projections de DM-10-P, câblées avec elles.
  */
 import type { PrismaClient } from '@prisma/client';
 import { ETATS_OCCUPANTS } from '../../domain/attribution/etats';
@@ -18,12 +19,9 @@ export const compterAvantLaDecision: PortsDeVerification['compter'] = async () =
 
 export function portsDeLaBase(
   prisma: PrismaClient
-): Pick<PortsDeVerification, 'compter' | 'surLaListe' | 'occupation' | 'journaliser'> {
+): Pick<PortsDeVerification, 'compter' | 'occupation' | 'journaliser'> {
   return {
     compter: compterAvantLaDecision,
-    surLaListe: async (siren) =>
-      (await prisma.sirenListeNoire.findUnique({ where: { siren }, select: { siren: true } })) !==
-      null,
     // Tout occupant compte, quel qu'en soit le porteur : un apporteur ou un conseiller (W19).
     occupation: async (siren) => {
       const [occupants, enFile] = await Promise.all([
