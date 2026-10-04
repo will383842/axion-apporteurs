@@ -19,4 +19,23 @@ export const DUREES_AUTH = {
   sessionMs: { valeur: 30 * 24 * 60 * 60 * 1000, source: 'REQ-SEC-003', verifieLe: '2026-09-26' },
   /** REQ-SEC-004 : « un lien magique consommé depuis moins de 10 minutes » (le relèvement). */
   releveMs: { valeur: 10 * 60 * 1000, source: 'REQ-SEC-004', verifieLe: '2026-09-26' },
+  /**
+   * SEC-29 : la session de la CONSOLE est courte, sans « rester connecté ». Durée maximale et
+   * inactivité PROPOSÉES par la tâche ; Williams les valide en séance groupée avant la fusion.
+   */
+  sessionConsoleMs: {
+    valeur: 12 * 60 * 60 * 1000,
+    source: 'SEC-29 (proposition, validation de Williams)',
+    verifieLe: '2026-10-03',
+  },
+  inactiviteConsoleMs: {
+    valeur: 30 * 60 * 1000,
+    source: 'SEC-29 (proposition, validation de Williams)',
+    verifieLe: '2026-10-03',
+  },
+  /**
+   * SEC-29 (lentille sécurité, condition d) : la dernière vue d'une session de la console n'est
+   * réécrite qu'au plus une fois par période, pour qu'une lecture ne devienne pas une écriture.
+   */
+  toucheVueConsoleMs: { valeur: 60 * 1000, source: 'SEC-29', verifieLe: '2026-10-03' },
 } as const satisfies Record<string, Duree>;
