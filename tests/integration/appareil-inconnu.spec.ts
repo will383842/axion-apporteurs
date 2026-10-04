@@ -4,10 +4,11 @@
  * RÉELLE. Les sessions se jugent, les appareils s'écrivent et se purgent sous `partners_app`, le rôle
  * d'exécution PROVISIONNÉ, comme en production.
  *
- * CE QU'IL PROUVE (cadrage de la lentille sécurité, point 5) :
- *   1. nouvel appareil → refusé tant que la session n'est pas fraîchement authentifiée sur lui ; la
- *      confirmation renforcée (lien ou code consommé il y a moins de dix minutes) part en avis, puis
- *      l'appareil est connu, et passe ensuite sans avis ;
+ * CE QU'IL PROUVE (cadrage de la lentille sécurité, point 5, et sa note sur 4913c6a3) :
+ *   1. nouvel appareil → refusé, même sur une session fraîche ; il se confirme à la CONSOMMATION
+ *      d'un lien sur lui, dans la transaction de la connexion : l'avis part, puis l'appareil est
+ *      connu, et passe ensuite sans avis ; un cookie de session volé, présenté depuis un autre
+ *      appareil, ne fait connaître aucun appareil ;
  *   2. aucune trace ailleurs : ni anomalie, ni statut, ni version de session, ni dépôt, ni événement ;
  *   3. un appareil est connu pour UN compte ;
  *   4. au-delà d'une durée de session sans être vu, il redevient inconnu ;
@@ -22,8 +23,18 @@ import { PrismaClient } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
 import { NOMS_DES_SECRETS, kidDe } from '../../src/lib/env';
 import { clesPii, colonnesPii } from '../../src/server/securite/pii';
-import { MODELE_APPORTEUR } from '../../src/server/auth/lien-magique-depot';
-import { tirerJeton } from '../../src/server/auth/lien-magique';
+import {
+  MODELE_APPORTEUR,
+  ecrituresDeLien,
+  transactionDeConsommation,
+} from '../../src/server/auth/lien-magique-depot';
+import {
+  consommerLien,
+  empreinteDuCode,
+  empreinteDuJeton,
+  tirerJeton,
+} from '../../src/server/auth/lien-magique';
+import { DUREES_AUTH } from '../../src/server/auth/durees';
 import { depotDeSessions } from '../../src/server/auth/session';
 import {
   cleDesAppareils,
@@ -129,10 +140,9 @@ async function session(apporteurId: string, consommeAt: Date): Promise<string> {
   return jetonSession;
 }
 
-/** Les ports de la garde, à l'instant donné, en base réelle ; l'avis est un double. */
-function ports(maintenant: Date) {
-  const aviser = vi.fn(async (_avis: { apporteurId: string; confirmeAt: Date }) => undefined);
-  const p: PortsDAppareil = {
+/** Les ports de la garde, à l'instant donné, en base réelle. */
+function ports(maintenant: Date): PortsDAppareil {
+  return {
     session: {
       maintenant: () => maintenant,
       depot: depotDeSessions(app),
@@ -140,9 +150,41 @@ function ports(maintenant: Date) {
     },
     depot: depotDAppareils(app),
     cle: CLE,
-    aviser,
   };
-  return { p, aviser };
+}
+
+const CONFIGURATION_DU_LIEN = {
+  secret: CONFIGURATION.lien.secret,
+  kid: CONFIGURATION.lien.kid,
+  urlPublique: 'https://partners.example.org',
+  session: CONFIGURATION.session,
+};
+
+/**
+ * La connexion RÉELLE : un lien émis, puis consommé sur l'appareil donné, à l'instant donné, par
+ * `consommerLien` dans sa transaction en base. L'avis est un double.
+ */
+async function connecter(apporteurId: string, identifiantAppareil: unknown, maintenant: Date) {
+  const jeton = tirerJeton();
+  await ecrituresDeLien(app).insererLien({
+    apporteurId,
+    tokenHash: empreinteDuJeton(jeton, CONFIGURATION_DU_LIEN.secret),
+    codeHash: empreinteDuCode('042137', CONFIGURATION_DU_LIEN.secret),
+    kid: CONFIGURATION_DU_LIEN.kid,
+    creeAt: maintenant,
+    expireAt: new Date(maintenant.getTime() + DUREES_AUTH.lienMagiqueMs.valeur),
+  });
+  const aviser = vi.fn(async (_avis: { apporteurId: string; confirmeAt: Date }) => undefined);
+  const resultat = await consommerLien(
+    { jeton, ipHash: null, identifiantAppareil },
+    {
+      maintenant: () => maintenant,
+      transaction: transactionDeConsommation(app),
+      configuration: CONFIGURATION_DU_LIEN,
+      appareils: { aviser },
+    }
+  );
+  return { resultat, aviser };
 }
 
 /** Les appareils connus d'un apporteur, tels que la base les rend. */
@@ -154,27 +196,30 @@ function appareilsDe(apporteurId: string) {
   });
 }
 
-describe('REQ-SEC-003 — SEC-55 : un nouvel appareil, une confirmation renforcée, puis un appareil connu', () => {
-  it('REQ-SEC-003 : refusé sur une session ancienne ; confirmé par une authentification fraîche sur CET appareil, avec son avis ; puis connu, sans avis', async () => {
+describe('REQ-SEC-003 — SEC-55 : un nouvel appareil se confirme à la CONSOMMATION du lien, sur lui ; la garde ne confirme jamais', () => {
+  it('REQ-SEC-003 : refusé sur une session ancienne ET sur une session fraîche ; confirmé par la consommation d’un lien sur CET appareil, avec son avis ; puis connu, sans avis', async () => {
     const a = await apporteur();
     const identifiant = tirerIdentifiantDAppareil();
     const ancienne = await session(a, d('2026-10-03T08:00:00.000Z'));
+    expect(
+      await exigerAppareilConfirme(ancienne, identifiant, ports(d('2026-10-03T09:00:00.000Z')))
+    ).toEqual({ ok: false, motif: 'appareil_inconnu' });
 
-    const refus = ports(d('2026-10-03T09:00:00.000Z'));
-    expect(await exigerAppareilConfirme(ancienne, identifiant, refus.p)).toEqual({
-      ok: false,
-      motif: 'appareil_inconnu',
-    });
-    expect(refus.aviser).not.toHaveBeenCalled();
+    // Une session ouverte il y a une minute ne confirme RIEN : la fraîcheur est celle de la session.
+    const fraiche = await session(a, d('2026-10-03T09:05:00.000Z'));
+    expect(
+      await exigerAppareilConfirme(fraiche, identifiant, ports(d('2026-10-03T09:06:00.000Z')))
+    ).toEqual({ ok: false, motif: 'appareil_inconnu' });
     expect(await appareilsDe(a)).toEqual([]);
 
-    // Un nouveau lien, ou son code, consommé sur cet appareil : la session neuve est fraîche.
-    const fraiche = await session(a, d('2026-10-03T09:05:00.000Z'));
-    const confirmation = ports(d('2026-10-03T09:14:59.999Z'));
-    const v = await exigerAppareilConfirme(fraiche, identifiant, confirmation.p);
-    expect(v.ok && v.session.apporteurId).toBe(a);
-    expect(confirmation.aviser).toHaveBeenCalledTimes(1);
-    expect(confirmation.aviser).toHaveBeenCalledWith({
+    // Un lien consommé sur CET appareil : l'avis part, puis l'appareil est connu, dans la transaction.
+    const connexion = await connecter(a, identifiant, d('2026-10-03T09:14:59.999Z'));
+    expect(connexion.resultat).toMatchObject({
+      etat: 'ouverte',
+      appareil: { identifiant, issue: 'confirme' },
+    });
+    expect(connexion.aviser).toHaveBeenCalledTimes(1);
+    expect(connexion.aviser).toHaveBeenCalledWith({
       apporteurId: a,
       confirmeAt: d('2026-10-03T09:14:59.999Z'),
     });
@@ -187,10 +232,10 @@ describe('REQ-SEC-003 — SEC-55 : un nouvel appareil, une confirmation renforc�
       },
     ]);
 
-    // Connu : il passe, même sur l'ancienne session, sans avis ; sa dernière vue avance.
-    const ensuite = ports(d('2026-10-04T10:00:00.000Z'));
-    expect((await exigerAppareilConfirme(ancienne, identifiant, ensuite.p)).ok).toBe(true);
-    expect(ensuite.aviser).not.toHaveBeenCalled();
+    // Connu : il passe, même sur l'ancienne session ; sa dernière vue avance.
+    expect(
+      (await exigerAppareilConfirme(ancienne, identifiant, ports(d('2026-10-04T10:00:00.000Z')))).ok
+    ).toBe(true);
     expect(await appareilsDe(a)).toEqual([
       {
         empreinte: empreinteDAppareil(identifiant, CLE.secret),
@@ -199,19 +244,44 @@ describe('REQ-SEC-003 — SEC-55 : un nouvel appareil, une confirmation renforc�
         derniereVueAt: d('2026-10-04T10:00:00.000Z'),
       },
     ]);
+
+    // Un nouveau lien consommé sur le même appareil : reconnu, sans second avis.
+    const seconde = await connecter(a, identifiant, d('2026-10-04T11:00:00.000Z'));
+    expect(seconde.resultat).toMatchObject({ etat: 'ouverte', appareil: { issue: 'connu' } });
+    expect(seconde.aviser).not.toHaveBeenCalled();
   });
 
-  it('REQ-SEC-003 : dix minutes pile après la consommation du lien, la session n’est plus fraîche : l’appareil reste inconnu', async () => {
+  it('REQ-SEC-003 : TÉMOIN DE LA LENTILLE SÉCURITÉ — un cookie de session volé : la session ouverte il y a une minute par la vraie connexion, présentée depuis un AUTRE appareil, est refusée ; rien n’est écrit', async () => {
     const a = await apporteur();
-    const identifiant = tirerIdentifiantDAppareil();
-    const jeton = await session(a, d('2026-10-03T11:00:00.000Z'));
-    const { p, aviser } = ports(d('2026-10-03T11:10:00.000Z'));
-    expect(await exigerAppareilConfirme(jeton, identifiant, p)).toEqual({
-      ok: false,
-      motif: 'appareil_inconnu',
-    });
-    expect(aviser).not.toHaveBeenCalled();
-    expect(await appareilsDe(a)).toEqual([]);
+    const sonAppareil = tirerIdentifiantDAppareil();
+    const connexion = await connecter(a, sonAppareil, d('2026-10-03T11:00:00.000Z'));
+    if (connexion.resultat.etat !== 'ouverte') throw new Error('connexion attendue');
+    const volee = connexion.resultat.jetonSession;
+    const avantLeVol = await appareilsDe(a);
+    expect(avantLeVol).toHaveLength(1);
+
+    const appareilDuTiers = tirerIdentifiantDAppareil();
+    expect(
+      await exigerAppareilConfirme(volee, appareilDuTiers, ports(d('2026-10-03T11:01:00.000Z')))
+    ).toEqual({ ok: false, motif: 'appareil_inconnu' });
+    expect(await appareilsDe(a)).toEqual(avantLeVol);
+    // L'appareil de l'apporteur, lui, passe sur la même session.
+    expect(
+      (await exigerAppareilConfirme(volee, sonAppareil, ports(d('2026-10-03T11:01:00.000Z')))).ok
+    ).toBe(true);
+  });
+
+  it('REQ-SEC-003 : à la consommation, un identifiant absent ou hors forme est remplacé par un identifiant NEUF, confirmé et rendu à poser ; le hors-forme n’est jamais écrit', async () => {
+    for (const illisible of [undefined, '', 'pas-un-identifiant']) {
+      const a = await apporteur();
+      const connexion = await connecter(a, illisible, d('2026-10-03T12:00:00.000Z'));
+      const appareil = connexion.resultat.etat === 'ouverte' ? connexion.resultat.appareil : null;
+      expect(appareil?.issue).toBe('confirme');
+      expect(appareil?.identifiant).toMatch(/^[A-Za-z0-9_-]{43}$/);
+      expect((await appareilsDe(a)).map((r) => r.empreinte)).toEqual([
+        empreinteDAppareil(appareil?.identifiant, CLE.secret),
+      ]);
+    }
   });
 
   it('REQ-SEC-003 : aucune trace ailleurs — ni anomalie, ni statut, ni version de session, ni dépôt, ni événement', async () => {
@@ -232,10 +302,9 @@ describe('REQ-SEC-003 — SEC-55 : un nouvel appareil, une confirmation renforc�
     const ficheAvant = await fiche();
     const identifiant = tirerIdentifiantDAppareil();
     const ancienne = await session(a, d('2026-10-02T08:00:00.000Z'));
-    await exigerAppareilConfirme(ancienne, identifiant, ports(d('2026-10-03T08:00:00.000Z')).p);
-    const fraiche = await session(a, d('2026-10-03T08:01:00.000Z'));
-    await exigerAppareilConfirme(fraiche, identifiant, ports(d('2026-10-03T08:02:00.000Z')).p);
-    await exigerAppareilConfirme(ancienne, identifiant, ports(d('2026-10-03T09:00:00.000Z')).p);
+    await exigerAppareilConfirme(ancienne, identifiant, ports(d('2026-10-03T08:00:00.000Z')));
+    await connecter(a, identifiant, d('2026-10-03T08:01:00.000Z'));
+    await exigerAppareilConfirme(ancienne, identifiant, ports(d('2026-10-03T09:00:00.000Z')));
     expect(await compter()).toEqual(comptesAvant);
     expect(await fiche()).toEqual(ficheAvant);
   });
@@ -244,22 +313,15 @@ describe('REQ-SEC-003 — SEC-55 : un nouvel appareil, une confirmation renforc�
     const a = await apporteur();
     const b = await apporteur();
     const identifiant = tirerIdentifiantDAppareil();
-    const fraicheA = await session(a, d('2026-10-03T13:00:00.000Z'));
-    expect(
-      (await exigerAppareilConfirme(fraicheA, identifiant, ports(d('2026-10-03T13:01:00.000Z')).p))
-        .ok
-    ).toBe(true);
+    await connecter(a, identifiant, d('2026-10-03T13:00:00.000Z'));
     const ancienneB = await session(b, d('2026-10-02T13:00:00.000Z'));
-    const { p, aviser } = ports(d('2026-10-03T13:02:00.000Z'));
-    expect(await exigerAppareilConfirme(ancienneB, identifiant, p)).toEqual({
-      ok: false,
-      motif: 'appareil_inconnu',
-    });
-    expect(aviser).not.toHaveBeenCalled();
+    expect(
+      await exigerAppareilConfirme(ancienneB, identifiant, ports(d('2026-10-03T13:02:00.000Z')))
+    ).toEqual({ ok: false, motif: 'appareil_inconnu' });
     expect(await appareilsDe(b)).toEqual([]);
   });
 
-  it('REQ-SEC-003 : vu pour la dernière fois il y a trente jours ou plus, l’appareil redevient inconnu ; une confirmation fraîche le rétablit', async () => {
+  it('REQ-SEC-003 : vu pour la dernière fois il y a trente jours ou plus, l’appareil redevient inconnu ; un lien consommé sur lui le rétablit, avec son avis', async () => {
     const a = await apporteur();
     const identifiant = tirerIdentifiantDAppareil();
     const empreinte = empreinteDAppareil(identifiant, CLE.secret)!;
@@ -279,7 +341,7 @@ describe('REQ-SEC-003 — SEC-55 : un nouvel appareil, une confirmation renforc�
         await exigerAppareilConfirme(
           ancienne,
           identifiant,
-          ports(avant(d('2026-10-03T10:00:00.000Z'))).p
+          ports(avant(d('2026-10-03T10:00:00.000Z')))
         )
       ).ok
     ).toBe(true);
@@ -289,12 +351,11 @@ describe('REQ-SEC-003 — SEC-55 : un nouvel appareil, une confirmation renforc�
     });
     // Trente jours pile : inconnu.
     expect(
-      await exigerAppareilConfirme(ancienne, identifiant, ports(d('2026-10-03T10:00:00.000Z')).p)
+      await exigerAppareilConfirme(ancienne, identifiant, ports(d('2026-10-03T10:00:00.000Z')))
     ).toEqual({ ok: false, motif: 'appareil_inconnu' });
-    const fraiche = await session(a, d('2026-10-03T10:00:00.000Z'));
-    const { p, aviser } = ports(d('2026-10-03T10:05:00.000Z'));
-    expect((await exigerAppareilConfirme(fraiche, identifiant, p)).ok).toBe(true);
-    expect(aviser).toHaveBeenCalledTimes(1);
+    const connexion = await connecter(a, identifiant, d('2026-10-03T10:05:00.000Z'));
+    expect(connexion.resultat).toMatchObject({ etat: 'ouverte', appareil: { issue: 'confirme' } });
+    expect(connexion.aviser).toHaveBeenCalledTimes(1);
     expect(await appareilsDe(a)).toEqual([
       {
         empreinte,
@@ -305,7 +366,7 @@ describe('REQ-SEC-003 — SEC-55 : un nouvel appareil, une confirmation renforc�
     ]);
   });
 
-  it('REQ-SEC-003 : échec fermé — un identifiant absent ou hors forme, même sur une session fraîche, est refusé ; rien n’est écrit, aucun avis', async () => {
+  it('REQ-SEC-003 : échec fermé — à la garde, un identifiant absent ou hors forme, même sur une session fraîche, est refusé ; rien n’est écrit', async () => {
     const a = await apporteur();
     const fraiche = await session(a, d('2026-10-03T15:00:00.000Z'));
     for (const illisible of [
@@ -314,12 +375,9 @@ describe('REQ-SEC-003 — SEC-55 : un nouvel appareil, une confirmation renforc�
       'pas-un-identifiant',
       `${tirerIdentifiantDAppareil()}=`,
     ]) {
-      const { p, aviser } = ports(d('2026-10-03T15:01:00.000Z'));
-      expect(await exigerAppareilConfirme(fraiche, illisible, p)).toEqual({
-        ok: false,
-        motif: 'appareil_inconnu',
-      });
-      expect(aviser).not.toHaveBeenCalled();
+      expect(
+        await exigerAppareilConfirme(fraiche, illisible, ports(d('2026-10-03T15:01:00.000Z')))
+      ).toEqual({ ok: false, motif: 'appareil_inconnu' });
     }
     expect(await appareilsDe(a)).toEqual([]);
   });
