@@ -11,15 +11,19 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { after } from 'next/server';
-import { requireRole, type VerdictDeRole } from '../roles/require-role';
-import type { DroitConsole } from '../roles/matrice';
+import { requireRole, type VerdictDeRole } from '../../roles/require-role';
 import {
   COOKIE_DE_SESSION_CONSOLE,
   dependancesDuProcessus,
   portsDeRoleConsole,
-} from '../auth/lien-magique-production';
-import { MOTIFS_REFUS_PIECE, type MotifRefusPiece } from '../../domain/kyc/pieces';
-import { ErreurDossierDeConformite, ouvrirLeKyc, validerLeKyc, verifierUnePiece } from './dossier';
+} from '../../auth/lien-magique-production';
+import { MOTIFS_REFUS_PIECE, type MotifRefusPiece } from '../../../domain/kyc/pieces';
+import {
+  ErreurDossierDeConformite,
+  ouvrirLeKyc,
+  validerLeKyc,
+  verifierUnePiece,
+} from '../../conformite/dossier';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -35,16 +39,16 @@ function ecranDe(formData: FormData): { apporteurId: string; ecran: string } {
   return { apporteurId, ecran: `/console/apporteurs/${apporteurId}/conformite` };
 }
 
-/** Le jugement du rôle pour ce droit ; un refus ne revient jamais (redirection). */
-async function acteurPour(droit: DroitConsole, ecran: string) {
-  const d = dependancesDuProcessus({ apres: after, env: process.env });
-  const jeton = (await cookies()).get(COOKIE_DE_SESSION_CONSOLE.nom)?.value;
-  const verdict: VerdictDeRole = await requireRole(droit, jeton, portsDeRoleConsole(d));
-  if (verdict.ok) return { d, acteur: verdict.utilisateur };
+/** Le verdict, lu en tête ; un refus ne revient jamais (redirection). */
+function acteurOuRedirection(verdict: VerdictDeRole, ecran: string) {
+  if (verdict.ok) return verdict.utilisateur;
   if (verdict.motif === 'releve_requis')
     redirect(`/console/connexion?suite=${encodeURIComponent(ecran)}`);
   redirect('/console');
 }
+
+const jetonDeSession = async () => (await cookies()).get(COOKIE_DE_SESSION_CONSOLE.nom)?.value;
+const processus = () => dependancesDuProcessus({ apres: after, env: process.env });
 
 async function geste(ecran: string, travail: () => Promise<void>): Promise<never> {
   try {
@@ -58,7 +62,11 @@ async function geste(ecran: string, travail: () => Promise<void>): Promise<never
 
 export async function verifierLaPiece(formData: FormData): Promise<void> {
   const { ecran } = ecranDe(formData);
-  const { d, acteur } = await acteurPour('action:verifier_piece', ecran);
+  const d = processus();
+  const acteur = acteurOuRedirection(
+    await requireRole('action:verifier_piece', await jetonDeSession(), portsDeRoleConsole(d)),
+    ecran
+  );
   const decision = texte(formData, 'decision');
   const motif = texte(formData, 'motif');
   const verdict =
@@ -81,7 +89,11 @@ export async function verifierLaPiece(formData: FormData): Promise<void> {
 
 export async function ouvrirLeDossier(formData: FormData): Promise<void> {
   const { apporteurId, ecran } = ecranDe(formData);
-  const { d, acteur } = await acteurPour('action:ouvrir_kyc', ecran);
+  const d = processus();
+  const acteur = acteurOuRedirection(
+    await requireRole('action:ouvrir_kyc', await jetonDeSession(), portsDeRoleConsole(d)),
+    ecran
+  );
   await geste(ecran, () =>
     ouvrirLeKyc(d.prisma, { acteur, apporteurId, maintenant: new Date(d.horloge.maintenant()) })
   );
@@ -89,7 +101,11 @@ export async function ouvrirLeDossier(formData: FormData): Promise<void> {
 
 export async function validerLeDossier(formData: FormData): Promise<void> {
   const { apporteurId, ecran } = ecranDe(formData);
-  const { d, acteur } = await acteurPour('action:valider_kyc', ecran);
+  const d = processus();
+  const acteur = acteurOuRedirection(
+    await requireRole('action:valider_kyc', await jetonDeSession(), portsDeRoleConsole(d)),
+    ecran
+  );
   await geste(ecran, () =>
     validerLeKyc(d.prisma, { acteur, apporteurId, maintenant: new Date(d.horloge.maintenant()) })
   );

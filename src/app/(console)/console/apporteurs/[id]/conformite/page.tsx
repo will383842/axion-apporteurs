@@ -6,6 +6,7 @@
  * d'accès refusé.
  */
 import { Suspense } from 'react';
+import type { ConsoleRole } from '@prisma/client';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { after } from 'next/server';
@@ -21,7 +22,7 @@ import {
   ouvrirLeDossier,
   validerLeDossier,
   verifierLaPiece,
-} from '../../../../../../server/conformite/actions';
+} from '../../../../../../server/console/conformite/actions';
 import {
   ChargementDuDossier,
   DossierDeConformite,
@@ -47,19 +48,17 @@ function refusLu(valeur: string | undefined): MotifDuDossier | null {
     : null;
 }
 
+/** Le dossier, lu et rendu ; le rôle arrive jugé par la page. */
 async function Dossier({
   apporteurId,
   refus,
+  role,
 }: {
   apporteurId: string;
   refus: MotifDuDossier | null;
+  role: ConsoleRole;
 }) {
   const d = dependancesDuProcessus({ apres: after, env: process.env });
-  const jeton = (await cookies()).get(COOKIE_DE_SESSION_CONSOLE.nom)?.value;
-  const verdict = await requireRole('ecran:conformite_apporteur', jeton, portsDeRoleConsole(d));
-  if (!verdict.ok)
-    redirect(verdict.motif === 'role_refuse' ? '/console/acces-refuse' : '/console/connexion');
-  const role = verdict.utilisateur.role;
   const dossier = UUID.test(apporteurId)
     ? await lireLeDossier(d.prisma, {
         apporteurId,
@@ -89,11 +88,16 @@ export default async function PageDossierDeConformite({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ refus?: string }>;
 }) {
+  const d = dependancesDuProcessus({ apres: after, env: process.env });
+  const jeton = (await cookies()).get(COOKIE_DE_SESSION_CONSOLE.nom)?.value;
+  const verdict = await requireRole('ecran:conformite_apporteur', jeton, portsDeRoleConsole(d));
+  if (!verdict.ok)
+    redirect(verdict.motif === 'role_refuse' ? '/console/acces-refuse' : '/console/connexion');
   const { id } = await params;
   const { refus } = await searchParams;
   return (
     <Suspense fallback={<ChargementDuDossier />}>
-      <Dossier apporteurId={id} refus={refusLu(refus)} />
+      <Dossier apporteurId={id} refus={refusLu(refus)} role={verdict.utilisateur.role} />
     </Suspense>
   );
 }
