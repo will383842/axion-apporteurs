@@ -204,11 +204,13 @@ export async function lireLeJournalDesAcces(
   return prisma.$transaction(async (tx) => {
     const lecteur = await tx.utilisateurConsole.findUnique({
       where: { id: demande.lecteurId },
-      select: { role: true, desactiveAt: true },
+      select: { role: true, desactiveAt: true, valideAt: true },
     });
+    // Un administrateur EN ATTENTE (quatre yeux, sans validation) n'a pas ce droit (forme d'A02).
     if (
       lecteur === null ||
       lecteur.desactiveAt !== null ||
+      lecteur.valideAt === null ||
       !roleAutorise('action:lire_journal_des_acces', lecteur.role)
     )
       throw new LectureDuJournalRefusee();

@@ -61,10 +61,34 @@ afterAll(async () => {
   await base?.arreter();
 });
 
+/**
+ * Quatre yeux (SEC-30) : un administrateur semé sans validation est EN ATTENTE. Le premier se
+ * valide lui-même (premier administrateur, sans validateur) ; chaque admin suivant est validé par lui.
+ */
+let fondateur: string | null = null;
 async function unUtilisateur(role: ConsoleRole, desactiveAt: Date | null = null): Promise<string> {
+  const creeAt = new Date('2026-01-01T00:00:00.000Z');
+  if (role !== 'admin')
+    return (await base.prisma.utilisateurConsole.create({ data: { role, creeAt, desactiveAt } }))
+      .id;
+  if (fondateur === null)
+    fondateur = (
+      await base.prisma.utilisateurConsole.create({
+        data: { role: 'admin', creeAt, valideAt: creeAt, valideParId: null },
+      })
+    ).id;
   return (
     await base.prisma.utilisateurConsole.create({
-      data: { role, creeAt: new Date('2026-01-01T00:00:00.000Z'), desactiveAt },
+      data: { role: 'admin', creeAt, desactiveAt, valideAt: creeAt, valideParId: fondateur },
+    })
+  ).id;
+}
+
+/** Un administrateur EN ATTENTE : aucune validation posée. */
+async function unAdminEnAttente(): Promise<string> {
+  return (
+    await base.prisma.utilisateurConsole.create({
+      data: { role: 'admin', creeAt: new Date('2026-01-01T00:00:00.000Z') },
     })
   ).id;
 }
@@ -107,6 +131,26 @@ describe('REQ-SEC-058 — la lecture du journal des accès est réservée à un 
       ).rejects.toBeInstanceOf(LectureDuJournalRefusee);
     }
     expect(await lignesDe(ancien)).toHaveLength(0);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN À DEUX FACES — un administrateur EN ATTENTE est refusé sans qu’aucune ligne soit lue ; validé par un autre, le même appel passe', async () => {
+    const cible = await unUtilisateur('lecteur');
+    const enAttente = await unAdminEnAttente();
+    const lire = () =>
+      lireLeJournalDesAcces(
+        app,
+        { lecteurId: enAttente, utilisateurConsoleId: cible, adresse: null },
+        cles
+      );
+    await expect(lire()).rejects.toBeInstanceOf(LectureDuJournalRefusee);
+    expect(await lignesDe(enAttente)).toHaveLength(0);
+    const validateur = await unUtilisateur('admin');
+    await base.prisma.utilisateurConsole.update({
+      where: { id: enAttente },
+      data: { valideAt: new Date('2026-01-02T00:00:00.000Z'), valideParId: validateur },
+    });
+    await expect(lire()).resolves.toEqual([]);
+    expect(await lignesDe(enAttente)).toHaveLength(1);
   });
 
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — le même appel, par l’admin actif, passe', async () => {
