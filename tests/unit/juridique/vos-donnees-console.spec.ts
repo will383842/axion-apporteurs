@@ -257,8 +257,27 @@ describe('REQ-JUR-068 — ce que le registre ne tranche pas s’affiche « en co
     expect(texte).not.toMatch(/(?<![\p{L}\p{N}])Will(?:iams)?(?![\p{L}\p{N}])/u);
   });
 
-  it('REQ-JUR-068 : le registre RÉEL n’est pas publiable aujourd’hui : la page le dit en cours de rédaction', () => {
-    expect(estPubliableConsole(politiqueDe(REGISTRE))).toBe(false);
+  // JUR-T62 : les textes finaux de la juriste (décisions de Williams du 2026-10-04) tranchent chaque manque.
+  it('REQ-JUR-068 : TÉMOIN — le registre RÉEL est publiable : aucun passage en cours de rédaction, et les textes tranchés de la juriste', () => {
+    const politique = politiqueDe(REGISTRE);
+    expect(estPubliableConsole(politique)).toBe(true);
+    const texte = texteDe(rendre(politique));
+    expect(texte).not.toContain(VOS_DONNEES_CONSOLE.aCompleter);
+    expect(texte).toContain(
+      "L'intérêt légitime de la Société à sécuriser l'accès à ses outils et aux données personnelles qu'ils contiennent"
+    );
+    expect(texte).toContain(
+      "ce journal ne sert ni à mesurer l'activité des utilisateurs de la console ni à les évaluer"
+    );
+    expect(texte).toContain(
+      "Compte désactivé : le nom et l'adresse, cinq ans après la désactivation, preuve des actes accomplis dans la console, puis effacés ; l'identifiant reste."
+    );
+    expect(texte).toContain(
+      'Elles ne sont pas en service à ce jour ; le pays du service et l’encadrement du transfert seront précisés ici avant leur mise en service.'.replace(
+        /’/g,
+        "'"
+      )
+    );
   });
 
   it('REQ-JUR-068 : chaque manque tranché, la page est publiable et ne porte AUCUN passage en cours de rédaction', () => {
@@ -324,6 +343,13 @@ describe('REQ-JUR-068 — la page est publique : accessible sans session', () =>
     } else {
       expect(connexion).not.toContain(ROUTE);
     }
+  });
+
+  // JUR-T62 : la page est publiable, le lien est posé — une seule ligne, son titre de la micro-copie.
+  it('REQ-JUR-068 : TÉMOIN — l’écran de connexion de la console porte le lien « Vos données dans la console »', () => {
+    const connexion = readFileSync(join(RACINE, ECRAN_DE_CONNEXION), 'utf8');
+    expect(connexion).toContain(`<a href="${ROUTE}">{VOS_DONNEES_CONSOLE.titre}</a>`);
+    expect(connexion.split(ROUTE).length - 1).toBe(1);
   });
 });
 
