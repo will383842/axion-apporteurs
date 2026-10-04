@@ -29,9 +29,12 @@ import {
   entrepriseDeLaNotification,
   motifDeLaDecision,
   parametresDeLaNotification,
+  rendreDepuisLaBase,
+  type SourcesDuRendu,
 } from '../../../src/server/attribution/notifications';
 import {
   ENTREPRISE_DE_REPLI,
+  FAITS_NON_CONSERVES,
   LIBELLES_DES_CATEGORIES,
   MOTIFS_DES_DECISIONS,
   RAISONS_D_ANNULATION,
@@ -855,5 +858,184 @@ describe('REQ-DM-006 — la catégorie de l’article 3.3 bis, source fermée du
         categorieRelation: 'administration',
       }).success
     ).toBe(false);
+  });
+});
+
+describe('REQ-UX-016 — le texte rendu depuis la base, à l’heure de l’envoi ; un non-rendu NOMMÉ (sécurité)', () => {
+  const ENVOI = new Date('2027-05-10T08:00:00.000Z');
+  const ATT = '0190f3a0-0000-7000-8000-0000000000a1';
+  const APP = '0190f3a0-0000-7000-8000-0000000000b2';
+  const AUTRE = '0190f3a0-0000-7000-8000-0000000000c3';
+  const ANO = '0190f3a0-0000-7000-8000-0000000000d4';
+  const console_ = { par: 'utilisateur_console', id: '0190f3a0-0000-7000-8000-0000000000e5' };
+  const annulation = (motifAnnulation: string, categorieRelation?: string) => ({
+    de: 'provisoire',
+    vers: 'annulee',
+    transition: 'annulee_par_la_console',
+    acteur: console_,
+    lienInteret: 'non_declare',
+    motifAnnulation,
+    ...(categorieRelation === undefined ? {} : { categorieRelation }),
+  });
+  const anomalie = {
+    de: 'provisoire',
+    vers: 'invalidee',
+    transition: 'anomalie_confirmee',
+    acteur: console_,
+    lienInteret: 'non_declare',
+  };
+
+  function banc(o: {
+    attribution?: {
+      apporteurId: string | null;
+      raisonSociale: string | null;
+      siren: string;
+    } | null;
+    charge?: unknown;
+    faits?: Awaited<ReturnType<SourcesDuRendu['faitsDe']>>;
+  }) {
+    const demandesDeFaits: unknown[] = [];
+    const tx = {
+      attribution: {
+        findUnique: async () =>
+          o.attribution === undefined
+            ? { apporteurId: APP, raisonSociale: 'Atelier Dupont', siren: '123456789' }
+            : o.attribution,
+      },
+    } as unknown as PrismaClient;
+    const sources: SourcesDuRendu = {
+      chargeDuFait: async () => (o.charge === undefined ? null : o.charge),
+      faitsDe: async (_tx, q) => {
+        demandesDeFaits.push(q);
+        return o.faits ?? 'purgee';
+      },
+      composer: (_cle, t) => ({ sujet: t.titre, corps: [t.corps ?? '', t.appel].join(' | ') }),
+    };
+    return { tx, sources, demandesDeFaits };
+  }
+
+  const n = (cle: string, o: Partial<NotificationAEnvoyer> = {}): NotificationAEnvoyer => ({
+    id: 'n1',
+    cle,
+    apporteurId: APP,
+    attributionId: ATT,
+    evenementId: '42',
+    anomalieId: null,
+    ...o,
+  });
+
+  it('REQ-UX-016 : la phrase de la juriste quand les faits ne sont plus conservés, MOT POUR MOT, sans point final', () => {
+    expect(FAITS_NON_CONSERVES).toBe(
+      'les faits vous ont été indiqués dans le courriel qui vous a informé de cette décision'
+    );
+  });
+
+  it('REQ-DM-004 : premier_rang_libere se rend avec l’entreprise et la date limite de l’envoi', async () => {
+    const b = banc({});
+    const r = await rendreDepuisLaBase(b.tx, n('premier_rang_libere'), ENVOI, b.sources);
+    expect(JSON.stringify(r)).toContain('Atelier Dupont');
+    expect(JSON.stringify(r)).toContain('26 mai 2027');
+  });
+
+  it('REQ-DM-006 : une annulation pour l’article 3.3 bis se rend avec sa catégorie, lue dans la charge', async () => {
+    const b = banc({
+      charge: annulation('entreprise_relevant_de_l_article_3_3_bis', 'financeur_public'),
+    });
+    const r = await rendreDepuisLaBase(b.tx, n('decision_attribution'), ENVOI, b.sources);
+    expect(JSON.stringify(r)).toContain(LIBELLES_DES_CATEGORIES.financeur_public);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — les faits d’une anomalie sont demandés pour CETTE attribution et CET apporteur, et rendus', async () => {
+    const b = banc({ charge: anomalie, faits: { faits: 'deux dépôts le même jour' } });
+    const r = await rendreDepuisLaBase(
+      b.tx,
+      n('decision_attribution', { anomalieId: ANO }),
+      ENVOI,
+      b.sources
+    );
+    expect(b.demandesDeFaits).toStrictEqual([
+      { anomalieId: ANO, attributionId: ATT, apporteurId: APP },
+    ]);
+    expect(JSON.stringify(r)).toContain('deux dépôts le même jour');
+  });
+
+  it.each([
+    ['purgés', ANO, 'purgee' as const],
+    ['sans lien (vidé par la purge ou l’anonymisation)', null, 'purgee' as const],
+  ])(
+    'REQ-DM-006 : TÉMOIN — des faits %s : le courriel ne part pas, et le motif est NOMMÉ',
+    async (_, anomalieId, faits) => {
+      const b = banc({ charge: anomalie, faits });
+      expect(
+        await rendreDepuisLaBase(b.tx, n('decision_attribution', { anomalieId }), ENVOI, b.sources)
+      ).toStrictEqual({ nonRendue: 'faits_non_conserves' });
+    }
+  );
+
+  it('REQ-DM-006 : TÉMOIN — une anomalie que le lecteur refuse ne rend rien, nommée', async () => {
+    const b = banc({ charge: anomalie, faits: 'refusee' });
+    expect(
+      await rendreDepuisLaBase(
+        b.tx,
+        n('decision_attribution', { anomalieId: ANO }),
+        ENVOI,
+        b.sources
+      )
+    ).toStrictEqual({ nonRendue: 'anomalie_refusee' });
+  });
+
+  it('REQ-DM-006 : TÉMOIN — une attribution d’un AUTRE apporteur ne rend rien, et aucun fait n’est lu', async () => {
+    const b = banc({
+      attribution: { apporteurId: AUTRE, raisonSociale: 'X', siren: '123456789' },
+      charge: anomalie,
+      faits: { faits: 'f' },
+    });
+    expect(
+      await rendreDepuisLaBase(
+        b.tx,
+        n('decision_attribution', { anomalieId: ANO }),
+        ENVOI,
+        b.sources
+      )
+    ).toStrictEqual({ nonRendue: 'apporteur_different' });
+    expect(b.demandesDeFaits).toStrictEqual([]);
+  });
+
+  it.each([
+    ['un fait introuvable', { charge: undefined }, 'fait_introuvable'],
+    ['une charge illisible', { charge: { transition: 'inventee' } }, 'charge_illisible'],
+    [
+      'l’erreur de saisie de la Société',
+      { charge: annulation('erreur_de_saisie_de_la_societe') },
+      'decision_non_notifiee',
+    ],
+    [
+      'une attribution introuvable',
+      { attribution: null, charge: anomalie },
+      'attribution_introuvable',
+    ],
+  ])('REQ-UX-016 : %s ne rend rien, sous un motif fermé', async (_, o, motif) => {
+    const b = banc(o as Parameters<typeof banc>[0]);
+    expect(
+      await rendreDepuisLaBase(b.tx, n('decision_attribution'), ENVOI, b.sources)
+    ).toStrictEqual({ nonRendue: motif });
+  });
+
+  it('REQ-UX-016 : TÉMOIN — le passage NOMME le motif de chaque non-rendu à son bilan', async () => {
+    const p: PortsDuPassage = {
+      maintenant: () => ENVOI,
+      lireLot: async () => [n('decision_attribution')],
+      dansUneTransaction: async (fn) =>
+        fn({
+          verrouiller: async () => true,
+          rendre: async () => ({ nonRendue: 'faits_non_conserves' }),
+          envoyer: async () => ({ statut: 'envoye', envoyeAt: ENVOI }),
+          poserLaFenetre: async () => undefined,
+        }),
+    };
+    expect(await envoyerLesNotificationsDeLEspace(p)).toMatchObject({
+      nonRendues: 1,
+      motifsNonRendus: ['faits_non_conserves'],
+    });
   });
 });
