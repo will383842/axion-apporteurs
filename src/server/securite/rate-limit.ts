@@ -23,12 +23,9 @@
 import { randomUUID } from 'node:crypto';
 import Redis, { type RedisOptions } from 'ioredis';
 import { SEUILS } from '../../domain/seuils/ssot';
-
-/**
- * La conversion d'une fenêtre lue en minutes dans la SSOT : une constante nommée, jamais un nombre
- * tapé dans la déclaration d'un compteur (critère 2 de la sécurité pour la garde `rate-famille`).
- */
-const SECONDES_PAR_MINUTE = 60;
+// La conversion d'une fenêtre lue en minutes dans la SSOT : la constante nommée de la table fermée
+// que lit la garde `rate-famille`, jamais un nombre tapé dans la déclaration d'un compteur.
+import { SECONDES_PAR_MINUTE } from '../../domain/seuils/conversions';
 
 // ── Le vocabulaire fermé ────────────────────────────────────────────────────────────────────────
 
