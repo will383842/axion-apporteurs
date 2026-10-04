@@ -54,7 +54,8 @@ function base(devis: Ligne[], entreprises: Ligne[]) {
         const lus = devis
           .filter((d) => satisfait(d, q.where))
           .sort((a, b) => String(a.devisRef).localeCompare(String(b.devisRef)));
-        return (q.orderBy ? lus : [...lus].reverse()).slice(0, q.take ?? lus.length);
+        const trie = (q.orderBy as { devisRef?: unknown } | undefined)?.devisRef === 'asc';
+        return (trie ? lus : [...lus].reverse()).slice(0, q.take ?? lus.length);
       },
       deleteMany: async (q: { where: Ligne }) => {
         appels.push('devis.deleteMany');
@@ -191,20 +192,25 @@ describe('REQ-DM-029 — entreprises_connues : effacée quand elle ne fonde plus
   it('REQ-DM-029 : origine devis — retirée quand son dernier devis est effacé, recalée sur ceux qui restent', async () => {
     const vieux = new Date('2020-01-01T00:00:00.000Z');
     const ouvert = new Date('2021-03-01T00:00:00.000Z');
+    const signeLe = new Date('2021-04-01T00:00:00.000Z');
+    const recent = ms(LIMITE_DEVIS, 5);
+    const clientA = ms(LIMITE_CLIENT, 1);
     const b = base(
       [
         unDevis('a-vieux', SIREN_A, vieux),
         unDevis('b-vieux', SIREN_B, vieux),
         unDevis('b-ouvert', SIREN_B, ouvert, {
-          signeAt: ouvert,
+          signeAt: signeLe,
           montantTotalHtCents: 10,
           factureHtCents: 0,
         }),
+        // un devis NON signé, émis récemment : il reste, et sa date entre au recalage
+        unDevis('b-recent', SIREN_B, recent),
       ],
       [
         uneLigne(SIREN_A, 'devis', vieux, vieux),
         uneLigne(SIREN_B, 'devis', vieux, ouvert),
-        uneLigne(SIREN_A, 'client', ms(LIMITE_CLIENT, 1), ms(LIMITE_CLIENT, 1)),
+        uneLigne(SIREN_A, 'client', clientA, clientA),
       ]
     );
     expect(await purgerLesEntreprisesConnues(b.prisma, MAINTENANT)).toEqual({
@@ -212,14 +218,48 @@ describe('REQ-DM-029 — entreprises_connues : effacée quand elle ne fonde plus
       clients: 0,
       devisOrigine: 1,
     });
+    // le recalage ne touche QUE la ligne devis de l'entreprise : la ligne client de A garde ses dates
+    const clientDeA = b.entreprises.find((e) => e.siren === SIREN_A && e.origine === 'client')!;
+    expect((clientDeA.connueDepuisAt as Date).getTime()).toBe(clientA.getTime());
+    expect((clientDeA.dernierContactAt as Date).getTime()).toBe(clientA.getTime());
     // A : son devis est effacé, la ligne devis aussi ; sa ligne client, récente, reste.
     expect(b.entreprises.filter((e) => e.siren === SIREN_A).map((e) => e.origine)).toEqual([
       'client',
     ]);
-    // B : un devis ouvert la rend connue ; la ligne est recalée sur lui.
+    // B : la ligne est recalée sur les devis qui restent — de la plus ancienne émission à la plus
+    // récente des dates (émission ou signature).
     const ligneB = b.entreprises.find((e) => e.siren === SIREN_B)!;
     expect((ligneB.connueDepuisAt as Date).getTime()).toBe(ouvert.getTime());
-    expect((ligneB.dernierContactAt as Date).getTime()).toBe(ouvert.getTime());
+    expect((ligneB.dernierContactAt as Date).getTime()).toBe(recent.getTime());
+  });
+
+  it('REQ-DM-029 : un devis NON signé est effacé à son échéance même s’il n’est pas entièrement facturé', async () => {
+    const b = base(
+      [
+        unDevis('d-partiel', SIREN_A, ms(LIMITE_DEVIS, -1), {
+          montantTotalHtCents: 100,
+          factureHtCents: 40,
+        }),
+      ],
+      []
+    );
+    expect(await purgerLesEntreprisesConnues(b.prisma, MAINTENANT)).toMatchObject({ devis: 1 });
+    expect(b.devis).toEqual([]);
+  });
+
+  it('REQ-DM-029 : une référence qui précède toute lettre est relue, la pagination part du début', async () => {
+    const b = base([unDevis('0-ancien', SIREN_A, ms(LIMITE_DEVIS, -1))], []);
+    expect(await purgerLesEntreprisesConnues(b.prisma, MAINTENANT)).toMatchObject({ devis: 1 });
+  });
+
+  it('REQ-DM-029 : rien à effacer dans un lot — aucune suppression n’est demandée', async () => {
+    const vieux = new Date('2020-01-01T00:00:00.000Z');
+    const b = base(
+      [unDevis('d-ouvert', SIREN_A, vieux, { signeAt: vieux, montantTotalHtCents: 10 })],
+      []
+    );
+    await purgerLesEntreprisesConnues(b.prisma, MAINTENANT);
+    expect(b.appels.filter((a) => a === 'devis.deleteMany')).toEqual([]);
   });
 
   it('REQ-DM-028 : la liste de la Société n’est pas une projection purgée ici : aucune ligne financeur n’est touchée', async () => {
