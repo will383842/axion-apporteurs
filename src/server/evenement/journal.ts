@@ -174,3 +174,19 @@ export async function lireJournalParLots(
     apres = lot[lot.length - 1]!.id;
   }
 }
+
+/**
+ * DM-55 — la charge d'UN fait, par son identifiant : ce que le rendu d'une notification de la machine
+ * relit à l'heure de l'envoi (transition, motif, catégorie). Une lecture seule, par l'écrivain unique
+ * du journal ; `null` si le fait n'existe pas.
+ */
+export async function lireLaChargeDUnFait(
+  client: PrismaClient | Prisma.TransactionClient,
+  id: string
+): Promise<{ type: string; charge: unknown } | null> {
+  const l = await client.evenement.findUnique({
+    where: { id: BigInt(id) },
+    select: { type: true, charge: true },
+  });
+  return l === null ? null : { type: l.type, charge: l.charge };
+}
