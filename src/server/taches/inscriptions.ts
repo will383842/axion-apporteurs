@@ -64,11 +64,13 @@ import {
   purgerLesContestations,
   purgerLesDementis,
 } from './purger-contestations-anomalies';
+import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
 import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
 import { clientDuTiers } from '../integrations/recherche-entreprises/tiers';
 import { limiteurDuRegistre } from '../integrations/recherche-entreprises/limiteur';
+import { traitantsDeLAnteriorite } from '../entreprise-connue/projection';
 
 /**
  * Les traitants branchés, par type d'événement reçu. Un seul aujourd'hui : la candidature reçue
@@ -78,6 +80,8 @@ import { limiteurDuRegistre } from '../integrations/recherche-entreprises/limite
 export function traitantsDeReception(prisma: PrismaClient): Traitants {
   return {
     [TypeEvenementRecu.candidature_recue]: (recu) => traiterCandidature(prisma, recu),
+    // DM-10-P : la projection de l'antériorité (client.*, devis, factures, avoirs, annulations).
+    ...traitantsDeLAnteriorite(prisma),
   };
 }
 
@@ -213,6 +217,9 @@ export function inscriptions(
     dementis_purger: () => purgerLesDementis(prisma, new Date(horlogeSysteme.maintenant())),
     // SEC-55 (REQ-SEC-003) : l'empreinte d'un appareil, effacée une durée de session après sa vue.
     appareils_purger: () => purgerLesAppareils(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-58 : le journal des accès à la console, purgé à son échéance (la purge vide les identifiants).
+    journal_acces_console_purger: () =>
+      purgerLeJournalDesAccesConsole(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>

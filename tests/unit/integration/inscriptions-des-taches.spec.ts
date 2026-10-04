@@ -110,9 +110,16 @@ beforeEach(() => {
 });
 
 describe('REQ-QA-027 — les traitants branchés', () => {
-  it('REQ-QA-027 : un seul traitant aujourd’hui, celui de la candidature reçue', () => {
+  it('REQ-QA-027 : les traitants branchés aujourd’hui — la candidature reçue, et la projection de l’antériorité (DM-10-P)', () => {
     expect(Object.keys(traitantsDeReception(PRISMA))).toEqual([
       TypeEvenementRecu.candidature_recue,
+      TypeEvenementRecu.client_cree,
+      TypeEvenementRecu.client_mis_a_jour,
+      TypeEvenementRecu.devis_emis,
+      TypeEvenementRecu.devis_signe,
+      TypeEvenementRecu.facture_emise,
+      TypeEvenementRecu.avoir_emis,
+      TypeEvenementRecu.facture_annulee,
     ]);
   });
 });

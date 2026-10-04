@@ -32,6 +32,8 @@ export const TACHES = {
   droits_contact_purger: { req: 'REQ-JUR-065' },
   /** SEC-55 — la purge des appareils connus, une durée de session après leur dernière vue. */
   appareils_purger: { req: 'REQ-SEC-003' },
+  /** SEC-58 — la purge, à échéance, du journal des accès à la console. */
+  journal_acces_console_purger: { req: 'REQ-SEC-023' },
   /**
    * INT-T08-P — la réconciliation quotidienne avec axion-ia : relecture de sa file depuis la plus
    * haute séquence reçue, rejeu des trous (`src/server/jobs/reconciliation.ts`).
