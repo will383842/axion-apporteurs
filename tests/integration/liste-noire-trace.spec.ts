@@ -14,7 +14,11 @@
  *   3. UN RÔLE NOMMÉ : ajouter et retirer sont réservés au rôle que la matrice nomme ; tout autre
  *      rôle, et un utilisateur désactivé, sont refusés sans rien écrire ; le retrait par le code
  *      ferme la période (auteur, date) puis supprime la ligne, dans une transaction ;
- *   4. CE QUE LA PROJECTION EN LIT : inscrit, un SIREN est connu sous sa catégorie ; retiré, il
+ *   4. LA PURGE À CINQ ANS : une période fermée est effacée quand `retire_at` plus
+ *      `LISTE_NOIRE_TRACE_ANS` est atteint — à la milliseconde : l'échéance moins 1 ms est gardée,
+ *      l'échéance pile effacée ; une période ouverte n'est jamais touchée ; seule la tâche de purge
+ *      efface la trace (témoin statique) ;
+ *   5. CE QUE LA PROJECTION EN LIT : inscrit, un SIREN est connu sous sa catégorie ; retiré, il
  *      redevient déclarable.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -33,6 +37,15 @@ import {
   retirerDeLaListe,
 } from '../../src/server/entreprise-connue/liste-noire';
 import { MATRICE_DES_ROLES, ROLES_CONSOLE } from '../../src/server/roles/matrice';
+import {
+  LOT_DE_PURGE_DES_TRACES_DE_LA_LISTE,
+  limiteDesTracesDeLaListe,
+  purgerLesTracesDeLaListe,
+} from '../../src/server/taches/purger-traces-liste-noire';
+import { SEUILS } from '../../src/domain/seuils/ssot';
+import { TACHES } from '../../src/server/taches/registre';
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
 let base: Base;
 /** Le client du SERVEUR : la base sous `partners_app`, provisionné comme en production. */
@@ -494,5 +507,92 @@ describe('REQ-DM-029 — la projection locale lit la liste : un SIREN retiré re
     });
     await retirerDeLaListe(app, { siren, auteurId: admin, maintenant });
     expect((await anterioriteDe(app, siren, maintenant)).connue).toBe(false);
+  });
+});
+
+// ── 5. la purge à cinq ans ───────────────────────────────────────────────────────────────────────
+
+describe('REQ-DM-028 — la trace d’un retrait est gardée cinq ans, puis effacée', () => {
+  /** Une période inscrite à `ajoute`, retirée à `retire`, sous `partners_app`. */
+  async function periodeFermee(ajoute: Date, retire: Date): Promise<string> {
+    const siren = unSiren();
+    const admin = await utilisateur('admin');
+    await inscrire(siren, admin, ajoute);
+    await app.$transaction([
+      app.$executeRawUnsafe(
+        `UPDATE sirens_liste_noire_trace SET retire_par_id = $2::uuid, retire_at = $3
+          WHERE siren = $1 AND retire_at IS NULL`,
+        siren,
+        admin,
+        retire
+      ),
+      app.$executeRawUnsafe(`DELETE FROM sirens_liste_noire WHERE siren = $1`, siren),
+    ]);
+    return siren;
+  }
+
+  /** L'échéance d'une période retirée à `retire` : cinq ans civils plus tard, en UTC. */
+  const echeance = (retire: Date) => {
+    const d = new Date(retire.getTime());
+    d.setUTCFullYear(d.getUTCFullYear() + SEUILS.LISTE_NOIRE_TRACE_ANS.valeur);
+    return d;
+  };
+
+  it('REQ-DM-028 : la durée vit dans la SSOT des rétentions — cinq ans, avec sa source', () => {
+    expect(SEUILS.LISTE_NOIRE_TRACE_ANS).toMatchObject({ valeur: 5, unite: 'ans' });
+    expect(SEUILS.LISTE_NOIRE_TRACE_ANS.source).toMatch(/registre de l.article 30|juriste/);
+  });
+
+  it('REQ-DM-028 : la limite est l’instant moins cinq ans civils, en UTC', () => {
+    expect(limiteDesTracesDeLaListe(new Date('2031-10-04T08:00:00.000Z'))).toEqual(
+      new Date('2026-10-04T08:00:00.000Z')
+    );
+  });
+
+  it('REQ-DM-028 : à la milliseconde — l’échéance moins 1 ms est gardée, l’échéance pile est effacée', async () => {
+    const retire = new Date(T0.getTime() + MINUTE);
+    const siren = await periodeFermee(T0, retire);
+    const fin = echeance(retire);
+
+    await purgerLesTracesDeLaListe(app, new Date(fin.getTime() - 1));
+    expect(await periodes(siren)).toHaveLength(1);
+
+    await purgerLesTracesDeLaListe(app, fin);
+    expect(await periodes(siren)).toEqual([]);
+  });
+
+  it('REQ-DM-028 : une période OUVERTE n’est jamais touchée, quelle que soit son ancienneté', async () => {
+    const siren = unSiren();
+    await inscrire(siren, await utilisateur('admin'), new Date('2000-01-01T00:00:00.000Z'));
+    await purgerLesTracesDeLaListe(app, new Date('2100-01-01T00:00:00.000Z'));
+    expect((await periodes(siren)).map((p) => p.retire_at)).toEqual([null]);
+  });
+
+  it('REQ-DM-028 : la purge va par lots bornés jusqu’à épuisement, et rend le nombre effacé', async () => {
+    const retire = new Date('2001-01-01T00:00:00.000Z');
+    const ajoute = new Date('2000-01-01T00:00:00.000Z');
+    const sirens: string[] = [];
+    for (let i = 0; i < 3; i += 1) sirens.push(await periodeFermee(ajoute, retire));
+    const { effacees } = await purgerLesTracesDeLaListe(app, echeance(retire));
+    expect(effacees).toBeGreaterThanOrEqual(3);
+    for (const s of sirens) expect(await periodes(s)).toEqual([]);
+    expect(LOT_DE_PURGE_DES_TRACES_DE_LA_LISTE).toBeGreaterThan(0);
+    expect((await purgerLesTracesDeLaListe(app, echeance(retire))).effacees).toBe(0);
+  });
+
+  it('REQ-DM-028 : la purge est une tâche du registre, sous sa clé', () => {
+    expect(TACHES.traces_liste_noire_purger).toEqual({ req: 'REQ-DM-028' });
+  });
+
+  it('REQ-DM-028 : TÉMOIN statique — seule la tâche de purge efface la trace', () => {
+    const fichiers = execFileSync('git', ['ls-files', 'src'], { encoding: 'utf8' })
+      .split('\n')
+      .filter((f) => /\.(ts|tsx)$/.test(f));
+    const effaceurs = fichiers.filter((f) =>
+      /sirenListeNoireTrace\.(delete|deleteMany)\b|DELETE\s+FROM\s+"?sirens_liste_noire_trace\b/i.test(
+        readFileSync(f, 'utf8')
+      )
+    );
+    expect(effaceurs).toEqual(['src/server/taches/purger-traces-liste-noire.ts']);
   });
 });
