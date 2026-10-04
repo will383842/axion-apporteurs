@@ -142,6 +142,23 @@ export const SEUILS = {
     renvois: [],
     verifieLe: '2026-10-03',
   },
+  // SEC-18 : la tâche différée qui ouvre les anomalies d'auto-parrainage (forme d'A02, PR 601). Sa
+  // cadence, et la fenêtre qui borne ce qu'elle relit en arrière au premier passage ou après une
+  // panne. Valeurs proposées par l'auteur, à confirmer par la coordination.
+  AUTO_PARRAINAGE_CADENCE_MINUTES: {
+    valeur: 60,
+    unite: 'minutes',
+    source: 'REQ-SEC-031 (contrôle différé, forme d’A02 du 2026-10-03), valeur proposée par A05',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
+  AUTO_PARRAINAGE_FENETRE_JOURS: {
+    valeur: 7,
+    unite: 'jours',
+    source: 'REQ-SEC-031 (contrôle différé, forme d’A02 du 2026-10-03), valeur proposée par A05',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
   ANTERIORITE_DEVIS_MOIS: {
     valeur: 6,
     unite: 'mois',
