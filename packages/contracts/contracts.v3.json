@@ -692,6 +692,18 @@
                     "type": "null"
                   }
                 ]
+              },
+              "prixReferenceHtCents": {
+                "$comment": "Prix public HT de la LIGNE, en centimes : le prix public unitaire ferme en vigueur à la date de signature, multiplié par la quantité de la ligne, arrondi comme `montantHtCents`, auquel il se compare directement. `null` si l'offre n'a pas de prix public ferme (sur devis, fourchette, « à partir de », paliers, offre disparue) ou si la ligne n'a pas d'`offreCode` ; jamais un prix nul.",
+                "anyOf": [
+                  {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [
@@ -701,7 +713,8 @@
               "montantHtCents",
               "offreCode",
               "commissionId",
-              "commission"
+              "commission",
+              "prixReferenceHtCents"
             ],
             "type": "object"
           },
