@@ -835,7 +835,7 @@ describe('REQ-DM-006 — l’écrivain des transitions, en processus (client sim
       maintenant: MAINTENANT,
     });
     expect(r).toStrictEqual({ de: 'signee', vers: 'annulee' });
-    expect(mises[0]!.data.statut).toBe('annulee');
+    expect((mises[0] as { data: { statut: string } }).data.statut).toBe('annulee');
     expect(evenementsEcrits()[0]!.charge).toMatchObject({
       de: 'signee',
       vers: 'annulee',
@@ -864,7 +864,8 @@ describe('REQ-DM-006 — l’écrivain des transitions, en processus (client sim
       } catch (e) {
         levee = e;
       }
-      expect(levee).toBeInstanceOf(ErreurTransitionAttribution);
+      // L'écrivain est rechargé : sa classe d'erreur n'est pas celle importée ici, on lit son nom.
+      expect((levee as Error).name).toBe('ErreurTransitionAttribution');
       expect((levee as ErreurTransitionAttribution).code).toBe('critere_incoherent');
       expect(mises).toStrictEqual([]);
       expect(evenementsEcrits()).toStrictEqual([]);

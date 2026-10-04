@@ -28,6 +28,7 @@ import { z } from 'zod';
 import { ALGORITHME } from './journal';
 import { EVENEMENTS_APPORTEUR, MOTIFS_RESILIATION, STATUTS_APPORTEUR } from '../apporteur/statut';
 import {
+  CRITERES_D_ANTERIORITE,
   ETATS_ATTRIBUTION,
   EVENEMENTS_ATTRIBUTION,
   NAISSANCES_ATTRIBUTION,
@@ -170,7 +171,7 @@ export const CHARGES_PAR_TYPE = {
        * DM-67 (REQ-JUR-007) : le critère de l'antériorité établie après coup, en enum INTERNE, porté
        * par `anteriorite_etablie` et par elle seule ; aucune donnée de personne.
        */
-      critere: z.enum(['cliente', 'devis', 'devis_signe']).optional(),
+      critere: z.enum(CRITERES_D_ANTERIORITE).optional(),
     })
     .strict()
     .superRefine(({ de, transition, critere }, ctx) => {

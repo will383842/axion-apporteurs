@@ -162,6 +162,13 @@ export const REFUSEES_AU_CONSEILLER = [
 /** La prise en charge est la naissance du conseiller, et de lui seul. */
 const REFUSEES_A_L_APPORTEUR: readonly TransitionAttribution[] = ['prise_en_charge'];
 
+/**
+ * DM-67 (REQ-JUR-007) : le critère de l'antériorité établie après coup, en enum INTERNE de l'événement
+ * `anteriorite_etablie` ; il n'apparaît jamais dans une notification.
+ */
+export const CRITERES_D_ANTERIORITE = ['cliente', 'devis', 'devis_signe'] as const;
+export type CritereDAnteriorite = (typeof CRITERES_D_ANTERIORITE)[number];
+
 export type CodeTransitionAttribution =
   | 'etat_inconnu'
   | 'transition_inconnue'
@@ -169,7 +176,8 @@ export type CodeTransitionAttribution =
   | 'naissance_refusee'
   | 'transition_refusee'
   | 'refusee_au_porteur'
-  | 'autre_commande_valable';
+  | 'autre_commande_valable'
+  | 'critere_incoherent';
 
 export class ErreurTransitionAttribution extends Error {
   readonly code: CodeTransitionAttribution;
