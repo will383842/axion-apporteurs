@@ -925,13 +925,14 @@ describe('REQ-DM-006 — l’écrivain des transitions, en processus (client sim
     async (_, transition, extra) => {
       const { transitionnerUneAttribution } = await ecrivain();
       const { tx, mises, verrous } = txSimule([ligneDe({ statut: 'active' })]);
-      const e = await transitionnerUneAttribution(tx, {
+      const demande: Parameters<typeof transitionnerUneAttribution>[1] = {
         attributionId: ID,
         transition,
         ...extra,
         acteur: { par: 'systeme' },
         maintenant: MAINTENANT,
-      } as never).catch((x: unknown) => x);
+      };
+      const e = await transitionnerUneAttribution(tx, demande).catch((x: unknown) => x);
       expect((e as Error).name).toBe('ErreurTransitionAttribution');
       expect((e as { code: string }).code).toBe('critere_incoherent');
       expect(verrous).toStrictEqual([]);
