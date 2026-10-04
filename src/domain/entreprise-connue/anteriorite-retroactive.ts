@@ -13,12 +13,15 @@
  * signature postérieures sont ignorées. La liste de la Société n'est pas un de ces critères.
  */
 import { occupe } from '../attribution/etats';
-import type { TypePorteur } from '../attribution/machine';
+import {
+  CRITERES_D_ANTERIORITE,
+  type CritereDAnteriorite,
+  type TypePorteur,
+} from '../attribution/machine';
 import { estEntierementFacture, evaluerAnteriorite, type DevisConnu } from './anteriorite';
 
-/** Le critère, en enum INTERNE de l'événement : il n'apparaît jamais dans la notification. */
-export const CRITERES_D_ANTERIORITE = ['cliente', 'devis', 'devis_signe'] as const;
-export type CritereDAnteriorite = (typeof CRITERES_D_ANTERIORITE)[number];
+/** Le critère, en enum INTERNE de l'événement : celui de la machine (DM-67), jamais recopié. */
+export { CRITERES_D_ANTERIORITE, type CritereDAnteriorite };
 
 /**
  * Les faits datés d'une entreprise. Pour chaque devis, `factureHtCents` est le facturé HT, avoirs
