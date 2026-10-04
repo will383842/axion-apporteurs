@@ -770,6 +770,8 @@ function txSimule(lignes: LigneSimulee[]) {
         mises.push(arg);
         return {};
       },
+      // DM-55 : la libération de l'occupation lit le SIREN ; sans ligne, aucun rang n'est notifié.
+      findUnique: async () => null,
     },
   };
   return { tx: tx as never, verrous, mises };
@@ -802,6 +804,7 @@ async function refusDe(p: Promise<unknown>) {
 describe('REQ-DM-006 — l’écrivain des transitions, en processus (client simulé)', () => {
   beforeEach(() => {
     journalSimule.ajouterEvenement.mockReset();
+    journalSimule.ajouterEvenement.mockResolvedValue({ id: '1', selfHash: 'x' });
   });
 
   it('REQ-DM-006 : TÉMOIN — la confirmation verrouille la ligne, écrit l’état et la fenêtre, puis l’événement, à la valeur près', async () => {

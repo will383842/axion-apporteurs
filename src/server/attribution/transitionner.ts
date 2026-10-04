@@ -37,6 +37,7 @@ import {
 import { ajouterEvenement } from '../evenement/journal';
 import { annulerLaDemandeDe } from '../confirmation/demandes';
 import { ETATS_LIBERES, echeanceDePurge } from '../taches/purger-contacts';
+import { ETATS_OCCUPANTS } from '../../domain/attribution/etats';
 import { MOTIFS_DES_DECISIONS } from '../../content/micro-copy/courriels/notifications';
 
 type Tx = Prisma.TransactionClient;
@@ -178,6 +179,40 @@ async function jugerSousLeVerrou(tx: Tx, demande: DemandeEcriture, l: Ligne): Pr
 const estUneDecisionNotifiee = (t: TransitionAttribution): boolean =>
   Object.hasOwn(MOTIFS_DES_DECISIONS, t);
 
+const occupe = (e: EtatAttribution): boolean =>
+  (ETATS_OCCUPANTS as readonly EtatAttribution[]).includes(e);
+
+/**
+ * DM-55 (REQ-DM-004, art. 3.5 al. 2) : l'attribution qui QUITTE l'occupation libère le SIREN. Le
+ * premier rang en attente est notifié — sur SA ligne, à SON apporteur —, avec l'événement de la
+ * libération. Sa fenêtre de redéclaration n'est PAS posée ici : elle court de l'envoi effectif du
+ * courriel, posée par le passage d'envoi.
+ */
+async function notifierLePremierRang(
+  tx: Tx,
+  attributionId: string,
+  evenementId: bigint
+): Promise<void> {
+  const libere = await tx.attribution.findUnique({
+    where: { id: attributionId },
+    select: { siren: true },
+  });
+  if (libere === null) return;
+  const rang1 = await tx.attribution.findFirst({
+    where: { siren: libere.siren, statut: 'en_attente', rangAttente: 1 },
+    select: { id: true, apporteurId: true },
+  });
+  if (rang1 === null || rang1.apporteurId === null) return;
+  await tx.notificationEspace.create({
+    data: {
+      apporteurId: rang1.apporteurId,
+      cle: 'premier_rang_libere',
+      attributionId: rang1.id,
+      evenementId,
+    },
+  });
+}
+
 /** Une transition d'une attribution EXISTANTE. Rend l'état de départ et d'arrivée. */
 export async function transitionnerUneAttribution(
   tx: Tx,
@@ -245,6 +280,9 @@ export async function transitionnerUneAttribution(
         ...(anomalieId !== undefined ? { anomalieId } : {}),
       },
     });
+  }
+  if (occupe(de) && !occupe(vers)) {
+    await notifierLePremierRang(tx, attributionId, BigInt(inscrit.id));
   }
   // DM-40 (HYP-W20-ANNULATION) : l'annulation de l'apporteur annule sa demande de confirmation,
   // dans la MÊME transaction ; une demande déjà envoyée fait tout tomber.
