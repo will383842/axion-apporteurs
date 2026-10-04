@@ -25324,6 +25324,34 @@
           "axionia/src/server/qualiopi/financements/__tests__/blocage-condition-suspensive.spec.ts"
         ]
       }
+    },
+    {
+      "id": "GOV-149",
+      "titre": "La garde rate-famille lit en SSOT la limite d'un compteur que son exigence dit « lus en SSOT », sans aucun littéral, et ne laisse aucun compteur sans confrontation",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/rate-famille.ts",
+        "tests/unit/securite/rate-famille.spec.ts",
+        "src/domain/seuils/conversions.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-SEC-016"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Versée par la gouvernance (A01), en express, pour débloquer SEC-12 (#691) : REQ-SEC-016 dit que la fenêtre et les plafonds du dépôt sont « lus en SSOT », sans chiffre, et la garde `securite:rate-famille` exigeait alors la sentinelle hors dépôt.\n\nDÉCISION (coordination, #619, commentaire 5980895730), TELLE QUELLE (à un écart près, déclaré : « fichier.ts:N » y est écrit « fichier.ts, ligne N », sinon `gov:sonde` rougit) :\n\n**Option 1 retenue** : la garde `rate-famille.ts` évolue (limites lues en `SEUILS` acceptées quand la REQ dit « lues en SSOT », avec vérification qu'aucune valeur n'est tapée), et `rate-famille.spec.ts`, ligne 249 est réécrit.\n\nCRITÈRES DE LA SÉCURITÉ (#619, commentaire 5982320469), TELS QUELS (à un écart près, déclaré : « fichier.ts:N » y est écrit « fichier.ts, ligne N », sinon `gov:sonde` rougit) :\n\n1. **Quand l'exigence CHIFFRE une limite, la garde la confronte TOUJOURS** au compteur, comme aujourd'hui. L'option 1 ne s'ouvre que si le texte de l'exigence dit « lus en SSOT » DANS LA MÊME PHRASE que l'ancre du compteur, et APRÈS elle. Sinon, la règle actuelle s'applique. Une exigence qui chiffre ET dit « lus en SSOT » est confrontée sur le chiffre.\n2. **Quand l'exigence ne chiffre rien,** la `limite` et la `fenetreSecondes` du compteur, dans `src/server/securite/rate-limit.ts`, sont des expressions `SEUILS.<NOM>…`, vérifiées dans le TEXTE source, sans AUCUN littéral numérique (une multiplication d'unités comprise : la conversion passe par une constante ou par la SSOT). Chaque seuil nommé existe dans `SEUILS` avec une `source` NON VIDE et un `verifieLe` daté. Un compteur qui n'a ni chiffre dans l'exigence ni constante en SSOT ROUGIT, et la famille est nommée.\n3. **`surPanne` reste exigé et confronté** pour chaque compteur des préfixes sensibles (`magic:`, `depot:`, `verif:`, `webhook:`, `auth:`, `console:`), lu dans le texte de l'exigence comme aujourd'hui. L'option 1 n'en dispense aucun.\n4. **Aucun compteur existant ne perd sa confrontation.** Un témoin parcourt TOUS les compteurs du registre : chacun est confronté soit à un chiffre de son exigence, soit à des seuils SSOT sourcés, sans troisième voie. La réécriture de `rate-famille.spec.ts`, ligne 249 garde ses faces actuelles et ajoute les nouvelles.\n\nTÉMOINS, à deux faces pour chaque critère :\n- un compteur « lus en SSOT » bien écrit passe ;\n- le même avec un littéral rougit ;\n- « lus en SSOT » hors de la phrase de l'ancre rougit ;\n- un seuil SSOT sans source rougit ;\n- un `surPanne` absent ou contraire au texte rougit ;\n- un compteur sans aucune confrontation rougit.\n\nFORME (gouvernance) : un compteur lu en SSOT écrit `limite: SEUILS.<NOM>.valeur` (seuil en `tentatives`) et `fenetreSecondes: SEUILS.<NOM>.valeur * <CONSTANTE>`, la constante étant importée, sous ce nom, de `src/domain/seuils/conversions.ts`, dont la table fermée `CONVERSIONS_EN_SECONDES` associe `SECONDES_PAR_MINUTE` aux `minutes` et `SECONDES_PAR_JOUR` aux `jours`. Cinq familles de faute nommées : `valeur_tapee_hors_ssot`, `seuil_inconnu`, `seuil_sans_source`, `facteur_d_unite_faux`, `compteur_sans_confrontation`. La sentinelle hors dépôt reste une voie nommée (`hors-depot-ferme`), admise seulement en `surPanne: refuser`. Les témoins de la panne lisent la conduite ouverte sur `depot:entreprise-ip`, puisque SEC-12 passe `depot:ip` en `refuser`.\n\nLentille : sécurité (garde de sécurité, relue sur sa tête exacte).\n\nARBITRAGES DE LA SÉCURITÉ (#721, commentaire 5982915994), TELS QUELS — ils complètent les critères ci-dessus ; le critère (3) se lit sans `console:` :\n\n**(a) La sentinelle `hors-depot-ferme` est ACCEPTÉE, mais RESTREINTE :**\n- elle vaut pour une liste FERMÉE d'un seul compteur, `depot:identite` ;\n- `surPanne: refuser` est exigé ;\n- un TÉMOIN STATIQUE vérifie qu'aucun fichier de `src/` n'appelle `limiter('depot:identite', …)`.\n\nUn compteur qui refuse tout et que personne n'appelle n'est pas une troisième voie de confrontation. C'est un compteur mort, et fermé.\n\nDETTE NOMMÉE pour SEC-12 : SUPPRIMER `depot:identite` du registre. La juriste interdit tout compteur par identité au dépôt (REQ-DM-009) : on ne le chiffre pas dans une exigence. La sentinelle disparaît avec lui, et la garde rougit alors sur toute sentinelle.\n\n**(b) Le préfixe `console:` : d'accord, il n'existe pas.** Les compteurs de la console vivent sous `magic:console-*` et sont déjà confrontés. Rien à ajouter dans GOV-149. Mon critère (3) se lit sans `console:`.\n\n**(c) `depot:ip` est confronté au texte remplacé jusqu'à SEC-12 : accepté.**\n\nDETTE NOMMÉE pour SEC-12 : après le changement d'ancre, un TÉMOIN vérifie que la garde ne lit JAMAIS une ancre placée dans une note `[REMPLACÉ …]`. La règle « la phrase s'arrête au premier `[` » tient déjà pour la voie SSOT ; elle doit tenir aussi pour l'ancre.",
+      "tests": {
+        "REQ-SEC-016": [
+          "tests/unit/securite/rate-famille.spec.ts"
+        ]
+      }
     }
   ]
 }
