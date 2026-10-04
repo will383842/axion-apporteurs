@@ -11,7 +11,8 @@
  *   — `nomAffichable` (décision de Williams du 2026-10-01, option B) : null pour `libre`, et aucun
  *     autre champ n'est admis.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import type { PrismaClient } from '@prisma/client';
 import {
   API_ATTRIBUTIONS,
   API_DU_CONTRAT,
@@ -24,6 +25,14 @@ import {
   STATUTS_D_ATTRIBUTION,
   schemaReponseAttribution,
 } from '../../../src/server/integrations/axionia/api-entrante';
+import {
+  lecteurDeLaBase,
+  nomAffichable,
+  referenceOpaque,
+} from '../../../src/server/integrations/axionia/attributions-dto';
+import { ETATS_OCCUPANTS } from '../../../src/domain/attribution/etats';
+import { clesPii, encryptPii } from '../../../src/server/securite/pii';
+import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 
 type Schema = Record<string, unknown>;
 const NOMS = [
@@ -129,6 +138,204 @@ describe('REQ-INT-014 — la forme admise par la frontière est dérivée du con
         schemaReponseAttribution.safeParse({ ...base, nomAffichable }).success,
         nomAffichable
       ).toBe(false);
+    }
+  });
+});
+
+// ── Le lecteur (`attributions-dto.ts`) : arbitrage de la coordination du 2026-10-04 (#561) ───────
+
+const CLES = clesPii({
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-int-t07-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: 'b'.repeat(64),
+});
+const CLE_REF = 'c'.repeat(64);
+const APPORTEUR = '11111111-1111-4111-8111-111111111111';
+const CONSEILLER = '22222222-2222-4222-8222-222222222222';
+const FIN = new Date('2027-03-15T10:00:00.000Z');
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+const bloc = (modele: string, champ: string, id: string, clair: string) =>
+  Buffer.from(encryptPii({ modele, champ, id }, clair, CLES));
+
+type Ligne = Record<string, unknown>;
+function base(ligne: Ligne | null) {
+  const findFirst = vi.fn(async () => ligne);
+  return { findFirst, prisma: { attribution: { findFirst } } as unknown as PrismaClient };
+}
+const parApporteur = (
+  statut: string,
+  dates: Ligne = { fenetreFinAt: FIN, peremptionAt: null }
+) => ({
+  statut,
+  ...dates,
+  apporteur: {
+    id: APPORTEUR,
+    prenomChiffre: bloc('Apporteur', 'prenomChiffre', APPORTEUR, 'Paul'),
+    nomChiffre: bloc('Apporteur', 'nomChiffre', APPORTEUR, 'Dupont'),
+  },
+  utilisateurConsole: null,
+});
+const parConseiller = (statut: string, nom = 'Julie Martin') => ({
+  statut,
+  fenetreFinAt: FIN,
+  peremptionAt: null,
+  apporteur: null,
+  utilisateurConsole: {
+    id: CONSEILLER,
+    nomChiffre: bloc('UtilisateurConsole', 'nomChiffre', CONSEILLER, nom),
+  },
+});
+const lire = (ligne: Ligne | null, cleReference = CLE_REF) => {
+  const b = base(ligne);
+  return { b, lecture: lecteurDeLaBase(b.prisma, { cles: CLES, cleReference })(SIREN_TEMOIN) };
+};
+const SIREN_TEMOIN = '552100554';
+
+describe('REQ-INT-014 — le statut se lit dans l’attribution qui OCCUPE le SIREN', () => {
+  it('REQ-INT-014 : une seule lecture, des seuls états occupants, la même quel que soit le porteur', async () => {
+    const { b, lecture } = lire(null);
+    expect(await lecture).toBeNull();
+    expect(b.findFirst).toHaveBeenCalledTimes(1);
+    expect(b.findFirst).toHaveBeenCalledWith({
+      where: { siren: SIREN_TEMOIN, statut: { in: [...ETATS_OCCUPANTS] } },
+      select: {
+        statut: true,
+        fenetreFinAt: true,
+        peremptionAt: true,
+        apporteur: { select: { id: true, prenomChiffre: true, nomChiffre: true } },
+        utilisateurConsole: { select: { id: true, nomChiffre: true } },
+      },
+    });
+  });
+
+  it.each(ETATS_OCCUPANTS.filter((e) => e !== 'convertie'))(
+    'REQ-INT-014 : `%s` occupe — `attribuee`',
+    async (etat) => {
+      expect(await lire(parApporteur(etat)).lecture).toMatchObject({ statut: 'attribuee' });
+    }
+  );
+
+  it('REQ-INT-014 : `convertie` — `cliente`, sans échéance, le porteur nommé', async () => {
+    const r = await lire(parApporteur('convertie')).lecture;
+    expect(r).toMatchObject({ statut: 'cliente', until: null, nomAffichable: 'Paul D.' });
+    expect(schemaReponseAttribution.safeParse(r).success).toBe(true);
+  });
+
+  it('REQ-INT-014 : aucune attribution occupante — null, que la frontière rend « libre »', async () => {
+    expect(await lire(null).lecture).toBeNull();
+  });
+});
+
+describe('REQ-INT-014 — `until`, le mois à Paris de la fin de fenêtre, sinon de la péremption', () => {
+  it('REQ-INT-014 : la fin de fenêtre l’emporte', async () => {
+    const r = await lire(
+      parApporteur('active', { fenetreFinAt: FIN, peremptionAt: new Date('2026-12-01T00:00:00Z') })
+    ).lecture;
+    expect(r).toMatchObject({ until: '2027-03' });
+  });
+
+  it('REQ-INT-014 : sans fin de fenêtre, la péremption', async () => {
+    const r = await lire(
+      parApporteur('provisoire', {
+        fenetreFinAt: null,
+        peremptionAt: new Date('2026-12-01T12:00:00Z'),
+      })
+    ).lecture;
+    expect(r).toMatchObject({ until: '2026-12' });
+  });
+
+  it('REQ-INT-014 : le mois est celui de PARIS — 23 h 30 UTC le dernier jour du mois est déjà le mois suivant', async () => {
+    const r = await lire(
+      parApporteur('active', { fenetreFinAt: new Date('2027-02-28T23:30:00Z'), peremptionAt: null })
+    ).lecture;
+    expect(r).toMatchObject({ until: '2027-03' });
+  });
+
+  it('REQ-INT-014 : ni fin de fenêtre ni péremption — null, jamais une date inventée', async () => {
+    const r = await lire(parApporteur('active', { fenetreFinAt: null, peremptionAt: null }))
+      .lecture;
+    expect(r).toMatchObject({ until: null });
+  });
+});
+
+describe('REQ-INT-014 — `apporteurRef`, opaque, de même forme pour les deux populations (W19)', () => {
+  it('REQ-INT-014 : un UUID, stable pour un même porteur, qui n’est pas son identifiant', async () => {
+    const a = (await lire(parApporteur('active')).lecture) as { apporteurRef: string };
+    const b = (await lire(parApporteur('rdv_pris')).lecture) as { apporteurRef: string };
+    expect(a.apporteurRef).toMatch(UUID);
+    expect(a.apporteurRef).toBe(b.apporteurRef);
+    expect(a.apporteurRef).not.toBe(APPORTEUR);
+    expect(a.apporteurRef).toBe(referenceOpaque(APPORTEUR, CLE_REF));
+  });
+
+  it('REQ-INT-014 : la référence dépend de la clé — une autre clé, une autre référence', () => {
+    expect(referenceOpaque(APPORTEUR, CLE_REF)).not.toBe(
+      referenceOpaque(APPORTEUR, 'd'.repeat(64))
+    );
+    expect(referenceOpaque(APPORTEUR, CLE_REF)).not.toBe(referenceOpaque(CONSEILLER, CLE_REF));
+  });
+
+  it('REQ-INT-014 : une clé absente ou trop courte — la lecture lève, jamais une référence faible', async () => {
+    await expect(lire(parApporteur('active'), '').lecture).rejects.toThrow(/cle_reference/);
+    await expect(lire(parApporteur('active'), 'c'.repeat(31)).lecture).rejects.toThrow(
+      /cle_reference/
+    );
+  });
+
+  it('REQ-SEC-042 : un conseiller au même stade répond comme un apporteur — même forme, hors la seule référence', async () => {
+    const a = (await lire(parApporteur('active')).lecture) as Record<string, unknown>;
+    const c = (await lire(parConseiller('active', 'Paul Durand')).lecture) as Record<
+      string,
+      unknown
+    >;
+    expect(Object.keys(c)).toEqual(Object.keys(a));
+    expect({ ...c, apporteurRef: null }).toEqual({ ...a, apporteurRef: null });
+    expect(c.apporteurRef).toMatch(UUID);
+    expect(c.apporteurRef).not.toBe(a.apporteurRef);
+  });
+});
+
+describe('REQ-INT-014 — `nomAffichable`, le prénom et l’initiale du nom, rien d’autre', () => {
+  it('REQ-INT-014 : un apporteur — son prénom et l’initiale de son nom', async () => {
+    expect(await lire(parApporteur('active')).lecture).toMatchObject({ nomAffichable: 'Paul D.' });
+  });
+
+  it('REQ-INT-014 : un conseiller — le premier mot de son nom et l’initiale du dernier, sans mention de rôle', async () => {
+    expect(await lire(parConseiller('active')).lecture).toMatchObject({
+      nomAffichable: 'Julie M.',
+    });
+    expect(await lire(parConseiller('active', 'Marie de La Tour')).lecture).toMatchObject({
+      nomAffichable: 'Marie T.',
+    });
+    expect(await lire(parConseiller('active', 'Paul')).lecture).toMatchObject({
+      nomAffichable: 'Paul',
+    });
+  });
+
+  it.each([
+    ['un prénom et un nom', 'Jean-Pierre', 'dupont', 'Jean-Pierre D.'],
+    ['des espaces en trop', '  Anne  ', '  le  Gall ', 'Anne L.'],
+    ['un prénom seul', 'Paul', null, 'Paul'],
+    ['un nom seul : rien, l’initiale ne suffit pas', null, 'Dupont', null],
+    ['ni l’un ni l’autre', null, null, null],
+    ['un courriel glissé dans le prénom', 'paul@example.test', 'Dupont', null],
+    ['un numéro glissé dans le prénom', '0612345678', 'Dupont', null],
+  ])('REQ-INT-014 : %s', (_q, prenom, nom, attendu) => {
+    expect(nomAffichable(prenom, nom)).toBe(attendu);
+  });
+
+  it('REQ-INT-014 : un bloc illisible — la lecture lève (503), le nom ne passe jamais en clair', async () => {
+    const ligne = parApporteur('active');
+    ligne.apporteur.nomChiffre = Buffer.from('pas un bloc');
+    await expect(lire(ligne).lecture).rejects.toThrow();
+  });
+
+  it('REQ-INT-014 : chaque réponse rendue est conforme au contrat', async () => {
+    for (const l of [parApporteur('active'), parApporteur('convertie'), parConseiller('signee')]) {
+      expect(schemaReponseAttribution.safeParse(await lire(l).lecture).success).toBe(true);
     }
   });
 });
