@@ -16,7 +16,18 @@
  * Un plantage entre le relais et le commit n'écrit rien : le passage suivant renvoie. Le doublon
  * possible est un second courriel d'INFORMATION, jamais un délai raccourci.
  */
+import { randomUUID } from 'node:crypto';
 import type { Prisma, PrismaClient } from '@prisma/client';
+import { domaines } from '../../config/entite';
+import { horlogeSysteme } from '../../lib/horloge';
+import { lireLesFaitsPourLaNotification } from '../anomalie/justification';
+import { rendreDepuisLaBase } from '../attribution/notifications';
+import { MODELE_APPORTEUR } from '../auth/lien-magique-depot';
+import { lireLaChargeDUnFait } from '../evenement/journal';
+import { configurationDeLEmetteur } from '../integrations/zeptomail/emetteur';
+import { relaisZeptomail } from '../integrations/zeptomail/relais';
+import { composerLeCourriel } from '../notifications/envoyer';
+import { CHAMPS_PII, clesPii, decryptPii, type ClesPii } from '../securite/pii';
 import { finDeLaFenetreDeRedeclaration } from '../../domain/attribution/fenetre-redeclaration';
 import { TAILLES_DE_LOT } from '../../domain/seuils/ssot';
 import type { MotifDeNonRendu } from '../attribution/notifications';
@@ -225,5 +236,77 @@ export function envoyerParLEmetteur(
       { ...dependances, depot: depotDesCourriels(tx) }
     );
     return { statut: ligne.statut, envoyeAt: ligne.envoyeAt };
+  };
+}
+
+// ── le passage du processus, tel que le lanceur l'inscrit ─────────────────────────────────────────
+
+/** L'adresse du destinataire, déchiffrée dans la transaction ; jamais consignée, jamais journalisée. */
+async function adresseDuDestinataire(
+  tx: Prisma.TransactionClient,
+  n: NotificationAEnvoyer,
+  cles: ClesPii
+): Promise<string> {
+  const a = await tx.apporteur.findUnique({
+    where: { id: n.apporteurId },
+    select: { emailChiffre: true },
+  });
+  if (a?.emailChiffre == null) {
+    throw new Error(`adresse_absente : la notification ${n.id} n'a pas d'adresse de destination`);
+  }
+  return decryptPii(
+    { modele: MODELE_APPORTEUR, champ: CHAMPS_PII.email.chiffre, id: n.apporteurId },
+    a.emailChiffre,
+    cles
+  );
+}
+
+/**
+ * Le passage du lanceur : l'heure du système, le rendu depuis la base (la charge par l'écrivain unique
+ * du journal, les faits par le second lecteur de la justification, la composition de `notifier()`),
+ * et l'émetteur unique — son drapeau DMARC décide seul si un courriel part ; fermé, la ligne est
+ * `retenu_dmarc_non_verifie` et aucun délai ne court.
+ */
+export function passageDEnvoiDesNotifications(
+  prisma: PrismaClient,
+  env: Readonly<Record<string, string | undefined>>
+): () => Promise<Awaited<ReturnType<typeof envoyerLesNotificationsDeLEspace>>> {
+  return () => {
+    const cles = clesPii(env);
+    const maintenant = () => new Date(horlogeSysteme.maintenant());
+    const urlDeLEspace = new URL(`https://${domaines().servi}`);
+    let envoi: GestesExternes['envoyer'] | undefined;
+    return envoyerLesNotificationsDeLEspace(
+      portsDuPassage(prisma, {
+        maintenant,
+        rendre: (tx, n, envoyeLe) =>
+          rendreDepuisLaBase(tx, n, envoyeLe, {
+            chargeDuFait: async (t, id) => {
+              const fait = await lireLaChargeDUnFait(t, id);
+              return fait?.type === 'attribution_etat_modifie' ? fait.charge : null;
+            },
+            faitsDe: (t, q) => lireLesFaitsPourLaNotification(t, q, cles),
+            composer: (cle, texte) => composerLeCourriel(cle, texte, urlDeLEspace),
+          }),
+        // L'émetteur est construit au PREMIER envoi : une configuration absente fait échouer l'envoi,
+        // nommée, jamais un passage qui n'a rien à envoyer.
+        envoyer: (tx, n, texte) => {
+          envoi ??= envoyerParLEmetteur(
+            {
+              configuration: configurationDeLEmetteur(env, domaines().envoi),
+              relais: relaisZeptomail({
+                url: env.ZEPTOMAIL_API_URL,
+                jeton: env.ZEPTOMAIL_SEND_TOKEN,
+              }),
+              cles,
+              maintenant,
+              nouvelId: randomUUID,
+            },
+            (t, m) => adresseDuDestinataire(t, m, cles)
+          );
+          return envoi(tx, n, texte);
+        },
+      })
+    );
   };
 }

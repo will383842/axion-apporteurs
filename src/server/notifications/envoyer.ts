@@ -161,6 +161,24 @@ export interface DemandeDeNotification {
   cause?: CauseDeLiberation;
 }
 
+/**
+ * La composition d'un courriel de notification, UNE fois pour tous ses émetteurs (`notifier()` et
+ * le passage d'envoi de DM-55) : le titre en sujet ; le corps, puis l'appel à l'action suivi du lien
+ * de sa route quand elle existe.
+ */
+export function composerLeCourriel(
+  cle: string,
+  texte: TexteRendu,
+  urlDeLEspace: URL
+): { sujet: string; corps: string } {
+  const route = GABARITS[cleDeLaTable(cle)].route;
+  const lien = route === null ? null : new URL(route, urlDeLEspace).href;
+  const corps = [texte.corps, lien === null ? texte.appel : `${texte.appel} : ${lien}`]
+    .filter((x): x is string => x !== null)
+    .join('\n\n');
+  return { sujet: texte.titre, corps };
+}
+
 export async function notifier(
   demande: DemandeDeNotification,
   d: DependancesDeLaNotification
@@ -187,14 +205,11 @@ export async function notifier(
     if (preference?.active === false)
       return { notificationId, courriel: 'desactive_par_preference' };
   }
-  const lien = ligne.route === null ? null : new URL(ligne.route, d.urlDeLEspace).href;
-  const corps = [texte.corps, lien === null ? texte.appel : `${texte.appel} : ${lien}`]
-    .filter((x): x is string => x !== null)
-    .join('\n\n');
+  const { sujet, corps } = composerLeCourriel(cle, texte, d.urlDeLEspace);
   const courriel = await d.envoyerCourriel({
     gabarit: cle,
     a: demande.a,
-    sujet: texte.titre,
+    sujet,
     corps,
     apporteurId: d.acces.apporteurId,
   });
