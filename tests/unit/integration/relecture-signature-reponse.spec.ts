@@ -376,7 +376,9 @@ describe('REQ-INT-013 — la réponse de rejeu : rearmes ∪ introuvables égale
       rearmes: 1,
       introuvables: 1,
     });
-    expect(await clientRejeu(canalDeRejeu({ rearmes: [x], introuvables: [] }))([a, b])).toEqual({
+    // La face refusée a la TAILLE de la demande : seule la vérification identifiant par identifiant
+    // la distingue, jamais la comparaison des tailles.
+    expect(await clientRejeu(canalDeRejeu({ rearmes: [x], introuvables: [b] }))([a, b])).toEqual({
       ok: false,
       motif: 'reponse_hors_demande',
     });
@@ -396,6 +398,17 @@ describe('REQ-INT-013 — la réponse de rejeu : rearmes ∪ introuvables égale
     ['un identifiant est à la fois réarmé et introuvable', { rearmes: [a, b], introuvables: [b] }],
     ['un identifiant est rendu deux fois', { rearmes: [a, a, b], introuvables: [] }],
     ['un identifiant n’est pas une chaîne', { rearmes: [a, 1], introuvables: [b] }],
+    // De MÊME TAILLE que la demande `[a, b]` : la comparaison des tailles ne les refuse pas.
+    [
+      'même taille — un identifiant non demandé à la place d’un demandé',
+      { rearmes: [a], introuvables: [x] },
+    ],
+    ['même taille — un identifiant rendu deux fois', { rearmes: [a, a], introuvables: [] }],
+    [
+      'même taille — un identifiant à la fois réarmé et introuvable',
+      { rearmes: [a], introuvables: [a] },
+    ],
+    ['même taille — un identifiant n’est pas une chaîne', { rearmes: [a, 1], introuvables: [] }],
   ])('REQ-INT-013 : réponse refusée `reponse_hors_demande` — %s', async (_cas, reponse) => {
     expect(await clientRejeu(canalDeRejeu(reponse))([a, b])).toEqual({
       ok: false,
