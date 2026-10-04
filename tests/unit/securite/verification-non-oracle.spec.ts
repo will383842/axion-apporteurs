@@ -1,4 +1,5 @@
 // @req REQ-UX-007
+// @req REQ-SEC-022
 // @req REQ-JUR-011
 // @req REQ-SEC-021
 /**
@@ -512,4 +513,29 @@ describe('REQ-JUR-011 — le port du registre public, sur les dépendances du ma
   it('REQ-JUR-011 : TÉMOIN — une levée du mandataire est une panne : indisponible, jamais « active »', async () => {
     await expect(entrepriseParLeRegistre(DEPS_VIDES)(SIREN)).resolves.toBe('indisponible');
   });
+});
+
+describe('REQ-SEC-022 — la catégorie de la liste ne se dit qu’au refus d’un DÉPÔT, jamais à une vérification', () => {
+  const CATEGORIES = [
+    'administration',
+    'financeur_public',
+    'financeur_paritaire',
+    'organisme_de_formation_partenaire',
+  ] as const;
+
+  it.each(CATEGORIES)(
+    'REQ-SEC-022 : TÉMOIN — inscrite comme %s, la réponse ne porte ni la catégorie, ni rien qui la distingue',
+    async (motif) => {
+      const client = {
+        sirenListeNoire: { findUnique: async () => ({ siren: SIREN, motif }) },
+      } as unknown as PrismaClient;
+      // Le port rend un BOOLÉEN : la catégorie ne franchit pas la base.
+      const surLaListe = await portsDeLaBase(client).surLaListe(SIREN);
+      expect(surLaListe).toBe(true);
+      const { p } = ports({ ...LIBRE, surLaListe });
+      const rendu = JSON.stringify(await verifierUneEntreprise(p, DEMANDE));
+      expect(rendu).toBe(JSON.stringify({ ok: true, dto: { etat: 'non_disponible' } }));
+      for (const c of CATEGORIES) expect(rendu).not.toContain(c);
+    }
+  );
 });
