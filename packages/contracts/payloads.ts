@@ -104,6 +104,10 @@ const commissionDeLigne = ferme({
   grilleVersion: chaine,
 });
 
+/** Le sens de `prixReferenceHtCents`, publié tel quel en `$comment` de la propriété. */
+const SENS_DU_PRIX_DE_REFERENCE =
+  "Prix public HT de la LIGNE, en centimes : le prix public unitaire ferme en vigueur à la date de signature, multiplié par la quantité de la ligne, arrondi comme `montantHtCents`, auquel il se compare directement. `null` si l'offre n'a pas de prix public ferme (sur devis, fourchette, « à partir de », paliers, offre disparue) ou si la ligne n'a pas d'`offreCode` ; jamais un prix nul.";
+
 const ligneDeDevis = ferme({
   designation: chaine,
   activite: ouNul(chaine),
@@ -112,6 +116,18 @@ const ligneDeDevis = ferme({
   offreCode: ouNul(chaine),
   commissionId: ouNul(chaine),
   commission: commissionDeLigne,
+  // Version 3, amendée avant son adoption par axion-ia (décision de Williams du 2026-10-01 ; sens
+  // tranché par A02, recopié mot pour mot dans le `$comment` publié) : Prix public HT de la LIGNE,
+  // en centimes : le prix public unitaire ferme en vigueur à la date de signature, multiplié par la
+  // quantité de la ligne, arrondi comme `montantHtCents`, auquel il se compare directement. `null`
+  // si l'offre n'a pas de prix public ferme (sur devis, fourchette, « à partir de », paliers, offre
+  // disparue) ou si la ligne n'a pas d'`offreCode` ; jamais un prix nul.
+  // Strictement positif : une absence de prix s'écrit `null`, et un 0 ferait diviser le prorata par
+  // zéro.
+  prixReferenceHtCents: {
+    $comment: SENS_DU_PRIX_DE_REFERENCE,
+    ...ouNul({ type: 'integer', minimum: 1 }),
+  },
 });
 
 // ── les douze charges ────────────────────────────────────────────────────────
