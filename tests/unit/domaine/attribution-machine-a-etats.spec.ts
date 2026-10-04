@@ -356,9 +356,9 @@ describe('REQ-DM-007 — les effets recalculés à chaque transition', () => {
   });
 });
 
-/** La référence d'un fait fondateur : la facture ou le devis d'axion-ia, opaque, et sa date. */
-const FACTURE = { nature: 'facture', ref: 'fac_7Hk2-9', le: '2026-12-01T10:00:00.000Z' } as const;
-const DEVIS = { nature: 'devis', ref: 'dev-0001', le: '2026-11-15T10:00:00.000Z' } as const;
+/** La référence d'un fait fondateur : l'EMPREINTE de l'identifiant d'axion-ia, et sa date. */
+const FACTURE = { nature: 'facture', ref: 'a'.repeat(64), le: '2026-12-01T10:00:00.000Z' } as const;
+const DEVIS = { nature: 'devis', ref: 'b'.repeat(64), le: '2026-11-15T10:00:00.000Z' } as const;
 
 describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
   const charge = CHARGES_PAR_TYPE.attribution_etat_modifie;
@@ -424,7 +424,8 @@ describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
       false
     );
     // aucune donnée de personne : une référence opaque, une date ISO, rien d'autre
-    for (const ref of ['', 'Jean Dupont', 'a@b.fr', 'x'.repeat(65)]) {
+    // l'identifiant en clair, un nom, une adresse, une empreinte mal formée : refusés
+    for (const ref of ['', 'fac_7Hk2-9', 'Jean Dupont', 'a@b.fr', 'A'.repeat(64), 'a'.repeat(63)]) {
       expect(
         charge.safeParse({ ...base, critere: 'cliente', fait: { ...FACTURE, ref } }).success,
         ref

@@ -172,9 +172,23 @@ export const CHARGES_PAR_TYPE = {
        * par `anteriorite_etablie` et par elle seule ; aucune donnée de personne.
        */
       critere: z.enum(CRITERES_D_ANTERIORITE).optional(),
+      /**
+       * Lentille sécurité (rattrapage 99) : la RÉFÉRENCE du fait fondateur — la facture ou le devis
+       * d'axion-ia, et sa date. Son identifiant est une chaîne libre au contrat : il entre par son
+       * EMPREINTE (SHA-256), qui se retrouve en hachant l'identifiant connu, sans rien laisser passer
+       * d'autre. Aucune donnée de personne, la charge est fermée.
+       */
+      fait: z
+        .object({
+          nature: z.enum(['facture', 'devis']),
+          ref: FORMES.empreinte(),
+          le: FORMES.horodatage(),
+        })
+        .strict()
+        .optional(),
     })
     .strict()
-    .superRefine(({ de, transition, critere }, ctx) => {
+    .superRefine(({ de, transition, critere, fait }, ctx) => {
       if ((de === null) !== NAISSANCES.includes(transition)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -187,6 +201,16 @@ export const CHARGES_PAR_TYPE = {
           code: z.ZodIssueCode.custom,
           path: ['critere'],
           message: 'critere_incoherent',
+        });
+      }
+      // Le fait fondateur accompagne le critère, et sa nature est celle que le critère nomme.
+      const natureAttendue =
+        critere === undefined ? undefined : critere === 'cliente' ? 'facture' : 'devis';
+      if (fait?.nature !== natureAttendue) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['fait'],
+          message: 'fait_incoherent',
         });
       }
     }),
