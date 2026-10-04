@@ -35,7 +35,7 @@ import {
   EVENEMENTS_ATTRIBUTION,
   NAISSANCES_ATTRIBUTION,
 } from '../attribution/machine';
-import { STATUTS_PIECE_KYC, TYPES_PIECE_KYC } from '../kyc/pieces';
+import { MOTIFS_REFUS_PIECE, STATUTS_PIECE_KYC, TYPES_PIECE_KYC } from '../kyc/pieces';
 import { ETATS_DEMANDE_CONFIRMATION } from '../confirmation/demande';
 import {
   ETATS_CONTESTATION,
@@ -106,7 +106,16 @@ export type TypeEvenementJournal =
   | 'contestation_modifiee'
   | 'rattachement_manuel_modifie'
   | 'anomalie_gel_modifie'
-  | 'utilisateur_console_modifie';
+  | 'utilisateur_console_modifie'
+  | 'journal_acces_gel_modifie';
+
+/**
+ * SEC-61 : le gel du journal des accès à la console — ses gestes, ses motifs (les valeurs de
+ * `MotifGelJournal`, confrontées au schéma par la garde des énumérations) et le TYPE de sa portée.
+ */
+export const GESTES_GEL_JOURNAL = ['poser', 'lever'] as const;
+export const MOTIFS_GEL_JOURNAL = ['incident', 'litige'] as const;
+export const PORTEES_GEL_JOURNAL = ['utilisateur', 'cible'] as const;
 
 /** DM-08 : le porteur d'une attribution, une forme UNIQUE — sa population et son identifiant. */
 const PORTEUR = () =>
@@ -275,15 +284,27 @@ export const CHARGES_PAR_TYPE = {
   /**
    * DM-11 (REQ-DM-027) : un changement de statut d'une pièce du KYC, sur l'agrégat `piece_kyc`.
    * `de` est nul à la naissance de la pièce. Ni fichier, ni IBAN, ni donnée de personne.
+   * CPL-T07 (forme d'A02) : le motif FERMÉ d'un refus, exigé si et seulement si `vers` vaut
+   * `refusee` ; l'espace le relit dans le dernier événement de l'agrégat de la pièce, sans colonne.
    */
   piece_kyc_statut_modifie: z
     .object({
       de: z.enum(STATUTS_PIECE_KYC).nullable(),
       vers: z.enum(STATUTS_PIECE_KYC),
       type: z.enum(TYPES_PIECE_KYC),
+      motifRefus: z.enum(MOTIFS_REFUS_PIECE).optional(),
       acteur: FORMES.acteur(),
     })
-    .strict(),
+    .strict()
+    .superRefine((c, ctx) => {
+      if ((c.vers === 'refusee') !== (c.motifRefus !== undefined)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['motifRefus'],
+          message: 'motif_refus_si_et_seulement_si_refusee',
+        });
+      }
+    }),
   /**
    * DM-40 (REQ-DM-060) : un changement d'état de la demande de confirmation, naissance comprise (`de`
    * nul, `planifiee`). Ni jeton, ni empreinte, ni donnée de personne : l'état seul.
@@ -367,6 +388,20 @@ export const CHARGES_PAR_TYPE = {
           message: 'roles_incoherents_avec_le_geste',
         });
     }),
+  // SEC-61 (forme d'A02 et de la sécurité, mot pour mot) : la pose ou la levée d'un gel du journal des
+  // accès, sur l'agrégat `journal_acces_gel` (l'id du gel est `agregatId`). AUCUN identifiant
+  // d'employé : ni le poseur, ni celui qui lève, ni la personne visée, ni la cible ; la portée n'en
+  // dit que le TYPE, l'acteur que sa population, et la référence n'y est qu'en empreinte. Les
+  // identifiants vivent sur la ligne du gel et partent avec elle.
+  journal_acces_gel_modifie: z
+    .object({
+      geste: z.enum(GESTES_GEL_JOURNAL),
+      motif: z.enum(MOTIFS_GEL_JOURNAL),
+      portee: z.object({ type: z.enum(PORTEES_GEL_JOURNAL) }).strict(),
+      referenceEmpreinte: FORMES.empreinte(),
+      acteur: FORMES.acteurSansIdentite(),
+    })
+    .strict(),
 } satisfies Record<TypeEvenementJournal, z.ZodTypeAny>;
 
 /**

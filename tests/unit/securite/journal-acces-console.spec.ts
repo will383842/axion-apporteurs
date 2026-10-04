@@ -13,7 +13,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import type { PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
 import {
   CibleInconnue,
@@ -315,25 +315,37 @@ describe('REQ-SEC-058 — les coordonnées sortent déchiffrées, champ par cham
 
 const MAINTENANT = new Date('2027-10-03T12:00:00.000Z');
 
+/**
+ * Un faux client de la purge. SEC-61 : le lot échu se lit en SQL (`NOT EXISTS` sur les gels ouverts,
+ * le critère même du filet de la base) ; les gels épuisés aussi — le faux n'en rend aucun.
+ */
 function fauxClientDePurge(lots: number[], compte: (n: number) => number = (n) => n) {
-  const lectures: unknown[] = [];
+  const lectures: { texte: string; valeurs: unknown[] }[] = [];
+  const lecturesDesGels: string[] = [];
   const ecritures: { where: unknown; data: unknown }[] = [];
   let rang = 0;
   const client = {
+    $queryRaw: async (chaines: TemplateStringsArray, ...parametres: unknown[]) => {
+      const requete = Prisma.sql(chaines, ...parametres);
+      if (
+        /FROM "journal_acces_console_gels" g\s+WHERE g\."leve_at" IS NOT NULL/.test(requete.sql)
+      ) {
+        lecturesDesGels.push(requete.sql);
+        return [];
+      }
+      lectures.push({ texte: requete.sql, valeurs: requete.values });
+      const n = lots[rang] ?? 0;
+      rang += 1;
+      return Array.from({ length: n }, (_, i) => ({ id: `j-${rang}-${i}` }));
+    },
     journalAccesConsole: {
-      findMany: async (a: unknown) => {
-        lectures.push(a);
-        const n = lots[rang] ?? 0;
-        rang += 1;
-        return Array.from({ length: n }, (_, i) => ({ id: `j-${rang}-${i}` }));
-      },
       updateMany: async (a: { where: { id: { in: string[] } }; data: unknown }) => {
         ecritures.push(a);
         return { count: compte(a.where.id.in.length) };
       },
     },
   } as unknown as PrismaClient;
-  return { client, lectures, ecritures };
+  return { client, lectures, lecturesDesGels, ecritures };
 }
 
 describe('REQ-SEC-058 — la purge à l’échéance vide les identifiants, la ligne nue reste', () => {
@@ -345,15 +357,29 @@ describe('REQ-SEC-058 — la purge à l’échéance vide les identifiants, la l
     expect(limiteDuJournalDesAcces(MAINTENANT)).toEqual(new Date('2026-10-03T12:00:00.000Z'));
   });
 
-  it('REQ-SEC-058 : TÉMOIN — chaque lecture vise l’échu NON purgé, ordonnée, bornée au lot', async () => {
+  it('REQ-SEC-058 : TÉMOIN — chaque lecture vise l’échu NON purgé et NON gelé, ordonnée, bornée au lot', async () => {
     const f = fauxClientDePurge([1]);
     await purgerLeJournalDesAccesConsole(f.client, MAINTENANT);
-    expect(f.lectures[0]).toEqual({
-      where: { survenuAt: { lt: limiteDuJournalDesAcces(MAINTENANT) }, purgeAt: null },
-      select: { id: true },
-      orderBy: [{ survenuAt: 'asc' }, { id: 'asc' }],
-      take: LOT_DE_PURGE_DU_JOURNAL_DES_ACCES,
-    });
+    const { texte, valeurs } = f.lectures[0]!;
+    expect(texte).toMatch(/j\."survenu_at" < \? AND j\."purge_at" IS NULL/);
+    // SEC-61 : le critère du filet — un gel OUVERT, de la même portée, dans sa période (jusqu_a inclus).
+    expect(texte).toMatch(
+      /NOT EXISTS \(\s*SELECT 1 FROM "journal_acces_console_gels" g\s+WHERE g\."leve_at" IS NULL\s+AND j\."survenu_at" >= g\."depuis" AND \(g\."jusqu_a" IS NULL OR j\."survenu_at" <= g\."jusqu_a"\)\s+AND \(g\."utilisateur_vise_id" = j\."utilisateur_console_id" OR g\."cible_id" = j\."cible_id"\)\)/
+    );
+    expect(texte).toMatch(/ORDER BY j\."survenu_at" ASC, j\."id" ASC\s+LIMIT \?/);
+    expect(valeurs).toEqual([
+      limiteDuJournalDesAcces(MAINTENANT),
+      LOT_DE_PURGE_DU_JOURNAL_DES_ACCES,
+    ]);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — un gel levé s’efface quand ses lignes protégées, couvertes et survenues jusqu’à la levée, sont purgées', async () => {
+    const f = fauxClientDePurge([]);
+    await purgerLeJournalDesAccesConsole(f.client, MAINTENANT);
+    expect(f.lecturesDesGels).toHaveLength(1);
+    expect(f.lecturesDesGels[0]).toMatch(
+      /WHERE j\."purge_at" IS NULL\s+AND j\."survenu_at" >= g\."depuis" AND \(g\."jusqu_a" IS NULL OR j\."survenu_at" <= g\."jusqu_a"\)\s+AND j\."survenu_at" <= g\."leve_at"\s+AND \(j\."utilisateur_console_id" = g\."utilisateur_vise_id" OR j\."cible_id" = g\."cible_id"\)\)/
+    );
   });
 
   it('REQ-SEC-058 : TÉMOIN — la purge VIDE l’utilisateur, la cible et l’empreinte, et pose sa date, en une écriture par lot', async () => {
@@ -371,9 +397,13 @@ describe('REQ-SEC-058 — la purge à l’échéance vide les identifiants, la l
     const f = fauxClientDePurge([LOT_DE_PURGE_DU_JOURNAL_DES_ACCES, 3]);
     expect(await purgerLeJournalDesAccesConsole(f.client, MAINTENANT)).toEqual({
       purgees: LOT_DE_PURGE_DU_JOURNAL_DES_ACCES + 3,
+      gelsSupprimes: 0,
     });
     const g = fauxClientDePurge([2, 2, 2], () => 0);
-    expect(await purgerLeJournalDesAccesConsole(g.client, MAINTENANT)).toEqual({ purgees: 0 });
+    expect(await purgerLeJournalDesAccesConsole(g.client, MAINTENANT)).toEqual({
+      purgees: 0,
+      gelsSupprimes: 0,
+    });
     expect(g.ecritures).toHaveLength(1);
   });
 });
