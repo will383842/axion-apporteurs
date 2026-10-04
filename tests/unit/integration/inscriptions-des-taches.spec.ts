@@ -40,6 +40,14 @@ const m = vi.hoisted(() => ({
   clientDuTiers: vi.fn(),
   creerDisjoncteur: vi.fn(),
   debitGlobal: vi.fn(),
+  // QA-T73 : la réconciliation et ses clients, simulés pour juger ce que son passage leur passe.
+  reconcilier: vi.fn(),
+  clientRejeu: vi.fn(),
+  portsDeReconciliation: vi.fn(),
+  clientRelecture: vi.fn(),
+  // SEC-18 : l'ouverture différée des anomalies d'auto-parrainage, simulée pour juger son inscription.
+  ouvrirLesAnomaliesDAutoParrainage: vi.fn(),
+  precedentDuBattement: vi.fn(),
 }));
 
 vi.mock('../../../src/server/queue/workers/evenement-recu', async (original) => ({
@@ -50,7 +58,10 @@ vi.mock('../../../src/server/queue/workers/evenement-recu', async (original) => 
   lireLesAttentes: m.lireLesAttentes,
   depotDuTravail: m.depotDuTravail,
 }));
-vi.mock('../../../src/lib/env', () => ({
+// Le module réel, sauf les deux lectures simulées : le passage d'envoi de DM-55 charge l'émetteur, qui
+// lit `schemaConfiguration` au chargement.
+vi.mock('../../../src/lib/env', async (original) => ({
+  ...(await original<object>()),
   lireEnvironnement: m.lireEnvironnement,
   lireTrousseaux: m.lireTrousseaux,
 }));
@@ -106,12 +117,27 @@ vi.mock('../../../src/server/integrations/recherche-entreprises/disjoncteur', ()
 vi.mock('../../../src/server/integrations/recherche-entreprises/limiteur', () => ({
   limiteurDuRegistre: { global: m.debitGlobal },
 }));
+vi.mock('../../../src/server/integrations/axionia/reconciliation', () => ({
+  reconcilier: m.reconcilier,
+  clientRejeu: m.clientRejeu,
+  portsDeBase: m.portsDeReconciliation,
+}));
+vi.mock('../../../src/server/integrations/axionia/relecture', () => ({
+  clientRelecture: m.clientRelecture,
+}));
+vi.mock('../../../src/server/taches/ouvrir-anomalies-auto-parrainage', async (original) => ({
+  ...(await original<object>()),
+  ouvrirLesAnomaliesDAutoParrainage: m.ouvrirLesAnomaliesDAutoParrainage,
+  precedentDuBattement: m.precedentDuBattement,
+}));
 
 import {
   battementDeLaReconciliation,
   canalDAlerte,
   inscriptions,
+  passageDeReconciliation,
   passageDesEvenementsRecus,
+  passageDuJournal,
   traitantsDeReception,
 } from '../../../src/server/taches/inscriptions';
 import { PARAMETRES } from '../../../src/server/integrations/recherche-entreprises/parametres';
@@ -390,12 +416,243 @@ describe('REQ-UX-016 — le passage d’envoi des notifications de l’espace es
     m.passageDEnvoiDesNotifications.mockReturnValue(passage);
     const env = { NODE_ENV: 'test' };
     const i = inscriptions(PRISMA, env);
-    expect(m.passageDEnvoiDesNotifications).toHaveBeenCalledWith(PRISMA, env);
+    // Le passage se construit À L'APPEL (l'émetteur et l'alerte se lisent à chaque passage).
     expect(await i.notifications_espace_envoyer!()).toBe(bilan);
+    expect(m.passageDEnvoiDesNotifications).toHaveBeenCalledWith(PRISMA, env);
     expect(passage).toHaveBeenCalledTimes(1);
   });
 
   it('REQ-UX-016 : la clé est au registre des tâches, sous REQ-UX-016', () => {
     expect(TACHES.notifications_espace_envoyer).toEqual({ req: 'REQ-UX-016' });
+  });
+});
+
+// ── QA-T73 : les témoins du code d'`inscriptions.ts` qu'aucune PR ne portait ────────────────────
+
+describe('REQ-QA-027 — `evenements_recus` lit son dernier succès dans SON battement', () => {
+  const JOUR = 24 * 60 * 60 * 1000;
+  const INSTANT = new Date('2026-10-03T08:00:00.000Z');
+  beforeEach(() => {
+    vi.useFakeTimers({ now: INSTANT, toFake: ['Date'] });
+    m.depotDuTravail.mockReturnValue({ battre: vi.fn() });
+    m.reprendreLesAttentes.mockReturnValue(async () => 0);
+    m.reprendreLesTraitants.mockReturnValue(async () => 0);
+    m.passerLeTravail.mockResolvedValue({});
+    // Une attente d'un parent, reçue il y a trois jours : au-delà du seuil de deux jours de la SSOT.
+    m.lireLesAttentes.mockReturnValue(async () => [
+      {
+        eventType: TypeEvenementRecu.devis_emis,
+        dependanceRef: 'parent:x',
+        receivedAt: new Date(INSTANT.getTime() - 3 * JOUR),
+      },
+    ]);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const avecBattement = (dernierSuccesAt: Date | null) => {
+    const findUnique = vi.fn(async () => (dernierSuccesAt === null ? null : { dernierSuccesAt }));
+    return { findUnique, prisma: { battement: { findUnique } } as unknown as PrismaClient };
+  };
+
+  it('REQ-QA-027 : sans battement (premier passage), la fenêtre part de l’origine — l’alerte est due, et sans canal le passage échoue en le nommant', async () => {
+    const { findUnique, prisma } = avecBattement(null);
+    await expect(inscriptions(prisma, {}).evenements_recus!()).rejects.toThrow(
+      'canal_alerte_absent'
+    );
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { tache: 'evenements_recus' },
+      select: { dernierSuccesAt: true },
+    });
+  });
+
+  it('REQ-QA-027 : un dernier succès postérieur au franchissement ferme la fenêtre — aucune alerte due, le passage réussit', async () => {
+    const { prisma } = avecBattement(new Date(INSTANT.getTime() - JOUR / 2));
+    await expect(inscriptions(prisma, {}).evenements_recus!()).resolves.toEqual({});
+  });
+});
+
+describe('REQ-QA-027 — le passage `reconciliation_axionia` relit ses secrets à chaque passage', () => {
+  const INSTANT = new Date('2026-10-03T08:00:00.000Z');
+  const ENV = { AXIONIA_BASE_URL: 'https://axion.test' };
+  const TROUSSEAU = { courante: 'c', precedente: null };
+  beforeEach(() => {
+    vi.useFakeTimers({ now: INSTANT, toFake: ['Date'] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const prismaAvec = (battement: { dernierSuccesAt: Date; compteurs: unknown } | null) =>
+    ({ battement: { findUnique: vi.fn(async () => battement) } }) as unknown as PrismaClient;
+  const environnementAdmis = () => {
+    m.lireEnvironnement.mockReturnValue({
+      ok: true,
+      env: { AXIONIA_RELECTURE_SECRET: 'relecture' },
+    });
+    m.lireTrousseaux.mockReturnValue({
+      ok: true,
+      trousseaux: { AXIONIA_WEBHOOK_SECRET: TROUSSEAU },
+    });
+  };
+
+  it('REQ-QA-027 : déjà réconcilié ce jour UTC (son battement le dit) — le passage est différé, sans relire les secrets ni appeler axion-ia', async () => {
+    const prisma = prismaAvec({
+      dernierSuccesAt: new Date('2026-10-03T00:30:00.000Z'),
+      compteurs: { manquants: 2 },
+    });
+    expect(await passageDeReconciliation(prisma, ENV, null)()).toEqual({
+      manquants: 2,
+      differee: 1,
+    });
+    expect(m.lireEnvironnement).not.toHaveBeenCalled();
+    expect(m.reconcilier).not.toHaveBeenCalled();
+  });
+
+  it('REQ-QA-027 : environnement refusé — `environnement_refuse`, rien n’est réconcilié', async () => {
+    m.lireEnvironnement.mockReturnValue({ ok: false });
+    await expect(passageDeReconciliation(prismaAvec(null), ENV, null)()).rejects.toThrow(
+      'environnement_refuse'
+    );
+    expect(m.lireEnvironnement).toHaveBeenCalledWith(ENV);
+    expect(m.lireTrousseaux).not.toHaveBeenCalled();
+    expect(m.reconcilier).not.toHaveBeenCalled();
+  });
+
+  it('REQ-QA-027 : trousseaux refusés — `environnement_refuse`, rien n’est réconcilié', async () => {
+    m.lireEnvironnement.mockReturnValue({ ok: true, env: { AXIONIA_RELECTURE_SECRET: 's' } });
+    m.lireTrousseaux.mockReturnValue({ ok: false });
+    await expect(passageDeReconciliation(prismaAvec(null), ENV, null)()).rejects.toThrow(
+      'environnement_refuse'
+    );
+    expect(m.lireTrousseaux).toHaveBeenCalledWith(ENV, INSTANT.getTime());
+    expect(m.reconcilier).not.toHaveBeenCalled();
+  });
+
+  it('REQ-QA-027 : environnement admis — la réconciliation reçoit ses ports, la relecture et le rejeu sur le canal d’axion-ia, et son bilan est celui du passage', async () => {
+    environnementAdmis();
+    const prisma = prismaAvec(null);
+    m.portsDeReconciliation.mockReturnValue({ lireCurseur: 'curseur' });
+    m.clientRelecture.mockReturnValue('lire');
+    m.clientRejeu.mockReturnValue('rejouer');
+    m.reconcilier.mockResolvedValue({ relus: 3 });
+    expect(await passageDeReconciliation(prisma, ENV, null)()).toEqual({ relus: 3 });
+    expect(m.portsDeReconciliation).toHaveBeenCalledWith(prisma);
+    for (const client of [m.clientRelecture, m.clientRejeu]) {
+      const canal = client.mock.calls[0]![0] as { maintenantMs: () => number };
+      expect(canal).toEqual({
+        urlAxionia: 'https://axion.test',
+        secretRelecture: 'relecture',
+        trousseauEmission: TROUSSEAU,
+        appeler: fetch,
+        maintenantMs: expect.any(Function),
+      });
+      expect(canal.maintenantMs()).toBe(INSTANT.getTime());
+    }
+    expect(m.reconcilier).toHaveBeenCalledWith({
+      lireCurseur: 'curseur',
+      lire: 'lire',
+      rejouer: 'rejouer',
+      signaler: expect.any(Function),
+    });
+  });
+
+  const signaler = async (alerteur: { alerter: ReturnType<typeof vi.fn> } | null) => {
+    environnementAdmis();
+    m.reconcilier.mockResolvedValue({});
+    await passageDeReconciliation(prismaAvec(null), ENV, alerteur as never)();
+    return (m.reconcilier.mock.calls[0]![0] as { signaler: (s: unknown) => Promise<void> })
+      .signaler;
+  };
+
+  it('REQ-QA-027 : un signal à motif part en alerte `reconciliation` — son genre et son motif, rien d’autre', async () => {
+    const alerter = vi.fn(async () => undefined);
+    await (
+      await signaler({ alerter })
+    )({ genre: 'relecture_refusee', motif: 'signature' });
+    expect(alerter).toHaveBeenCalledWith({
+      categorie: 'reconciliation',
+      id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      reconciliation: { genre: 'relecture_refusee', motif: 'signature' },
+    });
+  });
+
+  it('REQ-QA-027 : un signal compté part en alerte `reconciliation` — son genre et son nombre, rien d’autre', async () => {
+    const alerter = vi.fn(async () => undefined);
+    await (
+      await signaler({ alerter })
+    )({ genre: 'trous', nombre: 4 });
+    expect(alerter).toHaveBeenCalledWith({
+      categorie: 'reconciliation',
+      id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      reconciliation: { genre: 'trous', nombre: 4 },
+    });
+  });
+
+  it('REQ-QA-027 : sans canal d’alerte, un signal est perdu sans faire échouer la réconciliation', async () => {
+    await expect((await signaler(null))({ genre: 'trous', nombre: 4 })).resolves.toBeUndefined();
+  });
+});
+
+describe('REQ-QA-027 — `journal_verifier` nomme la faute d’une chaîne rompue', () => {
+  it('REQ-QA-027 : une chaîne vide fait échouer le passage — la faute et « maillon aucun », jamais une charge', async () => {
+    await expect(passageDuJournal(async () => [])()).rejects.toThrow(
+      /^chaine_rompue : chaine_vide, maillon aucun$/
+    );
+  });
+});
+
+describe('REQ-QA-027 — le traitant de la candidature tire les coordonnées sur le canal d’axion-ia', () => {
+  const INSTANT = new Date('2026-10-03T08:00:00.000Z');
+  beforeEach(() => {
+    vi.useFakeTimers({ now: INSTANT, toFake: ['Date'] });
+    vi.stubEnv('AXIONIA_BASE_URL', 'https://axion.test');
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
+
+  it('REQ-QA-027 : l’adresse d’axion-ia, l’appel et l’horloge du client des coordonnées sont ceux du système', async () => {
+    m.lireEnvironnement.mockReturnValue({ ok: true, env: { AXIONIA_RELECTURE_SECRET: 'r' } });
+    m.lireTrousseaux.mockReturnValue({
+      ok: true,
+      trousseaux: { AXIONIA_WEBHOOK_SECRET: { courante: 'c', precedente: null } },
+    });
+    m.traiterCandidatureRecue.mockResolvedValue('cree');
+    await traitantsDeReception(PRISMA)[TypeEvenementRecu.candidature_recue]!(RECU);
+    const canal = m.clientCoordonnees.mock.calls[0]![0] as {
+      urlAxionia: unknown;
+      appeler: unknown;
+      maintenantMs: () => number;
+    };
+    expect([canal.urlAxionia, canal.appeler]).toEqual(['https://axion.test', fetch]);
+    expect(canal.maintenantMs()).toBe(INSTANT.getTime());
+  });
+});
+
+describe('REQ-QA-027 — `auto_parrainage_ouvrir` ouvre depuis le curseur de SON battement', () => {
+  const INSTANT = new Date('2026-10-03T08:00:00.000Z');
+  beforeEach(() => {
+    vi.useFakeTimers({ now: INSTANT, toFake: ['Date'] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('REQ-QA-027 : l’ouverture reçoit le client, l’heure du système et la relecture du battement, et rend son bilan', async () => {
+    const precedent = vi.fn();
+    m.precedentDuBattement.mockReturnValue(precedent);
+    const bilan = { curseur: 3, naissancesLues: 2, ouvertes: 1 };
+    m.ouvrirLesAnomaliesDAutoParrainage.mockResolvedValue(bilan);
+    expect(await inscriptions(PRISMA).auto_parrainage_ouvrir!()).toBe(bilan);
+    expect(m.precedentDuBattement).toHaveBeenCalledWith(PRISMA);
+    const [client, d] = m.ouvrirLesAnomaliesDAutoParrainage.mock.calls[0]! as [
+      unknown,
+      { maintenant: () => Date; precedent: unknown },
+    ];
+    expect([client, d.precedent]).toEqual([PRISMA, precedent]);
+    expect(d.maintenant()).toEqual(INSTANT);
   });
 });
