@@ -18,6 +18,7 @@
  *   5. la charge du journal `attribution_etat_modifie` lit `EVENEMENTS_ATTRIBUTION`.
  */
 import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { readdirSync, readFileSync } from 'node:fs';
 import { EtatAttribution } from '@prisma/client';
 import {
   ETATS_ATTRIBUTION,
@@ -36,6 +37,7 @@ import {
 import { SEUILS } from '../../../src/domain/seuils/ssot';
 import { MS_PAR_JOUR } from '../../../src/domain/temps/calendrier-civil';
 import { CHARGES_PAR_TYPE } from '../../../src/domain/evenement/charges';
+import { ETATS_OCCUPANTS } from '../../../src/domain/attribution/etats';
 
 /** LA TABLE ATTENDUE — validée par l'architecte le 2026-10-02 ; tout ce qui n'y est pas est refusé. */
 const NAISSANCES: Record<string, string> = {
@@ -56,6 +58,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     annulee_par_la_console: 'annulee',
     liberee_sans_confirmation: 'perimee',
     figee: 'figee_resiliation',
+    anteriorite_etablie: 'annulee',
   },
   active: {
     rdv_pris: 'rdv_pris',
@@ -66,6 +69,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
     figee: 'figee_resiliation',
+    anteriorite_etablie: 'annulee',
   },
   rdv_pris: {
     devis_envoye: 'proposition',
@@ -74,6 +78,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
     figee: 'figee_resiliation',
+    anteriorite_etablie: 'annulee',
   },
   proposition: {
     devis_signe: 'signee',
@@ -81,6 +86,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
     figee: 'figee_resiliation',
+    anteriorite_etablie: 'annulee',
   },
   signee: {
     paiement_recu: 'convertie',
@@ -88,9 +94,10 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     figee: 'figee_resiliation',
     commande_caduque: 'active',
     commande_caduque_hors_fenetre: 'expiree',
+    anteriorite_etablie: 'annulee',
   },
-  convertie: { expiree: 'expiree', figee: 'figee_resiliation' },
-  figee_resiliation: { expiree: 'expiree' },
+  convertie: { expiree: 'expiree', figee: 'figee_resiliation', anteriorite_etablie: 'annulee' },
+  figee_resiliation: { expiree: 'expiree', anteriorite_etablie: 'annulee' },
   invalidee: {},
   perdue: {},
   perimee: {},
@@ -204,6 +211,29 @@ describe('REQ-DM-006 — un couple absent lève une erreur typée qui le nomme, 
   it('REQ-DM-004 : TÉMOIN — la file ne promeut rien : aucune flèche en_attente → un état occupant', () => {
     for (const vers of Object.values(TRANSITIONS_ATTRIBUTION.en_attente)) {
       expect(['annulee', 'expiree']).toContain(vers);
+    }
+  });
+});
+
+describe('REQ-DM-006 — l’antériorité établie après coup annule, depuis chaque état occupant', () => {
+  it.each(ETATS_OCCUPANTS)(
+    'REQ-DM-006 : TÉMOIN — %s × anteriorite_etablie → annulee, pour un apporteur comme pour un conseiller',
+    (de) => {
+      for (const porteur of PORTEURS) {
+        expect(transitionnerAttribution({ de, transition: 'anteriorite_etablie', porteur })).toBe(
+          'annulee'
+        );
+      }
+    }
+  );
+
+  it('REQ-DM-006 : un état qui n’occupe plus ne s’annule pas pour antériorité', () => {
+    for (const de of ETATS_ATTRIBUTION.filter(
+      (e) => !(ETATS_OCCUPANTS as readonly string[]).includes(e)
+    )) {
+      expect(() =>
+        transitionnerAttribution({ de, transition: 'anteriorite_etablie', porteur: 'apporteur' })
+      ).toThrow(ErreurTransitionAttribution);
     }
   });
 });
@@ -326,6 +356,10 @@ describe('REQ-DM-007 — les effets recalculés à chaque transition', () => {
   });
 });
 
+/** La référence d'un fait fondateur : l'EMPREINTE de l'identifiant d'axion-ia, et sa date. */
+const FACTURE = { nature: 'facture', ref: 'a'.repeat(64), le: '2026-12-01T10:00:00.000Z' } as const;
+const DEVIS = { nature: 'devis', ref: 'b'.repeat(64), le: '2026-11-15T10:00:00.000Z' } as const;
+
 describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
   const charge = CHARGES_PAR_TYPE.attribution_etat_modifie;
   const acteur = { par: 'systeme' } as const;
@@ -333,9 +367,12 @@ describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
   it('REQ-DM-006 : chaque code de la matrice est admis, un code inconnu refusé', () => {
     for (const transition of EVENEMENTS_ATTRIBUTION) {
       const de = transition in NAISSANCES_ATTRIBUTION ? null : 'active';
-      expect(charge.safeParse({ de, vers: 'active', transition, acteur }).success, transition).toBe(
-        true
-      );
+      const critere =
+        transition === 'anteriorite_etablie' ? { critere: 'cliente', fait: FACTURE } : {};
+      expect(
+        charge.safeParse({ de, vers: 'active', transition, acteur, ...critere }).success,
+        transition
+      ).toBe(true);
     }
     expect(
       charge.safeParse({ de: 'active', vers: 'perdue', transition: 'inventee', acteur }).success
@@ -347,6 +384,60 @@ describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
     expect(charge.safeParse({ ...base, lienInteret: 'declare' }).success).toBe(true);
     expect(charge.safeParse({ ...base, lienInteret: true }).success).toBe(false);
     expect(charge.safeParse({ ...base, siren: '552100554' }).success).toBe(false);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — anteriorite_etablie porte son critère, en enum fermé ; aucune autre transition n’en porte', () => {
+    const base = { de: 'signee', vers: 'annulee', transition: 'anteriorite_etablie', acteur };
+    expect(charge.safeParse({ ...base, critere: 'cliente', fait: FACTURE }).success).toBe(true);
+    for (const critere of ['devis', 'devis_signe']) {
+      expect(charge.safeParse({ ...base, critere, fait: DEVIS }).success, critere).toBe(true);
+    }
+    expect(charge.safeParse(base).success).toBe(false);
+    expect(charge.safeParse({ ...base, critere: 'financeur', fait: FACTURE }).success).toBe(false);
+    expect(
+      charge.safeParse({
+        de: 'active',
+        vers: 'perdue',
+        transition: 'perdue',
+        acteur,
+        critere: 'cliente',
+      }).success
+    ).toBe(false);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — la RÉFÉRENCE du fait fondateur : nature, référence opaque, date ; exigée, et accordée au critère', () => {
+    const base = { de: 'active', vers: 'annulee', transition: 'anteriorite_etablie', acteur };
+    // sans fait, ou avec un fait sur une autre transition : refusé
+    expect(charge.safeParse({ ...base, critere: 'cliente' }).success).toBe(false);
+    expect(
+      charge.safeParse({
+        de: 'active',
+        vers: 'perdue',
+        transition: 'perdue',
+        acteur,
+        fait: FACTURE,
+      }).success
+    ).toBe(false);
+    // le critère dit la nature du fait : cliente ↔ facture, devis et devis_signe ↔ devis
+    expect(charge.safeParse({ ...base, critere: 'cliente', fait: DEVIS }).success).toBe(false);
+    expect(charge.safeParse({ ...base, critere: 'devis_signe', fait: FACTURE }).success).toBe(
+      false
+    );
+    // aucune donnée de personne : une référence opaque, une date ISO, rien d'autre
+    // l'identifiant en clair, un nom, une adresse, une empreinte mal formée : refusés
+    for (const ref of ['', 'fac_7Hk2-9', 'Jean Dupont', 'a@b.fr', 'A'.repeat(64), 'a'.repeat(63)]) {
+      expect(
+        charge.safeParse({ ...base, critere: 'cliente', fait: { ...FACTURE, ref } }).success,
+        ref
+      ).toBe(false);
+    }
+    expect(
+      charge.safeParse({ ...base, critere: 'cliente', fait: { ...FACTURE, le: 'hier' } }).success
+    ).toBe(false);
+    expect(
+      charge.safeParse({ ...base, critere: 'cliente', fait: { ...FACTURE, siren: '552100554' } })
+        .success
+    ).toBe(false);
   });
 
   it('REQ-DM-006 : de est nul si et seulement si la transition est une naissance', () => {
@@ -413,7 +504,7 @@ async function chargesRechargees(): Promise<ModuleCharges> {
 }
 
 describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
-  it('REQ-QA-004 : les treize états, les vingt-cinq transitions et les naissances, dans cet ordre', async () => {
+  it('REQ-QA-004 : les treize états, les vingt-six transitions et les naissances, dans cet ordre', async () => {
     const m = await machineRechargee();
     expect(m.ETATS_ATTRIBUTION).toEqual([
       'en_attente',
@@ -456,6 +547,7 @@ describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
       'paiement_recu',
       'commande_caduque',
       'commande_caduque_hors_fenetre',
+      'anteriorite_etablie',
     ]);
     expect(m.NAISSANCES_ATTRIBUTION).toEqual(NAISSANCES);
   });
@@ -1028,5 +1120,38 @@ describe('REQ-DM-007 — les confirmations et la charge d’apporteur, rechargé
         intrus: 1,
       }).success
     ).toBe(false);
+  });
+});
+
+describe('REQ-DM-006 — anteriorite_etablie n’est émise que par le passage de l’antériorité', () => {
+  /**
+   * Les seuls fichiers de src/ qui peuvent écrire le littéral : la machine et la charge qui le
+   * déclarent, l'écrivain qui le juge, et le passage quotidien qui l'émet sur les faits projetés.
+   * Aucune action libre de la console ne l'émet (lentille sécurité).
+   */
+  const PERMIS = [
+    'src/domain/attribution/machine.ts',
+    'src/domain/evenement/charges.ts',
+    'src/server/attribution/transitionner.ts',
+    'src/server/jobs/anteriorite-retroactive.ts',
+  ];
+  const sources = (dossier: string): string[] =>
+    readdirSync(dossier, { withFileTypes: true }).flatMap((e) => {
+      const chemin = `${dossier}/${e.name}`;
+      if (e.isDirectory()) return sources(chemin);
+      return /\.(ts|tsx)$/.test(e.name) ? [chemin] : [];
+    });
+
+  it('REQ-DM-006 : TÉMOIN — aucun autre fichier de src/ n’écrit « anteriorite_etablie »', () => {
+    const fautifs = sources('src').filter(
+      (f) => !PERMIS.includes(f) && /['"`]anteriorite_etablie['"`]/.test(readFileSync(f, 'utf8'))
+    );
+    expect(fautifs).toEqual([]);
+  });
+
+  it('REQ-DM-006 : contre-témoin — le motif lit bien la machine, qui le déclare', () => {
+    expect(readFileSync('src/domain/attribution/machine.ts', 'utf8')).toMatch(
+      /'anteriorite_etablie'/
+    );
   });
 });
