@@ -26,7 +26,7 @@ import {
 } from '../../../src/domain/attribution/fenetre-redeclaration';
 import { MS_PAR_JOUR, joursDeLaDate } from '../../../src/domain/temps/calendrier-civil';
 import { versParis } from '../../../src/domain/temps/paris';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import type { PrismaClient } from '@prisma/client';
 import { GABARITS } from '../../../src/server/notifications/table-ssot';
 import {
@@ -1619,33 +1619,62 @@ describe('REQ-UX-016 — un non-rendu lève une alerte Telegram fermée (arbitra
 });
 
 describe('REQ-SEC-008 — la notification d’un courriel est HORS DE L’ESPACE (sécurité, DM-55)', () => {
-  it('REQ-SEC-008 : TÉMOIN — notificationEspaceId est à la fois référence déclarée et clé REFUSÉE : un creer() qui la porte est refusé avant toute base', async () => {
+  it('REQ-SEC-008 : TÉMOIN — notificationEspaceId est une référence VÉRIFIÉE : un creer() qui porte la notification d’un AUTRE apporteur est refusé, sans écriture', async () => {
     const acces = await import('../../../src/server/acces/for-apporteur');
-    expect(acces.CLES_REFUSEES.courrielEnvoye).toContain('notificationEspaceId');
     expect(acces.REFERENCES_CLOISONNEES.courrielEnvoye).toMatchObject({
       notificationEspaceId: 'notificationEspace',
     });
-    const appels: unknown[] = [];
+    expect(acces.CLES_REFUSEES.courrielEnvoye).toContain('notificationEspace');
+    const methodes: string[] = [];
     const delegue = new Proxy(
       {},
-      {
-        get:
-          () =>
-          async (...a: unknown[]) => (appels.push(a), null),
-      }
+      { get: (_c, nom) => async () => (methodes.push(String(nom)), null) }
     );
     const client = new Proxy({}, { get: () => delegue }) as never;
-    const apporteur = '0190f3a0-0000-7000-8000-0000000000a1';
     let refus = '';
     try {
-      await acces.forApporteur(client, apporteur).courrielEnvoye.creer({
-        notificationEspaceId: '0190f3a0-0000-7000-8000-0000000000b2',
-      } as never);
+      // une notification qui n'est pas de la session : la lecture de vérification ne la trouve pas
+      const donnees = { notificationEspaceId: '0190f3a0-0000-7000-8000-0000000000b2' };
+      await acces
+        .forApporteur(client, '0190f3a0-0000-7000-8000-0000000000a1')
+        .courrielEnvoye.creer(donnees as never);
     } catch (e) {
       refus = (e as Error).message;
     }
-    expect(refus).toBe(acces.REFUS.cle);
-    expect(appels).toEqual([]);
+    expect(refus).toBe(acces.REFUS.reference);
+    expect(methodes).not.toContain('create');
+  });
+
+  /** Les fichiers de la couche de l'espace qui ÉCRIVENT un courriel (creer ou modifier). */
+  const ecrivainsDeCourriel = (fichiers: readonly (readonly [string, string])[]) =>
+    fichiers
+      .filter(([, texte]) => /courrielEnvoye\s*\.\s*(creer|modifier)\b/.test(texte))
+      .map(([chemin]) => chemin);
+  const sourcesDe = (dossier: string): string[] =>
+    readdirSync(dossier, { withFileTypes: true }).flatMap((e) => {
+      const chemin = `${dossier}/${e.name}`;
+      if (e.isDirectory()) return sourcesDe(chemin);
+      return /\.(ts|tsx)$/.test(e.name) ? [chemin] : [];
+    });
+
+  it('REQ-SEC-008 : TÉMOIN (statique) — aucun fichier de la couche de l’espace n’écrit courrielEnvoye', () => {
+    // Les deux arbres que vise la règle semgrep de l'espace ; un arbre pas encore créé n'a rien à lire.
+    const fichiers = ['src/app/(espace)', 'src/server/espace']
+      .filter((d) => existsSync(d))
+      .flatMap((d) => sourcesDe(d))
+      .map((f) => [f, readFileSync(f, 'utf8')] as const);
+    expect(fichiers.length).toBeGreaterThan(0);
+    expect(ecrivainsDeCourriel(fichiers)).toEqual([]);
+  });
+
+  it('REQ-SEC-008 : contre-témoin — un écrivain de courriel dans l’espace est NOMMÉ', () => {
+    expect(
+      ecrivainsDeCourriel([
+        ['src/server/espace/a.ts', 'await acces.courrielEnvoye.creer({ gabarit: g });'],
+        ['src/server/espace/b.ts', 'await acces.courrielEnvoye\n  .modifier(id, {});'],
+        ['src/server/espace/c.ts', 'const l = await acces.courrielEnvoye.lister();'],
+      ])
+    ).toEqual(['src/server/espace/a.ts', 'src/server/espace/b.ts']);
   });
 
   it('REQ-SEC-008 : TÉMOIN (statique) — le passage d’envoi, le rendu et le lecteur des faits n’importent PAS le journal applicatif', () => {
@@ -1658,5 +1687,51 @@ describe('REQ-SEC-008 — la notification d’un courriel est HORS DE L’ESPACE
       expect(texte.includes('lib/logger'), f).toBe(false);
       expect(texte, f).not.toMatch(/creerJournal/);
     }
+  });
+});
+
+describe('REQ-DM-041 — la relation faitDuJournal n’est jamais employée par le code (condition d’A02)', () => {
+  /**
+   * Les fautes d'un jeu de fichiers : une ÉCRITURE par la relation (`faitDuJournal:` comme clé
+   * d'objet, imbriquée ou non) partout, et toute mention hors de la seule déclaration permise — les
+   * listes de cloisonnement de la couche d'accès, qui la nomment en chaîne pour la REFUSER.
+   */
+  const MENTION_PERMISE = 'src/server/acces/for-apporteur.ts';
+  const fautes = (fichiers: readonly (readonly [string, string])[]) =>
+    fichiers.flatMap(([chemin, texte]) => {
+      const f: string[] = [];
+      if (/faitDuJournal\s*:/.test(texte)) f.push(`${chemin} : écriture par la relation`);
+      const nu = texte.split("'faitDuJournal'").join('');
+      if (/faitDuJournal/.test(chemin === MENTION_PERMISE ? nu : texte)) {
+        f.push(`${chemin} : mention de la relation`);
+      }
+      return f;
+    });
+  const sources = (dossier: string): string[] =>
+    readdirSync(dossier, { withFileTypes: true }).flatMap((e) => {
+      const chemin = `${dossier}/${e.name}`;
+      if (e.isDirectory()) return sources(chemin);
+      return /\.(ts|tsx)$/.test(e.name) ? [chemin] : [];
+    });
+
+  it('REQ-DM-041 : TÉMOIN — dans src/, faitDuJournal n’est jamais écrit ni employé ; le code passe par evenementId', () => {
+    expect(fautes(sources('src').map((f) => [f, readFileSync(f, 'utf8')] as const))).toEqual([]);
+  });
+
+  it('REQ-DM-041 : contre-témoin — une écriture imbriquée dans le journal par la relation est NOMMÉE', () => {
+    expect(
+      fautes([
+        [
+          'src/server/factice.ts',
+          'await tx.notificationEspace.create({ data: { faitDuJournal: { create: {} } } });',
+        ],
+        ['src/server/autre.ts', 'const r = n.faitDuJournal;'],
+        [MENTION_PERMISE, "const refusees = ['faitDuJournal'];"],
+      ])
+    ).toEqual([
+      'src/server/factice.ts : écriture par la relation',
+      'src/server/factice.ts : mention de la relation',
+      'src/server/autre.ts : mention de la relation',
+    ]);
   });
 });

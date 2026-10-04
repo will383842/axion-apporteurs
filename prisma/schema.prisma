@@ -713,6 +713,7 @@ model NotificationEspace {
   /// `notifications_espace_machine_a_son_evenement` (les deux clés de la machine ont leur événement),
   /// en SQL brut (partners/ADR-0015).
   evenementId   BigInt?          @map("evenement_id")
+  /// Relation vers le journal chaîné, jamais employée par le code : on écrit `evenementId` (garde de l'écrivain unique).
   faitDuJournal Evenement?       @relation(fields: [evenementId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   /// DM-55 : l'anomalie confirmée qui fonde une `decision_attribution`, et elle seule (CHECK
   /// `notifications_espace_anomalie_decision_seule`, en SQL brut). Ses faits se lisent dans sa ligne au

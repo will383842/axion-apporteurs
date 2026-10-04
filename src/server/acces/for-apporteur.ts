@@ -157,14 +157,7 @@ export const CLES_REFUSEES = {
     'reponduePar',
   ],
   // DM-55 (sécurité) : la notification qu'un courriel porte est HORS DE L'ESPACE, jamais écrite d'ici.
-  courrielEnvoye: [
-    'id',
-    'apporteurId',
-    'apporteur',
-    'attribution',
-    'notificationEspaceId',
-    'notificationEspace',
-  ],
+  courrielEnvoye: ['id', 'apporteurId', 'apporteur', 'attribution', 'notificationEspace'],
   // CPL-T06 : une décision naît de la console, jamais de l'espace — son auteur est une clé refusée,
   // et la base l'exige : aucune création n'aboutit par cette couche.
   decisionCandidature: ['id', 'apporteurId', 'apporteur', 'auteurId', 'auteur'],
@@ -216,8 +209,8 @@ export const REFERENCES_CLOISONNEES: Partial<
 > = {
   sessionEspace: { lienMagiqueId: 'lienMagique' },
   attribution: { jetonDepotId: 'jetonDepot', personneDeclareeId: 'personneDeclaree' },
-  // DM-55 (sécurité, option i) : la notification d'un courriel est une référence DÉCLARÉE, mais sa clé est
-  // aussi REFUSÉE — verifier() refuse les clés interdites d'abord : aucune écriture de l'espace ne la pose.
+  // DM-55 (sécurité, option i') : la notification d'un courriel est une référence VÉRIFIÉE — elle doit être
+  // de la session ; sa colonne n'est jamais rendue, et aucun fichier de l'espace n'écrit de courriel.
   courrielEnvoye: { attributionId: 'attribution', notificationEspaceId: 'notificationEspace' },
   // DM-11 : la pièce rib d'une identité de facturation est une pièce de la session.
   identiteFacturation: { pieceKycId: 'pieceKyc' },
