@@ -21,7 +21,8 @@
  */
 
 import type { ConsoleRole, PrismaClient } from '@prisma/client';
-import { empreinteDeSession } from '../auth/lien-magique';
+import { DUREES_AUTH } from '../auth/durees';
+import { empreinteDeSessionConsole } from '../auth/lien-magique';
 import { droitDeclare, roleAutorise, type DroitConsole } from './matrice';
 
 /** Les motifs de refus : une liste FERMÉE. Le motif part au journal, jamais au navigateur. */
@@ -35,6 +36,8 @@ export const MOTIFS_DE_REFUS_CONSOLE = [
   'hors_console',
   'desactive',
   'role_refuse',
+  // SEC-29 : la session de la console sans activité depuis plus que l'inactivité de `durees.ts`.
+  'inactive',
 ] as const;
 export type MotifDeRefusConsole = (typeof MOTIFS_DE_REFUS_CONSOLE)[number];
 
@@ -43,6 +46,11 @@ export interface LigneDeSessionConsole {
   kid: string;
   expireAt: Date;
   revoqueAt: Date | null;
+  /**
+   * SEC-29 : la dernière vue, posée à l'ouverture et touchée au passage. Nulle (ou absente) vaut
+   * une session jamais vue : refusée comme inactive, en échec fermé.
+   */
+  derniereVueAt?: Date | null;
   utilisateurConsole: { id: string; role: ConsoleRole; desactiveAt: Date | null } | null;
 }
 
@@ -70,12 +78,37 @@ export function jugerAcces(
   const utilisateur = ligne.utilisateurConsole;
   if (utilisateur === null) return refus('hors_console');
   if (utilisateur.desactiveAt !== null) return refus('desactive');
+  if (!vueRecemment(ligne.derniereVueAt, maintenant)) return refus('inactive');
   if (!roleAutorise(droit, utilisateur.role)) return refus('role_refuse');
   return { ok: true, utilisateur: { id: utilisateur.id, role: utilisateur.role } };
 }
 
+/** SEC-29 : vue il y a MOINS que l'inactivité de la console. Jamais vue : non. */
+function vueRecemment(derniereVueAt: Date | null | undefined, maintenant: Date): boolean {
+  return (
+    derniereVueAt != null &&
+    maintenant.getTime() - derniereVueAt.getTime() < DUREES_AUTH.inactiviteConsoleMs.valeur
+  );
+}
+
+/**
+ * SEC-29 (lentille sécurité, condition d) : la dernière vue n'est réécrite que si elle date d'au
+ * moins `toucheVueConsoleMs`. Une lecture de la console ne devient pas une écriture à chaque requête.
+ */
+export function doitToucherLaVue(
+  derniereVueAt: Date | null | undefined,
+  maintenant: Date
+): boolean {
+  return (
+    derniereVueAt == null ||
+    maintenant.getTime() - derniereVueAt.getTime() >= DUREES_AUTH.toucheVueConsoleMs.valeur
+  );
+}
+
 export interface DepotDeSessionsConsole {
   lire(tokenHash: string): Promise<LigneDeSessionConsole | null>;
+  /** SEC-29 : pose la dernière vue de la session. Absent : la vue n'est pas touchée (échec fermé). */
+  toucher?(tokenHash: string, maintenant: Date): Promise<void>;
 }
 
 export interface PortsDeRole {
@@ -96,8 +129,15 @@ export async function requireRole(
   ports: PortsDeRole
 ): Promise<VerdictDeRole> {
   if (!jeton) return refus('absente');
-  const ligne = await ports.depot.lire(empreinteDeSession(jeton, ports.configuration.secret));
-  return jugerAcces(droit, ligne, ports.maintenant(), ports.configuration.kid);
+  // SEC-29 : l'empreinte d'une session de la console est sous SON domaine, jamais celui de l'espace.
+  const tokenHash = empreinteDeSessionConsole(jeton, ports.configuration.secret);
+  const ligne = await ports.depot.lire(tokenHash);
+  const maintenant = ports.maintenant();
+  const verdict = jugerAcces(droit, ligne, maintenant, ports.configuration.kid);
+  if (verdict.ok && doitToucherLaVue(ligne?.derniereVueAt, maintenant)) {
+    await ports.depot.toucher?.(tokenHash, maintenant);
+  }
+  return verdict;
 }
 
 /** Le dépôt en base : l'empreinte arrive CALCULÉE, aucun secret n'entre ici. */
@@ -110,8 +150,21 @@ export function depotDeSessionsConsole(prisma: PrismaClient): DepotDeSessionsCon
           kid: true,
           expireAt: true,
           revoqueAt: true,
+          derniereVueAt: true,
           utilisateurConsole: { select: { id: true, role: true, desactiveAt: true } },
         },
+      });
+    },
+    async toucher(tokenHash, maintenant) {
+      // Une écriture conditionnelle : deux requêtes concurrentes n'écrivent qu'une fois par période.
+      const avant = new Date(maintenant.getTime() - DUREES_AUTH.toucheVueConsoleMs.valeur);
+      await prisma.sessionEspace.updateMany({
+        where: {
+          tokenHash,
+          utilisateurConsoleId: { not: null },
+          OR: [{ derniereVueAt: null }, { derniereVueAt: { lte: avant } }],
+        },
+        data: { derniereVueAt: maintenant },
       });
     },
   };

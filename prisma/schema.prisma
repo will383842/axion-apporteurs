@@ -701,6 +701,8 @@ model NotificationEspace {
 
   @@index([apporteurId, creeAt])
   @@index([attributionId])
+  /// DM-61 : la purge à douze mois lit `cree_at` seul.
+  @@index([creeAt])
   @@map("notifications_espace")
 }
 
