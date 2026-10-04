@@ -30,6 +30,7 @@ import { transitionner } from '../../domain/apporteur/matrice';
 import type { MotifResiliation, StatutApporteur } from '../../domain/apporteur/statut';
 import {
   ARTICLES_MISE_EN_DEMEURE,
+  estSousContrat,
   jugerLaResiliationPourManquement,
   type ArticleMiseEnDemeure,
 } from '../../domain/apporteur/resiliation';
@@ -55,7 +56,14 @@ import {
   rendreLaNotification,
   type TexteRendu,
 } from '../notifications/envoyer';
-import { CHAMPS_PII, colonnesPii, decryptPii, type ClesPii } from '../securite/pii';
+import {
+  CHAMPS_PII,
+  colonnesPii,
+  decryptPii,
+  empreinteRecherche,
+  nettoyerUnTexteSaisi,
+  type ClesPii,
+} from '../securite/pii';
 import { CHARGES_PAR_TYPE } from '../../domain/evenement/charges';
 
 type Tx = Prisma.TransactionClient;
@@ -74,7 +82,9 @@ export class ErreurResiliation extends Error {
     | RefusDesFaits
     | 'article_hors_liste'
     | 'statut_sans_contrat'
-    | 'preavis_non_notifie';
+    | 'preavis_non_notifie'
+    | 'cle_idempotence_invalide'
+    | 'cle_deja_employee';
 
   constructor(code: ErreurResiliation['code'], detail: string) {
     super(`${code} : ${detail}`);
@@ -108,8 +118,8 @@ export interface DemandeDeResiliation {
 /** Le modèle des blocs chiffrés d'une décision de contrat (lien du bloc, `pii.ts`). */
 export const MODELE_DECISION_DE_CONTRAT = 'DecisionDeContrat';
 
-/** Les statuts liés par un contrat : seuls eux reçoivent une mise en demeure. */
-const SOUS_CONTRAT: readonly StatutApporteur[] = ['signe', 'suspendu'];
+/** Une clé d'idempotence : un UUID, tiré par le serveur au rendu ; revalidé ici, jamais remplacé. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /** Le jour civil de Paris d'un instant, en colonne DATE (minuit UTC de ce jour). */
 function jourDeParis(instant: Date): Date {
@@ -146,6 +156,8 @@ async function deciderEtNotifier(
     article?: ArticleMiseEnDemeure;
     texte?: string;
     dates?: { reception: Date; effet: Date };
+    /** La mise en demeure seule : sa clé et l'empreinte de ses faits (A02, 5982552283). */
+    idempotence?: { cle: string; faitsEmpreinte: string };
   },
   cles: ClesPii
 ): Promise<string> {
@@ -154,7 +166,17 @@ async function deciderEtNotifier(
     data: {
       ...(d.texte === undefined
         ? { id }
-        : colonnesPii({ modele: MODELE_DECISION_DE_CONTRAT, id }, { texte: d.texte }, cles)),
+        : (colonnesPii(
+            { modele: MODELE_DECISION_DE_CONTRAT, id },
+            { texte: d.texte },
+            cles
+          ) as unknown as Prisma.DecisionDeContratUncheckedCreateInput)),
+      ...(d.idempotence === undefined
+        ? {}
+        : {
+            cleIdempotence: d.idempotence.cle,
+            faitsEmpreinte: d.idempotence.faitsEmpreinte,
+          }),
       apporteurId: d.apporteurId,
       geste: d.geste,
       ...(d.article === undefined ? {} : { article: d.article }),
@@ -180,6 +202,11 @@ export interface DemandeDeMiseEnDemeure {
   readonly article: ArticleMiseEnDemeure;
   /** Les `{faits}`, saisis par une personne : sous les règles de DM-55, CHIFFRÉS, jamais au journal. */
   readonly faits: string;
+  /**
+   * La clé d'idempotence, tirée par le SERVEUR au rendu du formulaire (sécurité, #703, 5982535417) :
+   * revalidée en UUID ; absente ou forgée, refusée — jamais remplacée par une clé neuve.
+   */
+  readonly cleIdempotence: string;
   readonly acteur: ActeurDeResiliation;
   readonly maintenant: Date;
 }
@@ -189,20 +216,60 @@ export interface DemandeDeMiseEnDemeure {
  * console, l'article de la liste fermée et les faits ; le fait daté au journal SANS les faits, la
  * décision chiffrée, la notification `mise_en_demeure`. Un apporteur hors contrat n'en reçoit pas.
  * Une mise en demeure n'est ni un avertissement ni un antécédent : rien ne les compte (art. 11.2).
+ *
+ * IDEMPOTENTE (sécurité, 5982535417 ; forme d'A02, 5982552283) : sous le verrou de l'apporteur, SEULE
+ * la ligne de la même clé est lue — jamais l'historique. Même contenu (apporteur, article, empreinte
+ * des faits nettoyés, acteur de SON fait) : la décision existante est rendue, sans rien écrire. Autre
+ * contenu, ou ligne déjà purgée (comparaison impossible) : `cle_deja_employee`.
  */
 export async function mettreEnDemeure(
   tx: Tx,
   demande: DemandeDeMiseEnDemeure,
   cles: ClesPii
-): Promise<{ decisionId: string; evenementId: bigint }> {
-  const { apporteurId, article, faits, acteur, maintenant } = demande;
+): Promise<{ decisionId: string; evenementId: bigint; rejouee?: true }> {
+  const { apporteurId, article, faits, cleIdempotence, acteur, maintenant } = demande;
+  if (typeof cleIdempotence !== 'string' || !UUID.test(cleIdempotence)) {
+    throw new ErreurResiliation(
+      'cle_idempotence_invalide',
+      "la clé tirée au rendu manque ou n'est pas un UUID"
+    );
+  }
   exigerUnActeurHumain(acteur);
   if (!(ARTICLES_MISE_EN_DEMEURE as readonly string[]).includes(article)) {
     throw new ErreurResiliation('article_hors_liste', "l'article n'est pas visé par l'art. 11.2");
   }
   exigerUnTexteAdmis(faits);
+  const propres = nettoyerUnTexteSaisi(faits);
+  const faitsEmpreinte = empreinteRecherche('faits_mise_en_demeure', propres, cles);
   const statut = await statutVerrouille(tx, apporteurId);
-  if (!SOUS_CONTRAT.includes(statut)) {
+  const memeCle = await tx.decisionDeContrat.findUnique({
+    where: { cleIdempotence },
+    select: {
+      id: true,
+      apporteurId: true,
+      geste: true,
+      article: true,
+      faitsEmpreinte: true,
+      evenementId: true,
+    },
+  });
+  if (memeCle !== null) {
+    const fait = await lireLaChargeDUnFait(tx, String(memeCle.evenementId));
+    const auteur = (fait?.charge as { acteur?: { par?: string; id?: string } } | undefined)?.acteur;
+    const identique =
+      memeCle.geste === 'mise_en_demeure' &&
+      memeCle.apporteurId === apporteurId &&
+      memeCle.article === article &&
+      memeCle.faitsEmpreinte !== null &&
+      memeCle.faitsEmpreinte === faitsEmpreinte &&
+      auteur?.par === acteur.par &&
+      auteur?.id === acteur.id;
+    if (!identique) {
+      throw new ErreurResiliation('cle_deja_employee', 'cette clé a déjà servi à un autre acte');
+    }
+    return { decisionId: memeCle.id, evenementId: memeCle.evenementId, rejouee: true };
+  }
+  if (!estSousContrat(statut)) {
     throw new ErreurResiliation('statut_sans_contrat', `statut ${statut}`);
   }
   const inscrit = await ajouterEvenement(tx, {
@@ -215,7 +282,14 @@ export async function mettreEnDemeure(
   const evenementId = BigInt(inscrit.id);
   const decisionId = await deciderEtNotifier(
     tx,
-    { apporteurId, geste: 'mise_en_demeure', evenementId, article, texte: faits },
+    {
+      apporteurId,
+      geste: 'mise_en_demeure',
+      evenementId,
+      article,
+      texte: propres,
+      idempotence: { cle: cleIdempotence, faitsEmpreinte },
+    },
     cles
   );
   return { decisionId, evenementId };

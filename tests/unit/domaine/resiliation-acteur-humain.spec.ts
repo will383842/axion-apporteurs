@@ -72,6 +72,8 @@ const transitionnerSimule = vi.hoisted(() => ({ transitionnerUneAttribution: vi.
 vi.mock('../../../src/server/attribution/transitionner', () => transitionnerSimule);
 
 const ID = '0190f0a0-0000-7000-8000-0000000000a1';
+/** Une clé d'idempotence, tirée par le serveur au rendu du formulaire. */
+const CLE = '0190f0a0-0000-4000-8000-00000000c1e0';
 const MAINTENANT = new Date('2027-03-01T09:00:00.000Z');
 const CONSOLE = { par: 'utilisateur_console', id: '0190f0a0-0000-7000-8000-0000000000c1' } as const;
 
@@ -80,6 +82,7 @@ function txSimule(
   monde: {
     attributions?: { id: string; statut: string }[];
     misesEnDemeure?: { evenementId: bigint; courriels: { envoyeAt: Date }[] }[];
+    decisionDeMemeCle?: Record<string, unknown> | null;
   } = {}
 ) {
   let statut = statutInitial;
@@ -128,6 +131,11 @@ function txSimule(
       },
     },
     decisionDeContrat: {
+      findUnique: async (q: unknown) => {
+        ordre.push('meme_cle');
+        lectures.push(q);
+        return monde.decisionDeMemeCle ?? null;
+      },
       create: async (q: unknown) => {
         ordre.push('decision');
         ecrits.push({ decision: q });
@@ -809,6 +817,7 @@ describe('REQ-JUR-006 — les émetteurs : la mise en demeure et la décision de
         apporteurId: ID,
         article: '6',
         faits: 'Trois dépôts sans échange réel',
+        cleIdempotence: CLE,
         acteur: CONSOLE,
         maintenant: MAINTENANT,
       },
@@ -845,7 +854,7 @@ describe('REQ-JUR-006 — les émetteurs : la mise en demeure et la décision de
         decisionContratId: r.decisionId,
       },
     });
-    expect(t.ordre).toStrictEqual(['verrou', 'decision', 'notification']);
+    expect(t.ordre).toStrictEqual(['verrou', 'meme_cle', 'decision', 'notification']);
   });
 
   it('REQ-JUR-006 : la mise en demeure est refusée, nommée, sans rien écrire : acteur système, article hors liste, faits vides ou trop longs, apporteur sans contrat', async () => {
@@ -856,6 +865,7 @@ describe('REQ-JUR-006 — les émetteurs : la mise en demeure et la décision de
       apporteurId: ID,
       article: '6' as const,
       faits: 'Des faits',
+      cleIdempotence: CLE,
       acteur: CONSOLE,
       maintenant: MAINTENANT,
     };
@@ -1313,5 +1323,160 @@ describe('REQ-JUR-006 — le juge unique des faits saisis', () => {
       )
     );
     expect(e.code).toBe('faits_avec_lien');
+  });
+});
+
+/**
+ * L'IDEMPOTENCE de la mise en demeure (sécurité, #703, 5982535417 ; forme d'A02, 5982552283) : une clé
+ * tirée par le serveur au rendu, revalidée en UUID ; sous le verrou de l'apporteur, seule la ligne de
+ * la MÊME clé est lue. Même contenu (apporteur, article, empreinte des faits, acteur de SON fait) : la
+ * décision existante est rendue, sans rien écrire. Autre contenu, ou ligne purgée : `cle_deja_employee`.
+ */
+describe('REQ-JUR-006 — l’idempotence de la mise en demeure', () => {
+  beforeEach(() => {
+    journalSimule.ajouterEvenement.mockReset();
+    journalSimule.ajouterEvenement.mockResolvedValue({ id: '41', selfHash: 'x' });
+    journalSimule.lireLaChargeDUnFait.mockReset();
+    journalSimule.lireLaChargeDUnFait.mockResolvedValue({
+      type: 'apporteur_mis_en_demeure',
+      charge: { article: '6', acteur: CONSOLE },
+    });
+  });
+
+  const demande = (o: Record<string, unknown> = {}): never => {
+    const d: unknown = {
+      apporteurId: ID,
+      article: '6',
+      faits: 'Trois dépôts  sans échange réel',
+      cleIdempotence: CLE,
+      acteur: CONSOLE,
+      maintenant: MAINTENANT,
+      ...o,
+    };
+    return d as never;
+  };
+
+  async function empreinte(faits: string) {
+    const { empreinteRecherche } = await import('../../../src/server/securite/pii');
+    return empreinteRecherche('faits_mise_en_demeure', faits, await clesDeTest());
+  }
+
+  it('REQ-JUR-006 : TÉMOIN — une clé absente ou forgée est refusée (cle_idempotence_invalide), sans rien lire ni écrire', async () => {
+    const { mettreEnDemeure } = await import('../../../src/server/apporteur/resiliation');
+    for (const cle of [undefined, '', 'pas-un-uuid', '0190f0a0-0000-7000-8000', 42]) {
+      const t = txSimule('signe');
+      const e = await refusDe(
+        mettreEnDemeure(t.tx, demande({ cleIdempotence: cle }), await clesDeTest())
+      );
+      expect(e.code, String(cle)).toBe('cle_idempotence_invalide');
+      expect(t.ordre).toStrictEqual([]);
+    }
+  });
+
+  it('REQ-JUR-006 : TÉMOIN — la décision porte sa clé et l’empreinte des faits NETTOYÉS ; le texte chiffré est ce même clair', async () => {
+    const { mettreEnDemeure } = await import('../../../src/server/apporteur/resiliation');
+    const { decryptPii } = await import('../../../src/server/securite/pii');
+    const t = txSimule('signe');
+    const r = await mettreEnDemeure(t.tx, demande(), await clesDeTest());
+    const d = (t.ecrits[0] as { decision: { data: Record<string, unknown> } }).decision.data;
+    expect(d.cleIdempotence).toBe(CLE);
+    expect(d.faitsEmpreinte).toBe(await empreinte('Trois dépôts sans échange réel'));
+    expect(
+      decryptPii(
+        { modele: 'DecisionDeContrat', champ: 'texteChiffre', id: r.decisionId },
+        d.texteChiffre as Uint8Array,
+        await clesDeTest()
+      )
+    ).toBe('Trois dépôts sans échange réel');
+    expect(t.lectures).toContainEqual({
+      where: { cleIdempotence: CLE },
+      select: {
+        id: true,
+        apporteurId: true,
+        geste: true,
+        article: true,
+        faitsEmpreinte: true,
+        evenementId: true,
+      },
+    });
+  });
+
+  it('REQ-JUR-006 : TÉMOIN — la même clé et le même contenu rendent la décision EXISTANTE, sans fait, sans décision, sans notification', async () => {
+    const { mettreEnDemeure } = await import('../../../src/server/apporteur/resiliation');
+    const t = txSimule('signe', {
+      decisionDeMemeCle: {
+        id: 'd-existante',
+        apporteurId: ID,
+        geste: 'mise_en_demeure',
+        article: '6',
+        faitsEmpreinte: await empreinte('Trois dépôts sans échange réel'),
+        evenementId: 7n,
+      },
+    });
+    const r = await mettreEnDemeure(t.tx, demande(), await clesDeTest());
+    expect(r).toStrictEqual({ decisionId: 'd-existante', evenementId: 7n, rejouee: true });
+    expect(t.ecrits).toStrictEqual([]);
+    expect(journalSimule.ajouterEvenement).not.toHaveBeenCalled();
+    expect(journalSimule.lireLaChargeDUnFait).toHaveBeenCalledWith(t.tx, '7');
+  });
+
+  it('REQ-JUR-006 : TÉMOIN — la même clé avec un autre contenu, ou une ligne déjà purgée, est refusée (cle_deja_employee), sans rien écrire', async () => {
+    const { mettreEnDemeure } = await import('../../../src/server/apporteur/resiliation');
+    const juste = {
+      id: 'd-existante',
+      apporteurId: ID,
+      geste: 'mise_en_demeure',
+      article: '6',
+      faitsEmpreinte: await empreinte('Trois dépôts sans échange réel'),
+      evenementId: 7n,
+    };
+    const cas: [string, Record<string, unknown>, Record<string, unknown>][] = [
+      ['autre article', {}, { article: '7' }],
+      ['autres faits', {}, { faits: 'D’autres faits' }],
+      ['autre apporteur', { apporteurId: 'autre' }, {}],
+      ['ligne purgée', { faitsEmpreinte: null }, {}],
+      ['autre geste', { geste: 'resiliation' }, {}],
+    ];
+    for (const [nom, ligne, d] of cas) {
+      const t = txSimule('signe', { decisionDeMemeCle: { ...juste, ...ligne } });
+      const e = await refusDe(mettreEnDemeure(t.tx, demande(d), await clesDeTest()));
+      expect(e.code, nom).toBe('cle_deja_employee');
+      expect(t.ecrits, nom).toStrictEqual([]);
+    }
+    // Un autre acteur, lu dans le fait de la ligne.
+    journalSimule.lireLaChargeDUnFait.mockResolvedValue({
+      type: 'apporteur_mis_en_demeure',
+      charge: {
+        article: '6',
+        acteur: { par: 'utilisateur_console', id: '0190f0a0-0000-7000-8000-0000000000c2' },
+      },
+    });
+    const t = txSimule('signe', { decisionDeMemeCle: juste });
+    expect((await refusDe(mettreEnDemeure(t.tx, demande(), await clesDeTest()))).code).toBe(
+      'cle_deja_employee'
+    );
+  });
+
+  it('REQ-JUR-006 : TÉMOIN — l’empreinte d’un même texte, avant et après nettoyage, est identique ; deux textes différents en donnent deux', async () => {
+    expect(await empreinte('Des  faits\n précis ')).toBe(await empreinte('Des faits précis'));
+    expect(await empreinte('Des faits précis')).not.toBe(await empreinte('Des faits imprécis'));
+  });
+
+  it('REQ-JUR-006 : TÉMOIN STATIQUE — mettreEnDemeure ne lit aucune mise en demeure antérieure : la ligne de SA clé, et rien d’autre', () => {
+    const source = readFileSync('src/server/apporteur/resiliation.ts', 'utf8');
+    const corps = source.slice(
+      source.indexOf('export async function mettreEnDemeure'),
+      source.indexOf('\n}\n', source.indexOf('export async function mettreEnDemeure'))
+    );
+    expect(corps).not.toMatch(/findMany|findFirst|count\(|envoisDeLArticle|notificationEspace/);
+    expect(corps.match(/findUnique\(/g) ?? []).toHaveLength(1);
+    expect(corps).toMatch(/findUnique\(\{\s*where: \{ cleIdempotence \}/);
+  });
+
+  it('REQ-JUR-006 : le prédicat « sous contrat » du domaine : signé ou suspendu, et rien d’autre', async () => {
+    const { estSousContrat } = await import('../../../src/domain/apporteur/resiliation');
+    const { STATUTS_APPORTEUR } = await import('../../../src/domain/apporteur/statut');
+    expect(STATUTS_APPORTEUR.filter((s) => estSousContrat(s))).toEqual(['signe', 'suspendu']);
+    expect(estSousContrat(null)).toBe(false);
   });
 });

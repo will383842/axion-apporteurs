@@ -25,6 +25,7 @@ import type { Instant } from '../../domain/temps/horloge';
 import type { Prisma } from '@prisma/client';
 import { CHARGES_PAR_TYPE } from '../../domain/evenement/charges';
 import { FAITS_ANOMALIE_CARACTERES_MAX } from '../../domain/seuils/ssot';
+import { nettoyerUnTexteSaisi } from '../securite/pii';
 import {
   NotificationRefusee,
   rendreLaNotification,
@@ -46,16 +47,6 @@ export type Decision = {
 /** {numeroEntreprise} : neuf chiffres, rien d'autre. */
 const NUMERO_D_ENTREPRISE = /^[0-9]{9}$/;
 
-/**
- * Un caractère de contrôle (sous 0x20, de 0x7f à 0x9f), un séparateur de ligne ou de paragraphe, ou un caractère de
- * FORMAT (catégorie Cf : U+202E retourne un texte, U+200B le cache) — que le rendu refuserait.
- */
-const FORMAT = /^\p{Cf}$/u;
-function estUnControle(ch: string): boolean {
-  const c = ch.codePointAt(0)!;
-  return c < 0x20 || (c >= 0x7f && c <= 0x9f) || c === 0x2028 || c === 0x2029 || FORMAT.test(ch);
-}
-
 const ECHAPPEMENTS: Readonly<Record<string, string>> = {
   '&': '&amp;',
   '<': '&lt;',
@@ -71,8 +62,7 @@ const ECHAPPEMENTS: Readonly<Record<string, string>> = {
  * `null` : aucun courriel, jamais une troncature —, puis le texte est échappé pour le HTML.
  */
 export function faitsPourLeCourriel(brut: string): string | null {
-  const points = [...brut].map((ch) => (estUnControle(ch) ? ' ' : ch));
-  const propre = points.join('').replace(/ {2,}/g, ' ').trim();
+  const propre = nettoyerUnTexteSaisi(brut);
   const longueur = [...propre].length;
   if (longueur === 0 || longueur > FAITS_ANOMALIE_CARACTERES_MAX.valeur) return null;
   return propre.replace(/[&<>"']/g, (c) => ECHAPPEMENTS[c]!);
@@ -107,11 +97,7 @@ function contenuRefuse(texte: string): Exclude<RefusDesFaits, 'faits_trop_longs'
 export function jugerLesFaitsSaisis(
   brut: string
 ): { ok: true } | { ok: false; motif: RefusDesFaits } {
-  const propre = [...brut]
-    .map((ch) => (estUnControle(ch) ? ' ' : ch))
-    .join('')
-    .replace(/ {2,}/g, ' ')
-    .trim();
+  const propre = nettoyerUnTexteSaisi(brut);
   const contenu = contenuRefuse(propre);
   if (contenu === 'faits_vides') return { ok: false, motif: contenu };
   if ([...propre].length > FAITS_ANOMALIE_CARACTERES_MAX.valeur) {

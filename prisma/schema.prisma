@@ -1512,6 +1512,12 @@ model DecisionDeContrat {
   faitDuJournal       Evenement            @relation(fields: [evenementId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   creeAt              DateTime             @default(dbgenerated("clock_timestamp()")) @map("cree_at") @db.Timestamptz(3)
   textePurgeAt        DateTime?            @map("texte_purge_at") @db.Timestamptz(3)
+  /// La clé d'idempotence, tirée par le serveur au rendu du formulaire : UNIQUE, immuable, jamais
+  /// purgée ; exigée pour une mise en demeure (CHECK).
+  cleIdempotence      String?              @unique @map("cle_idempotence") @db.Uuid
+  /// L'empreinte HMAC des faits (`empreinteRecherche('faits_mise_en_demeure', …)`) : elle vit et meurt
+  /// avec le texte (CHECK et garde) ; jamais de clair pour comparer.
+  faitsEmpreinte      String?              @map("faits_empreinte") @db.Char(64)
   notificationsEspace NotificationEspace[]
 
   @@index([apporteurId])

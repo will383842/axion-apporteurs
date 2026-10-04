@@ -114,25 +114,33 @@ type Ligne = {
   dateReception?: string | null;
   dateEffet?: string | null;
   purgeAt?: Date | null;
+  cle?: string | null;
+  empreinte?: string | null;
 };
 
 /** Une décision, insérée par SQL brut sous `partners_app` ; rend son id. */
 async function uneDecision(l: Ligne, apporteurId?: string): Promise<string> {
   const a = apporteurId ?? (await unApporteur());
   const id = randomUUID();
+  const texte = l.texte === undefined ? randomBytes(40) : l.texte;
+  // Par défaut, une mise en demeure porte sa clé et l'empreinte de son texte ; une résiliation, rien.
+  const med = l.geste === 'mise_en_demeure';
   await app.$executeRawUnsafe(
     `INSERT INTO decisions_de_contrat (id, apporteur_id, geste, article, texte_chiffre,
-       date_reception, date_effet, evenement_id, texte_purge_at)
-     VALUES ($1::uuid, $2::uuid, $3::geste_decision_contrat, $4, $5, $6::date, $7::date, $8, $9)`,
+       date_reception, date_effet, evenement_id, texte_purge_at, cle_idempotence, faits_empreinte)
+     VALUES ($1::uuid, $2::uuid, $3::geste_decision_contrat, $4, $5, $6::date, $7::date, $8, $9,
+       $10::uuid, $11)`,
     id,
     a,
     l.geste,
     l.article ?? null,
-    l.texte === undefined ? randomBytes(40) : l.texte,
+    texte,
     l.dateReception ?? null,
     l.dateEffet ?? null,
     await unFait(a),
-    l.purgeAt ?? null
+    l.purgeAt ?? null,
+    l.cle === undefined ? (med ? randomUUID() : null) : l.cle,
+    l.empreinte === undefined ? (med && texte !== null ? hex(32) : null) : l.empreinte
   );
   return id;
 }
@@ -224,7 +232,8 @@ describe('REQ-JUR-006 — decisions_de_contrat : la garde dédiée', () => {
     const id = await uneDecision(MISE_EN_DEMEURE);
     const purger = () =>
       app.$executeRawUnsafe(
-        `UPDATE decisions_de_contrat SET texte_chiffre = NULL, texte_purge_at = $2 WHERE id = $1::uuid`,
+        `UPDATE decisions_de_contrat SET texte_chiffre = NULL, faits_empreinte = NULL, texte_purge_at = $2
+         WHERE id = $1::uuid`,
         id,
         MAINTENANT
       );
@@ -261,6 +270,11 @@ describe('REQ-JUR-006 — decisions_de_contrat : la garde dédiée', () => {
       id
     );
     expect(l).toEqual({ t: null, p: MAINTENANT });
+    const [e] = await base.prisma.$queryRawUnsafe<{ e: string | null }[]>(
+      `SELECT faits_empreinte AS e FROM decisions_de_contrat WHERE id = $1::uuid`,
+      id
+    );
+    expect(e!.e).toBeNull();
     // Une seconde purge : refusée.
     expect(await refus(purger())).toContain(GARDE);
   });
@@ -362,5 +376,55 @@ describe('REQ-DM-011 — la résiliation, en base réelle', () => {
       },
     });
     expect(restantes).toBe(0);
+  });
+});
+
+describe('REQ-JUR-006 — decisions_de_contrat : l’idempotence de la mise en demeure (A02, 5982552283)', () => {
+  it('REQ-JUR-006 : TÉMOIN — une mise en demeure sans clé est refusée ; une résiliation peut s’en passer', async () => {
+    expect(await refus(uneDecision({ ...MISE_EN_DEMEURE, cle: null }))).toContain(
+      'decisions_de_contrat_cle_de_la_mise_en_demeure'
+    );
+    await uneDecision({ ...RESILIATION, cle: null });
+    await uneDecision({ ...RESILIATION, cle: randomUUID() });
+  });
+
+  it('REQ-JUR-006 : TÉMOIN — l’empreinte : hors forme refusée ; sans texte, ou texte sans empreinte, refusés ; jamais sur une résiliation', async () => {
+    expect(await refus(uneDecision({ ...MISE_EN_DEMEURE, empreinte: 'A'.repeat(64) }))).toContain(
+      'decisions_de_contrat_faits_empreinte_forme'
+    );
+    expect(await refus(uneDecision({ ...MISE_EN_DEMEURE, empreinte: null }))).toContain(
+      'decisions_de_contrat_empreinte_liee_au_texte'
+    );
+    expect(await refus(uneDecision({ ...RESILIATION, empreinte: hex(32) }))).toContain(
+      'decisions_de_contrat_empreinte_liee_au_texte'
+    );
+  });
+
+  it('REQ-JUR-006 : TÉMOIN — l’index unique refuse une seconde ligne de même clé, même hors du code', async () => {
+    const cle = randomUUID();
+    await uneDecision({ ...MISE_EN_DEMEURE, cle });
+    expect(await refus(uneDecision({ ...MISE_EN_DEMEURE, cle }))).toContain('cle_idempotence');
+  });
+
+  it('REQ-JUR-006 : TÉMOIN — une purge qui garde l’empreinte est refusée ; une réécriture de la clé aussi', async () => {
+    const id = await uneDecision(MISE_EN_DEMEURE);
+    expect(
+      await refus(
+        app.$executeRawUnsafe(
+          `UPDATE decisions_de_contrat SET texte_chiffre = NULL, texte_purge_at = $2 WHERE id = $1::uuid`,
+          id,
+          MAINTENANT
+        )
+      )
+    ).toMatch(/decisions_de_contrat_(?:garde|empreinte_liee_au_texte)/);
+    expect(
+      await refus(
+        app.$executeRawUnsafe(
+          `UPDATE decisions_de_contrat SET cle_idempotence = $2::uuid WHERE id = $1::uuid`,
+          id,
+          randomUUID()
+        )
+      )
+    ).toContain(GARDE);
   });
 });

@@ -14,6 +14,14 @@ import { depuisParis, versParis } from '../temps/paris';
 export const ARTICLES_MISE_EN_DEMEURE = ['3.7', '6', '7', '8', '9', '23'] as const;
 export type ArticleMiseEnDemeure = (typeof ARTICLES_MISE_EN_DEMEURE)[number];
 
+/** Les statuts liés par un contrat : seuls eux reçoivent une mise en demeure. */
+export const STATUTS_SOUS_CONTRAT = ['signe', 'suspendu'] as const;
+
+/** Le prédicat « sous contrat » : l'écran le lit AVANT la saisie, le serveur le rejuge sous le verrou. */
+export function estSousContrat(statut: string | null): boolean {
+  return (STATUTS_SOUS_CONTRAT as readonly (string | null)[]).includes(statut);
+}
+
 /**
  * L'échéance de la mise en demeure, borne EXCLUSIVE (forme d'A02, comme la fenêtre de DM-55) :
  * minuit, heure de Paris, du jour civil qui suit (envoi effectif + `MISE_EN_DEMEURE_JOURS`). Le
