@@ -25,7 +25,9 @@
  *      la même catégorie pour les deux antériorités ; ni `gele` ni un dépôt enregistré ne notifient ;
  *   6. UNE DEMANDE DE CONFIRMATION par dépôt enregistré, dans la même transaction ; aucune pour un
  *      refus, aucune pour un dépôt annulé ;
- *   8. LE LIEN D'INTÉRÊT DÉCLARÉ est conservé sur la déclaration, sans aucun effet sur son issue.
+ *   8. LE LIEN D'INTÉRÊT DÉCLARÉ est conservé sur la déclaration, sans aucun effet sur son issue ;
+ *   9. LE DÉPÔT ET LA PROJECTION SE SÉRIALISENT sur un SIREN : un dépôt ATTEND une projection
+ *      `client_cree` en cours, et lit l'antériorité APRÈS elle (rattrapage 107).
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
@@ -45,6 +47,7 @@ import { notifier } from '../../src/server/notifications/envoyer';
 import { forApporteur } from '../../src/server/acces/for-apporteur';
 import type { DemandeDeNotification } from '../../src/server/notifications/envoyer';
 import { CASE_INFORMATION_TIERS } from '../../src/content/micro-copy/espace/information-tiers';
+import { verrouillerLesSirens } from '../../src/server/entreprise-connue/projection';
 
 let base: Base;
 let codes = 0;
@@ -517,5 +520,44 @@ describe('REQ-UX-039 — le lien d’intérêt déclaré ne change jamais l’is
     expect(
       await base.prisma.depotRefuse.count({ where: { siren: { in: [coche, decoche] } } })
     ).toBe(0);
+  });
+});
+
+describe('REQ-SEC-022 — le dépôt et la projection se sérialisent sur un SIREN (rattrapage 107)', () => {
+  it('REQ-SEC-022 : TÉMOIN — un dépôt ATTEND une projection `client_cree` en cours, et la lit APRÈS elle', async () => {
+    const siren = unSiren();
+    const a = await apporteur('signe');
+
+    // Une « projection » tient le verrou du SIREN et y écrit le client, sans encore valider.
+    let relacher!: () => void;
+    const tenu = new Promise<void>((r) => (relacher = r));
+    let signaler!: () => void;
+    const pris = new Promise<void>((r) => (signaler = r));
+    const projection = base.prisma.$transaction(
+      async (tx) => {
+        await verrouillerLesSirens(tx, [siren]);
+        await tx.entrepriseConnue.create({
+          data: { siren, origine: 'client', connueDepuisAt: T0, dernierContactAt: T0 },
+        });
+        signaler();
+        await tenu;
+      },
+      { timeout: 30_000 }
+    );
+    await pris;
+
+    let fini = false;
+    const depot = deposerOuEchouer(base.prisma, demande(a, siren), PORTS).then((r) => {
+      fini = true;
+      return r;
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    expect(fini).toBe(false);
+
+    relacher();
+    await projection;
+    // Lue APRÈS la projection : la cliente est refusée ; lue avant, elle aurait occupé le SIREN.
+    expect(await depot).toEqual({ issue: 'anteriorite_client', attributionId: null });
+    expect(await base.prisma.attribution.count({ where: { siren } })).toBe(0);
   });
 });

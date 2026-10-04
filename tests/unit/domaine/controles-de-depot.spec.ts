@@ -210,11 +210,13 @@ describe('REQ-SEC-020 — ni la zone ni le secteur ne refusent un dépôt', () =
 
 const doublures = vi.hoisted(() => ({
   anterioriteDe: vi.fn(),
+  verrouillerLesSirens: vi.fn(),
   journaliserLaNaissance: vi.fn(),
   creerLaDemande: vi.fn(),
 }));
 vi.mock('../../../src/server/entreprise-connue/projection', () => ({
   anterioriteDe: doublures.anterioriteDe,
+  verrouillerLesSirens: doublures.verrouillerLesSirens,
 }));
 vi.mock('../../../src/server/attribution/transitionner', () => ({
   journaliserLaNaissance: doublures.journaliserLaNaissance,
@@ -360,6 +362,7 @@ const ecrit = (appels: readonly Appel[], nom: string) =>
 
 beforeEach(() => {
   doublures.anterioriteDe.mockReset().mockResolvedValue({ connue: false });
+  doublures.verrouillerLesSirens.mockReset().mockResolvedValue(undefined);
   doublures.journaliserLaNaissance.mockReset().mockResolvedValue('provisoire');
   doublures.creerLaDemande.mockReset().mockResolvedValue('demande-1');
 });
@@ -460,6 +463,16 @@ describe('REQ-SEC-032 — le statut relu sous verrou ouvre, ou non, le dépôt',
 });
 
 describe('REQ-SEC-022 — les faits lus sous verrou, et le refus tracé', () => {
+  it('REQ-SEC-022 : le SIREN est aussi verrouillé dans le domaine de l’entreprise connue, AVANT la lecture de l’antériorité', async () => {
+    const { tx } = transaction({});
+    await deposerDans(tx, demande(), ports());
+    expect(doublures.verrouillerLesSirens).toHaveBeenCalledTimes(1);
+    expect(doublures.verrouillerLesSirens).toHaveBeenCalledWith(tx, [SIREN]);
+    expect(doublures.verrouillerLesSirens.mock.invocationCallOrder[0]).toBeLessThan(
+      doublures.anterioriteDe.mock.invocationCallOrder[0]!
+    );
+  });
+
   it('REQ-SEC-022 : l’antériorité est lue sur le SIREN, à l’heure du port ; l’opposition aussi', async () => {
     const { tx } = transaction({});
     const p = ports();
