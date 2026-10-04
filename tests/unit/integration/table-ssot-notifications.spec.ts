@@ -511,3 +511,88 @@ describe('REQ-UX-016 — la fin d’une réservation se dit selon sa cause (A07,
     ).toBe('parametre_en_trop');
   });
 });
+
+// La passe de mutation (PR 667) a montré des fautes de la table jugées sans leur TEXTE, et des
+// branches jamais prises : chaque faute est ici rendue mot pour mot, sur une table cassée d'un geste.
+describe('REQ-UX-016 — chaque faute de la table, nommée mot pour mot', () => {
+  const ligneDe = (cle: Gabarit, extra: Partial<LigneDeNotification>) => ({
+    [cle]: { ...(GABARITS[cle] as LigneDeNotification), ...extra },
+  });
+  const fautes = (t: Record<string, LigneDeNotification>) => fautesDeLaTable(t, CONTEXTE);
+
+  it('REQ-UX-016 : TÉMOIN — le texte absent et la route non déclarée nomment LEUR source, espace ou console', () => {
+    const sansTextes = { ...CONTEXTE, textes: {}, console: { ...CONTEXTE.console, textes: {} } };
+    expect(fautesDeLaTable(ligneDe('lien_magique', {}), sansTextes)).toContain(
+      "texte_absent : lien_magique n'a pas de texte dans src/content/micro-copy/courriels/notifications.ts"
+    );
+    expect(fautesDeLaTable(ligneDe('admin_cree', {}), sansTextes)).toContain(
+      "texte_absent : admin_cree n'a pas de texte dans src/content/micro-copy/console/connexion.ts"
+    );
+    expect(fautes(ligneDe('lien_magique', { route: '/nulle-part' }))).toContain(
+      'route_non_declaree : lien_magique mène à /nulle-part, absente de docs/ESPACE-ROUTES.md'
+    );
+    expect(fautes(ligneDe('admin_cree', { route: '/console/nulle-part' }))).toContain(
+      'route_non_declaree : admin_cree mène à /console/nulle-part, absente de docs/CONSOLE-ROUTES.md'
+    );
+  });
+
+  it('REQ-UX-016 : TÉMOIN — l’action est UNE, et c’est l’appel de la micro-copie', () => {
+    const a = GABARITS.lien_magique.actions[0]!;
+    const faute = 'action_non_unique : lien_magique doit porter UN appel, celui de la micro-copie';
+    expect(fautes(ligneDe('lien_magique', {}))).toEqual([]);
+    expect(fautes(ligneDe('lien_magique', { actions: [] }))).toEqual([faute]);
+    expect(fautes(ligneDe('lien_magique', { actions: [a, a] }))).toEqual([faute]);
+    expect(fautes(ligneDe('lien_magique', { actions: [{ ...a, libelle: 'Autre' }] }))).toEqual([
+      faute,
+    ]);
+    // L'action d'une clé de l'apporteur vient de SA micro-copie, source nommée.
+    expect(GABARITS.lien_magique.actions).toEqual([
+      {
+        libelle: TEXTES_DES_NOTIFICATIONS.lien_magique.appel,
+        source: 'src/content/micro-copy/courriels/notifications.ts',
+      },
+    ]);
+  });
+
+  it('REQ-JUR-039 : TÉMOIN — une date fixe exige « art. » suivi d’un numéro, espace ou non', () => {
+    const fixe = (fondement: string) =>
+      fautes(ligneDe('rappel_rc_pro', { declencheur: 'calendrier_fixe', fondement }));
+    const faute =
+      'calendrier_sans_article : rappel_rc_pro part à date fixe sans article du contrat qui la fixe';
+    expect(fixe('contrat art. 6.4')).toEqual([]);
+    expect(fixe('contrat art.6')).toEqual([]);
+    expect(fixe('contrat art.  12')).toEqual([]);
+    expect(fixe('contrat art. six')).toEqual([faute]);
+    expect(fixe('contrat article 6')).toEqual([faute]);
+  });
+
+  it('REQ-UX-016 : TÉMOIN — l’émetteur cite l’exigence par ses REQ OU par son acceptance ; sinon, nommé', () => {
+    const l = GABARITS.lien_magique as LigneDeNotification;
+    const avec = (t: Tache) => fautesDeLaTable({ lien_magique: l }, { ...CONTEXTE, registre: [t] });
+    const faute = `emetteur_sans_exigence : ${l.emetteur} ne cite pas ${l.req} (lien_magique)`;
+    expect(avec({ id: l.emetteur, phase: 1, reqs: [l.req] })).toEqual([]);
+    expect(avec({ id: l.emetteur, phase: 1, acceptance: `… ${l.req} …` })).toEqual([]);
+    expect(avec({ id: l.emetteur, phase: 1 })).toEqual([faute]);
+    expect(avec({ id: l.emetteur, phase: 1, reqs: ['REQ-AUTRE-001'], acceptance: 'rien' })).toEqual(
+      [faute]
+    );
+  });
+
+  it('REQ-UX-016 : TÉMOIN À DEUX FACES — désactiver une clé obligatoire est refusé sur `active`, nommé ; une clé désactivable se désactive', () => {
+    const r = schemaPreferenceNotification.safeParse({ cle: 'lien_magique', active: false });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues.map((i) => [i.code, i.path.join('.')])).toEqual([['custom', 'active']]);
+    expect(r.error?.issues[0]?.message).toBe(
+      `notification obligatoire « lien_magique » : elle ne se désactive pas (${GABARITS.lien_magique.fondement})`
+    );
+    const libre = Object.entries(GABARITS).find(([, l]) => l.desactivable)?.[0];
+    expect(libre).toBeDefined();
+    expect(schemaPreferenceNotification.safeParse({ cle: libre, active: false }).success).toBe(
+      true
+    );
+    expect(
+      schemaPreferenceNotification.safeParse({ cle: 'lien_magique', active: true }).success
+    ).toBe(true);
+    expect(schemaPreferenceNotification.safeParse({ cle: 'lien_magique' }).success).toBe(false);
+  });
+});
