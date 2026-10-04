@@ -90,15 +90,15 @@ passage suivant rappelle. Les valeurs de ce débit vivent dans son code, elles n
 | Objet | État au 2026-10-04 |
 | --- | --- |
 | Contrat / plan souscrit | Sans objet : dépôt de la même société, aucun contrat de service |
-| Sous-traitance (art. 28 RGPD) | Sans objet pour ces deux routes : elles ne transportent que des identifiants d'événement et des séquences |
+| Sous-traitance (art. 28 RGPD) | Sans objet : même responsable de traitement (une autre application de la Société), ni sous-traitant ni destinataire tiers ; la relecture rend des enveloppes complètes du contrat, coordonnées du candidat comprises |
 | Localisation des données | Celle de l'hébergement d'axion-ia, hors du périmètre de cette fiche |
-| Secrets | Le secret de relecture signe les requêtes des deux routes ; le secret d'émission signe les réponses, vérifiées par la même fonction que les webhooks (`verifierSignatureAxionia`) |
+| Secrets | Le secret de relecture signe les requêtes des deux routes ; le secret d'émission signe les réponses, vérifiées par la même fonction que les webhooks (`verifierSignatureAxionia`), donc sur l'horodatage et le corps seuls : la forme canonique de la signature de la réponse, qui la lierait à sa requête, et sa fraîcheur restent à livrer (rubrique 8) |
 
 ## 8. À confirmer, et par qui
 
 | Question | Qui | Avant quoi |
 | --- | --- | --- |
-| La déclaration de la route de relecture au contrat (`packages/contracts/api.ts`), où son chemin n'est pas encore écrit | `A01` répartit ; le lecteur date sa lecture dans la fiche | avant le rattrapage historique, qui réemploiera le même client |
+| La forme canonique de la signature d'une réponse de relecture ou de rejeu (liée à sa requête, avec sa fraîcheur) : tant qu'elle n'est pas livrée, une réponse authentique peut être resservie pour une autre requête | `A01` répartit ; le lecteur date sa lecture dans la fiche | avant le rattrapage historique, qui réemploiera le même client |
 
 ## 9. Référence à citer dans une fixture
 
