@@ -36,7 +36,7 @@ import {
 } from '../../domain/depot/issue-depot';
 import { niveauDAcces } from '../../domain/apporteur/acces-espace';
 import { ETATS_OCCUPANTS } from '../../domain/attribution/etats';
-import { anterioriteDe } from '../entreprise-connue/projection';
+import { anterioriteDe, verrouillerLesSirens } from '../entreprise-connue/projection';
 import { journaliserLaNaissance } from '../attribution/transitionner';
 import { creerLaDemande } from '../confirmation/demandes';
 import { tirerLesJetonsDeLaDemande } from '../confirmation/jetons';
@@ -261,6 +261,9 @@ export async function deposerDans(
 
   await verrou(tx, `verrou-du-depot.porteur.${apporteurId}`);
   await verrou(tx, `verrou-du-depot.siren.${siren}`);
+  // La projection de l'antériorité écrit sous ce verrou (domaine `partners.entreprise_connue`) :
+  // le dépôt le prend aussi, pour lire l'antériorité APRÈS une projection en cours, jamais avant.
+  await verrouillerLesSirens(tx, [siren]);
 
   const [a] = await tx.$queryRaw<{ statut: string }[]>`
     SELECT statut::text AS statut
