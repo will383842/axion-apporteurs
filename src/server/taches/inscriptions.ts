@@ -56,6 +56,7 @@ import {
 import { passageQuotidien } from '../jobs/reconciliation';
 import { minimiserCandidatures } from './minimiser-candidatures';
 import { purgerLesContacts } from './purger-contacts';
+import { purgerLesEntreprisesConnues } from './purger-entreprises-connues';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
 import { purgerLesNotificationsDeLEspace } from './purger-notifications-espace';
 import { purgerLesValeursDesDroits } from './purger-valeurs-droits-contact';
@@ -208,6 +209,9 @@ export function inscriptions(
     // DM-53 (REQ-DM-043) : le SIREN des dépôts refusés, douze mois après le refus.
     siren_refuses_purger: () =>
       purgerLesSirenRefuses(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-66 (REQ-DM-029) : les projections de l'antériorité, effacées quand elles ne fondent plus de refus.
+    entreprises_connues_purger: () =>
+      purgerLesEntreprisesConnues(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-61 (REQ-UX-016) : les notifications de l'espace, douze mois après leur inscription.
     notifications_espace_purger: () =>
       purgerLesNotificationsDeLEspace(prisma, new Date(horlogeSysteme.maintenant())),
