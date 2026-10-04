@@ -80,6 +80,7 @@ enum TypeEvenementJournal {
   contestation_modifiee
   rattachement_manuel_modifie
   anomalie_gel_modifie
+  journal_acces_console_resume
 
   @@map("type_evenement_journal")
 }

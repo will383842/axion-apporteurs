@@ -35,6 +35,12 @@ export const TACHES = {
   /** SEC-58 — la purge, à échéance, du journal des accès à la console. */
   journal_acces_console_purger: { req: 'REQ-SEC-023' },
   /**
+   * SEC-59 — le résumé quotidien du journal des accès à la console au journal chaîné : le nombre de
+   * lignes et deux empreintes par jour clos, puis la vérification des résumés
+   * (`src/server/taches/resumer-journal-acces-console.ts`).
+   */
+  journal_acces_console_resumer: { req: 'REQ-SEC-058' },
+  /**
    * INT-T08-P — la réconciliation quotidienne avec axion-ia : relecture de sa file depuis la plus
    * haute séquence reçue, rejeu des trous (`src/server/jobs/reconciliation.ts`).
    */

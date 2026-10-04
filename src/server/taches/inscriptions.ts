@@ -65,6 +65,7 @@ import {
   purgerLesDementis,
 } from './purger-contestations-anomalies';
 import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
+import { passageDuResumeDuJournalDesAcces } from './resumer-journal-acces-console';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import {
   ouvrirLesAnomaliesDAutoParrainage,
@@ -232,6 +233,18 @@ export function inscriptions(
     // SEC-58 : le journal des accès à la console, purgé à son échéance (la purge vide les identifiants).
     journal_acces_console_purger: () =>
       purgerLeJournalDesAccesConsole(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-59 (REQ-SEC-058) : le résumé de chaque jour clos du journal des accès entre au journal
+    // chaîné, une fois par jour civil UTC (son battement le dit), puis les résumés sont vérifiés.
+    journal_acces_console_resumer: passageDuResumeDuJournalDesAcces(prisma, {
+      maintenant: () => new Date(horlogeSysteme.maintenant()),
+      dernierSucces: async () =>
+        (
+          await prisma.battement.findUnique({
+            where: { tache: 'journal_acces_console_resumer' },
+            select: { dernierSuccesAt: true },
+          })
+        )?.dernierSuccesAt ?? null,
+    }),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>
