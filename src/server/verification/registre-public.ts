@@ -31,8 +31,16 @@ export function etatDepuisLaFiche(issue: IssueDeFiche): EtatDeLEntreprise | 'ind
     : 'indisponible';
 }
 
-/** Le port `entreprise` de la vérification, sur les dépendances du mandataire. */
+/**
+ * Le port `entreprise` de la vérification, sur les dépendances du mandataire. Une levée du
+ * mandataire (cache, journal, horloge) est une panne comme une autre : `indisponible`.
+ */
 export function entrepriseParLeRegistre(deps: DependancesDuMandataire) {
-  return async (siren: string): Promise<EtatDeLEntreprise | 'indisponible'> =>
-    etatDepuisLaFiche(await ficheEntreprisePourServeur(siren, deps));
+  return async (siren: string): Promise<EtatDeLEntreprise | 'indisponible'> => {
+    try {
+      return etatDepuisLaFiche(await ficheEntreprisePourServeur(siren, deps));
+    } catch {
+      return 'indisponible';
+    }
+  };
 }

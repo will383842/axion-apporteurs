@@ -34,9 +34,20 @@ import {
 
 /** La famille des compteurs de la vérification (REQ-SEC-016), lue au registre, jamais retapée. */
 const FAMILLE = PREFIXES_DE_FAMILLE[2];
-import { etatDepuisLaFiche } from '../../../src/server/verification/registre-public';
-import { compterAvantLaDecision } from '../../../src/server/verification/ports-prisma';
-import type { IssueDeFiche } from '../../../src/server/integrations/recherche-entreprises/autocompletion';
+import {
+  entrepriseParLeRegistre,
+  etatDepuisLaFiche,
+} from '../../../src/server/verification/registre-public';
+import {
+  compterAvantLaDecision,
+  portsDeLaBase,
+} from '../../../src/server/verification/ports-prisma';
+import { ETATS_OCCUPANTS } from '../../../src/domain/attribution/etats';
+import type { PrismaClient } from '@prisma/client';
+import type {
+  DependancesDuMandataire,
+  IssueDeFiche,
+} from '../../../src/server/integrations/recherche-entreprises/autocompletion';
 import { MOTIFS_DE_SAISIE_MANUELLE } from '../../../src/server/integrations/recherche-entreprises/schemas';
 
 const SIREN = '100000001';
@@ -387,5 +398,118 @@ describe('REQ-SEC-021 — avant la décision de Williams, le compteur de product
     for (const nom of SUJETS_COMPTES) {
       expect(await compterAvantLaDecision(nom, DEMANDE.sujetIdentite)).toEqual({ autorise: false });
     }
+  });
+});
+
+describe('REQ-UX-007 — les ports de la base, jugés en processus sur un faux client', () => {
+  type Appel = { quoi: string; args: unknown };
+  function fauxClient(o: {
+    occupants?: number;
+    enFile?: number;
+    liste?: boolean;
+    client?: Date | null;
+    devis?: {
+      emisAt: Date;
+      signeAt: Date | null;
+      montantTotalHtCents: number;
+      factureHtCents: number;
+    }[];
+  }) {
+    const appels: Appel[] = [];
+    const noter = (quoi: string, rendu: (args: unknown) => unknown) => async (args: unknown) => {
+      appels.push({ quoi, args });
+      return rendu(args);
+    };
+    const client = {
+      attribution: {
+        count: noter('attribution.count', (a) =>
+          (a as { where: { statut: unknown } }).where.statut === 'en_attente'
+            ? (o.enFile ?? 0)
+            : (o.occupants ?? 0)
+        ),
+      },
+      sirenListeNoire: {
+        findUnique: noter('sirenListeNoire.findUnique', () =>
+          o.liste ? { siren: SIREN, motif: 'financeur_public' } : null
+        ),
+      },
+      entrepriseConnue: {
+        findUnique: noter('entrepriseConnue.findUnique', () =>
+          o.client ? { dernierContactAt: o.client } : null
+        ),
+      },
+      devisConnu: { findMany: noter('devisConnu.findMany', () => o.devis ?? []) },
+      verification: { create: noter('verification.create', () => ({})) },
+    } as unknown as PrismaClient;
+    return { client, appels };
+  }
+
+  it('REQ-UX-007 : l’occupation compte les états OCCUPANTS et la file en_attente, sur CE SIREN', async () => {
+    const f = fauxClient({ occupants: 1, enFile: 2 });
+    expect(await portsDeLaBase(f.client).occupation(SIREN)).toEqual({ occupee: true, enFile: 2 });
+    expect(f.appels.map((a) => a.args)).toEqual([
+      { where: { siren: SIREN, statut: { in: [...ETATS_OCCUPANTS] } } },
+      { where: { siren: SIREN, statut: 'en_attente' } },
+    ]);
+    expect(await portsDeLaBase(fauxClient({}).client).occupation(SIREN)).toEqual({
+      occupee: false,
+      enFile: 0,
+    });
+  });
+
+  it('REQ-UX-007 : la liste de la Société se lit par le SIREN', async () => {
+    const f = fauxClient({ liste: true });
+    expect(await portsDeLaBase(f.client).surLaListe(SIREN)).toBe(true);
+    expect(f.appels[0]!.args).toEqual({ where: { siren: SIREN }, select: { siren: true } });
+    expect(await portsDeLaBase(fauxClient({}).client).surLaListe(SIREN)).toBe(false);
+  });
+
+  it('REQ-UX-007 : l’antériorité ne compte que client et devis — la liste est une autre cause', async () => {
+    const recente = new Date(Date.now() - 24 * 3600 * 1000);
+    expect(await portsDeLaBase(fauxClient({ client: recente }).client).anteriorite(SIREN)).toBe(
+      true
+    );
+    expect(
+      await portsDeLaBase(
+        fauxClient({
+          devis: [{ emisAt: recente, signeAt: null, montantTotalHtCents: 0, factureHtCents: 0 }],
+        }).client
+      ).anteriorite(SIREN)
+    ).toBe(true);
+    // Sur la liste, l'antériorité dit « financeur » : ce port rend faux, la liste a le sien.
+    expect(await portsDeLaBase(fauxClient({ liste: true }).client).anteriorite(SIREN)).toBe(false);
+    expect(await portsDeLaBase(fauxClient({}).client).anteriorite(SIREN)).toBe(false);
+  });
+
+  it('REQ-SEC-021 : le journal écrit la ligne telle quelle, dans verifications', async () => {
+    const f = fauxClient({});
+    const ligne = {
+      apporteurId: 'a',
+      utilisateurConsoleId: null,
+      siren: SIREN,
+      resultat: 'libre' as const,
+      ipHash: null,
+    };
+    await portsDeLaBase(f.client).journaliser(ligne);
+    expect(f.appels).toEqual([{ quoi: 'verification.create', args: { data: ligne } }]);
+  });
+
+  it('REQ-SEC-021 : le compteur de production refuse, par la base aussi', async () => {
+    expect(
+      await portsDeLaBase(fauxClient({}).client).compter('identite', DEMANDE.sujetIdentite)
+    ).toEqual({ autorise: false });
+  });
+});
+
+describe('REQ-JUR-011 — le port du registre public, sur les dépendances du mandataire', () => {
+  /** Des dépendances vides : le mandataire lève au premier usage. */
+  const DEPS_VIDES: DependancesDuMandataire = Object.create(null);
+
+  it('REQ-JUR-011 : un SIREN mal formé est introuvable, avant tout appel', async () => {
+    expect(await entrepriseParLeRegistre(DEPS_VIDES)('12345678')).toBe('introuvable');
+  });
+
+  it('REQ-JUR-011 : TÉMOIN — une levée du mandataire est une panne : indisponible, jamais « active »', async () => {
+    await expect(entrepriseParLeRegistre(DEPS_VIDES)(SIREN)).resolves.toBe('indisponible');
   });
 });
