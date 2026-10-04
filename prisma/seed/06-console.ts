@@ -91,6 +91,9 @@ export async function semerSessionConsole(
       ipHash: s.ipHash,
       creeAt: s.consommeAt,
       expireAt: new Date(s.consommeAt.getTime() + DUREES_AUTH.sessionMs.valeur),
+      // SEC-29 : la dernière vue posée à l'ouverture ; sans elle, le juge refuse la session comme
+      // inactive (jamais vue, échec fermé).
+      derniereVueAt: s.consommeAt,
     },
     select: { id: true },
   });
