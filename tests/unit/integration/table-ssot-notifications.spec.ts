@@ -119,6 +119,7 @@ describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles'
       suspension_declarations: 'T/T',
       rappel_rc_pro: 'F/F',
       rattachement_decide: 'T/F',
+      nouvel_appareil: 'T/F',
     });
   });
 

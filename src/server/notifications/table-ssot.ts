@@ -231,6 +231,25 @@ export const GABARITS = {
     route: '/mes-entreprises',
     routeEnAttente: null,
   },
+  /**
+   * SEC-55 (rattrapage 102) : l'avis de sécurité du COMPTE, à la consommation d'un lien ou d'un code
+   * sur un appareil que le compte ne connaît pas encore. Un avis de sécurité ne se désactive pas, et
+   * part par courriel seul, à l'adresse vérifiée, comme le lien qu'il signale.
+   */
+  nouvel_appareil: {
+    destinataire: 'apporteur',
+    req: 'REQ-SEC-003',
+    emetteur: 'SEC-55',
+    fondement: 'REQ-SEC-003 — avis de sécurité du compte, à la connexion depuis un nouvel appareil',
+    declencheur: LIEN_DE_L_ESPACE.declencheur,
+    notificationObligatoire: LIEN_DE_L_ESPACE.notificationObligatoire,
+    faitCourirUnDelai: LIEN_DE_L_ESPACE.faitCourirUnDelai,
+    canaux: LIEN_DE_L_ESPACE.canaux,
+    desactivable: LIEN_DE_L_ESPACE.desactivable,
+    actions: action('nouvel_appareil'),
+    route: '/connexion',
+    routeEnAttente: null,
+  },
 } as const satisfies Readonly<Record<string, LigneDeNotification>>;
 
 export type Gabarit = keyof typeof GABARITS;

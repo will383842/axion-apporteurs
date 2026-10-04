@@ -216,6 +216,9 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
     'decision',
     'motif',
   ],
+  // SEC-55 (rattrapage 104) : l'avis de sécurité de SON compte ne dit que l'heure de SA connexion,
+  // rien sur l'appareil (juriste, rattrapage 102).
+  'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › nouvel_appareil': ['dateHeure'],
   // La fin de SA réservation, choisie par la cause (A07) : la date où il pourra redéposer.
   'courriels/notifications.ts › CORPS_DE_LA_LIBERATION › demande_verifiee': ['dateRedepot'],
   // W20 (UX-P1-41) : le contact que l'apporteur a LUI-MÊME saisi, son entreprise, l'heure de SON
