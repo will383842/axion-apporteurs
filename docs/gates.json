@@ -860,7 +860,7 @@
     {
       "id": "GATE-JUR-ACTEUR-HUMAIN",
       "phase": 1,
-      "script": "tests/domain/acteur-humain.spec.ts",
+      "script": "tests/unit/domaine/resiliation-acteur-humain.spec.ts",
       "tache": "SEC-19",
       "verifie": "transition suspendu/resilie sans acteur humain identifie et sans motif ecrit -> throw ; resiliation ordinaire sans preavis PREAVIS_JOURS -> refus ; AUCUNE ligne dechue ne peut etre produite, quel que soit le motif ; aucun compteur de gradation atteignable (etendue par JUR-T28 ; remplace GATE-JUR-SANCTION-HUMAINE, retiree le 2026-09-03 avec le bareme, la decheance et le contradictoire)",
       "fixtureRouge": "faire produire une ligne dechue par une resiliation",

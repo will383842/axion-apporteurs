@@ -15,7 +15,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { MOTIFS_RESILIATION } from '../../../src/domain/apporteur/statut';
 
-// La garde d'acceptation (SEC-53) est hors du sujet ici : elle passe, pour que seul le niveau juge.
+// La garde d'acceptation de la politique est hors du sujet ici : elle passe, pour que seul le niveau juge.
 vi.mock('../../../src/server/auth/garde-espace', async (original) => ({
   ...(await original<typeof import('../../../src/server/auth/garde-espace')>()),
   exigerAcceptation: async () => ({ ok: true }),
