@@ -60,6 +60,17 @@ export const MATRICE_DES_ROLES = {
     roles: ['admin', 'qualifieur', 'comptable', 'lecteur'],
     stepUp: false,
   },
+  // UX-P1-16 : les écrans de la PHASE 1 de la navigation (`docs/CONSOLE-ROUTES.md`), répartis selon la
+  // carte ; une entrée n'apparaît que si l'écran est AUSSI livré. Les écrans des phases 2 et 3
+  // entrent avec la tâche qui les livre. Un écran se lit sans step-up : le lire n'engage rien.
+  'ecran:qualification': { roles: ['admin', 'qualifieur', 'lecteur'], stepUp: false },
+  'ecran:apporteurs': { roles: ['admin', 'qualifieur', 'comptable'], stepUp: false },
+  'ecran:attributions': { roles: ['admin', 'qualifieur', 'lecteur'], stepUp: false },
+  // L'écran d'accès refusé, ouvert à tout rôle : il dit ce que le rôle permet et à qui s'adresser.
+  'ecran:acces_refuse': {
+    roles: ['admin', 'qualifieur', 'comptable', 'lecteur'],
+    stepUp: false,
+  },
   // SEC-30 : la gestion des utilisateurs de la console, à admin seul ; l'action sous step-up, son
   // écran sans (le lire n'engage rien).
   'ecran:utilisateurs_console': { roles: ['admin'], stepUp: false },
