@@ -7,7 +7,7 @@
  *
  * Les compteurs sont admis ici par un port de test : en production, ils refusent tant que Williams
  * n'a pas chiffré les limites (témoin unitaire). L'antériorité et la liste de la Société se lisent
- * sur les projections de l'antériorité ; ce banc les tient fausses.
+ * sur leurs vraies tables ; seul le registre public est simulé (actif).
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -24,6 +24,7 @@ let grilleId: string;
 let apporteurA: string;
 let apporteurB: string;
 let apporteurC: string;
+let utilisateurConsole: string;
 
 const MAINTENANT = new Date('2026-10-04T12:00:00.000Z');
 const hex = (octets: number) => randomBytes(octets).toString('hex');
@@ -63,6 +64,12 @@ beforeAll(async () => {
   apporteurA = await apporteur();
   apporteurB = await apporteur();
   apporteurC = await apporteur();
+  utilisateurConsole = (
+    await base.prisma.utilisateurConsole.create({
+      // Désactivé, comme dans les témoins de l'antériorité : seul l'auteur de l'inscription compte ici.
+      data: { role: 'admin', creeAt: MAINTENANT, desactiveAt: MAINTENANT },
+    })
+  ).id;
 }, 180_000);
 
 afterAll(async () => {
@@ -90,8 +97,6 @@ function ports(): PortsDeVerification {
     ...portsDeLaBase(base.prisma),
     compter: async () => ({ autorise: true }),
     entreprise: async () => 'active',
-    anteriorite: async () => false,
-    surLaListe: async () => false,
   };
 }
 
@@ -138,6 +143,37 @@ describe('REQ-UX-007 — l’occupation et la file, lues dans attributions', () 
     expect(await verifierUneEntreprise(ports(), demande(siren))).toEqual({
       ok: true,
       dto: { etat: 'libre' },
+    });
+  });
+});
+
+describe('REQ-UX-007 — la liste de la Société et l’antériorité, lues dans leurs tables', () => {
+  it('REQ-UX-007 : un SIREN de la liste — non_disponible, la cause tenue au journal est la liste', async () => {
+    const siren = unSiren();
+    await base.prisma.sirenListeNoire.create({
+      data: { siren, motif: 'financeur_public', ajouteParId: utilisateurConsole },
+    });
+    expect(await verifierUneEntreprise(ports(), demande(siren))).toEqual({
+      ok: true,
+      dto: { etat: 'non_disponible' },
+    });
+    expect(await base.prisma.verification.findFirst({ where: { siren } })).toMatchObject({
+      resultat: 'liste_noire',
+    });
+  });
+
+  it('REQ-UX-007 : une cliente récente — non_disponible ; la même réponse que la liste, la cause « cliente »', async () => {
+    const siren = unSiren();
+    const recente = new Date(Date.now() - 30 * 24 * 3600 * 1000);
+    await base.prisma.entrepriseConnue.create({
+      data: { siren, origine: 'client', connueDepuisAt: recente, dernierContactAt: recente },
+    });
+    expect(await verifierUneEntreprise(ports(), demande(siren))).toEqual({
+      ok: true,
+      dto: { etat: 'non_disponible' },
+    });
+    expect(await base.prisma.verification.findFirst({ where: { siren } })).toMatchObject({
+      resultat: 'cliente',
     });
   });
 });

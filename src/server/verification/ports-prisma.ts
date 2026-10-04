@@ -1,10 +1,13 @@
 /**
  * Les ports de « Vérifier une entreprise » (SEC-16) sur la base. L'état de l'entreprise au registre
- * public a son port (`registre-public.ts`) ; l'antériorité et la liste de la Société se lisent sur
- * les projections de DM-10-P, câblées avec elles.
+ * public a son port (`registre-public.ts`). L'antériorité se lit sur les projections locales
+ * (`anterioriteDe`), sans réseau ; la liste de la Société, sur `sirens_liste_noire`. Les deux
+ * causes restent DISTINCTES au journal : l'antériorité ne compte ici que les origines client et devis.
  */
 import type { PrismaClient } from '@prisma/client';
 import { ETATS_OCCUPANTS } from '../../domain/attribution/etats';
+import { horlogeSysteme } from '../../lib/horloge';
+import { anterioriteDe } from '../entreprise-connue/projection';
 import type { PortsDeVerification } from './verifier';
 
 /**
@@ -19,9 +22,19 @@ export const compterAvantLaDecision: PortsDeVerification['compter'] = async () =
 
 export function portsDeLaBase(
   prisma: PrismaClient
-): Pick<PortsDeVerification, 'compter' | 'occupation' | 'journaliser'> {
+): Pick<
+  PortsDeVerification,
+  'compter' | 'anteriorite' | 'surLaListe' | 'occupation' | 'journaliser'
+> {
   return {
     compter: compterAvantLaDecision,
+    anteriorite: async (siren) => {
+      const a = await anterioriteDe(prisma, siren, new Date(horlogeSysteme.maintenant()));
+      return a.connue && a.origine !== 'financeur';
+    },
+    surLaListe: async (siren) =>
+      (await prisma.sirenListeNoire.findUnique({ where: { siren }, select: { siren: true } })) !==
+      null,
     // Tout occupant compte, quel qu'en soit le porteur : un apporteur ou un conseiller (W19).
     occupation: async (siren) => {
       const [occupants, enFile] = await Promise.all([
