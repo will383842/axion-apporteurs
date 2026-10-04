@@ -1715,3 +1715,51 @@ describe('REQ-JUR-007 — l’antériorité établie notifie l’apporteur (DM-2
     expect(t.notifications).toStrictEqual([]);
   });
 });
+
+/**
+ * DM-25 — la RÉFÉRENCE du fait fondateur d'`anteriorite_etablie` (arbitrage de la coordination sur
+ * #731, voie (a) d'A02, 5984318182 ; condition de la sécurité) : `ref = sha256_hex("partners.
+ * anteriorite.v1|" + nature + "|" + id)`, sur l'identifiant OPAQUE d'axion-ia, à l'octet. Un id qui
+ * n'a pas la forme d'un UUID est refusé, nommé : si la règle d'axion-ia change, elle se rouvre.
+ */
+describe('REQ-JUR-007 — la référence du fait fondateur', () => {
+  const ID = '0190f0a0-0000-4000-8000-000000000d01';
+
+  it('REQ-JUR-007 : TÉMOIN — le vecteur FIGÉ, calculé hors du code (printf … | sha256sum)', async () => {
+    const { refDuFaitFondateur } = await import('../../../src/server/attribution/transitionner');
+    expect(refDuFaitFondateur('devis', ID)).toBe(
+      '7708e44da73d14cdf9432be0034469a6bbc10465bd1ba4b06f7a3ced277da029'
+    );
+    expect(refDuFaitFondateur('facture', ID)).toBe(
+      '44f1913396b705256a25e686ae9c3aa691aadce7c7143ea1d06e0a318aa422e5'
+    );
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — le même fait donne la même ref ; un devis et une facture de même id, deux ref', async () => {
+    const { refDuFaitFondateur } = await import('../../../src/server/attribution/transitionner');
+    expect(refDuFaitFondateur('devis', ID)).toBe(refDuFaitFondateur('devis', ID));
+    expect(refDuFaitFondateur('devis', ID)).not.toBe(refDuFaitFondateur('facture', ID));
+    expect(refDuFaitFondateur('devis', ID)).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — un id vide ou hors forme UUID est refusé, nommé (reference_du_fait_invalide)', async () => {
+    const { refDuFaitFondateur } = await import('../../../src/server/attribution/transitionner');
+    for (const id of ['', 'FAC-2026-0001', '42', ` ${ID}`, `${ID}x`]) {
+      expect(() => refDuFaitFondateur('devis', id), JSON.stringify(id)).toThrow(
+        /^reference_du_fait_invalide/
+      );
+    }
+  });
+
+  it('REQ-JUR-007 : TÉMOIN STATIQUE — la chaîne ne lit que la nature et l’id : ni numero, ni clientId, ni siren', () => {
+    const source = readFileSync('src/server/attribution/transitionner.ts', 'utf8');
+    const debut = source.indexOf('export function refDuFaitFondateur');
+    expect(debut).toBeGreaterThan(-1);
+    const corps = source.slice(debut, source.indexOf('\n}\n', debut));
+    expect(corps).not.toMatch(/numero|clientId|siren|nom\b/i);
+    expect(corps).toMatch(/`partners\.anteriorite\.v1\|\$\{nature\}\|\$\{id\}`/);
+    // Et le job ne lui passe que l'identifiant du fait reçu.
+    const job = readFileSync('src/server/jobs/anteriorite-retroactive.ts', 'utf8');
+    expect(job).toMatch(/refDuFaitFondateur\(fondement\.fait\.nature, fondement\.fait\.id\)/);
+  });
+});
