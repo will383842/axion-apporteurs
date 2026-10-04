@@ -20,6 +20,7 @@
 import type { Prisma } from '@prisma/client';
 import {
   ErreurTransitionAttribution,
+  type CritereDAnteriorite,
   NAISSANCES_ATTRIBUTION,
   codeDeCaducite,
   effetsDeTransition,
@@ -62,11 +63,43 @@ const date = (i: number | null): Date | null => (i === null ? null : new Date(i)
 const porteurDe = (l: Ligne): TypePorteur => (l.apporteur_id === null ? 'conseiller' : 'apporteur');
 const lienDe = (l: Ligne) => (l.lien_interet_declare ? 'declare' : 'non_declare');
 
+/** DM-67 : le fait fondateur de l'antériorité — sa nature, l'EMPREINTE de son identifiant, sa date. */
+export type FaitFondateur = {
+  readonly nature: 'facture' | 'devis';
+  readonly ref: string;
+  readonly le: string;
+};
+
 export interface DemandeEcriture {
   readonly attributionId: string;
   readonly transition: TransitionAttribution;
   readonly acteur: Acteur;
   readonly maintenant: Date;
+  /** DM-67 : exigés pour `anteriorite_etablie`, et pour elle seule. */
+  readonly critere?: CritereDAnteriorite;
+  readonly fait?: FaitFondateur;
+}
+
+/**
+ * DM-67 (lentille sécurité) : `anteriorite_etablie` porte son critère et son fait fondateur, et n'est
+ * émise que par le SYSTÈME — le passage quotidien de l'antériorité, sur les faits projetés. Jugé AVANT
+ * tout verrou et toute écriture : un refus ne laisse rien.
+ */
+function jugerLAnteriorite(demande: DemandeEcriture): void {
+  const { transition, critere, fait, acteur } = demande;
+  const anteriorite = transition === 'anteriorite_etablie';
+  if (anteriorite !== (critere !== undefined) || anteriorite !== (fait !== undefined)) {
+    throw new ErreurTransitionAttribution(
+      'critere_incoherent',
+      `${transition} : le critère et le fait sont exigés pour anteriorite_etablie, et pour elle seule`
+    );
+  }
+  if (anteriorite && acteur.par !== 'systeme') {
+    throw new ErreurTransitionAttribution(
+      'acteur_refuse',
+      `anteriorite_etablie : émise par le système seul, refusée à ${acteur.par}`
+    );
+  }
 }
 
 /** Une transition d'une attribution EXISTANTE. Rend l'état de départ et d'arrivée. */
@@ -74,7 +107,8 @@ export async function transitionnerUneAttribution(
   tx: Tx,
   demande: DemandeEcriture
 ): Promise<{ de: EtatAttribution; vers: EtatAttribution }> {
-  const { attributionId, transition, acteur, maintenant } = demande;
+  const { attributionId, transition, acteur, maintenant, critere, fait } = demande;
+  jugerLAnteriorite(demande);
   const l = await verrouiller(tx, attributionId);
   const de = l.statut;
   const vers = transitionnerAttribution({ de, transition, porteur: porteurDe(l) });
@@ -108,7 +142,15 @@ export async function transitionnerUneAttribution(
     agregat: 'attribution',
     agregatId: attributionId,
     survenuAt: maintenant,
-    charge: { de, vers, transition, acteur, lienInteret: lienDe(l) },
+    charge: {
+      de,
+      vers,
+      transition,
+      acteur,
+      lienInteret: lienDe(l),
+      ...(critere !== undefined ? { critere } : {}),
+      ...(fait !== undefined ? { fait } : {}),
+    },
   });
   // DM-40 (HYP-W20-ANNULATION) : l'annulation de l'apporteur annule sa demande de confirmation,
   // dans la MÊME transaction ; une demande déjà envoyée fait tout tomber.
