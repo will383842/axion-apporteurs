@@ -25,7 +25,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { ConsoleRole, type PrismaClient } from '@prisma/client';
 import { kidDe } from '../../../src/lib/env';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
@@ -1672,5 +1673,30 @@ describe('REQ-DM-024 — SEC-30 : l’invitation écrit activeeAt: null explicit
     const bloc = creation.slice(0, creation.indexOf('});'));
     expect(bloc).toContain('inviteeAt: d.maintenant');
     expect(bloc).toContain('activeeAt: null');
+  });
+});
+
+// Précision de la sécurité (a), rattrapage 96 : le chemin de la console écrit TOUJOURS un
+// administrateur en attente ; seul le semeur ou une commande d'exploitation pose un premier
+// administrateur sans validateur.
+describe('REQ-SEC-023 — SEC-30 : la console ne crée jamais un administrateur validé', () => {
+  const sources = (dossier: string): string[] =>
+    readdirSync(dossier, { recursive: true, withFileTypes: true })
+      .filter((e) => e.isFile() && /\.tsx?$/.test(e.name))
+      .map((e) => readFileSync(join(e.parentPath, e.name), 'utf8'));
+  const console_ = [...sources('src/server/console'), ...sources('src/app/(console)')];
+
+  it('REQ-SEC-023 : TÉMOIN STATIQUE — aucun code de la console ne pose valide_at à une création, ni sans le validateur qu’est l’acteur', () => {
+    const ecritures = console_.flatMap((s) =>
+      [...s.matchAll(/valideAt:\s*([^,}\n]+)/g)].map((m) => ({ s, m }))
+    );
+    for (const { s, m } of ecritures) {
+      const autour = s.slice(Math.max(0, (m.index ?? 0) - 120), (m.index ?? 0) + 80);
+      // Une lecture (`select`) n'écrit rien ; toute écriture va avec le validateur, l'acteur.
+      if (/valideAt:\s*true/.test(m[0])) continue;
+      expect(autour).toContain('valideParId: d.acteur.id');
+      expect(autour).not.toContain('.create(');
+    }
+    for (const s of console_) expect(s).not.toMatch(/create\(\{[^}]*valideAt/s);
   });
 });
