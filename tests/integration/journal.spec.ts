@@ -102,9 +102,14 @@ describe('REQ-DM-024 — le journal en base réelle : append-only, chaîné, vé
   });
 
   it('REQ-SEC-027 → REQ-DM-024 : TRUNCATE, que le déclencheur de ligne ne voit pas, est refusé aussi', async () => {
-    await expect(base.prisma.$executeRawUnsafe('TRUNCATE evenements')).rejects.toThrow(
-      /evenements_append_only : TRUNCATE refusé/
-    );
+    // DM-55 : notifications_espace.evenement_id référence le journal ; un TRUNCATE nu échouerait sur
+    // la clé étrangère AVANT le déclencheur. CASCADE, dans une transaction annulée par le refus, laisse
+    // le déclencheur parler — et c'est SON refus, nommé, que le témoin exige.
+    await expect(
+      base.prisma.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe('TRUNCATE evenements CASCADE');
+      })
+    ).rejects.toThrow(/evenements_append_only : TRUNCATE refusé/);
     expect(await verifier()).toMatchObject({ ok: true, maillons: 5 });
   });
 
