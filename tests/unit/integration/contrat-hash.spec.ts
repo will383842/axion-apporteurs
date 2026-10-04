@@ -142,6 +142,12 @@ const RENOMMAGES_V2: readonly { type: string; avant: string; apres: string }[] =
 const SANS_FIXTURE_V3 = {
   type: 'devis.emis',
   champ: { type: 'facture.emise', nom: 'devisId' },
+  /**
+   * INT-T48-P, amendement de la v3 : le prix de référence de chaque LIGNE du devis signé, entré au
+   * contrat avant que le producteur d'axion-ia ne l'émette. Même règle que `devisId` : exempté de
+   * la confrontation à la fixture, exigé par le contrat publié, levé dès que la fixture le porte.
+   */
+  ligne: { type: 'devis.signe', liste: 'lignes', nom: 'prixReferenceHt' },
 } as const;
 
 /** Les types confrontés à la fixture : tous, sauf le type exempté. */
@@ -159,6 +165,15 @@ function contratConfronte(): Schema {
   ]!;
   delete (def['properties'] as Record<string, unknown>)[SANS_FIXTURE_V3.champ.nom];
   def['required'] = (def['required'] as string[]).filter((c) => c !== SANS_FIXTURE_V3.champ.nom);
+  const { type, liste, nom } = SANS_FIXTURE_V3.ligne;
+  const ligne = (
+    (contrat['$defs'] as Record<string, Schema>)[nomDefPayload(type)]!['properties'] as Record<
+      string,
+      Schema
+    >
+  )[liste]!['items'] as Schema;
+  delete (ligne['properties'] as Record<string, unknown>)[nom];
+  ligne['required'] = (ligne['required'] as string[]).filter((c) => c !== nom);
   return contrat;
 }
 
@@ -442,6 +457,43 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
           Object.hasOwn(c.payload, SANS_FIXTURE_V3.champ.nom)
       ),
       'la fixture porte `devisId` : retirer le champ de SANS_FIXTURE_V3'
+    ).toEqual([]);
+  });
+
+  /** La ligne du devis signé, au contrat donné. */
+  const ligneDuDevisSigne = (contrat: Schema): Schema => {
+    const { type, liste } = SANS_FIXTURE_V3.ligne;
+    return (
+      (contrat['$defs'] as Record<string, Schema>)[nomDefPayload(type)]!['properties'] as Record<
+        string,
+        Schema
+      >
+    )[liste]!['items'] as Schema;
+  };
+
+  it('REQ-INT-003 — l’exemption de la ligne ne masque rien : le contrat PUBLIÉ EXIGE `prixReferenceHt` sur chaque ligne du devis signé, et la confrontation ne retire que lui', () => {
+    const { nom } = SANS_FIXTURE_V3.ligne;
+    const publiee = ligneDuDevisSigne(contratJsonSchema());
+    expect(publiee['additionalProperties']).toBe(false);
+    expect(publiee['required']).toContain(nom);
+    expect(Object.keys(publiee['properties'] as object)).toContain(nom);
+    const confrontee = ligneDuDevisSigne(contratConfronte());
+    expect(
+      Object.keys(publiee['properties'] as object).filter(
+        (c) => !Object.keys(confrontee['properties'] as object).includes(c)
+      )
+    ).toEqual([nom]);
+  });
+
+  it('REQ-QA-007 — TÉMOIN DE LEVÉE : dès qu’une ligne de devis signé de la fixture porte `prixReferenceHt`, l’exemption de la ligne doit tomber', () => {
+    const { type, liste, nom } = SANS_FIXTURE_V3.ligne;
+    const lignes = [...PRODUCTEUR.evenements, ...PRODUCTEUR.horsContratV1]
+      .filter((c) => c.event_type === type)
+      .flatMap((c) => (c.payload[liste] as Record<string, unknown>[] | undefined) ?? []);
+    expect(lignes.length, `la fixture porte au moins une ligne de ${type}`).toBeGreaterThan(0);
+    expect(
+      lignes.filter((l) => Object.hasOwn(l, nom)),
+      'la fixture porte `prixReferenceHt` : retirer la ligne de SANS_FIXTURE_V3'
     ).toEqual([]);
   });
 
