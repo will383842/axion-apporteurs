@@ -37,6 +37,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
 import { declarationsDeLaBase, declarationsRetirees } from './declarations-de-sorties';
 import {
@@ -362,9 +363,9 @@ describe('REQ-GOV-032 — le refus du composeur SORT, il ne se contente pas de l
     let stderr = '';
     try {
       execFileSync(
-        'npx',
+        process.execPath,
         [
-          'tsx',
+          TSX_DU_DEPOT,
           'scripts/lot/corps-de-pr.ts',
           '--gabarit',
           'docs/pr/31.tpl.md',
@@ -380,7 +381,7 @@ describe('REQ-GOV-032 — le refus du composeur SORT, il ne se contente pas de l
         // `--corps-publie` que je visais. **C'est cette erreur qui a révélé le quatrième.**
         // 🔴 *Compter les points d'appel qu'on a corrigés ne dit pas combien il y en a, et
         // apparier une chaîne qui n'est pas unique corrige un endroit qu'on n'a pas choisi.*
-        { encoding: 'utf8', stdio: 'pipe', shell: true, env: environnementDeProduction() }
+        { encoding: 'utf8', stdio: 'pipe', env: environnementDeProduction() }
       );
       code = 0;
     } catch (e) {
@@ -1428,13 +1429,11 @@ describe('REQ-CPL-018 — la garde d’ARGENT sort en échec : témoin d’EFFET
 
   const lancerLaGarde = (cwd: string) => {
     try {
-      const stdout = execFileSync('npx', ['tsx', resolve('scripts/gates/gov-entite.ts')], {
-        cwd,
-        encoding: 'utf8',
-        env: environnementDeProduction(),
-        stdio: 'pipe',
-        shell: true,
-      });
+      const stdout = execFileSync(
+        process.execPath,
+        [TSX_DU_DEPOT, resolve('scripts/gates/gov-entite.ts')],
+        { cwd, encoding: 'utf8', env: environnementDeProduction(), stdio: 'pipe' }
+      );
       return { code: 0, sortie: stdout };
     } catch (e) {
       const err = e as { status?: number; stdout?: string; stderr?: string };
@@ -1527,14 +1526,14 @@ describe('REQ-CPL-018 — `--corps-publie` : le verdict SORT, il ne se contente 
     let sortie = '';
     try {
       execFileSync(
-        'npx',
-        ['tsx', 'scripts/gates/gov-entite.ts', '--corps-publie', String(PR_INEXISTANTE)],
+        process.execPath,
+        [TSX_DU_DEPOT, 'scripts/gates/gov-entite.ts', '--corps-publie', String(PR_INEXISTANTE)],
         // 🔴 LE LANCEUR DE `--corps-publie` — mode déclaré BLOQUANT en CI, fermé sur décision de
         // Will avant fusion. Il n'avait AUCUNE option `env`. Mutant de `mutation` au 25e tour :
         // `if (!process.env.VITEST) verdict.code = 0` -> **606/606 VERTS**, et
         // `pnpm gov:entite --corps-publie 999999` imprime « ✅ … aucune coordonnée bancaire »,
         // **exit 0, sur un corps JAMAIS LU, dépôt PUBLIC**.
-        { encoding: 'utf8', stdio: 'pipe', shell: true, env: environnementDeProduction() }
+        { encoding: 'utf8', stdio: 'pipe', env: environnementDeProduction() }
       );
       code = 0;
     } catch (e) {
@@ -1806,6 +1805,23 @@ function famillesDeclarees(script: string): { noms: string[]; calculee: boolean 
 }
 
 /**
+ * QA-T72 — LE `tsx` DU DÉPÔT, lancé par le `node` qui fait tourner ce fichier. Jamais `npx tsx`.
+ *
+ * 🔴 CE QUI A FAIT ÉCRIRE CETTE CONSTANTE. Ce fichier prenait 480 s en CI à lui seul, et sur un
+ * poste la plus grande part n'était pas les gardes : c'était le LANCEUR. Lancé dans un dépôt jetable qui n'a pas de
+ * `node_modules`, `npx tsx` ne trouve pas `tsx` sur place et interroge le registre avant de
+ * lancer quoi que ce soit — mesuré sur un poste sans accès au registre, 70 s par lancement, et
+ * le témoin de la garde d'argent, qui lance deux fois, à 146 s pour UN test. Et quand le registre
+ * répond, `npx` lance le `tsx` de SON cache, pas celui du dépôt : mesuré, 4.23.15 contre 4.23.13.
+ * *Le témoin jugeait la garde sous une autre version que celle que la porte A lance.*
+ *
+ * Le chemin est résolu depuis CE fichier, donc dans le `node_modules` du dépôt, quel que soit le
+ * `cwd` de l'enfant : le jetable reste un jetable, sans jonction. Sans `shell` : le premier
+ * argument est un exécutable absolu, il n'y a plus rien à chercher dans `PATH`.
+ */
+const TSX_DU_DEPOT = createRequire(import.meta.url).resolve('tsx/cli');
+
+/**
  * 🔴 CETTE LISTE **RÉDUIT** L'ENVIRONNEMENT. ELLE NE LE CONSTRUIT PAS À PARTIR DE RIEN.
  *
  * C'est ce que j'avais écrit, et **c'est faux** — mesuré par `mutation` au 25e tour :
@@ -1813,6 +1829,7 @@ function famillesDeclarees(script: string): { noms: string[]; calculee: boolean 
  * **ineffaçables sous Windows** (`HOMEDRIVE`, `HOMEPATH`, `LOGONSERVER`, `PATH`, `SYSTEMDRIVE`,
  * `SYSTEMROOT`, `TEMP`, `USERDOMAIN`, `USERNAME`, `USERPROFILE`, `WINDIR`), et `npx` en ajoute
  * ~22. **L'enfant en reçoit 53, pas 20.** La liste s'applique EN AMONT de ce qui repollue.
+ * (Mesuré quand le lanceur était `npx` ; il ne l'est plus, voir `TSX_DU_DEPOT` ci-dessus.)
  * 🔑 *Un mutant a d'ailleurs été tué par `process.env.USERNAME` — non pas parce que la liste
  * l'avait prévu, mais parce que libuv le réinjecte. Une garde qui mord pour une raison qu'on
  * n'a pas choisie n'est pas la garde qu'on croit tenir.*
@@ -1893,12 +1910,11 @@ function lancerLaGate(
   args: string[] = []
 ): { code: number; sortie: string } {
   try {
-    const stdout = execFileSync('npx', ['tsx', resolve(script), ...args], {
+    const stdout = execFileSync(process.execPath, [TSX_DU_DEPOT, resolve(script), ...args], {
       cwd,
       encoding: 'utf8',
       stdio: 'pipe',
       env: environnementDeProduction(),
-      shell: true,
     });
     return { code: 0, sortie: stdout };
   } catch (e) {
@@ -2598,7 +2614,18 @@ function chainesLancees(source: string, nom: string): string[] {
     return null;
   };
   const trouvees: string[] = [];
+  // QA-T72 — UNE EXPLORATION PAR (nœud, constantes suivies). Sans elle, une constante liée à
+  // plusieurs déclarations du même nom se réexplore par CHAQUE chemin qui y mène : mesuré, 56
+  // millions d'appels et 27 s pour le seul `gov-pr.ts`, le test entier à 103 s. Ce qui en sort est
+  // lu comme un ENSEMBLE (`appelleLEnumeration` ne fait qu'un `.some`), et une paire déjà
+  // explorée ne rend rien qu'elle n'ait déjà rendu : le verdict ne change pas. Mesuré aussi : les
+  // mêmes 2272 chaînes distinctes avec et sans, sur les 208 fichiers de `scripts/` et de
+  // `tests/unit/gouvernance/`.
+  const explores = new Set<string>();
   const recueillir = (n: ts.Node, suivis: ReadonlySet<string>): void => {
+    const cle = `${n.pos}:${n.end}:${n.kind}|${[...suivis].sort().join(',')}`;
+    if (explores.has(cle)) return;
+    explores.add(cle);
     const valeur = plier(n, suivis);
     if (valeur !== null) {
       trouvees.push(valeur);
