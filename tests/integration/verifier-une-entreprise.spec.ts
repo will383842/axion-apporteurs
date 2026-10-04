@@ -6,7 +6,7 @@
  *
  * Les compteurs sont admis ici par un port de test : en production, ils refusent tant que Williams
  * n'a pas chiffré les limites (témoin unitaire). L'antériorité et la liste de la Société se lisent
- * sur les projections de DM-10-P ; ce banc les tient fausses.
+ * sur les projections de l'antériorité ; ce banc les tient fausses.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
