@@ -58,6 +58,7 @@ import { minimiserCandidatures } from './minimiser-candidatures';
 import { purgerLesContacts } from './purger-contacts';
 import { purgerLesEntreprisesConnues } from './purger-entreprises-connues';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
+import { purgerLesAppareils } from './purger-appareils';
 import { purgerLesNotificationsDeLEspace } from './purger-notifications-espace';
 import { purgerLesValeursDesDroits } from './purger-valeurs-droits-contact';
 import { anonymiserLesTracesDesDroits } from './anonymiser-traces-droits-contact';
@@ -237,6 +238,8 @@ export function inscriptions(
     contestations_purger: () =>
       purgerLesContestations(prisma, new Date(horlogeSysteme.maintenant())),
     dementis_purger: () => purgerLesDementis(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-55 (REQ-SEC-003) : l'empreinte d'un appareil, effacée une durée de session après sa vue.
+    appareils_purger: () => purgerLesAppareils(prisma, new Date(horlogeSysteme.maintenant())),
     // SEC-58 : le journal des accès à la console, purgé à son échéance (la purge vide les identifiants).
     journal_acces_console_purger: () =>
       purgerLeJournalDesAccesConsole(prisma, new Date(horlogeSysteme.maintenant())),

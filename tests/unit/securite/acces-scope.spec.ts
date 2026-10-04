@@ -452,8 +452,25 @@ describe('REQ-QA-011 → REQ-SEC-008 — la liste des modèles cloisonnés est c
     expect([...MODELES_CLOISONNES, ...MODELES_SANS_VUE_APPORTEUR].sort()).toEqual(portantApporteur);
   });
 
+  it('REQ-SEC-008 : TÉMOIN — les modèles sans vue sont EXACTEMENT l’anomalie (DM-12) et l’appareil connu (SEC-55)', () => {
+    expect([...MODELES_SANS_VUE_APPORTEUR]).toEqual(['anomalie', 'appareilConnu']);
+  });
+
+  it('REQ-SEC-008 : TÉMOIN — SEC-55 : l’appareil connu n’a AUCUNE vue dans l’espace, et aucune relation de l’espace n’y mène', () => {
+    const vues = forApporteur(fauxClient().client, A) as unknown as Record<string, unknown>;
+    expect(Object.hasOwn(vues, 'appareilConnu')).toBe(false);
+    for (const m of modeles) {
+      const d = delegue(m.name);
+      if (!(MODELES_CLOISONNES as readonly string[]).includes(d)) continue;
+      expect(
+        m.fields.filter((x) => x.kind === 'object' && x.type === 'AppareilConnu'),
+        d
+      ).toEqual([]);
+    }
+  });
+
   it('REQ-SEC-008 : TÉMOIN — DM-12 : l’anomalie n’a AUCUNE vue dans l’espace, et aucune relation de l’espace n’y mène', () => {
-    expect([...MODELES_SANS_VUE_APPORTEUR]).toEqual(['anomalie']);
+    expect([...MODELES_SANS_VUE_APPORTEUR]).toContain('anomalie');
     const vues = forApporteur(fauxClient().client, A) as unknown as Record<string, unknown>;
     expect(Object.hasOwn(vues, 'anomalie')).toBe(false);
     const relations = RELATIONS as unknown as Record<string, readonly string[]>;
