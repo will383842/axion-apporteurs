@@ -3,6 +3,7 @@
 // @req REQ-SEC-032
 // @req REQ-JUR-008
 // @req REQ-CPL-008
+// @req REQ-UX-039
 /**
  * SEC-12 — la transaction de dépôt en base RÉELLE.
  *
@@ -23,7 +24,8 @@
  *   7. LE REFUS EST NOTIFIÉ (`refus_declaration`) : une fois, au bon apporteur, après la transaction ;
  *      la même catégorie pour les deux antériorités ; ni `gele` ni un dépôt enregistré ne notifient ;
  *   6. UNE DEMANDE DE CONFIRMATION par dépôt enregistré, dans la même transaction ; aucune pour un
- *      refus, aucune pour un dépôt annulé.
+ *      refus, aucune pour un dépôt annulé ;
+ *   8. LE LIEN D'INTÉRÊT DÉCLARÉ est conservé sur la déclaration, sans aucun effet sur son issue.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
@@ -486,5 +488,33 @@ describe('REQ-DM-010 — un captcha résolu ne refuse aucun dépôt', () => {
     );
     expect(r.issue).toBe('enregistree');
     expect(await base.prisma.attribution.count({ where: { siren } })).toBe(1);
+  });
+});
+
+describe('REQ-UX-039 — le lien d’intérêt déclaré ne change jamais l’issue', () => {
+  it('REQ-UX-039 : case cochée ou non, la déclaration est enregistrée, même réponse hors son identifiant ; le lien est conservé', async () => {
+    const coche = unSiren();
+    const decoche = unSiren();
+    const a = await apporteur('signe');
+    const avecLien = demande(a, coche);
+    const rc = await deposerOuEchouer(
+      base.prisma,
+      { ...avecLien, saisie: { ...avecLien.saisie, lienInteretDeclare: true } },
+      PORTS
+    );
+    const rd = await deposerOuEchouer(base.prisma, demande(a, decoche), PORTS);
+    expect(rc.issue).toBe('enregistree');
+    expect(JSON.stringify({ ...rc, attributionId: null })).toBe(
+      JSON.stringify({ ...rd, attributionId: null })
+    );
+    expect((await lignes(coche)).map((l) => [l.statut, l.lienInteretDeclare])).toEqual([
+      ['provisoire', true],
+    ]);
+    expect((await lignes(decoche)).map((l) => [l.statut, l.lienInteretDeclare])).toEqual([
+      ['provisoire', false],
+    ]);
+    expect(
+      await base.prisma.depotRefuse.count({ where: { siren: { in: [coche, decoche] } } })
+    ).toBe(0);
   });
 });
