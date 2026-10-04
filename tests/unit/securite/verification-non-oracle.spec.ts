@@ -1,4 +1,6 @@
-// @req REQ-UX-007 REQ-JUR-011 REQ-SEC-021
+// @req REQ-UX-007
+// @req REQ-JUR-011
+// @req REQ-SEC-021
 /**
  * G-SEC-ORACLE — « Vérifier une entreprise » ne fait pas d'oracle (SEC-16, rattrapages 95 et 96).
  *

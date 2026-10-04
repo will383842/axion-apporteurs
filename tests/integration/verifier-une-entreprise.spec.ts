@@ -1,4 +1,5 @@
-// @req REQ-SEC-021 REQ-UX-007
+// @req REQ-SEC-021
+// @req REQ-UX-007
 /**
  * « Vérifier une entreprise » (SEC-16) sur la vraie base : l'occupation et la file se lisent dans
  * `attributions`, la vérification se journalise dans `verifications`, et rien d'autre ne s'écrit —
