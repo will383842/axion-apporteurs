@@ -14,6 +14,12 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { MOTIFS_RESILIATION } from '../../../src/domain/apporteur/statut';
 
+// La garde d'acceptation (SEC-53) est hors du sujet ici : elle passe, pour que seul le niveau juge.
+vi.mock('../../../src/server/auth/garde-espace', async (original) => ({
+  ...(await original<typeof import('../../../src/server/auth/garde-espace')>()),
+  exigerAcceptation: async () => ({ ok: true }),
+}));
+
 /** Les formes d'un motif d'inactivité, en minuscules et sans accents. */
 const INACTIVITE = /inactiv|dormant|dormance|activite|absence|sans_depot|aucun_depot|silence/;
 
@@ -242,5 +248,113 @@ describe('REQ-SEC-032 — le niveau « lecture » d’un résilié', () => {
     const m = await import('../../../src/domain/apporteur/acces-espace');
     const proteges: readonly string[] = [...m.SEGMENTS_PLEINS, ...m.SEGMENTS_LIMITES];
     for (const s of m.SEGMENTS_LECTURE) expect(proteges, s).toContain(s);
+  });
+});
+
+/**
+ * La SESSION porte le refus d'écriture (critère 2 de la sécurité, #703) : le niveau `lecture` est
+ * refusé — motif `lecture_seule` — par `actionEspace()` et par `exigerSessionRelevee()`, sauf
+ * l'acceptation de la politique, geste nommé. Le niveau se relit en base à chaque requête.
+ */
+describe('REQ-SEC-032 — la session d’un résilié ne peut plus écrire', () => {
+  const MAINTENANT = new Date('2026-10-04T10:00:00Z');
+
+  function ports(statut: string, droitsEnCours: boolean, lienConsommeAt: Date | null = MAINTENANT) {
+    return {
+      maintenant: () => MAINTENANT,
+      configuration: { secret: 'secret-de-test-factice-de-trente-deux-caracteres', kid: 'k1' },
+      depot: {
+        lire: async () => ({
+          id: 'session-1',
+          apporteurId: 'apporteur-1',
+          kid: 'k1',
+          expireAt: new Date('2026-10-05T10:00:00Z'),
+          revoqueAt: null,
+          sessionVersion: 2,
+          apporteur: { statut, sessionVersion: 2, droitsEnCours },
+          lienMagique: { consommeAt: lienConsommeAt },
+        }),
+        marquerVue: async () => {},
+        lister: async () => [],
+        revoquer: async () => 0,
+        incrementerVersion: async () => {},
+      },
+    };
+  }
+
+  it('REQ-SEC-032 : TÉMOIN — le motif lecture_seule est dans la liste FERMÉE des refus', async () => {
+    const { MOTIFS_DE_REFUS } = await import('../../../src/server/auth/session');
+    expect(MOTIFS_DE_REFUS).toContain('lecture_seule');
+  });
+
+  it('REQ-SEC-032 : TÉMOIN — le juge rend la LECTURE à un résilié dont les droits courent, et FERME sans eux', async () => {
+    const { exigerSession } = await import('../../../src/server/auth/session');
+    const lu = await exigerSession('jeton', ports('resilie', true));
+    expect(lu.ok && lu.session.niveau).toBe('lecture');
+    expect(await exigerSession('jeton', ports('resilie', false))).toEqual({
+      ok: false,
+      motif: 'statut_ferme',
+    });
+  });
+
+  it('REQ-SEC-032 : TÉMOIN — actionEspace REFUSE la lecture (lecture_seule) sans exécuter le corps', async () => {
+    const { actionEspace } = await import('../../../src/server/auth/session');
+    const corps = vi.fn(async () => 'ecrit');
+    for (const segment of ['mes-commissions', 'mon-contrat', 'notifications'] as const) {
+      expect(await actionEspace(segment, 'jeton', ports('resilie', true), corps)).toEqual({
+        ok: false,
+        motif: 'lecture_seule',
+      });
+    }
+    expect(corps).not.toHaveBeenCalled();
+  });
+
+  it('REQ-SEC-032 : actionEspace laisse passer l’ACCEPTATION de la politique, geste nommé de la lecture', async () => {
+    const { actionEspace } = await import('../../../src/server/auth/session');
+    const { SEGMENT_DE_L_ACCEPTATION } = await import('../../../src/domain/apporteur/acces-espace');
+    expect(
+      await actionEspace(
+        SEGMENT_DE_L_ACCEPTATION,
+        'jeton',
+        ports('resilie', true),
+        async () => 'acceptee'
+      )
+    ).toEqual({ ok: true, valeur: 'acceptee' });
+  });
+
+  it('REQ-SEC-032 : contre-témoin — un apporteur signé écrit toujours par actionEspace', async () => {
+    const { actionEspace } = await import('../../../src/server/auth/session');
+    expect(
+      await actionEspace('mes-commissions', 'jeton', ports('signe', false), async () => 'ecrit')
+    ).toEqual({ ok: true, valeur: 'ecrit' });
+  });
+
+  it('REQ-SEC-032 : TÉMOIN — exigerSessionRelevee REFUSE la lecture, même relevée de frais', async () => {
+    const { exigerSessionRelevee } = await import('../../../src/server/auth/session');
+    expect(await exigerSessionRelevee('jeton', ports('resilie', true))).toEqual({
+      ok: false,
+      motif: 'lecture_seule',
+    });
+    const signe = await exigerSessionRelevee('jeton', ports('signe', false));
+    expect(signe.ok).toBe(true);
+  });
+
+  it('REQ-SEC-032 : TÉMOIN — une session ouverte AVANT la résiliation ne peut plus écrire APRÈS : le niveau se relit à chaque requête', async () => {
+    const { actionEspace } = await import('../../../src/server/auth/session');
+    let statut = 'signe';
+    let droits = false;
+    const p = ports('signe', false);
+    const lire = p.depot.lire;
+    p.depot.lire = async () => {
+      const l = await lire();
+      return { ...l, apporteur: { statut, sessionVersion: 2, droitsEnCours: droits } };
+    };
+    expect((await actionEspace('mes-commissions', 'jeton', p, async () => 1)).ok).toBe(true);
+    statut = 'resilie';
+    droits = true;
+    expect(await actionEspace('mes-commissions', 'jeton', p, async () => 2)).toEqual({
+      ok: false,
+      motif: 'lecture_seule',
+    });
   });
 });
