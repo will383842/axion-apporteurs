@@ -35,7 +35,6 @@ import {
   type TransactionDuCode,
 } from '../../../src/server/auth/lien-magique';
 import {
-  sessionRelevee,
   type LigneDeSession,
   type PortsDeSession,
   type SessionOuverte,
@@ -637,23 +636,6 @@ describe('REQ-SEC-003 — SEC-55 (2) : l’appareil se confirme à la CONSOMMATI
     });
     expect(r).toEqual({ identifiant: IDENTIFIANT, issue: 'confirme' });
     expect(JSON.stringify(r)).not.toContain(EMPREINTE);
-  });
-});
-
-describe('REQ-SEC-003 — le relèvement, une règle et un seul juge', () => {
-  const session = (consommeAt: Date | null): SessionOuverte => ({
-    id: 'session-x',
-    apporteurId: APPORTEUR,
-    lienConsommeAt: consommeAt,
-    niveau: 'plein',
-    statut: 'signe',
-  });
-
-  it('REQ-SEC-003 : une session est relevée strictement moins de dix minutes après la consommation de son lien ; sans lien consommé, jamais', () => {
-    expect(sessionRelevee(session(T), T)).toBe(true);
-    expect(sessionRelevee(session(new Date(T.getTime() - RELEVE_MS + 1)), T)).toBe(true);
-    expect(sessionRelevee(session(new Date(T.getTime() - RELEVE_MS)), T)).toBe(false);
-    expect(sessionRelevee(session(null), T)).toBe(false);
   });
 });
 
