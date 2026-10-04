@@ -65,6 +65,7 @@ import { purgerLesSirenRefuses } from './purger-siren-refuses';
 import { purgerLesAppareils } from './purger-appareils';
 import { purgerLesNotificationsDeLEspace } from './purger-notifications-espace';
 import { purgerLesValeursDesDroits } from './purger-valeurs-droits-contact';
+import { anonymiserLesTracesDesDroits } from './anonymiser-traces-droits-contact';
 import {
   anonymiserLesAnomalies,
   purgerLesContestations,
@@ -223,6 +224,9 @@ export function inscriptions(
     // DM-59 (REQ-JUR-065) : la valeur d'une rectification, effacée à son échéance même sans traitement.
     droits_contact_purger: () =>
       purgerLesValeursDesDroits(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-60 (REQ-JUR-065) : la trace d'une demande de droit, anonymisée cinq ans après sa clôture.
+    droits_contact_anonymiser: () =>
+      anonymiserLesTracesDesDroits(prisma, new Date(horlogeSysteme.maintenant())),
     // SEC-18 (REQ-SEC-031) : l'ouverture DIFFÉRÉE des anomalies d'auto-parrainage, depuis le curseur
     // que son propre battement porte.
     auto_parrainage_ouvrir: () =>
