@@ -41,17 +41,16 @@ function lotEchu(prisma: PrismaClient, limite: Date) {
     LIMIT ${LOT_DE_PURGE_DU_JOURNAL_DES_ACCES}`);
 }
 
-/** Les gels LEVÉS dont aucune ligne couverte ne reste à purger, par lot borné : supprimés. */
-function supprimerLesGelsEpuises(prisma: PrismaClient): Promise<number> {
-  return prisma.$executeRaw(Prisma.sql`
-    DELETE FROM "journal_acces_console_gels" WHERE "id" IN (
-      SELECT g."id" FROM "journal_acces_console_gels" g
-      WHERE g."leve_at" IS NOT NULL AND NOT EXISTS (
-        SELECT 1 FROM "journal_acces_console" j
-        WHERE j."purge_at" IS NULL AND j."survenu_at" >= g."depuis"
-          AND (j."utilisateur_console_id" = g."utilisateur_vise_id" OR j."cible_id" = g."cible_id"))
-      ORDER BY g."leve_at" ASC, g."id" ASC
-      LIMIT ${LOT_DE_PURGE_DU_JOURNAL_DES_ACCES})`);
+/** Les gels LEVÉS dont aucune ligne couverte ne reste à purger, par lot borné. */
+function gelsEpuises(prisma: PrismaClient) {
+  return prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+    SELECT g."id" FROM "journal_acces_console_gels" g
+    WHERE g."leve_at" IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM "journal_acces_console" j
+      WHERE j."purge_at" IS NULL AND j."survenu_at" >= g."depuis"
+        AND (j."utilisateur_console_id" = g."utilisateur_vise_id" OR j."cible_id" = g."cible_id"))
+    ORDER BY g."leve_at" ASC, g."id" ASC
+    LIMIT ${LOT_DE_PURGE_DU_JOURNAL_DES_ACCES}`);
 }
 
 export async function purgerLeJournalDesAccesConsole(
@@ -73,8 +72,13 @@ export async function purgerLeJournalDesAccesConsole(
   }
   let gelsSupprimes = 0;
   for (;;) {
-    const n = await supprimerLesGelsEpuises(prisma);
-    if (n === 0) return { purgees, gelsSupprimes };
-    gelsSupprimes += n;
+    const lot = await gelsEpuises(prisma);
+    if (lot.length === 0) return { purgees, gelsSupprimes };
+    // La garde dédiée rejuge chaque gel : levé, et plus aucune ligne couverte à purger.
+    const { count } = await prisma.journalAccesConsoleGel.deleteMany({
+      where: { id: { in: lot.map((g) => g.id) }, leveAt: { not: null } },
+    });
+    if (count === 0) return { purgees, gelsSupprimes };
+    gelsSupprimes += count;
   }
 }
