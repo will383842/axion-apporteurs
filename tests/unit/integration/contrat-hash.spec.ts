@@ -561,9 +561,15 @@ describe('la garde de dérivation du contrat tourne dans la suite', () => {
   // dans le RENDU d'INT-T01a). Sans ce cas, la garde existerait sans jamais s'exécuter — et une
   // garde qui ne tourne pas ne garde rien.
   it("REQ-QA-007 — `contracts:export --verifier` est vert sur l'état du dépôt", () => {
+    // Joué à la RACINE DU DÉPÔT : dans le bac à sable de Stryker, chaque `.ts` copié reçoit un
+    // `// @ts-nocheck` qui change l'empreinte de `signature-relecture.ts` sans rien dire du contrat.
+    const racine = spawnSync('git', ['rev-parse', '--show-toplevel'], {
+      encoding: 'utf8',
+    }).stdout.trim();
     const r = spawnSync('npx', ['tsx', 'scripts/contracts/export.ts', '--verifier'], {
       encoding: 'utf8',
       shell: true,
+      cwd: racine,
     });
     const sortie = (r.stdout ?? '') + (r.stderr ?? '');
     expect(sortie).toContain('✅');

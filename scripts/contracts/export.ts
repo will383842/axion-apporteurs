@@ -75,10 +75,10 @@ export function empreinte(texte: string): string {
   return createHash('sha256').update(texte, 'utf8').digest('hex');
 }
 
-/** L'empreinte d'un fichier commité, sur ses octets. */
-function empreinteDuFichier(chemin: string): string {
+/** L'empreinte d'un fichier commité, sur ses octets, lu sous `racine`. */
+function empreinteDuFichier(chemin: string, racine: string): string {
   return createHash('sha256')
-    .update(readFileSync(join(RACINE_CONTRATS, chemin)))
+    .update(readFileSync(join(racine, RACINE_CONTRATS, chemin)))
     .digest('hex');
 }
 
@@ -123,8 +123,13 @@ export function sourceZod(): string {
 
 export type Artefact = { chemin: string; contenu: string };
 
-/** Les trois artefacts, en mémoire. C'est cette fonction que le test de contrat confronte au disque. */
-export function artefacts(): Artefact[] {
+/**
+ * Les trois artefacts, en mémoire. C'est cette fonction que le test de contrat confronte au disque.
+ * `racine` est le dossier d'où se lisent les fichiers hachés (`FICHIERS_EMPREINTES`) : le
+ * répertoire courant pour `pnpm contracts:export`, la racine du dépôt pour un témoin qui tourne
+ * dans le bac à sable de Stryker, où chaque `.ts` reçoit un `// @ts-nocheck` qui change ses octets.
+ */
+export function artefacts(racine = '.'): Artefact[] {
   const jsonSchema = canoniser(contratJsonSchema());
   return [
     { chemin: join(RACINE_CONTRATS, NOM_JSON_SCHEMA), contenu: jsonSchema },
@@ -132,7 +137,7 @@ export function artefacts(): Artefact[] {
       chemin: join(RACINE_CONTRATS, NOM_EMPREINTE),
       contenu: [
         `${empreinte(jsonSchema)}  ${NOM_JSON_SCHEMA}\n`,
-        ...FICHIERS_EMPREINTES.map((f) => `${empreinteDuFichier(f)}  ${f}\n`),
+        ...FICHIERS_EMPREINTES.map((f) => `${empreinteDuFichier(f, racine)}  ${f}\n`),
       ].join(''),
     },
     { chemin: join(RACINE_CONTRATS, NOM_ZOD), contenu: sourceZod() },

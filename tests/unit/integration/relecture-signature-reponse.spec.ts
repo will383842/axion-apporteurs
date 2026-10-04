@@ -15,6 +15,7 @@
  * normalisé.
  */
 import { describe, it, expect } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import {
@@ -387,13 +388,17 @@ describe('REQ-INT-012 — contracts.sha256 couvre la chaîne canonique et ses ve
     'signature-relecture.ts',
     'fixtures/signature-relecture.vecteurs.json',
   ] as const;
+  // Les octets se lisent à la RACINE DU DÉPÔT, pas dans le répertoire courant : le bac à sable de
+  // Stryker (sous `.stryker-tmp/`, dans le dépôt) ajoute `// @ts-nocheck` en tête de chaque `.ts`
+  // qu'il copie, et l'empreinte d'une copie ainsi altérée ne dirait rien du fichier publié.
+  const racine = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
   const sha = (chemin: string) =>
     createHash('sha256')
-      .update(readFileSync(`packages/contracts/${chemin}`))
+      .update(readFileSync(`${racine}/packages/contracts/${chemin}`))
       .digest('hex');
 
   it('REQ-INT-012 : les deux fichiers ont leur ligne, APRÈS celle de contracts.v3.json, lue en premier par axion-ia', () => {
-    const lignes = readFileSync('packages/contracts/contracts.sha256', 'utf8')
+    const lignes = readFileSync(`${racine}/packages/contracts/contracts.sha256`, 'utf8')
       .trimEnd()
       .split('\n');
     expect(lignes[0]).toMatch(/^[0-9a-f]{64} {2}contracts\.v3\.json$/);
@@ -401,7 +406,9 @@ describe('REQ-INT-012 — contracts.sha256 couvre la chaîne canonique et ses ve
   });
 
   it('REQ-INT-012 : l’empreinte est DÉRIVÉE par `pnpm contracts:export`, jamais écrite à la main', () => {
-    const rendu = artefacts().find((a) => a.chemin.endsWith('contracts.sha256'));
-    expect(rendu?.contenu).toBe(readFileSync('packages/contracts/contracts.sha256', 'utf8'));
+    const rendu = artefacts(racine).find((a) => a.chemin.endsWith('contracts.sha256'));
+    expect(rendu?.contenu).toBe(
+      readFileSync(`${racine}/packages/contracts/contracts.sha256`, 'utf8')
+    );
   });
 });
