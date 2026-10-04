@@ -87,6 +87,14 @@ function base(devis: Ligne[], entreprises: Ligne[]) {
         return { count: n };
       },
     },
+    $transaction: async (fn: (tx: unknown) => Promise<unknown>) => {
+      appels.push('tx');
+      return fn(db);
+    },
+    $executeRaw: async (_sql: TemplateStringsArray, ...valeurs: unknown[]) => {
+      appels.push(`verrou:${valeurs.join('|')}`);
+      return 1;
+    },
   };
   return { prisma: db as unknown as PrismaClient, devis, entreprises, appels };
 }
@@ -271,5 +279,27 @@ describe('REQ-DM-029 — entreprises_connues : effacée quand elle ne fonde plus
       devisOrigine: 0,
     });
     expect(b.entreprises).toHaveLength(1);
+  });
+});
+
+describe('REQ-DM-029 — la purge prend le verrou du SIREN avant de relire ses devis (lentille sécurité)', () => {
+  it('REQ-DM-029 : TÉMOIN — étape 3 : une transaction par SIREN, le verrou, PUIS la relecture des devis restants', async () => {
+    const vieux = new Date('2020-01-01T00:00:00.000Z');
+    const b = base(
+      [unDevis('a-vieux', SIREN_A, vieux), unDevis('b-vieux', SIREN_B, vieux)],
+      [uneLigne(SIREN_A, 'devis', vieux, vieux), uneLigne(SIREN_B, 'devis', vieux, vieux)]
+    );
+    await purgerLesEntreprisesConnues(b.prisma, MAINTENANT);
+    const etape3 = b.appels.slice(b.appels.indexOf('tx'));
+    expect(etape3).toEqual([
+      'tx',
+      `verrou:partners.entreprise_connue|${SIREN_A}`,
+      'devis.findMany',
+      'entreprise.deleteMany',
+      'tx',
+      `verrou:partners.entreprise_connue|${SIREN_B}`,
+      'devis.findMany',
+      'entreprise.deleteMany',
+    ]);
   });
 });
