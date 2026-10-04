@@ -30,6 +30,7 @@ const m = vi.hoisted(() => ({
   purgerLesEntreprisesConnues: vi.fn(),
   purgerLesValeursDesDroits: vi.fn(),
   purgerLesNotificationsDeLEspace: vi.fn(),
+  passageDEnvoiDesNotifications: vi.fn(),
   purgerLeJournalDesAccesConsole: vi.fn(),
   // DM-60 : l'anonymisation des traces de droits du contact.
   anonymiserLesTracesDesDroits: vi.fn(),
@@ -62,7 +63,10 @@ vi.mock('../../../src/server/queue/workers/evenement-recu', async (original) => 
   lireLesAttentes: m.lireLesAttentes,
   depotDuTravail: m.depotDuTravail,
 }));
-vi.mock('../../../src/lib/env', () => ({
+// Le module réel, sauf les deux lectures simulées : le passage d'envoi de DM-55 charge l'émetteur, qui
+// lit `schemaConfiguration` au chargement.
+vi.mock('../../../src/lib/env', async (original) => ({
+  ...(await original<object>()),
   lireEnvironnement: m.lireEnvironnement,
   lireTrousseaux: m.lireTrousseaux,
 }));
@@ -91,6 +95,10 @@ vi.mock('../../../src/server/taches/purger-valeurs-droits-contact', () => ({
 vi.mock('../../../src/server/taches/purger-notifications-espace', async (original) => ({
   ...(await original<object>()),
   purgerLesNotificationsDeLEspace: m.purgerLesNotificationsDeLEspace,
+}));
+vi.mock('../../../src/server/taches/envoyer-notifications-espace', async (original) => ({
+  ...(await original<object>()),
+  passageDEnvoiDesNotifications: m.passageDEnvoiDesNotifications,
 }));
 vi.mock('../../../src/server/taches/purger-journal-acces-console', async (original) => ({
   ...(await original<object>()),
@@ -145,6 +153,7 @@ import {
   traitantsDeReception,
 } from '../../../src/server/taches/inscriptions';
 import { PARAMETRES } from '../../../src/server/integrations/recherche-entreprises/parametres';
+import { TACHES } from '../../../src/server/taches/registre';
 
 const PRISMA = { nom: 'client-de-test' } as unknown as PrismaClient;
 const RECU = {
@@ -404,6 +413,30 @@ describe('REQ-QA-027 — l’alerte des attentes, en fin de passage', () => {
     lire.mockClear();
     await passageDesEvenementsRecus(PRISMA, depot as never, null)();
     expect(lire).not.toHaveBeenCalled();
+  });
+});
+
+describe('REQ-UX-016 — le passage d’envoi des notifications de l’espace est inscrit (DM-55)', () => {
+  it('REQ-UX-016 : TÉMOIN — `notifications_espace_envoyer` joue le passage du processus, sur le client et l’environnement, et rend son bilan', async () => {
+    const bilan = {
+      envoyees: 1,
+      echecs: 0,
+      retenues: 0,
+      sautees: 0,
+      nonRendues: 0,
+    };
+    const passage = vi.fn(async () => bilan);
+    m.passageDEnvoiDesNotifications.mockReturnValue(passage);
+    const env = { NODE_ENV: 'test' };
+    const i = inscriptions(PRISMA, env);
+    // Le passage se construit À L'APPEL (l'émetteur et l'alerte se lisent à chaque passage).
+    expect(await i.notifications_espace_envoyer!()).toBe(bilan);
+    expect(m.passageDEnvoiDesNotifications).toHaveBeenCalledWith(PRISMA, env);
+    expect(passage).toHaveBeenCalledTimes(1);
+  });
+
+  it('REQ-UX-016 : la clé est au registre des tâches, sous REQ-UX-016', () => {
+    expect(TACHES.notifications_espace_envoyer).toEqual({ req: 'REQ-UX-016' });
   });
 });
 
