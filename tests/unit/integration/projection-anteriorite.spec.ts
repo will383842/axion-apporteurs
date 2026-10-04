@@ -1,4 +1,5 @@
-// @req REQ-DM-029 REQ-DM-028
+// @req REQ-DM-029
+// @req REQ-DM-028
 /**
  * La projection de l'antériorité (`src/server/entreprise-connue/projection.ts`), jugée EN
  * PROCESSUS sur un faux client Prisma en mémoire : la même projection que le banc Docker
