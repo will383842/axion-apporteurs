@@ -41,6 +41,9 @@ import { clesPii } from '../securite/pii';
 import {
   FORMES_D_ATTENTE,
   creerAlerteur,
+  DECISION_TRANSFERT_TELEGRAM,
+  exigerLeTransfertConsigne,
+  type DecisionDuTransfert,
   notifieurTelegram,
   type Alerteur,
 } from '../integrations/telegram/alertes';
@@ -171,10 +174,16 @@ export async function alerterLesFranchissements(
 }
 
 /** Le canal d'alerte du serveur, lu dans l'environnement ; `null` s'il n'est pas configuré. */
-export function canalDAlerte(env: Readonly<Record<string, string | undefined>>): Alerteur | null {
+export function canalDAlerte(
+  env: Readonly<Record<string, string | undefined>>,
+  decision: DecisionDuTransfert | null = DECISION_TRANSFERT_TELEGRAM
+): Alerteur | null {
   const jeton = env.TELEGRAM_BOT_TOKEN;
   const salon = env.TELEGRAM_CHAT_ID;
   if (jeton === undefined || jeton === '' || salon === undefined || salon === '') return null;
+  // SEC-64 (sécurité, 5982916235) : le canal réel se construirait ; sans décision consignée sur le
+  // transfert, il est refusé, nommé, et le lanceur ne démarre pas.
+  exigerLeTransfertConsigne(env, decision);
   return creerAlerteur({
     notifieur: notifieurTelegram(jeton, salon),
     horloge: horlogeSysteme,
