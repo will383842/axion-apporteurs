@@ -87,8 +87,8 @@
     {
       "id": "REQ-DM-006",
       "domaine": "domaine-donnees",
-      "texte": "Le statut d'attribution est un enum fermé {en_attente, provisoire, active, rdv_pris, proposition, signee, convertie, figee_resiliation, invalidee, perdue, perimee, expiree, annulee} ; toute transition passe par une matrice `from × événement → to` ; une transition absente de la matrice lève une erreur typée et n'écrit rien.",
-      "source": "outil §8 ; anti-abus M1/M4 ; fonctionnement §9 ; nouvelle (F-DM-06)",
+      "texte": "Le statut d'attribution est un enum fermé {en_attente, provisoire, active, rdv_pris, proposition, signee, convertie, figee_resiliation, invalidee, perdue, perimee, expiree, annulee} ; toute transition passe par une matrice `from × événement → to` ; une transition absente de la matrice lève une erreur typée et n'écrit rien. [rattrapage 98, DM-67 : la matrice admet `anteriorite_etablie` → `annulee` depuis les sept états de `ETATS_OCCUPANTS` ; l'événement porte le motif fermé `anteriorite_etablie` et un critère en enum interne (cliente | devis | devis_signe), sans donnée de personne ; les commissions acquises restent acquises]",
+      "source": "outil §8 ; anti-abus M1/M4 ; fonctionnement §9 ; nouvelle (F-DM-06) ; transition anteriorite_etablie (DM-67, juriste), rattrapage 98",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
@@ -99,7 +99,8 @@
         "DM-13",
         "DM-24",
         "DM-41",
-        "DM-55"
+        "DM-55",
+        "DM-67"
       ]
     },
     {
@@ -3906,6 +3907,7 @@
         "INT-T49",
         "QA-T40",
         "QA-T56",
+        "QA-T73",
         "T-ARG-015"
       ]
     },
@@ -6411,6 +6413,20 @@
       "phase": 1,
       "taches": [
         "INT-T12"
+      ]
+    },
+    {
+      "id": "REQ-JUR-068",
+      "domaine": "juridique",
+      "texte": "Les utilisateurs de la console sont informés du traitement de leurs données (RGPD art. 13) par une page publique, accessible depuis la connexion de la console, tirée du traitement TRT-CONSOLE du registre ; elle dit en clair que leurs connexions et leurs consultations de coordonnées sont journalisées, la durée du journal et sa finalité (code du travail art. L.1222-4), et elle est livrée avant le premier utilisateur réel.",
+      "source": "nouvelle (juriste, rattrapage 97, pour JUR-T61) ; RGPD art. 13 ; code du travail art. L.1222-4",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 11,
+      "etape": 10,
+      "phase": 1,
+      "taches": [
+        "JUR-T61"
       ]
     },
     {
