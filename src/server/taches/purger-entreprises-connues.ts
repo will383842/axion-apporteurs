@@ -19,6 +19,7 @@ import type { PrismaClient } from '@prisma/client';
 import { SEUILS } from '../../domain/seuils/ssot';
 import { ajouterMoisParis } from '../../domain/attribution/machine';
 import { estEntierementFacture } from '../../domain/entreprise-connue/anteriorite';
+import { verrouillerLesSirens } from '../entreprise-connue/projection';
 
 /** Les devis candidats sont relus par lots bornés, en avançant sur la référence. */
 export const LOT_DE_PURGE_DES_ENTREPRISES_CONNUES = 500;
@@ -62,24 +63,29 @@ export async function purgerLesEntreprisesConnues(
 
   // 3. L'origine devis des entreprises touchées : retirée, ou recalée sur ce qui reste.
   let devisOrigine = 0;
+  // Une transaction par SIREN, sous le MÊME verrou que la projection (DM-66, lentille sécurité) : la
+  // purge attend une projection en cours sur ce SIREN, et relit les devis restants APRÈS elle.
   for (const siren of sirensTouches) {
-    const restants = await prisma.devisConnu.findMany({ where: { siren } });
-    if (restants.length === 0) {
-      const { count } = await prisma.entrepriseConnue.deleteMany({
+    devisOrigine += await prisma.$transaction(async (tx) => {
+      await verrouillerLesSirens(tx, [siren]);
+      const restants = await tx.devisConnu.findMany({ where: { siren } });
+      if (restants.length === 0) {
+        const { count } = await tx.entrepriseConnue.deleteMany({
+          where: { siren, origine: 'devis' },
+        });
+        return count;
+      }
+      const temps = restants.flatMap((d) =>
+        d.signeAt === null ? [d.emisAt.getTime()] : [d.emisAt.getTime(), d.signeAt.getTime()]
+      );
+      await tx.entrepriseConnue.updateMany({
         where: { siren, origine: 'devis' },
+        data: {
+          connueDepuisAt: new Date(Math.min(...temps)),
+          dernierContactAt: new Date(Math.max(...temps)),
+        },
       });
-      devisOrigine += count;
-      continue;
-    }
-    const temps = restants.flatMap((d) =>
-      d.signeAt === null ? [d.emisAt.getTime()] : [d.emisAt.getTime(), d.signeAt.getTime()]
-    );
-    await prisma.entrepriseConnue.updateMany({
-      where: { siren, origine: 'devis' },
-      data: {
-        connueDepuisAt: new Date(Math.min(...temps)),
-        dernierContactAt: new Date(Math.max(...temps)),
-      },
+      return 0;
     });
   }
 

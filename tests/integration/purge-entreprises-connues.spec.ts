@@ -16,7 +16,8 @@ import {
 } from '../../src/server/deploiement/role-d-execution';
 import { SEUILS } from '../../src/domain/seuils/ssot';
 import { ajouterMoisParis } from '../../src/domain/attribution/machine';
-import { anterioriteDe } from '../../src/server/entreprise-connue/projection';
+import { setTimeout as attendre } from 'node:timers/promises';
+import { anterioriteDe, verrouillerLesSirens } from '../../src/server/entreprise-connue/projection';
 import { purgerLesEntreprisesConnues } from '../../src/server/taches/purger-entreprises-connues';
 
 let base: Base;
@@ -133,5 +134,78 @@ describe('REQ-DM-029 — la purge, sous partners_app, à la milliseconde', () =>
   it('REQ-DM-029 : rejouée, la purge n’efface rien de plus', async () => {
     const premiere = await purgerLesEntreprisesConnues(app, MAINTENANT);
     expect(premiere).toEqual({ devis: 0, clients: 0, devisOrigine: 0 });
+  });
+});
+
+describe('REQ-DM-029 — la purge et la projection se sérialisent sur un SIREN (lentille sécurité)', () => {
+  it('REQ-DM-029 : TÉMOIN — la purge ATTEND une projection en cours et relit les devis restants APRÈS elle', async () => {
+    const siren = unSiren();
+    const vieux = ms(LIMITE_DEVIS, -1);
+    const recent = ms(MAINTENANT, -86_400_000);
+    await unDevis(`d-${siren}-vieux`, siren, vieux);
+    await uneLigne(siren, 'devis', vieux, vieux);
+
+    // Une « projection » tient le verrou du SIREN et y écrit un devis récent, sans encore valider.
+    let relacher!: () => void;
+    const tenu = new Promise<void>((r) => (relacher = r));
+    let signaler!: () => void;
+    const pris = new Promise<void>((r) => (signaler = r));
+    const projection = app.$transaction(
+      async (tx) => {
+        await verrouillerLesSirens(tx, [siren]);
+        await tx.devisConnu.create({
+          data: {
+            devisRef: `d-${siren}-recent`,
+            siren,
+            emisAt: recent,
+            montantTotalHtCents: 0,
+            factureHtCents: 0,
+          },
+        });
+        signaler();
+        await tenu;
+      },
+      { timeout: 30_000 }
+    );
+    await pris;
+
+    let finie = false;
+    const purge = purgerLesEntreprisesConnues(app, MAINTENANT).then((r) => {
+      finie = true;
+      return r;
+    });
+    await attendre(500);
+    expect(finie).toBe(false);
+
+    relacher();
+    await projection;
+    const bilan = await purge;
+    // Relue APRÈS la projection : le devis récent la tient connue — retirée, elle aurait menti.
+    expect(bilan.devisOrigine).toBe(0);
+    const ligne = await base.prisma.entrepriseConnue.findFirst({
+      where: { siren, origine: 'devis' },
+    });
+    expect(ligne?.dernierContactAt.toISOString()).toBe(recent.toISOString());
+    expect(ligne?.connueDepuisAt.toISOString()).toBe(recent.toISOString());
+  });
+
+  it('REQ-DM-029 : TÉMOIN — deux transactions qui touchent les mêmes SIREN en ordre croisé finissent sans interblocage', async () => {
+    const a = unSiren();
+    const b = unSiren();
+    let premiereTient!: () => void;
+    const tient = new Promise<void>((r) => (premiereTient = r));
+    const croisee = (sirensDemandes: string[], avant: () => Promise<void>) =>
+      app.$transaction(
+        async (tx) => {
+          await verrouillerLesSirens(tx, sirensDemandes);
+          await avant();
+          await attendre(200);
+        },
+        { timeout: 30_000 }
+      );
+    const une = croisee([a, b], async () => premiereTient());
+    await tient;
+    const deux = croisee([b, a], async () => undefined);
+    await expect(Promise.all([une, deux])).resolves.toHaveLength(2);
   });
 });
