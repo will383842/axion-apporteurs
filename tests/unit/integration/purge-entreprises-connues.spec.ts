@@ -21,7 +21,9 @@ import {
 
 type Ligne = Record<string, unknown>;
 const MAINTENANT = new Date('2027-06-15T12:00:00.000Z');
-const LIMITE_DEVIS = new Date(ajouterMoisParis(MAINTENANT.getTime(), -SEUILS.ANTERIORITE_DEVIS_MOIS.valeur));
+const LIMITE_DEVIS = new Date(
+  ajouterMoisParis(MAINTENANT.getTime(), -SEUILS.ANTERIORITE_DEVIS_MOIS.valeur)
+);
 const LIMITE_CLIENT = new Date(
   ajouterMoisParis(MAINTENANT.getTime(), -SEUILS.ANTERIORITE_CLIENT_MOIS.valeur)
 );
@@ -107,10 +109,7 @@ const uneLigne = (siren: string, origine: string, depuis: Date, dernier: Date): 
 describe('REQ-DM-029 — devis_connus : effacé quand il ne fonde plus aucun refus', () => {
   it('REQ-DM-029 : TÉMOIN — non signé, émis une milliseconde avant la limite : effacé ; pile à la limite : gardé', async () => {
     const b = base(
-      [
-        unDevis('d-avant', SIREN_A, ms(LIMITE_DEVIS, -1)),
-        unDevis('d-pile', SIREN_A, LIMITE_DEVIS),
-      ],
+      [unDevis('d-avant', SIREN_A, ms(LIMITE_DEVIS, -1)), unDevis('d-pile', SIREN_A, LIMITE_DEVIS)],
       []
     );
     expect(await purgerLesEntreprisesConnues(b.prisma, MAINTENANT)).toMatchObject({ devis: 1 });
@@ -146,7 +145,13 @@ describe('REQ-DM-029 — devis_connus : effacé quand il ne fonde plus aucun ref
   it('REQ-DM-029 : un devis signé entièrement facturé mais émis il y a moins de six mois fonde encore un refus : gardé', async () => {
     const recent = ms(LIMITE_DEVIS, 1);
     const b = base(
-      [unDevis('d-recent', SIREN_A, recent, { signeAt: recent, montantTotalHtCents: 10, factureHtCents: 10 })],
+      [
+        unDevis('d-recent', SIREN_A, recent, {
+          signeAt: recent,
+          montantTotalHtCents: 10,
+          factureHtCents: 10,
+        }),
+      ],
       []
     );
     expect(await purgerLesEntreprisesConnues(b.prisma, MAINTENANT)).toMatchObject({ devis: 0 });
