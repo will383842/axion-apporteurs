@@ -120,12 +120,11 @@ export function parametresDeLaNotification(
     return { entreprise: c.entreprise, motif: c.motif };
   }
   if (cle === 'premier_rang_libere') {
-    const { annee, mois, jour } = jourLimiteDeLaFenetre(
-      finDeLaFenetreDeRedeclaration(c.envoyeLe.getTime())
-    );
     return {
       entreprise: c.entreprise,
-      dateLimite: `${jour} ${MOIS_EN_TOUTES_LETTRES[mois - 1]} ${annee}`,
+      dateLimite: dateLimiteDeLaFenetre(
+        new Date(finDeLaFenetreDeRedeclaration(c.envoyeLe.getTime()))
+      ),
     };
   }
   throw new Error(`cle_hors_passage : ${cle}`);
@@ -252,4 +251,27 @@ export async function rendreDepuisLaBase(
     if (e instanceof NotificationRefusee) return nonRendue('parametre_refuse');
     throw e;
   }
+}
+
+/** Le jour limite d'une fenêtre de redéclaration (borne exclusive), en clair, à Paris. */
+function dateLimiteDeLaFenetre(finAt: Date): string {
+  const { annee, mois, jour } = jourLimiteDeLaFenetre(finAt.getTime());
+  return `${jour} ${MOIS_EN_TOUTES_LETTRES[mois - 1]} ${annee}`;
+}
+
+/**
+ * Le texte de `premier_rang_libere` pour l'ESPACE (juriste, critère a) : `{dateLimite}` est le jour
+ * de la fenêtre POSÉE (`fenetreRedeclarationFinAt`), celle que le courriel a fait courir — jamais un
+ * recalcul. Tant qu'elle est NULLE, le courriel n'est pas parti, aucun délai ne court, et aucun texte
+ * daté n'existe : `null`. L'écran de l'espace a sa propre tâche ; ce texte est sa seule source.
+ */
+export function texteDuPremierRangDansLEspace(
+  entreprise: string,
+  fenetreRedeclarationFinAt: Date | null
+): TexteRendu | null {
+  if (fenetreRedeclarationFinAt === null) return null;
+  return rendreLaNotification('premier_rang_libere', {
+    entreprise,
+    dateLimite: dateLimiteDeLaFenetre(fenetreRedeclarationFinAt),
+  });
 }
