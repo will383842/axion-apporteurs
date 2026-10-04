@@ -579,6 +579,20 @@ export function budgetUx(nom: string): BudgetUx {
 }
 
 /**
+ * DM-55 (arbitrage de la sécurité et de la juriste, 2026-10-04) — la longueur maximale des faits retenus
+ * contre un dépôt (`{faits}` de `anomalie_confirmee`), comptée en POINTS DE CODE après retrait des
+ * caractères de contrôle. Elle se juge à la SAISIE dans la console (tâche à venir) ; à l'ENVOI, elle
+ * n'est qu'un filet : au-delà, aucun courriel, jamais une troncature.
+ */
+export const FAITS_ANOMALIE_CARACTERES_MAX = {
+  valeur: 1000,
+  unite: 'points_de_code',
+  source:
+    'proposée par A05, 1 000 fixé par la juriste (art. 3.7), comptage en points de code par la sécurité, arbitrage DM-55 du 04/10',
+  verifieLe: '2026-10-04',
+} as const;
+
+/**
  * W20 (UX-P1-41, HYP-W20-CONTEXTE) — la longueur maximale du contexte d'un dépôt, seule saisie libre
  * de l'apporteur reprise dans l'e-mail au contact. Entrée isolée : ni un délai du contrat, ni un
  * montant, ni un budget d'expérience. Condition (a) de la lentille sécurité (2026-10-02) : la ligne de

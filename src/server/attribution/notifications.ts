@@ -24,6 +24,7 @@ import {
 import type { Instant } from '../../domain/temps/horloge';
 import type { Prisma } from '@prisma/client';
 import { CHARGES_PAR_TYPE } from '../../domain/evenement/charges';
+import { FAITS_ANOMALIE_CARACTERES_MAX } from '../../domain/seuils/ssot';
 import {
   NotificationRefusee,
   rendreLaNotification,
@@ -41,6 +42,41 @@ export type Decision = {
   raison?: RaisonDAnnulation;
   categorie?: keyof typeof LIBELLES_DES_CATEGORIES;
 };
+
+/** {numeroEntreprise} : neuf chiffres, rien d'autre. */
+const NUMERO_D_ENTREPRISE = /^[0-9]{9}$/;
+
+/**
+ * Un caractère de contrôle (C0, DEL, C1), un séparateur de ligne ou de paragraphe, ou un caractère de
+ * FORMAT (catégorie Cf : U+202E retourne un texte, U+200B le cache) — que le rendu refuserait.
+ */
+const FORMAT = /^\p{Cf}$/u;
+function estUnControle(ch: string): boolean {
+  const c = ch.codePointAt(0)!;
+  return c < 0x20 || (c >= 0x7f && c <= 0x9f) || c === 0x2028 || c === 0x2029 || FORMAT.test(ch);
+}
+
+const ECHAPPEMENTS: Readonly<Record<string, string>> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+};
+
+/**
+ * {faits} à l'ENVOI (arbitrage de la sécurité) — le seul paramètre libre, lu par le lecteur réservé :
+ * les caractères de contrôle et les retours à la ligne forcés deviennent une espace, les espaces se
+ * resserrent, la longueur est revérifiée en POINTS DE CODE (`FAITS_ANOMALIE_CARACTERES_MAX`) — au-delà,
+ * `null` : aucun courriel, jamais une troncature —, puis le texte est échappé pour le HTML.
+ */
+export function faitsPourLeCourriel(brut: string): string | null {
+  const points = [...brut].map((ch) => (estUnControle(ch) ? ' ' : ch));
+  const propre = points.join('').replace(/ {2,}/g, ' ').trim();
+  const longueur = [...propre].length;
+  if (longueur === 0 || longueur > FAITS_ANOMALIE_CARACTERES_MAX.valeur) return null;
+  return propre.replace(/[&<>"']/g, (c) => ECHAPPEMENTS[c]!);
+}
 
 const LIEN = /https?:\/\/|www\.|\b[\w-]+\.(?:fr|com|net|org|io|test|eu)\b/i;
 const MOTS_INTERDITS = /\b(?:fraude|anomalie|sanction)s?\b/i;
@@ -65,6 +101,18 @@ export function motifDeLaDecision(d: Decision): string | null {
   }
   if ((transition === 'anomalie_confirmee') !== (faits !== undefined)) {
     throw new MotifRefuse('motif_incoherent', `faits sur ${transition}`);
+  }
+  // Les paramètres fermés (arbitrage de la sécurité) : une raison ou une catégorie hors de leur liste
+  // est refusée, jamais rendue.
+  if (
+    raison !== undefined &&
+    raison !== 'erreur_de_saisie_de_la_societe' &&
+    !Object.hasOwn(RAISONS_D_ANNULATION, raison)
+  ) {
+    throw new MotifRefuse('motif_incoherent', `raison hors de la liste`);
+  }
+  if (categorie !== undefined && !Object.hasOwn(LIBELLES_DES_CATEGORIES, categorie)) {
+    throw new MotifRefuse('motif_incoherent', `catégorie hors de la liste`);
   }
   if ((transition === 'annulee_par_la_console') !== (raison !== undefined)) {
     throw new MotifRefuse('motif_incoherent', `raison sur ${transition}`);
@@ -99,9 +147,12 @@ export function entrepriseDeLaNotification(
   numeroEntreprise: string
 ): string {
   const nom = raisonSociale?.trim() ?? '';
-  return nom === ''
-    ? ENTREPRISE_DE_REPLI.replace('{numeroEntreprise}', () => numeroEntreprise)
-    : nom;
+  if (nom !== '') return nom;
+  // {numeroEntreprise} : forme FERMÉE de neuf chiffres (arbitrage de la sécurité).
+  if (!NUMERO_D_ENTREPRISE.test(numeroEntreprise)) {
+    throw new Error('numero_entreprise_invalide : le numéro saisi au dépôt n’a pas neuf chiffres');
+  }
+  return ENTREPRISE_DE_REPLI.replace('{numeroEntreprise}', () => numeroEntreprise);
 }
 
 /** Une date en clair, au jour civil de Paris : « 25 mai 2027 ». */
@@ -137,6 +188,7 @@ export function parametresDeLaNotification(
  * nomme le motif à son bilan, sans contenu — la console peut informer autrement.
  */
 export const MOTIFS_DE_NON_RENDU = [
+  'numero_entreprise_invalide',
   'fait_introuvable',
   'charge_illisible',
   'attribution_introuvable',
@@ -199,7 +251,9 @@ async function motifDuFait(
     });
     if (lus === 'purgee') return nonRendue('faits_non_conserves');
     if (lus === 'refusee') return nonRendue('anomalie_refusee');
-    faits = lus.faits;
+    const nettoyes = faitsPourLeCourriel(lus.faits);
+    if (nettoyes === null) return nonRendue('faits_refuses');
+    faits = nettoyes;
   }
   try {
     const motif = motifDeLaDecision({
@@ -233,7 +287,12 @@ export async function rendreDepuisLaBase(
   });
   if (a === null) return nonRendue('attribution_introuvable');
   if (a.apporteurId !== n.apporteurId) return nonRendue('apporteur_different');
-  const entreprise = entrepriseDeLaNotification(a.raisonSociale, a.siren);
+  let entreprise: string;
+  try {
+    entreprise = entrepriseDeLaNotification(a.raisonSociale, a.siren);
+  } catch {
+    return nonRendue('numero_entreprise_invalide');
+  }
   let motif: string | undefined;
   if (n.cle === 'decision_attribution') {
     const lu = await motifDuFait(tx, { ...n, attributionId: n.attributionId }, s);

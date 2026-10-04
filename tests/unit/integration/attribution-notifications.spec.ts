@@ -1445,4 +1445,26 @@ describe('REQ-DM-006 — les paramètres du motif, à l’ENVOI, selon l’arbit
     expect(FAITS_ANOMALIE_CARACTERES_MAX.valeur).toBe(1000);
     expect(FAITS_ANOMALIE_CARACTERES_MAX.unite).toBe('points_de_code');
   });
+
+  it('REQ-DM-006 : seul {motif} a la borne des faits : toute autre valeur garde 300 points de code', () => {
+    expect(() =>
+      rendreLaNotification('premier_rang_libere', {
+        entreprise: 'e'.repeat(300),
+        dateLimite: '25 mai 2027',
+      })
+    ).not.toThrow();
+    expect(() =>
+      rendreLaNotification('premier_rang_libere', {
+        entreprise: 'e'.repeat(301),
+        dateLimite: '25 mai 2027',
+      })
+    ).toThrow(/parametre_invalide/);
+  });
+
+  it('REQ-DM-006 : TÉMOIN (texte piégé) — un caractère de FORMAT dans les faits est retiré, le courriel part', async () => {
+    const b = banc('deux' + String.fromCharCode(0x202e) + ' dépôts' + String.fromCharCode(0x200b));
+    const r = await rendreDepuisLaBase(b.tx, n, ENVOI, b.sources);
+    expect('sujet' in r && r.corps.includes('deux dépôts')).toBe(true);
+    expect(JSON.stringify(r)).not.toContain(String.fromCharCode(0x202e));
+  });
 });
