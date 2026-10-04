@@ -30,7 +30,8 @@ import { composerLeCourriel } from '../notifications/envoyer';
 import { CHAMPS_PII, clesPii, decryptPii, type ClesPii } from '../securite/pii';
 import { finDeLaFenetreDeRedeclaration } from '../../domain/attribution/fenetre-redeclaration';
 import { TAILLES_DE_LOT } from '../../domain/seuils/ssot';
-import type { MotifDeNonRendu } from '../attribution/notifications';
+import { MOTIFS_DE_NON_RENDU, type MotifDeNonRendu } from '../attribution/notifications';
+import type { Alerteur } from '../integrations/telegram/alertes';
 import {
   depotDesCourriels,
   emettre,
@@ -89,7 +90,7 @@ const CLES_A_FENETRE: ReadonlySet<string> = new Set(['premier_rang_libere']);
  * `nonRendues` : un texte dont un paramètre manque n'envoie rien et se COMPTE — le lanceur rend le
  * bilan, rien n'est tu —, sans bloquer les notifications suivantes du lot.
  */
-type Bilan = {
+export type Bilan = {
   envoyees: number;
   echecs: number;
   retenues: number;
@@ -319,4 +320,25 @@ export function passageDEnvoiDesNotifications(
       })
     );
   };
+}
+
+/**
+ * Un non-rendu lève, EN PLUS du compteur au battement, une alerte Telegram par motif présent
+ * (arbitrage de la sécurité) : la catégorie `notification_non_rendue`, le motif fermé et son nombre,
+ * rien d'autre. Sans canal configuré, le compteur reste seul.
+ */
+export async function alerterLesNonRendus(
+  bilan: Bilan,
+  alerteur: Pick<Alerteur, 'alerter'> | null
+): Promise<void> {
+  if (alerteur === null) return;
+  for (const motif of MOTIFS_DE_NON_RENDU) {
+    const nombre = bilan[`nonRendue_${motif}`];
+    if (nombre === undefined || nombre === 0) continue;
+    await alerteur.alerter({
+      categorie: 'notification_non_rendue',
+      id: randomUUID(),
+      nonRendu: { motif, nombre },
+    });
+  }
 }
