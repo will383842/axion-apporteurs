@@ -78,7 +78,7 @@ describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles'
       'decision_attribution',
       'depot_injoignable_j5',
       'lien_magique',
-      // SEC-55 (rattrapage 102) : l'avis de sécurité du compte, texte de la juriste.
+      // SEC-62 (texte du rattrapage 102) : l'avis de sécurité du compte, texte de la juriste.
       'nouvel_appareil',
       'premier_rang_libere',
       'rappel_rc_pro',
@@ -516,7 +516,7 @@ describe('REQ-UX-016 — la fin d’une réservation se dit selon sa cause (A07,
   });
 });
 
-describe('REQ-SEC-003 — l’avis « nouvel appareil » (SEC-55, rattrapage 102, texte de la juriste)', () => {
+describe('REQ-SEC-003 — l’avis « nouvel appareil » (SEC-62, texte de la juriste du rattrapage 102)', () => {
   it('REQ-SEC-003 : le sujet et le corps de la juriste, MOT POUR MOT, et UN appel vers la page de connexion, sans jeton ni paramètre', () => {
     expect(TEXTES_DES_NOTIFICATIONS.nouvel_appareil).toEqual({
       titre: 'Connexion à votre espace depuis un nouvel appareil',
@@ -539,11 +539,11 @@ describe('REQ-SEC-003 — l’avis « nouvel appareil » (SEC-55, rattrapage 102
     expect(r.appel).toBe('Demander un nouveau lien de connexion');
   });
 
-  it('REQ-SEC-003 : un avis de sécurité du COMPTE — émis par SEC-55 sur un événement, obligatoire, par courriel seul, jamais désactivable, sans délai', () => {
+  it('REQ-SEC-003 : un avis de sécurité du COMPTE — émis par SEC-62 sur un événement, obligatoire, par courriel seul, jamais désactivable, sans délai', () => {
     expect(GABARITS.nouvel_appareil).toMatchObject({
       destinataire: 'apporteur',
       req: 'REQ-SEC-003',
-      emetteur: 'SEC-55',
+      emetteur: 'SEC-62',
       declencheur: 'evenement',
       notificationObligatoire: true,
       faitCourirUnDelai: false,
