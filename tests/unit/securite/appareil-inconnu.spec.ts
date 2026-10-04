@@ -12,14 +12,16 @@
  *       sur l'appareil qui consomme — la garde ne confirme jamais, et une session fraîche présentée
  *       depuis un autre appareil est refusée (note de la lentille sécurité sur 4913c6a3 : un cookie
  *       de session volé ne doit faire connaître aucun appareil) ;
+ *       L'action de connexion (`src/app/(espace)/connexion/actions.ts`) lit le cookie de l'appareil,
+ *       le passe TEL QUEL au noyau, et pose l'identifiant qu'il rend ; elle n'en invente aucun ;
  *   (4) en échec fermé : une empreinte illisible compte comme un appareil inconnu ;
  *   (5) nouvel appareil → confirmation exigée, puis l'appareil est connu ; purge à l'échéance.
  * Les secrets sont factices, tirés pour ce fichier.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createHmac, hkdfSync } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
-import { kidDe } from '../../../src/lib/env';
+import { NOMS_DES_SECRETS, kidDe } from '../../../src/lib/env';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
 import {
   consommerLien,
@@ -52,9 +54,46 @@ import {
   type DepotDAppareils,
   type PortsDAppareil,
 } from '../../../src/server/auth/appareil';
+import { COOKIE_DATTENTE } from '../../../src/server/auth/lien-magique-production';
 import { purgerLesAppareils } from '../../../src/server/taches/purger-appareils';
 import { inscriptions } from '../../../src/server/taches/inscriptions';
 import { TACHES } from '../../../src/server/taches/registre';
+
+// ── Next simulé à ses frontières, pour l'action de connexion ─────────────────────────────────────
+// Le magasin de cookies ENREGISTRE chaque pose ; le noyau reste le vrai, sauf quand un témoin de
+// l'action lui substitue une réponse (`mockResolvedValueOnce`).
+
+const pot = vi.hoisted(() => ({
+  valeurs: new Map<string, string>(),
+  poses: [] as Array<{ nom: string; valeur: string; attributs: Record<string, unknown> }>,
+}));
+
+vi.mock('next/server', () => ({ after: () => undefined }));
+vi.mock('next/headers', () => ({
+  headers: async () => new Headers({ 'x-forwarded-for': '203.0.113.7' }),
+  cookies: async () => ({
+    get: (nom: string) => {
+      const valeur = pot.valeurs.get(nom);
+      return valeur === undefined ? undefined : { name: nom, value: valeur };
+    },
+    set: (nom: string, valeur: string, attributs: Record<string, unknown>) => {
+      pot.poses.push({ nom, valeur, attributs });
+    },
+  }),
+}));
+vi.mock('next/navigation', () => ({
+  redirect: (url: string) => {
+    throw new Error(`NEXT_REDIRECT ${url}`);
+  },
+}));
+vi.mock('../../../src/server/auth/lien-magique', async (original) => {
+  const reel = await original<typeof import('../../../src/server/auth/lien-magique')>();
+  return {
+    ...reel,
+    consommerLien: vi.fn(reel.consommerLien),
+    verifierLeCode: vi.fn(reel.verifierLeCode),
+  };
+});
 
 const SECRET_DES_SESSIONS = 'temoin-sec55-secret-des-sessions-'.padEnd(64, '0');
 const KID_DES_SESSIONS = kidDe(SECRET_DES_SESSIONS);
@@ -499,7 +538,8 @@ describe('REQ-SEC-003 — SEC-55 (2) : l’appareil se confirme à la CONSOMMATI
 
   it('REQ-SEC-003 : sans le port des appareils, la consommation est celle d’avant — aucune lecture, aucune écriture, aucun champ d’appareil', async () => {
     const c = consommation({});
-    const { appareils: _absent, ...sansAppareils } = c.p;
+    const sansAppareils: PortsDeConsommation = { ...c.p };
+    delete sansAppareils.appareils;
     const r = await consommerLien(
       { jeton: JETON, ipHash: null, identifiantAppareil: IDENTIFIANT },
       sansAppareils
@@ -680,5 +720,113 @@ describe('REQ-SEC-003 — SEC-55 (1) et (5) : la purge, au plus la durée d’un
     expect(d.appareilConnu.deleteMany).toHaveBeenCalledWith({
       where: { derniereVueAt: { lte: VU_APRES } },
     });
+  });
+});
+
+// ── le câblage de la connexion : le cookie de l'appareil, lu puis posé ───────────────────────────
+
+describe('REQ-SEC-003 — l’action de connexion lit le cookie de l’appareil, le passe au noyau, et pose celui qu’il rend', () => {
+  const actions = () => import('../../../src/app/(espace)/connexion/actions');
+  const NEUF = tirerIdentifiantDAppareil();
+  const SESSION = 'S'.repeat(43);
+  const posesDeLAppareil = () => pot.poses.filter((p) => p.nom === COOKIE_D_APPAREIL.nom);
+  const pose = (valeur: string) => ({
+    nom: COOKIE_D_APPAREIL.nom,
+    valeur,
+    attributs: COOKIE_D_APPAREIL.attributs,
+  });
+
+  beforeEach(() => {
+    pot.valeurs.clear();
+    pot.poses.length = 0;
+    for (const n of NOMS_DES_SECRETS)
+      vi.stubEnv(n, `temoin-sec55-actions-${n.toLowerCase()}-`.padEnd(48, '0'));
+    vi.stubEnv(
+      'PII_ENCRYPTION_KEY',
+      Array.from({ length: 32 }, (_, i) => i.toString(16).padStart(2, '0')).join('')
+    );
+    vi.stubEnv('NOTIFY_SINK', 'true');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('REQ-SEC-003 : le clic — le cookie lu est passé TEL QUEL à la consommation, et l’identifiant rendu est posé sous `__Host-partners-appareil`, aux attributs du cookie', async () => {
+    pot.valeurs.set(COOKIE_D_APPAREIL.nom, IDENTIFIANT);
+    vi.mocked(consommerLien).mockResolvedValueOnce({
+      etat: 'ouverte',
+      jetonSession: SESSION,
+      appareil: { identifiant: IDENTIFIANT, issue: 'connu' },
+    });
+    const { consommerUnLienDeConnexion } = await actions();
+    await expect(consommerUnLienDeConnexion(JETON)).rejects.toThrow('NEXT_REDIRECT');
+    expect(vi.mocked(consommerLien).mock.lastCall?.[0]).toMatchObject({
+      jeton: JETON,
+      identifiantAppareil: IDENTIFIANT,
+    });
+    expect(posesDeLAppareil()).toEqual([pose(IDENTIFIANT)]);
+  });
+
+  it('REQ-SEC-003 : sans cookie, l’action n’invente rien — le noyau reçoit l’absence, et c’est l’identifiant NEUF qu’il rend qui est posé', async () => {
+    vi.mocked(consommerLien).mockResolvedValueOnce({
+      etat: 'ouverte',
+      jetonSession: SESSION,
+      appareil: { identifiant: NEUF, issue: 'confirme' },
+    });
+    const { consommerUnLienDeConnexion } = await actions();
+    await expect(consommerUnLienDeConnexion(JETON)).rejects.toThrow('NEXT_REDIRECT');
+    expect(vi.mocked(consommerLien).mock.lastCall?.[0].identifiantAppareil).toBeUndefined();
+    expect(posesDeLAppareil()).toEqual([pose(NEUF)]);
+  });
+
+  it('REQ-SEC-003 : un avis échoué pose quand même l’identifiant — l’appareil reste inconnu, et la prochaine consommation sur lui retentera l’avis', async () => {
+    vi.mocked(consommerLien).mockResolvedValueOnce({
+      etat: 'ouverte',
+      jetonSession: SESSION,
+      appareil: { identifiant: NEUF, issue: 'avis_echoue' },
+    });
+    const { consommerUnLienDeConnexion } = await actions();
+    await expect(consommerUnLienDeConnexion(JETON)).rejects.toThrow('NEXT_REDIRECT');
+    expect(posesDeLAppareil()).toEqual([pose(NEUF)]);
+  });
+
+  it('REQ-SEC-003 : un lien refusé, ou une session ouverte sans appareil rendu (port non branché), ne pose AUCUN cookie d’appareil', async () => {
+    pot.valeurs.set(COOKIE_D_APPAREIL.nom, IDENTIFIANT);
+    const { consommerUnLienDeConnexion } = await actions();
+    vi.mocked(consommerLien).mockResolvedValueOnce({ etat: 'lien_invalide' });
+    await expect(consommerUnLienDeConnexion(JETON)).rejects.toThrow('NEXT_REDIRECT');
+    vi.mocked(consommerLien).mockResolvedValueOnce({ etat: 'ouverte', jetonSession: SESSION });
+    await expect(consommerUnLienDeConnexion(JETON)).rejects.toThrow('NEXT_REDIRECT');
+    expect(posesDeLAppareil()).toEqual([]);
+  });
+
+  it('REQ-SEC-003 : le CODE (SEC-54) — la même lecture et la même pose que le clic', async () => {
+    pot.valeurs.set(COOKIE_D_APPAREIL.nom, IDENTIFIANT);
+    pot.valeurs.set(COOKIE_DATTENTE.nom, 'e'.repeat(64));
+    vi.mocked(verifierLeCode).mockResolvedValueOnce({
+      etat: 'ouverte',
+      jetonSession: SESSION,
+      appareil: { identifiant: NEUF, issue: 'confirme' },
+    });
+    const formulaire = new FormData();
+    formulaire.set('code', CODE);
+    const { verifierUnCodeDeConnexion } = await actions();
+    await expect(verifierUnCodeDeConnexion(formulaire)).rejects.toThrow('NEXT_REDIRECT');
+    expect(vi.mocked(verifierLeCode).mock.lastCall?.[0]).toMatchObject({
+      code: CODE,
+      identifiantAppareil: IDENTIFIANT,
+    });
+    expect(posesDeLAppareil()).toEqual([pose(NEUF)]);
+  });
+
+  it('REQ-SEC-003 : un code refusé ne pose aucun cookie d’appareil', async () => {
+    pot.valeurs.set(COOKIE_DATTENTE.nom, 'e'.repeat(64));
+    vi.mocked(verifierLeCode).mockResolvedValueOnce({ etat: 'code_refuse' });
+    const formulaire = new FormData();
+    formulaire.set('code', CODE);
+    const { verifierUnCodeDeConnexion } = await actions();
+    await expect(verifierUnCodeDeConnexion(formulaire)).rejects.toThrow('NEXT_REDIRECT');
+    expect(posesDeLAppareil()).toEqual([]);
   });
 });
