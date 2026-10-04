@@ -754,6 +754,9 @@ function ligneDe(champs: Partial<LigneSimulee>): LigneSimulee {
   };
 }
 
+/** La date du dépôt que le banc rend (DM-25) ; un témoin la fixe autour du fait fondateur. */
+let deposeeDuBanc = new Date('2027-01-01T00:00:00.000Z');
+
 /** Un client de transaction : `$queryRaw` rend les lignes de la file, une par verrou. */
 function txSimule(lignes: LigneSimulee[]) {
   const verrous: { sql: string; valeurs: unknown[] }[] = [];
@@ -771,7 +774,9 @@ function txSimule(lignes: LigneSimulee[]) {
         return {};
       },
       // DM-55 : la libération de l'occupation lit le SIREN ; sans ligne, aucun rang n'est notifié.
-      findUnique: async () => null,
+      // DM-25 : l'antériorité lit la date du dépôt, POSTÉRIEURE aux faits du banc par défaut.
+      findUnique: async (q: { select?: { deposeeAt?: boolean } }) =>
+        q.select?.deposeeAt ? { deposeeAt: deposeeDuBanc } : null,
     },
   };
   return { tx: tx as never, verrous, mises };
@@ -1583,5 +1588,58 @@ describe('REQ-DM-006 — l’écrivain porte le motif, et écrit la notification
       { cle: 'decision_attribution', apporteurId: APPORTEUR },
       { cle: 'premier_rang_libere', apporteurId: APPORTEUR_RANG1 },
     ]);
+  });
+});
+
+/**
+ * DM-25 (juriste) : le fait fondateur de l'antériorité est ANTÉRIEUR au dépôt. Un fait daté du dépôt
+ * ou après lui n'annule rien : refus nommé `fait_posterieur_au_depot`, tenu à l'écriture même.
+ */
+describe('REQ-DM-006 — l’antériorité ne se fonde que sur un fait ANTÉRIEUR au dépôt (DM-25)', () => {
+  const DEPOT = new Date('2026-11-15T10:00:00.000Z');
+  const ms = (d: Date, delta: number) => new Date(d.getTime() + delta).toISOString();
+
+  beforeEach(() => {
+    journalSimule.ajouterEvenement.mockReset();
+    journalSimule.ajouterEvenement.mockResolvedValue({ id: '1', selfHash: 'x' });
+    deposeeDuBanc = DEPOT;
+  });
+
+  it.each([
+    ['daté du dépôt même', 0],
+    ['une milliseconde après le dépôt', 1],
+  ])(
+    'REQ-DM-006 : TÉMOIN — un fait fondateur %s : refus nommé, et RIEN n’est écrit',
+    async (_, delta) => {
+      const { transitionnerUneAttribution } = await ecrivain();
+      const { tx, mises } = txSimule([ligneDe({ statut: 'signee' })]);
+      const e = await refusDe(
+        transitionnerUneAttribution(tx, {
+          attributionId: ID,
+          transition: 'anteriorite_etablie',
+          critere: 'devis_signe',
+          fait: { ...DEVIS, le: ms(DEPOT, delta) },
+          acteur: { par: 'systeme' },
+          maintenant: MAINTENANT,
+        })
+      );
+      expect(e.code).toBe('fait_posterieur_au_depot');
+      expect(mises).toStrictEqual([]);
+      expect(evenementsEcrits()).toStrictEqual([]);
+    }
+  );
+
+  it('REQ-DM-006 : TÉMOIN — un fait une milliseconde AVANT le dépôt fonde l’antériorité', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const { tx } = txSimule([ligneDe({ statut: 'signee' })]);
+    const r = await transitionnerUneAttribution(tx, {
+      attributionId: ID,
+      transition: 'anteriorite_etablie',
+      critere: 'devis_signe',
+      fait: { ...DEVIS, le: ms(DEPOT, -1) },
+      acteur: { par: 'systeme' },
+      maintenant: MAINTENANT,
+    });
+    expect(r).toStrictEqual({ de: 'signee', vers: 'annulee' });
   });
 });
