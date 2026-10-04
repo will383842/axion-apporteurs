@@ -61,6 +61,28 @@ export type Rejeu =
 /** Demande le rejeu d'au plus `REJEU_MAX_PAR_APPEL` identifiants. */
 export type Rejouer = (eventIds: readonly string[]) => Promise<Rejeu>;
 
+/**
+ * La réponse dit-elle EXACTEMENT ce qui a été demandé ? `rearmes ∪ introuvables` égale l'ensemble
+ * dédoublonné des identifiants demandés, et `rearmes ∩ introuvables` est vide (lentille sécurité,
+ * forme finale) : chaque identifiant demandé est rendu une fois, dans une seule des deux listes, et
+ * rien d'autre. La réponse ne porte que des identifiants, sans séquence : c'est cette égalité qui la
+ * lie à SA demande, et une réponse authentique d'une autre demande est refusée.
+ */
+function rendExactement(
+  demandes: ReadonlySet<string>,
+  rearmes: readonly unknown[],
+  introuvables: readonly unknown[]
+): boolean {
+  const rendus = [...rearmes, ...introuvables];
+  if (rendus.length !== demandes.size) return false;
+  const vus = new Set<string>();
+  for (const id of rendus) {
+    if (typeof id !== 'string' || !demandes.has(id) || vus.has(id)) return false;
+    vus.add(id);
+  }
+  return true;
+}
+
 /** Le client de la route de rejeu : signée sur `<chemin>\n<corps>`, comme le serveur l'exige. */
 export function clientRejeu(c: CanalAxionia): Rejouer {
   return async (eventIds) => {
@@ -81,6 +103,9 @@ export function clientRejeu(c: CanalAxionia): Rejouer {
     const { rearmes, introuvables } = (brut ?? {}) as Record<string, unknown>;
     if (!Array.isArray(rearmes) || !Array.isArray(introuvables)) {
       return { ok: false, motif: 'reponse_illisible' };
+    }
+    if (!rendExactement(new Set(eventIds), rearmes, introuvables)) {
+      return { ok: false, motif: 'reponse_hors_demande' };
     }
     return { ok: true, rearmes: rearmes.length, introuvables: introuvables.length };
   };

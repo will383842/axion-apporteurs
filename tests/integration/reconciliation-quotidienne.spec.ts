@@ -13,8 +13,10 @@
  * L'AUTRE CÔTÉ. `axionia` ci-dessous rejoue la sémantique des deux routes RÉELLES d'axion-ia
  * (`src/server/partners-sync/relecture.ts` et `reconciliation.ts`, lues sur sa branche principale le
  * 2026-10-03) : signature de la requête sur `<t>.<cible>` (et `\n<corps>` pour le rejeu) sous le
- * secret de relecture, réponse signée sur `<t>.<corps>` sous le secret d'émission, NDJSON des corps
- * stockés, en-têtes `X-Axionia-Derniere-Sequence` et `X-Axionia-Suite`. Les corps sont ceux de la
+ * secret de relecture ; réponse signée sous le secret d'émission, la page de relecture sur la chaîne
+ * CANONIQUE que le `$comment` de la route déclare (INT-T74-P)
+ * `<t>.<after_sequence>.<limit>.<derniere>.<suite>.<corps>`, la réponse de rejeu sur `<t>.<corps>` ;
+ * NDJSON des corps stockés, en-têtes `X-Axionia-Derniere-Sequence` et `X-Axionia-Suite`. Les corps sont ceux de la
  * fixture du producteur réel (RM-03), tels quels.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -113,7 +115,8 @@ function axionia(options: {
   melanger?: boolean;
 }) {
   const appels: Appel[] = [];
-  const repondre = (corps: string, entetes: Record<string, string> = {}) => {
+  /** `signee` : ce que la signature couvre après `<t>.` — le corps seul, ou la chaîne canonique. */
+  const repondre = (corps: string, entetes: Record<string, string> = {}, signee = corps) => {
     const t = String(Math.floor(MAINTENANT_MS / 1000));
     return new Response(corps, {
       status: 200,
@@ -121,7 +124,7 @@ function axionia(options: {
         'x-axionia-timestamp': t,
         'x-axionia-signature': options.signatureFausse
           ? hmac(SECRET_EMISSION, `${t}.altere`)
-          : hmac(SECRET_EMISSION, `${t}.${corps}`),
+          : hmac(SECRET_EMISSION, `${t}.${signee}`),
         'x-axionia-kid': kidDe(SECRET_EMISSION),
         ...entetes,
       },
@@ -145,10 +148,20 @@ function axionia(options: {
       const suivantes = options.file.filter((l) => l.sequence > apres);
       const rendues = suivantes.slice(0, limite);
       const ordre = options.melanger ? [...rendues].reverse() : rendues;
-      return repondre(ordre.map((l) => l.corps).join('\n'), {
-        'x-axionia-derniere-sequence': String(rendues.at(-1)?.sequence ?? apres),
-        'x-axionia-suite': suivantes.length > limite ? '1' : '0',
-      });
+      const page = ordre.map((l) => l.corps).join('\n');
+      const derniere = String(rendues.at(-1)?.sequence ?? apres);
+      const suite = suivantes.length > limite ? '1' : '0';
+      return repondre(
+        page,
+        { 'x-axionia-derniere-sequence': derniere, 'x-axionia-suite': suite },
+        [
+          url.searchParams.get('after_sequence'),
+          url.searchParams.get('limit'),
+          derniere,
+          suite,
+          page,
+        ].join('.')
+      );
     }
     if (url.pathname === CHEMIN_REJEU) {
       const ids = (JSON.parse(corps) as { eventIds: string[] }).eventIds;

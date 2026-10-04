@@ -216,7 +216,7 @@ describe('REQ-INT-012 — le client de relecture vérifie la chaîne CANONIQUE (
     });
   });
 
-  it('REQ-INT-012 : TÉMOIN D1 — une page authentique d’une AUTRE lecture (after_sequence=10) servie à une demande à 3 est refusée', async () => {
+  it('REQ-INT-012 : TÉMOIN « D1 » — une page authentique d’une AUTRE lecture (after_sequence=10) servie à une demande à 3 est refusée', async () => {
     const autre: Page = {
       corps: [ligne(11), ligne(12)].join('\n'),
       derniere: '12',
@@ -239,7 +239,7 @@ describe('REQ-INT-012 — le client de relecture vérifie la chaîne CANONIQUE (
     expect(String(LIMITE_PAR_PAGE)).not.toBe('500');
   });
 
-  it('REQ-INT-012 : TÉMOIN D2 — un en-tête X-Axionia-Suite modifié APRÈS la signature est refusé', async () => {
+  it('REQ-INT-012 : TÉMOIN « D2 » — un en-tête X-Axionia-Suite modifié APRÈS la signature est refusé', async () => {
     expect(
       await clientRelecture(canal({ ...APRES_3, suite: '0', signee: { suite: '1' } }))(3n)
     ).toEqual({ ok: false, motif: 'signature_refusee' });
