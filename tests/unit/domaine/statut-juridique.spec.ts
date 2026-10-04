@@ -9,7 +9,7 @@
  *     qui signe et qui facture) ;
  *   — la correspondance vers `QualiteExercice`, fonction pure : les six sociétés donnent
  *     `societe_commerciale`, les deux formes individuelles la qualité de l'activité déclarée ;
- *     `QualiteExercice` reste à quatre valeurs (DM-50) ;
+ *     `QualiteExercice` reste à quatre valeurs ;
  *   — l'accord de la fonction et du CHECK `apporteurs_qualite_suit_le_statut` : ce que la fonction
  *     écrit, la base l'accepte toujours (le CHECK lui-même est jugé en base réelle par
  *     `tests/integration/statut-juridique-check.spec.ts`) ;
