@@ -12,6 +12,7 @@
  * `apporteur-matrice-et-statuts.spec.ts` ; ce fichier tient le verrou lexical, avec son contre-témoin.
  */
 import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { MOTIFS_RESILIATION } from '../../../src/domain/apporteur/statut';
 
 // La garde d'acceptation (SEC-53) est hors du sujet ici : elle passe, pour que seul le niveau juge.
@@ -403,5 +404,73 @@ describe('REQ-SEC-032 — la résiliation révoque les sessions ouvertes', () =>
       'utf8'
     );
     expect(source).toContain('sessionVersion: { increment: 1 }');
+  });
+});
+
+/**
+ * La résiliation pour manquement (art. 11.2, REQ-JUR-006 ; A02, #703, 5980982895 §2) : refusée
+ * (`mise_en_demeure_requise`) sans une mise en demeure du MÊME article, dont le courriel est ENVOYÉ et
+ * le délai ÉCHU. Borne exclusive en jours civils de Paris, comme la fenêtre de DM-55 ; refusée avant
+ * l'échéance et pile à l'échéance, admise à l'échéance plus 1 ms. Seule exception : l'inexécution
+ * irrémédiable, cochée et motivée.
+ */
+describe('REQ-JUR-006 — la mise en demeure préalable de l’art. 11.2', () => {
+  // Envoyée le 1er octobre 2026 à 10 h, heure de Paris (8 h UTC, heure d'été).
+  const ENVOI = Date.parse('2026-10-01T08:00:00.000Z');
+
+  it('REQ-JUR-006 : TÉMOIN — l’échéance est minuit, heure de Paris, du jour qui suit l’envoi + MISE_EN_DEMEURE_JOURS', async () => {
+    const { echeanceDeLaMiseEnDemeure } = await import('../../../src/domain/apporteur/resiliation');
+    const { SEUILS } = await import('../../../src/domain/seuils/ssot');
+    expect(SEUILS.MISE_EN_DEMEURE_JOURS.valeur).toBe(15);
+    // 1er + 15 = 16 octobre ; minuit du 17 octobre à Paris = 16 octobre 22 h UTC (heure d'été).
+    expect(new Date(echeanceDeLaMiseEnDemeure(ENVOI)).toISOString()).toBe(
+      '2026-10-16T22:00:00.000Z'
+    );
+    // Le changement d'heure (25 octobre) ne déplace pas le jour : envoi le 20 → minuit du 5 novembre.
+    expect(
+      new Date(echeanceDeLaMiseEnDemeure(Date.parse('2026-10-20T08:00:00.000Z'))).toISOString()
+    ).toBe('2026-11-04T23:00:00.000Z');
+  });
+
+  it('REQ-JUR-006 : TÉMOIN — refusée sans mise en demeure, avant l’échéance et pile à l’échéance ; admise à l’échéance plus 1 ms', async () => {
+    const { echeanceDeLaMiseEnDemeure, jugerLaResiliationPourManquement } =
+      await import('../../../src/domain/apporteur/resiliation');
+    const echeance = echeanceDeLaMiseEnDemeure(ENVOI);
+    const juger = (maintenant: number, envois: (number | null)[]) =>
+      jugerLaResiliationPourManquement({
+        envoisDeLArticle: envois,
+        maintenant,
+        inexecutionIrremediable: false,
+      });
+    expect(juger(echeance + 1, [])).toEqual({ ok: false, motif: 'mise_en_demeure_requise' });
+    expect(juger(echeance - 1, [ENVOI])).toEqual({ ok: false, motif: 'mise_en_demeure_requise' });
+    expect(juger(echeance, [ENVOI])).toEqual({ ok: false, motif: 'mise_en_demeure_requise' });
+    expect(juger(echeance + 1, [ENVOI])).toEqual({ ok: true });
+    // Un courriel non envoyé (envoye_at nul) ne fait courir aucun délai.
+    expect(juger(echeance + 1, [null])).toEqual({ ok: false, motif: 'mise_en_demeure_requise' });
+    // Une seule mise en demeure échue suffit, quelle que soit sa place.
+    expect(juger(echeance + 1, [null, ENVOI + 5 * 86_400_000, ENVOI])).toEqual({ ok: true });
+  });
+
+  it('REQ-JUR-006 : l’inexécution irrémédiable, cochée, dispense de la mise en demeure', async () => {
+    const { jugerLaResiliationPourManquement } =
+      await import('../../../src/domain/apporteur/resiliation');
+    expect(
+      jugerLaResiliationPourManquement({
+        envoisDeLArticle: [],
+        maintenant: ENVOI,
+        inexecutionIrremediable: true,
+      })
+    ).toEqual({ ok: true });
+  });
+
+  it('REQ-JUR-006 : TÉMOIN STATIQUE — rien ne COMPTE les mises en demeure (art. 11.2, dernière phrase)', () => {
+    for (const f of [
+      'src/domain/apporteur/resiliation.ts',
+      'src/server/apporteur/resiliation.ts',
+    ]) {
+      const source = readFileSync(f, 'utf8');
+      expect(source, f).not.toMatch(/envoisDeLArticle\.length|_count|\.count\(|COUNT\(/);
+    }
   });
 });
