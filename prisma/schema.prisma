@@ -394,7 +394,7 @@ model SessionEspace {
 /// tronqué à 128 bits, sous la clé dédiée des appareils (`kid`) —, jamais l'adresse réseau ni
 /// l'identifiant en clair (CHECK `appareils_connus_empreinte_forme`, SQL brut). La dernière vue
 /// avance à chaque reconnaissance ; la ligne est purgée une durée de session après elle
-/// (`appareils_purger`). Migration `20261003001800_appareils_connus`.
+/// (`appareils_purger`). Migration `20261003002800_appareils_connus`.
 model AppareilConnu {
   id            String    @id @default(uuid()) @db.Uuid
   apporteurId   String    @map("apporteur_id") @db.Uuid
