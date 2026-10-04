@@ -1726,3 +1726,52 @@ describe('REQ-SEC-023 — SEC-30 : la console ne crée jamais un administrateur 
     for (const s of console_) expect(s).not.toMatch(/create\(\{[^}]*valideAt/s);
   });
 });
+
+// CPL-T07 : le dossier de conformité. Vérifier une pièce à l'admin et au qualifieur ; ouvrir et
+// valider le dossier à l'admin seul ; la validation, qui mène à la signature, sous step-up
+// (condition de la sécurité).
+describe('REQ-SEC-023 — CPL-T07 : les droits du dossier de conformité', () => {
+  const sessionAdmin = (ms: number) => ({
+    ...valide(),
+    creeAt: new Date(T0.getTime() - ms),
+    utilisateurConsole: {
+      id: 'u-admin',
+      role: 'admin' as const,
+      desactiveAt: null,
+      sessionVersion: 0,
+      valideAt: T0,
+    },
+  });
+  const releve = DUREES_AUTH.releveMs.valeur;
+
+  it('REQ-SEC-023 : TÉMOIN — vérifier une pièce : admin et qualifieur ; ouvrir et valider le dossier : admin seul', () => {
+    expect(MATRICE_DES_ROLES['ecran:conformite_apporteur']).toEqual({
+      roles: ['admin', 'qualifieur'],
+      stepUp: false,
+    });
+    expect(MATRICE_DES_ROLES['action:verifier_piece']).toEqual({
+      roles: ['admin', 'qualifieur'],
+      stepUp: false,
+    });
+    expect(MATRICE_DES_ROLES['action:ouvrir_kyc']).toEqual({ roles: ['admin'], stepUp: false });
+    expect(MATRICE_DES_ROLES['action:valider_kyc']).toEqual({ roles: ['admin'], stepUp: true });
+    for (const role of ['comptable', 'lecteur'] as const)
+      for (const droit of [
+        'action:verifier_piece',
+        'action:ouvrir_kyc',
+        'action:valider_kyc',
+        'ecran:conformite_apporteur',
+      ])
+        expect(roleAutorise(droit, role), `${droit} × ${role}`).toBe(false);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — valider le dossier, session ouverte il y a le délai de relèvement : « releve_requis » ; un instant avant, elle passe', () => {
+    expect(jugerAcces('action:valider_kyc', sessionAdmin(releve), T0, KID)).toEqual({
+      ok: false,
+      motif: 'releve_requis',
+    });
+    expect(jugerAcces('action:valider_kyc', sessionAdmin(releve - 1), T0, KID).ok).toBe(true);
+    // Ouvrir le dossier ne regarde pas l'âge de la session.
+    expect(jugerAcces('action:ouvrir_kyc', sessionAdmin(releve * 10), T0, KID).ok).toBe(true);
+  });
+});
