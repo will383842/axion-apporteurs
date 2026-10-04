@@ -116,6 +116,14 @@ export default defineConfig({
       'tests/unit/domaine/journal-charge-fermee.spec.ts',
       'tests/unit/domaine/gardes-de-schema.spec.ts',
       'tests/unit/domaine/schema-centimes.spec.ts',
+      // SEC-12 : la garde de famille (REQ-SEC-016) LIT le texte de src/server/securite/rate-limit.ts
+      // pour confronter les compteurs lus en SSOT (`SEUILS.<NOM>.valeur [* <CONSTANTE>]`). Quand une PR
+      // touche ce registre, Stryker l'instrumente dans le bac, et la garde y voit des valeurs tapées :
+      // 53 témoins sur 162 rougissent à blanc (mesuré en simulant l'instrumentation, porte A de #691).
+      // Le fichier ENTIER est écarté, comme ses voisines qui jugent une garde ; il tourne dans pnpm test
+      // et en porte A, sur le vrai texte. Les mutants du registre restent jugés par les tests qui
+      // EXÉCUTENT `limiter` (lien magique, webhook, API entrante, débit du dépôt).
+      'tests/unit/securite/rate-famille.spec.ts',
     ],
     testNamePattern: new RegExp(`^(?!.*(?:${ECARTES.join('|')})).*$`),
   },
