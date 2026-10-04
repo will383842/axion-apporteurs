@@ -41,6 +41,7 @@ import { clesPii } from '../securite/pii';
 import {
   FORMES_D_ATTENTE,
   creerAlerteur,
+  exigerLeTransfertConsigne,
   notifieurTelegram,
   type Alerteur,
 } from '../integrations/telegram/alertes';
@@ -172,6 +173,8 @@ export async function alerterLesFranchissements(
 
 /** Le canal d'alerte du serveur, lu dans l'environnement ; `null` s'il n'est pas configuré. */
 export function canalDAlerte(env: Readonly<Record<string, string | undefined>>): Alerteur | null {
+  // SEC-64 : en production, un jeton sans décision consignée sur le transfert refuse le démarrage.
+  exigerLeTransfertConsigne(env);
   const jeton = env.TELEGRAM_BOT_TOKEN;
   const salon = env.TELEGRAM_CHAT_ID;
   if (jeton === undefined || jeton === '' || salon === undefined || salon === '') return null;
