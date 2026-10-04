@@ -1,5 +1,6 @@
 // @req REQ-SEC-023
 // @req REQ-UX-024 → REQ-SEC-023
+// @req REQ-SEC-058
 /**
  * `matrice-des-roles.spec.ts` — les rôles de la console (SEC-17) : la matrice droits × rôles en UN
  * fichier, `requireRole` relu en base à chaque requête, et la garde qui confronte le disque à la
@@ -115,6 +116,13 @@ describe('REQ-SEC-023 — les quatre rôles et la matrice unique', () => {
     expect(roleAutorise('action:rattacher_manuellement', 'admin')).toBe(true);
     expect(roleAutorise('action:rattacher_manuellement', 'comptable')).toBe(false);
     expect(roleAutorise('action:rattacher_manuellement', 'lecteur')).toBe(false);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — la lecture du journal des accès est à l’admin seul, refusée à tout rôle non nommé', () => {
+    expect(Object.hasOwn(MATRICE_DES_ROLES, 'action:lire_journal_des_acces')).toBe(true);
+    expect(roleAutorise('action:lire_journal_des_acces', 'admin')).toBe(true);
+    for (const role of ROLES_CONSOLE.filter((r) => r !== 'admin'))
+      expect(roleAutorise('action:lire_journal_des_acces', role)).toBe(false);
   });
 
   it('REQ-SEC-023 : le `comptable` voit l’IBAN, approuve le lot et produit le pain.001 — rien de plus', () => {
