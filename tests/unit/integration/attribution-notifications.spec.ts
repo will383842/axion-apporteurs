@@ -1617,3 +1617,46 @@ describe('REQ-UX-016 — un non-rendu lève une alerte Telegram fermée (arbitra
     for (const o of objets) expect(duPassage.has(o.id)).toBe(false);
   });
 });
+
+describe('REQ-SEC-008 — la notification d’un courriel est HORS DE L’ESPACE (sécurité, DM-55)', () => {
+  it('REQ-SEC-008 : TÉMOIN — notificationEspaceId est à la fois référence déclarée et clé REFUSÉE : un creer() qui la porte est refusé avant toute base', async () => {
+    const acces = await import('../../../src/server/acces/for-apporteur');
+    expect(acces.CLES_REFUSEES.courrielEnvoye).toContain('notificationEspaceId');
+    expect(acces.REFERENCES_CLOISONNEES.courrielEnvoye).toMatchObject({
+      notificationEspaceId: 'notificationEspace',
+    });
+    const appels: unknown[] = [];
+    const delegue = new Proxy(
+      {},
+      {
+        get:
+          () =>
+          async (...a: unknown[]) => (appels.push(a), null),
+      }
+    );
+    const client = new Proxy({}, { get: () => delegue }) as never;
+    const apporteur = '0190f3a0-0000-7000-8000-0000000000a1';
+    let refus = '';
+    try {
+      await acces.forApporteur(client, apporteur).courrielEnvoye.creer({
+        notificationEspaceId: '0190f3a0-0000-7000-8000-0000000000b2',
+      } as never);
+    } catch (e) {
+      refus = (e as Error).message;
+    }
+    expect(refus).toBe(acces.REFUS.cle);
+    expect(appels).toEqual([]);
+  });
+
+  it('REQ-SEC-008 : TÉMOIN (statique) — le passage d’envoi, le rendu et le lecteur des faits n’importent PAS le journal applicatif', () => {
+    for (const f of [
+      'src/server/taches/envoyer-notifications-espace.ts',
+      'src/server/attribution/notifications.ts',
+      'src/server/anomalie/justification.ts',
+    ]) {
+      const texte = readFileSync(f, 'utf8');
+      expect(texte.includes('lib/logger'), f).toBe(false);
+      expect(texte, f).not.toMatch(/creerJournal/);
+    }
+  });
+});
