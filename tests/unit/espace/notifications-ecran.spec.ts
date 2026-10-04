@@ -36,7 +36,7 @@ import {
   entreeDeLEspace,
   notificationsDeLEspace,
   type ClientDesNotifications,
-} from '../../../src/server/notifications/espace';
+} from '../../../src/server/notifications/notifications-de-l-espace';
 
 const UNE: NotificationDeLEspace = {
   id: '11111111-1111-4111-8111-111111111111',

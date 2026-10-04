@@ -16,7 +16,7 @@ import { ETATS_VIDES_ESPACE } from '../../../content/micro-copy/espace/etats-vid
 import { NOTIFICATIONS } from '../../../content/micro-copy/espace/notifications';
 // Mobile d'abord, par une feuille de la même origine : un style en ligne serait refusé par la CSP.
 import styles from './notifications.module.css';
-import type { NotificationDeLEspace } from '../../../server/notifications/espace';
+import type { NotificationDeLEspace } from '../../../server/notifications/notifications-de-l-espace';
 
 export type { NotificationDeLEspace };
 

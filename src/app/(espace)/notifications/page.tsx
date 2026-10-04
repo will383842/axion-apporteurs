@@ -11,7 +11,7 @@ import { after } from 'next/server';
 import { portsDeLaGarde as portsDeLAcceptation } from '../../../server/auth/garde-espace';
 import { dependancesDuProcessus } from '../../../server/auth/lien-magique-production';
 import { COOKIE_DE_SESSION, pageEspace, type PortsDeSession } from '../../../server/auth/session';
-import { notificationsDeLEspace } from '../../../server/notifications/espace';
+import { notificationsDeLEspace } from '../../../server/notifications/notifications-de-l-espace';
 import {
   ROUTE_CONFIDENTIALITE,
   ROUTE_INDISPONIBLE,
