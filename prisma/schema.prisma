@@ -415,6 +415,7 @@ model UtilisateurConsole {
   rattachementsDecides    RattachementManuel[]
   contestationsRepondues  Contestation[]
   qualificationsSaisies   Qualification[]
+  sirensListeNoireAjoutes SirenListeNoire[]
   /// CPL-T06 : les décisions de candidature dont l'utilisateur est l'auteur.
   decisionsCandidature    DecisionCandidature[]
 
@@ -1309,4 +1310,64 @@ model Qualification {
   @@index([attributionId, creeAt])
   @@index([auteurId])
   @@map("qualifications")
+}
+
+/// L'origine d'une entreprise connue de la Société (REQ-DM-029) : les valeurs du glossaire.
+enum OrigineEntrepriseConnue {
+  client
+  devis
+  financeur
+
+  @@map("origine_entreprise_connue")
+}
+
+/// Le motif d'inscription d'un SIREN sur la liste tenue par la Société (REQ-DM-028).
+enum MotifListeNoire {
+  administration
+  financeur_public
+  financeur_paritaire
+  organisme_de_formation_partenaire
+
+  @@map("motif_liste_noire")
+}
+
+/// La liste tenue par la Société (DM-10-P, REQ-DM-028) : un SIREN d'organisme, jamais une personne.
+model SirenListeNoire {
+  siren       String             @id @db.Char(9)
+  motif       MotifListeNoire
+  ajouteParId String             @map("ajoute_par_id") @db.Uuid
+  ajoutePar   UtilisateurConsole @relation(fields: [ajouteParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  ajouteAt    DateTime           @default(dbgenerated("clock_timestamp()")) @map("ajoute_at") @db.Timestamptz(3)
+
+  @@map("sirens_liste_noire")
+}
+
+/// La projection locale de l'antériorité (DM-10-P, REQ-DM-029) : une ligne par SIREN et par origine,
+/// alimentée par les seuls événements d'axionia et par la liste de la Société. Mutable : la trace
+/// vit dans `evenements_recus`.
+model EntrepriseConnue {
+  siren            String                  @db.Char(9)
+  origine          OrigineEntrepriseConnue
+  connueDepuisAt   DateTime                @map("connue_depuis_at") @db.Timestamptz(3)
+  /// Origine client : la date de la DERNIÈRE prestation facturée (dernière facture non annulée), d'où
+  /// se compte l'effacement à vingt-quatre mois. Origine devis : la dernière émission ou signature.
+  dernierContactAt DateTime                @map("dernier_contact_at") @db.Timestamptz(3)
+
+  @@id([siren, origine])
+  @@map("entreprises_connues")
+}
+
+/// Un devis d'axionia, projeté pour juger « entièrement facturé » devis par devis (art. 3.3, écart B-11) :
+/// le facturé HT, avoirs déduits, comparé au montant HT. Aucune donnée de personne.
+model DevisConnu {
+  devisRef            String    @id @map("devis_ref") @db.VarChar(64)
+  siren               String    @db.Char(9)
+  emisAt              DateTime  @map("emis_at") @db.Timestamptz(3)
+  signeAt             DateTime? @map("signe_at") @db.Timestamptz(3)
+  montantTotalHtCents Int       @map("montant_total_ht_cents")
+  factureHtCents      Int       @default(0) @map("facture_ht_cents")
+  majAt               DateTime  @default(dbgenerated("clock_timestamp()")) @map("maj_at") @db.Timestamptz(3)
+
+  @@index([siren])
+  @@map("devis_connus")
 }

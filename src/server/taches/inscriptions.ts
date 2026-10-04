@@ -69,6 +69,7 @@ import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjonct
 import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
 import { clientDuTiers } from '../integrations/recherche-entreprises/tiers';
 import { limiteurDuRegistre } from '../integrations/recherche-entreprises/limiteur';
+import { traitantsDeLAnteriorite } from '../entreprise-connue/projection';
 
 /**
  * Les traitants branchés, par type d'événement reçu. Un seul aujourd'hui : la candidature reçue
@@ -78,6 +79,8 @@ import { limiteurDuRegistre } from '../integrations/recherche-entreprises/limite
 export function traitantsDeReception(prisma: PrismaClient): Traitants {
   return {
     [TypeEvenementRecu.candidature_recue]: (recu) => traiterCandidature(prisma, recu),
+    // DM-10-P : la projection de l'antériorité (client.*, devis, factures, avoirs, annulations).
+    ...traitantsDeLAnteriorite(prisma),
   };
 }
 
