@@ -75,6 +75,7 @@ import {
   portsDuCode,
   portsDuCodeConsole,
 } from '../../../src/server/auth/lien-magique-production';
+import { transactionDeConfirmation } from '../../../src/server/auth/lien-magique-depot';
 import { purgerLesAppareils } from '../../../src/server/taches/purger-appareils';
 import { inscriptions } from '../../../src/server/taches/inscriptions';
 import { TACHES } from '../../../src/server/taches/registre';
@@ -1007,6 +1008,46 @@ function unDouble(o: { frais?: number } = {}) {
   };
   return { d, prisma: d as unknown as PrismaClient };
 }
+
+describe('REQ-SEC-003 — la transaction COURTE de confirmation, telle que la base la reçoit', () => {
+  function base(ligneLue: Record<string, unknown> | null) {
+    const findUnique = vi.fn(async () => ligneLue);
+    const tx = { sessionEspace: { findUnique }, appareilConnu: unDouble().d.appareilConnu };
+    const $transaction = vi.fn(async (travail: (t: typeof tx) => Promise<unknown>) => travail(tx));
+    return { findUnique, $transaction, prisma: { $transaction } as unknown as PrismaClient };
+  }
+
+  it('REQ-SEC-003 : UNE transaction relit la session par l’empreinte de son jeton — ce que juge `jugerSession`, et le lien qui l’a ouverte —, et rend la ligne séparée du lien', async () => {
+    const attendue = ligne(T);
+    const b = base({ ...attendue, lienMagiqueId: LIEN.id });
+    const lue = await transactionDeConfirmation(b.prisma)((tx) => tx.lireSession('empreinte-x'));
+    expect(b.$transaction).toHaveBeenCalledTimes(1);
+    expect(b.findUnique).toHaveBeenCalledWith({
+      where: { tokenHash: 'empreinte-x' },
+      select: {
+        id: true,
+        apporteurId: true,
+        kid: true,
+        expireAt: true,
+        revoqueAt: true,
+        sessionVersion: true,
+        lienMagiqueId: true,
+        apporteur: { select: { statut: true, sessionVersion: true } },
+        lienMagique: { select: { consommeAt: true } },
+      },
+    });
+    expect(lue).toEqual({ ligne: attendue, lienMagiqueId: LIEN.id });
+  });
+
+  it('REQ-SEC-003 : une session absente se lit `null` ; le dépôt des appareils est celui de la MÊME transaction', async () => {
+    const b = base(null);
+    expect(await transactionDeConfirmation(b.prisma)((tx) => tx.lireSession('x'))).toBeNull();
+    const confirme = await transactionDeConfirmation(b.prisma)((tx) =>
+      tx.appareils.confirmerSiInconnu(APPAREIL, T2, VU_APRES_T2)
+    );
+    expect(confirme).toBe('confirme');
+  });
+});
 
 describe('REQ-SEC-003 — le dépôt des appareils, tel que la base le reçoit', () => {
   it('REQ-SEC-003 : reconnaître est UNE écriture conditionnelle — ce compte, cette empreinte, cette clé, vu après la limite — qui fait avancer la dernière vue', async () => {
