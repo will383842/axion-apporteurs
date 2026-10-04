@@ -1,7 +1,7 @@
 // @req REQ-JUR-007
 // @req REQ-DM-043
 /**
- * L'antériorité établie APRÈS l'enregistrement (DM-25) — la règle pure, rectifiée par la juriste.
+ * L'antériorité établie APRÈS l'enregistrement — la règle pure, rectifiée par la juriste.
  *
  * L'art. 3.3 juge l'antériorité AU DÉPÔT : une attribution qui occupe un SIREN est annulée si, à
  * `deposeeAt`, l'un des trois critères était rempli par des faits datés AVANT le dépôt —
@@ -67,6 +67,19 @@ describe('REQ-JUR-007 — les trois critères, jugés au dépôt', () => {
     const solde = devis(vieux, { signeAt: vieux, montant: 1000, factureAvantLeDepot: 1000 });
     expect(critereAuDepot({ ...RIEN, devis: [ouvert] }, DEPOT)).toBe('devis_signe');
     expect(critereAuDepot({ ...RIEN, devis: [solde] }, DEPOT)).toBeNull();
+  });
+
+  it('REQ-JUR-007 : la facture la plus RÉCENTE avant le dépôt fait foi, quel que soit l’ordre reçu', () => {
+    const vieille = ms(LIMITE_CLIENT, -1);
+    const recente = ms(DEPOT, -1);
+    expect(critereAuDepot({ ...RIEN, facturesAt: [recente, vieille] }, DEPOT)).toBe('cliente');
+    expect(critereAuDepot({ ...RIEN, facturesAt: [vieille, recente] }, DEPOT)).toBe('cliente');
+  });
+
+  it('REQ-JUR-007 : un devis signé SOLDÉ à côté d’un devis émis récent — le critère est le devis émis', () => {
+    const vieux = new Date('2020-01-01T00:00:00.000Z');
+    const solde = devis(vieux, { signeAt: vieux, montant: 10, factureAvantLeDepot: 10 });
+    expect(critereAuDepot({ ...RIEN, devis: [solde, devis(ms(DEPOT, -1))] }, DEPOT)).toBe('devis');
   });
 
   it('REQ-JUR-007 : la préséance de la règle — cliente, puis devis signé, puis devis émis', () => {
