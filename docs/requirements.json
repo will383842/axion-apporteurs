@@ -699,6 +699,7 @@
         "DM-31",
         "DM-53",
         "DM-62",
+        "DM-69",
         "UX-P1-51"
       ]
     },
@@ -750,6 +751,7 @@
         "SEC-30",
         "SEC-45",
         "SEC-55",
+        "SEC-62",
         "UX-P1-04"
       ]
     },
@@ -935,8 +937,8 @@
     {
       "id": "REQ-SEC-016",
       "domaine": "anti-abus-securite",
-      "texte": "Le dépôt est en outre limité à 20 / 10 min par hash IP (`surPanne: laisser-passer`) ; le compteur par identité déclare `surPanne: refuser` ; tout compteur sous préfixe `magic:`, `depot:`, `verif:`, `webhook:`, `auth:` déclare sa conduite sur panne.",
-      "source": "nouvelle (patron `rate-limit.spec.ts` garde de famille)",
+      "texte": "Le dépôt est limité par DEUX compteurs : un compteur de SESSION, OBLIGATOIRE (clé : l'empreinte de la session ou du jetonDepotId, jamais l'apporteurId), et un compteur d'IP (hash IP) ; la fenêtre et les plafonds sont lus en SSOT, avec leur source ; `surPanne: refuser` ; tout compteur sous préfixe `magic:`, `depot:`, `verif:`, `webhook:`, `auth:` déclare sa conduite sur panne. [Amendée au rattrapage 108, arbitrage de la coordination du 2026-10-04 (sécurité, juriste) : remplace « limité à 20 / 10 min par hash IP (`surPanne: laisser-passer`) ; le compteur par identité déclare `surPanne: refuser` ».]",
+      "source": "nouvelle (patron `rate-limit.spec.ts` garde de famille) ; rattrapage 108 (arbitrage de la coordination du 2026-10-04, sécurité et juriste)",
       "statut": "active",
       "remplaceePar": null,
       "module": 9,
@@ -946,7 +948,8 @@
         "DM-31",
         "QA-T68",
         "SEC-03",
-        "SEC-10"
+        "SEC-10",
+        "SEC-12"
       ]
     },
     {
@@ -2197,7 +2200,9 @@
         "INT-T51",
         "INT-T70-A",
         "INT-T70-P",
-        "INT-T74-P"
+        "INT-T74-P",
+        "INT-T76-A",
+        "INT-T76-P"
       ]
     },
     {
@@ -6338,6 +6343,8 @@
       "taches": [
         "INT-T65-A",
         "INT-T66-A",
+        "INT-T76-A",
+        "INT-T76-P",
         "JUR-T47"
       ]
     },
@@ -6398,6 +6405,7 @@
       "taches": [
         "DM-59",
         "DM-60",
+        "DM-68",
         "JUR-T59",
         "UX-P1-48"
       ]
@@ -6441,7 +6449,8 @@
       "etape": 10,
       "phase": 1,
       "taches": [
-        "JUR-T61"
+        "JUR-T61",
+        "JUR-T62"
       ]
     },
     {
@@ -6508,6 +6517,21 @@
       "phase": -1,
       "taches": [
         "GOV-029"
+      ]
+    },
+    {
+      "id": "REQ-GOV-034",
+      "domaine": "gouvernance-agents",
+      "texte": "Porte de mise en service : aucune mise en production tant qu'une tâche marquée « BLOQUANTE AVANT LA MISE EN SERVICE » n'est pas fusionnée. La porte (GOV-146) tient ces tâches en dépendances ; une garde de `gov:tasks` (GOV-147) rougit si une tâche OUVERTE porte le marqueur sans figurer dans ses dépendances.",
+      "source": "rattrapage 108 (coordination, par délégation de Williams, 2026-10-04 ; refus de la lentille exactitude sur #701)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "GOV-146",
+        "GOV-147"
       ]
     }
   ]
