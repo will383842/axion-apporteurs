@@ -2,8 +2,9 @@
 // @req REQ-UX-016
 // @req REQ-JUR-006
 /**
- * UX-P1-59 — l'espace de l'apporteur affiche `mise_en_demeure` et `resiliation` (SEC-19), que le
- * lecteur d'UX-P1-54 écartait encore (rattrapage 114a).
+ * UX-P1-59 — l'espace de l'apporteur affiche `mise_en_demeure` et `resiliation` (les deux
+ * notifications du contrat), que le lecteur de l'écran des notifications écartait encore
+ * (rattrapage 114a).
  *
  * CE QU'IL PROUVE (conditions de la sécurité, #726, 5984213408) :
  *   1. le lecteur ne rend QUE les trois clés `premier_rang_libere`, `mise_en_demeure`, `resiliation` ;
@@ -98,12 +99,9 @@ function client(
         );
       },
     },
-    evenement: {
-      findUnique: async (args: { where: { id: bigint } }) =>
-        evenements[String(args.where.id)] ?? null,
-    },
   } as unknown as ClientDesNotifications;
-  return { c, lecturesDeDecision };
+  const lireUnFait = async (id: string) => evenements[id] ?? null;
+  return { c, lecturesDeDecision, lireUnFait };
 }
 
 const quand = new Date('2027-06-01T08:00:00.000Z');
@@ -271,11 +269,23 @@ describe('REQ-UX-016 — la résiliation, vue par le résilié en lecture', () =
 
   it('REQ-UX-016 : la résiliation s’affiche avec le paragraphe de son motif, lu dans la charge de son événement', async () => {
     const { cles, decision, notification, evenements } = await resiliation();
-    const { c } = client([notification], [decision], evenements);
-    const [n] = await notificationsDeLEspace(c, MOI, { cles });
+    const { c, lireUnFait } = client([notification], [decision], evenements);
+    const [n] = await notificationsDeLEspace(c, MOI, { cles, lireUnFait });
     expect(n?.titre).toBe("Fin de votre contrat d'apporteur");
     expect(n?.corps).toContain('votre décision de résilier le contrat');
     expect(n?.route).toBe('/mes-commissions');
+  });
+
+  it('REQ-UX-016 : échec FERMÉ — sans lecteur de la charge, ou sur une autre charge, la résiliation n’apparaît pas', async () => {
+    const { cles, decision, notification, evenements } = await resiliation();
+    const sans = client([notification], [decision], evenements);
+    expect(await notificationsDeLEspace(sans.c, MOI, { cles })).toEqual([]);
+    const autre = client([notification], [decision], {
+      '52': { type: 'apporteur_statut_modifie', charge: { de: 'signe' } },
+    });
+    expect(
+      await notificationsDeLEspace(autre.c, MOI, { cles, lireUnFait: autre.lireUnFait })
+    ).toEqual([]);
   });
 
   it('REQ-UX-016 : TÉMOIN — un résilié en `lecture` ouvre /notifications (SEGMENTS_LECTURE)', () => {
