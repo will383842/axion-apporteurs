@@ -55,6 +55,13 @@ export const MATRICE_DES_ROLES = {
   'ecran:utilisateurs_console': ['admin'],
   // L'écran d'accès refusé, ouvert à tout rôle : il dit ce que le rôle permet et à qui s'adresser.
   'ecran:acces_refuse': ['admin', 'qualifieur', 'comptable', 'lecteur'],
+  // CPL-T07 : le dossier de conformité. Vérifier une pièce (jamais un RIB, vérifié à quatre yeux
+  // ailleurs) à l'admin et au qualifieur ; ouvrir et valider le dossier à l'admin seul — la
+  // validation mène à la signature, sous step-up (condition de la sécurité, au format de SEC-30).
+  'ecran:conformite_apporteur': ['admin', 'qualifieur'],
+  'action:verifier_piece': ['admin', 'qualifieur'],
+  'action:ouvrir_kyc': ['admin'],
+  'action:valider_kyc': ['admin'],
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, readonly ConsoleRole[]>>;
 
 /** Un droit DÉCLARÉ — le seul que le typage laisse passer à `requireRole`. */
