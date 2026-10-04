@@ -56,7 +56,10 @@ export function EcranVosDonneesConsole({
             <strong>{T.aCompleter}</strong>
           </p>
         ) : (
-          <p>{T.responsable.phrase(responsable)}</p>
+          <>
+            <p>{T.responsable.phrase(responsable)}</p>
+            <p>{T.responsable.contact}</p>
+          </>
         )}
       </section>
       {page.rubriques.map((r) => (

@@ -28,6 +28,9 @@ export const VOS_DONNEES_CONSOLE = {
     titre: 'Qui en est responsable',
     phrase: (d: { denomination: string; siege: string }) =>
       `${d.denomination}, ${d.siege}, est responsable du traitement de ces données.`,
+    // Juriste, mot pour mot : le siège est la coordonnée ; aucune adresse électronique n'est inventée.
+    contact:
+      'Pour toute question sur vos données, ou pour exercer vos droits, écrivez-lui à cette adresse.',
   },
   obligatoire:
     "L'adresse électronique est nécessaire pour vous donner accès à la console : sans elle, aucun accès ne peut être ouvert.",
