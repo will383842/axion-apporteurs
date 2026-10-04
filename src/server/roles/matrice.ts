@@ -42,6 +42,10 @@ export const MATRICE_DES_ROLES = {
   // DM-12 (REQ-DM-033, cadrage de la sécurité) : déchiffrer la justification d'une anomalie, par le
   // lecteur unique ; jamais au comptable ni au lecteur.
   'action:lire_justification_anomalie': ['admin', 'qualifieur'],
+  // SEC-29 : l'écran `/console` minimal (le repli de la redirection, avant l'accueil du rôle
+  // d'UX-P1-16) et la déconnexion, ouverts aux quatre rôles : chacun doit pouvoir arriver et partir.
+  'ecran:accueil': ['admin', 'qualifieur', 'comptable', 'lecteur'],
+  'action:se_deconnecter': ['admin', 'qualifieur', 'comptable', 'lecteur'],
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, readonly ConsoleRole[]>>;
 
 /** Un droit DÉCLARÉ — le seul que le typage laisse passer à `requireRole`. */

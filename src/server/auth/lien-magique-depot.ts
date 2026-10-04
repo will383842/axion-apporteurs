@@ -18,10 +18,15 @@ import { CHAMPS_PII, decryptPii, type ClesPii } from '../securite/pii';
 import {
   ESSAIS_DU_CODE_MAX,
   type PortsDEmission,
+  type PortsDEmissionConsole,
   type PortsDeConsommation,
+  type PortsDeConsommationConsole,
   type PortsDuCode,
+  type PortsDuCodeConsole,
   type TransactionDeConsommation,
+  type TransactionDeConsommationConsole,
   type TransactionDuCode,
+  type TransactionDuCodeConsole,
 } from './lien-magique';
 
 /** Le nom du modèle dans la donnée authentifiée des blocs chiffrés d'un apporteur. */
@@ -162,4 +167,142 @@ function codeSur(tx: Prisma.TransactionClient): TransactionDuCode {
 /** La transaction de la vérification du code : tout le travail de `verifierLeCode`. */
 export function transactionDuCode(prisma: PrismaClient): PortsDuCode['transaction'] {
   return (travail) => prisma.$transaction((tx) => travail(codeSur(tx)));
+}
+
+// ── SEC-29 : la console ──────────────────────────────────────────────────────────────────────────
+//
+// Les MÊMES écritures que l'espace, pour l'autre population : chaque lecture et chaque écriture
+// d'un lien de la console juge `utilisateurConsoleId` non nul (lentille sécurité, condition a). Le
+// compte se lit par l'empreinte de son courriel ; l'adresse est le bloc stocké, déchiffré sous la
+// ligne qui le porte.
+
+/** Le nom du modèle dans la donnée authentifiée des blocs chiffrés d'un utilisateur de la console. */
+export const MODELE_UTILISATEUR_CONSOLE = 'UtilisateurConsole';
+
+export type LectureDuCompteConsole = Pick<
+  PortsDEmissionConsole,
+  'trouverUtilisateurConsole' | 'adresseStockee'
+>;
+
+export function lectureDuCompteConsole(
+  prisma: PrismaClient,
+  cles: ClesPii
+): LectureDuCompteConsole {
+  return {
+    async trouverUtilisateurConsole(emailHash) {
+      return prisma.utilisateurConsole.findUnique({
+        where: { emailHash },
+        select: { id: true, desactiveAt: true },
+      });
+    },
+    async adresseStockee(utilisateurConsoleId) {
+      const ligne = await prisma.utilisateurConsole.findUnique({
+        where: { id: utilisateurConsoleId },
+        select: { emailChiffre: true },
+      });
+      if (ligne?.emailChiffre == null) throw new Error('adresse_absente : aucun courriel stocké');
+      return decryptPii(
+        {
+          modele: MODELE_UTILISATEUR_CONSOLE,
+          champ: CHAMPS_PII.email.chiffre,
+          id: utilisateurConsoleId,
+        },
+        ligne.emailChiffre,
+        cles
+      );
+    },
+  };
+}
+
+export type EcrituresDeLienConsole = Pick<
+  PortsDEmissionConsole,
+  'annulerLiensActifs' | 'insererLien'
+>;
+
+export function ecrituresDeLienConsole(prisma: PrismaClient): EcrituresDeLienConsole {
+  return {
+    async annulerLiensActifs(utilisateurConsoleId, maintenant) {
+      await prisma.lienMagique.updateMany({
+        where: { utilisateurConsoleId, consommeAt: null, annuleAt: null },
+        data: { annuleAt: maintenant },
+      });
+    },
+    async insererLien(lien) {
+      await prisma.lienMagique.create({ data: lien });
+    },
+  };
+}
+
+function consommationConsoleSur(tx: Prisma.TransactionClient): TransactionDeConsommationConsole {
+  return {
+    async consommer(condition, donnees) {
+      const { count } = await tx.lienMagique.updateMany({ where: condition, data: donnees });
+      return count;
+    },
+    lireLienConsole(tokenHash) {
+      return tx.lienMagique.findUnique({
+        where: { tokenHash },
+        select: { id: true, utilisateurConsoleId: true, kid: true },
+      });
+    },
+    async dejaConsommeConsole(tokenHash, kid) {
+      const n = await tx.lienMagique.count({
+        where: { tokenHash, kid, utilisateurConsoleId: { not: null }, consommeAt: { not: null } },
+      });
+      return n === 1;
+    },
+    async utilisateurActif(utilisateurConsoleId) {
+      const u = await tx.utilisateurConsole.findUnique({
+        where: { id: utilisateurConsoleId },
+        select: { desactiveAt: true },
+      });
+      return u !== null && u.desactiveAt === null;
+    },
+    async ouvrirSessionConsole(session) {
+      await tx.sessionEspace.create({ data: session });
+    },
+  };
+}
+
+/** La transaction de consommation d'un lien de la console. */
+export function transactionDeConsommationConsole(
+  prisma: PrismaClient
+): PortsDeConsommationConsole['transaction'] {
+  return (travail) => prisma.$transaction((tx) => travail(consommationConsoleSur(tx)));
+}
+
+function codeConsoleSur(tx: Prisma.TransactionClient): TransactionDuCodeConsole {
+  // L'essai, l'annulation et la consommation par identifiant sont CEUX de l'espace : l'identifiant
+  // vient de `lienActifDeConsole`, déjà jugé sur la population, ou il est factice.
+  const { compterEssai, annulerLien, consommerParId } = codeSur(tx);
+  const { utilisateurActif, ouvrirSessionConsole } = consommationConsoleSur(tx);
+  return {
+    compterEssai,
+    annulerLien,
+    consommerParId,
+    utilisateurActif,
+    ouvrirSessionConsole,
+    async lienActifDeConsole(emailHash, maintenant) {
+      const lien = await tx.lienMagique.findFirst({
+        where: {
+          utilisateurConsole: { emailHash },
+          utilisateurConsoleId: { not: null },
+          consommeAt: null,
+          annuleAt: null,
+          expireAt: { gt: maintenant },
+          codeHash: { not: null },
+        },
+        orderBy: [{ creeAt: 'desc' }, { id: 'desc' }],
+        select: { id: true, utilisateurConsoleId: true, kid: true },
+      });
+      return lien?.utilisateurConsoleId == null
+        ? null
+        : { id: lien.id, utilisateurConsoleId: lien.utilisateurConsoleId, kid: lien.kid };
+    },
+  };
+}
+
+/** La transaction de la vérification du code de la console. */
+export function transactionDuCodeConsole(prisma: PrismaClient): PortsDuCodeConsole['transaction'] {
+  return (travail) => prisma.$transaction((tx) => travail(codeConsoleSur(tx)));
 }
