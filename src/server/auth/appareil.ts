@@ -246,8 +246,8 @@ export async function reconnaitreALaConsommation(
  * part HORS de toute transaction ; refusé, en échec ou au-delà du délai, il ne confirme RIEN
  * (`avis_echoue`). Accepté, une transaction COURTE REJUGE la session que la consommation a ouverte
  * — présente, non révoquée, non expirée, de la bonne version, d'un apporteur toujours actif, de CE
- * compte, ouverte par CE lien — et confirme l'appareil s'il ne l'est pas déjà ; sinon rien n'est
- * confirmé (`non_confirme`). Un arrêt entre la consommation et la confirmation laisse l'appareil
+ * compte, ouverte par CE lien, et pas en LECTURE (SEC-19) — et confirme l'appareil s'il ne l'est pas
+ * déjà ; sinon rien n'est confirmé (`non_confirme`). Un arrêt entre la consommation et la confirmation laisse l'appareil
  * inconnu : rien n'a été écrit pour lui.
  */
 export async function aviserPuisConfirmer(
@@ -272,6 +272,9 @@ export async function aviserPuisConfirmer(
     ) {
       return 'non_confirme';
     }
+    // SEC-19 (A09, #563 5983094689) : une session en LECTURE n'a aucune action sensible ; un appareil
+    // n'a rien à y gagner. Le refus est une RÈGLE, pas l'effet d'un champ non relu.
+    if (verdict.session.niveau === 'lecture') return 'non_confirme';
     const confirmation = await tx.appareils.confirmerSiInconnu(
       appareil,
       maintenant,
