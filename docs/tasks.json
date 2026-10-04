@@ -23946,7 +23946,8 @@
         "SEC-61"
       ],
       "reqs": [
-        "REQ-SEC-023"
+        "REQ-SEC-023",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
@@ -23955,6 +23956,9 @@
       "acceptance": "Versée au rattrapage 104 (coordination ; auteur A06) : l'écran console des gels du journal des accès, qui porte le « Reste » de SEC-61. (1) POSER et LEVER un gel, réservé à un administrateur VALIDÉ (SEC-30), sous step-up, par l'action serveur qui appelle `src/server/console/gels-journal-acces.ts` (la règle métier reste à SEC-61) ; refus nommé pour tout autre rôle, un administrateur en attente ou l'absence de step-up. (2) La LISTE des gels est lue selon SEC-60 : chaque lecture écrit sa ligne `lecture_journal_acces`, par utilisateur, avant le rendu. (3) Quand aucun autre administrateur validé ne peut lever, l'écran le dit (phrase « aucun autre administrateur », micro-copie dans `src/content/micro-copy/console/gels-journal-acces.ts`, jamais en dur). (4) La route entre dans `docs/CONSOLE-ROUTES.md`. TÉMOIN de rôle : `tests/unit/console/gels-journal-acces-ecran.spec.ts` (@req REQ-SEC-023) — l'admin validé voit poser et lever ; les autres rôles et l'admin en attente ne voient ni l'onglet ni l'action. Chemins proposés par A01 sur le modèle de SEC-60 ; l'auteur écrans les ajuste au rattrapage suivant s'il le faut.",
       "tests": {
         "REQ-SEC-023": [
+          "tests/unit/console/gels-journal-acces-ecran.spec.ts"
+        ],
+        "REQ-UX-047": [
           "tests/unit/console/gels-journal-acces-ecran.spec.ts"
         ]
       }
@@ -23979,7 +23983,8 @@
       ],
       "reqs": [
         "REQ-UX-016",
-        "REQ-DM-006"
+        "REQ-DM-006",
+        "REQ-UX-047"
       ],
       "hyp": [],
       "externe": null,
@@ -23991,6 +23996,9 @@
           "tests/unit/espace/notifications-ecran.spec.ts"
         ],
         "REQ-DM-006": [
+          "tests/unit/espace/notifications-ecran.spec.ts"
+        ],
+        "REQ-UX-047": [
           "tests/unit/espace/notifications-ecran.spec.ts"
         ]
       }
