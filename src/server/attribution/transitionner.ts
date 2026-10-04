@@ -295,6 +295,18 @@ export async function transitionnerUneAttribution(
       },
     });
   }
+  // DM-25 (juriste, critère d) : l'antériorité établie après coup est notifiée à l'APPORTEUR, une
+  // fois, avec son événement ; pour un conseiller, la console seule.
+  if (l.apporteur_id !== null && transition === 'anteriorite_etablie') {
+    await tx.notificationEspace.create({
+      data: {
+        apporteurId: l.apporteur_id,
+        cle: 'attribution_annulee_anteriorite',
+        attributionId,
+        evenementId: BigInt(inscrit.id),
+      },
+    });
+  }
   if (occupe(de) && !occupe(vers)) {
     await notifierLePremierRang(tx, attributionId, BigInt(inscrit.id));
   }
