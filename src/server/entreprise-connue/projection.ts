@@ -23,6 +23,27 @@ import {
 } from '../../domain/entreprise-connue/anteriorite';
 
 type Client = PrismaClient | Prisma.TransactionClient;
+
+/**
+ * Le domaine du verrou par SIREN (DM-66, lentille sécurité). Le verrou est TRANSACTIONNEL et prend la
+ * forme à DEUX clés — (hashtext(domaine), hashtext(siren)) —, dont Postgres tient l'espace séparé de
+ * celui des verrous à une clé du dépôt (le journal, l'import de la grille) : il n'en croise aucun.
+ */
+export const DOMAINE_DU_VERROU = 'partners.entreprise_connue';
+
+/**
+ * Verrouille des SIREN pour la transaction, DÉDOUBLONNÉS et TOUJOURS dans l'ordre croissant : deux
+ * transactions qui touchent les mêmes SIREN les prennent dans le même ordre, et ne s'interbloquent pas.
+ * La projection et la purge prennent ce même verrou : elles se sérialisent sur un SIREN.
+ */
+export async function verrouillerLesSirens(
+  tx: Prisma.TransactionClient,
+  sirens: Iterable<string>
+): Promise<void> {
+  for (const s of [...new Set(sirens)].sort()) {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${DOMAINE_DU_VERROU}), hashtext(${s}))`;
+  }
+}
 type Charge = Record<string, unknown>;
 
 const FORME_SIREN = /^[0-9]{9}$/;
@@ -136,6 +157,34 @@ async function annulees(db: Client, ids: readonly string[]): Promise<Set<string>
 
 /** Recalcule la ligne `devis_connus` d'un devis ; rend le SIREN touché, ou `null`. */
 export async function recalculerDevis(db: Client, devisRef: string): Promise<string | null> {
+  const calcul = await calculerDevis(db, devisRef);
+  if (calcul === null) return null;
+  await ecrireDevis(db, devisRef, calcul.ligne);
+  return calcul.siren;
+}
+
+type LigneDeDevis = {
+  siren: string;
+  emisAt: Date;
+  signeAt: Date | null;
+  montantTotalHtCents: number;
+  factureHtCents: number;
+  majAt: Date;
+};
+
+async function ecrireDevis(db: Client, devisRef: string, ligne: LigneDeDevis): Promise<void> {
+  await db.devisConnu.upsert({
+    where: { devisRef },
+    create: { devisRef, ...ligne },
+    update: ligne,
+  });
+}
+
+/** Le calcul d'un devis, en LECTURE SEULE des événements : son SIREN et sa ligne, ou `null`. */
+async function calculerDevis(
+  db: Client,
+  devisRef: string
+): Promise<{ siren: string; ligne: LigneDeDevis } | null> {
   const emis = await charges(db, [TypeEvenementRecu.devis_emis], 'devisId', devisRef);
   const signes = await charges(db, [TypeEvenementRecu.devis_signe], 'devisId', devisRef);
   const dernierEmis = emis.at(-1) ?? null;
@@ -182,12 +231,7 @@ export async function recalculerDevis(db: Client, devisRef: string): Promise<str
     factureHtCents: facture,
     majAt: new Date(),
   };
-  await db.devisConnu.upsert({
-    where: { devisRef },
-    create: { devisRef, ...ligne },
-    update: ligne,
-  });
-  return s;
+  return { siren: s, ligne };
 }
 
 // ── le recalcul d'une entreprise ────────────────────────────────────────────────────────────────
@@ -329,15 +373,23 @@ export async function projeterEvenement(
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
     const { devis, sirens } = await touches(tx, recu);
+    // 1. Tout CALCULER d'abord, en lecture : les SIREN d'avant (un devis qui change d'entreprise
+    //    quitte l'ancienne) et ceux d'après.
+    const calculs = new Map<string, { siren: string; ligne: LigneDeDevis } | null>();
     for (const ref of devis) {
-      // Le SIREN d'avant compte aussi : un devis qui change d'entreprise quitte l'ancienne.
       const avant = await tx.devisConnu.findUnique({
         where: { devisRef: ref },
         select: { siren: true },
       });
       if (avant !== null) sirens.add(avant.siren);
-      const s = await recalculerDevis(tx, ref);
-      if (s !== null) sirens.add(s);
+      const calcul = await calculerDevis(tx, ref);
+      calculs.set(ref, calcul);
+      if (calcul !== null) sirens.add(calcul.siren);
+    }
+    // 2. Verrouiller TOUS les SIREN touchés, dans l'ordre croissant (DM-66) ; 3. puis écrire.
+    await verrouillerLesSirens(tx, sirens);
+    for (const [ref, calcul] of calculs) {
+      if (calcul !== null) await ecrireDevis(tx, ref, calcul.ligne);
     }
     for (const s of sirens) await recalculerEntreprise(tx, s);
   });
