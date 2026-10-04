@@ -19,7 +19,8 @@ import {
   finDeLaFenetreDeRedeclaration,
   jourLimiteDeLaFenetre,
 } from '../../../src/domain/attribution/fenetre-redeclaration';
-import { MS_PAR_JOUR } from '../../../src/domain/temps/calendrier-civil';
+import { MS_PAR_JOUR, joursDeLaDate } from '../../../src/domain/temps/calendrier-civil';
+import { versParis } from '../../../src/domain/temps/paris';
 import { readdirSync, readFileSync } from 'node:fs';
 import type { PrismaClient } from '@prisma/client';
 import { GABARITS } from '../../../src/server/notifications/table-ssot';
@@ -499,15 +500,28 @@ describe('REQ-DM-004 — la fenêtre finit à MINUIT, heure de Paris, après le 
     expect(new Date(finDeLaFenetreDeRedeclaration(paris(envoi))).toISOString()).toBe(attendu);
   });
 
-  it('REQ-DM-004 : TÉMOIN — sur un échantillon d’heures d’envoi, la fin n’est JAMAIS avant envoi + 15 jours', () => {
-    const quinze = SEUILS.FILE_FENETRE_REDECLARATION_JOURS.valeur * MS_PAR_JOUR;
+  it('REQ-DM-004 : TÉMOIN — sur un échantillon d’heures d’envoi, la fin n’est JAMAIS avant envoi + 15 jours CIVILS', () => {
+    const jours = SEUILS.FILE_FENETRE_REDECLARATION_JOURS.valeur;
+    const heure = 3600 * 1000;
     const debut = paris('2027-01-01T00:00:00.000+01:00');
     for (let h = 0; h < 24 * 400; h += 7) {
-      const envoi = debut + h * 3600 * 1000 + 17 * 60 * 1000;
+      const envoi = debut + h * heure + 17 * 60 * 1000;
       const fin = finDeLaFenetreDeRedeclaration(envoi);
-      expect(fin - envoi, new Date(envoi).toISOString()).toBeGreaterThanOrEqual(quinze);
-      // … et jamais plus d'un jour au-delà : c'est la fin du jour, pas un report
-      expect(fin - envoi).toBeLessThanOrEqual(quinze + 25 * 3600 * 1000);
+      const quand = new Date(envoi).toISOString();
+      // En jours civils de Paris : le dernier jour ouvert est le jour d'envoi + 15, la fin est son minuit.
+      const dernier = jourLimiteDeLaFenetre(fin);
+      const { annee, mois, jour } = versParis(envoi);
+      expect(joursDeLaDate(dernier) - joursDeLaDate({ annee, mois, jour }), quand).toBe(jours);
+      expect(versParis(fin), quand).toMatchObject({
+        heure: 0,
+        minute: 0,
+        seconde: 0,
+        milliseconde: 0,
+      });
+      // En durée absolue : 15 jours, au plus une heure de moins quand l'heure d'été retire une heure,
+      // et jamais plus d'un jour au-delà — c'est la fin du jour, pas un report.
+      expect(fin - envoi, quand).toBeGreaterThan(jours * MS_PAR_JOUR - heure);
+      expect(fin - envoi, quand).toBeLessThanOrEqual((jours + 1) * MS_PAR_JOUR + heure);
     }
   });
 

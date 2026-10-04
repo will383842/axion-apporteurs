@@ -10,15 +10,15 @@
  *     à la transaction ; l'index `courriels_envoyes_un_par_notification` refuse un second courriel
  *     non échoué), puis la fenêtre, puis le commit ;
  *   — LE DÉLAI COURT DE L'ENVOI EFFECTIF (REQ-UX-016, juriste) : pour `premier_rang_libere`, la
- *     fenêtre de redéclaration est posée à `envoye_at` + `FILE_FENETRE_REDECLARATION_JOURS`, une fois
- *     (le port ne pose que si elle est nulle). Un courriel en échec ou retenu ne pose rien : aucun
+ *     fenêtre de redéclaration est posée à partir de `envoye_at`, une fois (le port ne pose que si elle
+ *     est nulle), et finit à minuit, heure de Paris, après le jour envoi + 15 (borne exclusive). Un courriel en échec ou retenu ne pose rien : aucun
  *     délai ne court tant qu'il n'est pas parti.
  * Un plantage entre le relais et le commit n'écrit rien : le passage suivant renvoie. Le doublon
  * possible est un second courriel d'INFORMATION, jamais un délai raccourci.
  */
 import type { Prisma, PrismaClient } from '@prisma/client';
-import { SEUILS, TAILLES_DE_LOT } from '../../domain/seuils/ssot';
-import { MS_PAR_JOUR } from '../../domain/temps/calendrier-civil';
+import { finDeLaFenetreDeRedeclaration } from '../../domain/attribution/fenetre-redeclaration';
+import { TAILLES_DE_LOT } from '../../domain/seuils/ssot';
 
 /** Une notification à porter par courriel, telle que le passage la lit. */
 export type NotificationAEnvoyer = {
@@ -71,9 +71,8 @@ export async function envoyerLesNotificationsDeLEspace(p: PortsDuPassage): Promi
       const envoi = await g.envoyer(n, texte);
       if (envoi.statut !== 'envoye') return envoi.statut === 'echec' ? 'echec' : 'retenue';
       if (CLES_A_FENETRE.has(n.cle) && n.attributionId !== null && envoi.envoyeAt !== null) {
-        const finAt = new Date(
-          envoi.envoyeAt.getTime() + SEUILS.FILE_FENETRE_REDECLARATION_JOURS.valeur * MS_PAR_JOUR
-        );
+        // La fin, calculée par le domaine : minuit, heure de Paris, après le jour envoi + 15 (exclue).
+        const finAt = new Date(finDeLaFenetreDeRedeclaration(envoi.envoyeAt.getTime()));
         await g.poserLaFenetre(n.attributionId, finAt);
       }
       return 'envoyee' as const;

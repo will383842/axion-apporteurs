@@ -415,6 +415,14 @@ export const PARAMETRES_HORS_DEPOT_CONFIRMATION = {
 export type NomDeSeuil = keyof typeof SEUILS;
 
 /**
+ * Le fuseau dans lequel les délais du contrat se comptent en jours civils — notamment la fenêtre de
+ * redéclaration (`FILE_FENETRE_REDECLARATION_JOURS`, DM-55 : fin à minuit, heure de Paris, du jour qui
+ * suit envoi + la durée). Le domaine le tient par `src/domain/temps/paris.ts`, qui n'en connaît pas
+ * d'autre ; la valeur est nommée ici, à côté des durées (forme d'A02).
+ */
+export const FUSEAU_DES_DELAIS = 'Europe/Paris' as const;
+
+/**
  * Les PARAMÈTRES du calcul qui ne sont ni un délai ni un montant — sourcés et datés comme les seuils
  * (RM-10), mais hors de `SEUILS` : la garde des seuils ne connaît que les durées et les montants, et
  * un ratio n'est ni l'un ni l'autre. L'étendre aux ratios est une suite, pas un détour.
