@@ -949,3 +949,149 @@ describe('REQ-JUR-006 — les émetteurs : la mise en demeure et la décision de
     }
   });
 });
+
+/**
+ * Le RENDU des deux notifications du contrat par le passage, à l'heure de l'envoi (A02, 5982083436) :
+ * depuis la décision liée — le texte déchiffré, les dates — et, pour la résiliation, le motif lu dans
+ * la charge de SON événement. Échec FERMÉ : un texte purgé, une décision d'un autre apporteur ou
+ * absente ne rendent rien.
+ */
+describe('REQ-JUR-006 — le rendu par le passage, depuis la décision', () => {
+  const composer = (cle: string, t: { titre: string; corps: string | null }) => ({
+    sujet: `[${cle}] ${t.titre}`,
+    corps: t.corps ?? '',
+  });
+
+  async function monde(decision: Record<string, unknown> | null) {
+    const cles = await clesDeTest();
+    const lus: unknown[] = [];
+    const tx = {
+      decisionDeContrat: {
+        findUnique: async (q: unknown) => {
+          lus.push(q);
+          return decision;
+        },
+      },
+    };
+    return { tx: tx as never, cles, lus };
+  }
+
+  async function chiffre(id: string, texte: string) {
+    const { colonnesPii } = await import('../../../src/server/securite/pii');
+    return colonnesPii({ modele: 'DecisionDeContrat', id }, { texte }, await clesDeTest())
+      .texteChiffre;
+  }
+
+  const N = (cle: string, o: Record<string, unknown> = {}) => ({
+    id: 'n-1',
+    cle,
+    apporteurId: ID,
+    attributionId: null,
+    evenementId: '41',
+    anomalieId: null,
+    decisionContratId: 'd-1',
+    ...o,
+  });
+
+  it('REQ-JUR-006 : TÉMOIN — la mise en demeure se rend depuis SA décision : l’article et les faits déchiffrés, échappés', async () => {
+    const { rendreUneDecisionDeContrat } =
+      await import('../../../src/server/apporteur/resiliation');
+    const m = await monde({
+      apporteurId: ID,
+      geste: 'mise_en_demeure',
+      article: '7',
+      texteChiffre: await chiffre('d-1', 'Dépôts <répétés>'),
+      dateReception: null,
+      dateEffet: null,
+      evenementId: 41n,
+      textePurgeAt: null,
+    });
+    const r = await rendreUneDecisionDeContrat(m.tx, N('mise_en_demeure'), {
+      cles: m.cles,
+      composer,
+    });
+    expect(r).toMatchObject({
+      sujet: '[mise_en_demeure] Mise en demeure de remédier à un manquement au contrat',
+    });
+    expect((r as { corps: string }).corps).toContain(
+      "à l'article 7 du contrat : Dépôts &lt;répétés&gt;."
+    );
+    expect(m.lus[0]).toStrictEqual({
+      where: { id: 'd-1' },
+      select: {
+        apporteurId: true,
+        geste: true,
+        article: true,
+        texteChiffre: true,
+        dateReception: true,
+        dateEffet: true,
+        evenementId: true,
+        textePurgeAt: true,
+      },
+    });
+  });
+
+  it('REQ-DM-011 : TÉMOIN — la résiliation se rend depuis SA décision et le motif de SON événement : dates en clair, à Paris', async () => {
+    const { rendreUneDecisionDeContrat } =
+      await import('../../../src/server/apporteur/resiliation');
+    journalSimule.lireLaChargeDUnFait.mockResolvedValue({
+      type: 'apporteur_statut_modifie',
+      charge: {
+        de: 'signe',
+        vers: 'resilie',
+        transition: 'resilier',
+        resiliationMotif: 'ordinaire_apporteur',
+        acteur: CONSOLE,
+      },
+    });
+    const m = await monde({
+      apporteurId: ID,
+      geste: 'resiliation',
+      article: null,
+      texteChiffre: null,
+      dateReception: new Date('2027-01-30T00:00:00.000Z'),
+      dateEffet: new Date('2027-03-01T00:00:00.000Z'),
+      evenementId: 41n,
+      textePurgeAt: null,
+    });
+    const r = await rendreUneDecisionDeContrat(m.tx, N('resiliation'), { cles: m.cles, composer });
+    expect((r as { corps: string }).corps).toMatch(
+      /^Axion-IA a bien reçu, le 30 janvier 2027, votre décision de résilier le contrat\. Celui-ci prend fin le 1 mars 2027,/
+    );
+    expect(journalSimule.lireLaChargeDUnFait).toHaveBeenCalledWith(m.tx, '41');
+  });
+
+  it('REQ-JUR-006 : TÉMOIN — échec FERMÉ : texte purgé, décision absente ou déliée, d’un autre apporteur, d’un autre geste ou d’un autre fait', async () => {
+    const { rendreUneDecisionDeContrat } =
+      await import('../../../src/server/apporteur/resiliation');
+    const juste = {
+      apporteurId: ID,
+      geste: 'mise_en_demeure',
+      article: '6',
+      texteChiffre: null as Uint8Array | null,
+      dateReception: null,
+      dateEffet: null,
+      evenementId: 41n,
+      textePurgeAt: null as Date | null,
+    };
+    juste.texteChiffre = await chiffre('d-1', 'Des faits');
+    const rendre = async (d: Record<string, unknown> | null, n = N('mise_en_demeure')) => {
+      const m = await monde(d);
+      return rendreUneDecisionDeContrat(m.tx, n, { cles: m.cles, composer });
+    };
+    expect(await rendre({ ...juste, texteChiffre: null, textePurgeAt: MAINTENANT })).toEqual({
+      nonRendue: 'faits_non_conserves',
+    });
+    expect(await rendre(null)).toEqual({ nonRendue: 'fait_introuvable' });
+    expect(await rendre(juste, N('mise_en_demeure', { decisionContratId: null }))).toEqual({
+      nonRendue: 'faits_non_conserves',
+    });
+    expect(await rendre({ ...juste, apporteurId: 'autre' })).toEqual({
+      nonRendue: 'apporteur_different',
+    });
+    expect(await rendre({ ...juste, geste: 'resiliation' })).toEqual({
+      nonRendue: 'charge_illisible',
+    });
+    expect(await rendre({ ...juste, evenementId: 99n })).toEqual({ nonRendue: 'fait_introuvable' });
+  });
+});

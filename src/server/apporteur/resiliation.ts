@@ -42,8 +42,19 @@ import {
 import { ajouterEvenement, lireLaChargeDUnFait } from '../evenement/journal';
 import { revoquerJetonsALaResiliation } from '../auth/jeton-depot';
 import { transitionnerUneAttribution } from '../attribution/transitionner';
-import { faitsPourLeCourriel } from '../attribution/notifications';
-import { colonnesPii, type ClesPii } from '../securite/pii';
+import {
+  dateEnClair,
+  faitsPourLeCourriel,
+  type MotifDeNonRendu,
+} from '../attribution/notifications';
+import {
+  NotificationRefusee,
+  parametresDe,
+  rendreLaNotification,
+  type TexteRendu,
+} from '../notifications/envoyer';
+import { CHAMPS_PII, colonnesPii, decryptPii, type ClesPii } from '../securite/pii';
+import { CHARGES_PAR_TYPE } from '../../domain/evenement/charges';
 
 type Tx = Prisma.TransactionClient;
 
@@ -351,4 +362,95 @@ export async function resilierUnApporteur(
   }
   const jetonsRevoques = await revoquerJetonsALaResiliation(tx, apporteurId, maintenant);
   return { de, vers, jetonsRevoques };
+}
+
+// ── le rendu par le passage ──────────────────────────────────────────────────────────────────────
+
+/** Ce que le rendu lit d'une notification du contrat. */
+export type NotificationDuContrat = {
+  cle: string;
+  apporteurId: string;
+  evenementId: string | null;
+  decisionContratId: string | null;
+};
+
+const nonRendue = (motif: MotifDeNonRendu) => ({ nonRendue: motif });
+
+/**
+ * Le texte d'une notification du contrat (`mise_en_demeure`, `resiliation`), rendu DEPUIS SA DÉCISION
+ * à l'heure de l'envoi (forme d'A02, #703, 5982083436) : le texte déchiffré puis nettoyé et échappé
+ * comme les faits de DM-55, les dates en clair à Paris, et, pour la résiliation, le motif lu dans la
+ * charge de SON événement. Échec FERMÉ : tout manque rend un motif fermé, jamais un texte à moitié ;
+ * un texte purgé ne se rend plus.
+ */
+export async function rendreUneDecisionDeContrat(
+  tx: Tx,
+  n: NotificationDuContrat,
+  s: { cles: ClesPii; composer(cle: string, texte: TexteRendu): { sujet: string; corps: string } }
+): Promise<{ sujet: string; corps: string } | { nonRendue: MotifDeNonRendu }> {
+  if (n.decisionContratId === null) return nonRendue('faits_non_conserves');
+  const d = await tx.decisionDeContrat.findUnique({
+    where: { id: n.decisionContratId },
+    select: {
+      apporteurId: true,
+      geste: true,
+      article: true,
+      texteChiffre: true,
+      dateReception: true,
+      dateEffet: true,
+      evenementId: true,
+      textePurgeAt: true,
+    },
+  });
+  if (d === null || n.evenementId === null || d.evenementId.toString() !== n.evenementId) {
+    return nonRendue('fait_introuvable');
+  }
+  if (d.apporteurId !== n.apporteurId) return nonRendue('apporteur_different');
+  if (d.geste !== n.cle) return nonRendue('charge_illisible');
+  if (d.textePurgeAt !== null) return nonRendue('faits_non_conserves');
+  let texte: string | undefined;
+  if (d.texteChiffre !== null) {
+    const clair = decryptPii(
+      {
+        modele: MODELE_DECISION_DE_CONTRAT,
+        champ: CHAMPS_PII.texte.chiffre,
+        id: n.decisionContratId,
+      },
+      d.texteChiffre,
+      s.cles
+    );
+    const propre = faitsPourLeCourriel(clair);
+    if (propre === null) return nonRendue('faits_refuses');
+    texte = propre;
+  }
+  try {
+    if (d.geste === 'mise_en_demeure') {
+      if (texte === undefined || d.article === null) return nonRendue('faits_non_conserves');
+      return s.composer(n.cle, rendreLaNotification(n.cle, { article: d.article, faits: texte }));
+    }
+    const fait = await lireLaChargeDUnFait(tx, n.evenementId);
+    const charge = CHARGES_PAR_TYPE.apporteur_statut_modifie.safeParse(fait?.charge);
+    if (fait?.type !== 'apporteur_statut_modifie' || !charge.success) {
+      return nonRendue('charge_illisible');
+    }
+    const motif = charge.data.resiliationMotif;
+    if (motif === undefined || d.dateEffet === null || d.dateReception === null) {
+      return nonRendue('charge_illisible');
+    }
+    const candidats: Record<string, string | undefined> = {
+      dateEffet: dateEnClair(d.dateEffet),
+      dateReception: dateEnClair(d.dateReception),
+      motif: texte,
+    };
+    const parametres: Record<string, string> = {};
+    for (const p of parametresDe('resiliation', motif)) {
+      const v = candidats[p];
+      if (v === undefined) return nonRendue('faits_non_conserves');
+      parametres[p] = v;
+    }
+    return s.composer(n.cle, rendreLaNotification(n.cle, parametres, motif));
+  } catch (e) {
+    if (e instanceof NotificationRefusee) return nonRendue('parametre_refuse');
+    throw e;
+  }
 }
