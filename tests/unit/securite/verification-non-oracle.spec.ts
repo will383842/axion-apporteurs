@@ -19,12 +19,23 @@ import {
   type FaitsDeVerification,
 } from '../../../src/domain/verification/etats';
 import {
-  COMPTEURS_DE_LA_VERIFICATION,
+  SUJETS_COMPTES,
   verifierUneEntreprise,
   type DemandeDeVerification,
   type PortsDeVerification,
 } from '../../../src/server/verification/verifier';
-import { COMPTEURS, sujetDepuisEmpreinte } from '../../../src/server/securite/rate-limit';
+import {
+  COMPTEURS,
+  PREFIXES_DE_FAMILLE,
+  sujetDepuisEmpreinte,
+} from '../../../src/server/securite/rate-limit';
+
+/** La famille des compteurs de la vérification (REQ-SEC-016), lue au registre, jamais retapée. */
+const FAMILLE = PREFIXES_DE_FAMILLE[2];
+import { etatDepuisLaFiche } from '../../../src/server/verification/registre-public';
+import { compterAvantLaDecision } from '../../../src/server/verification/ports-prisma';
+import type { IssueDeFiche } from '../../../src/server/integrations/recherche-entreprises/autocompletion';
+import { MOTIFS_DE_SAISIE_MANUELLE } from '../../../src/server/integrations/recherche-entreprises/schemas';
 
 const SIREN = '100000001';
 const LIBRE: FaitsDeVerification = {
@@ -97,19 +108,14 @@ describe('REQ-UX-007 — quatre états, et rien d’autre', () => {
 
 // ── le service ──────────────────────────────────────────────────────────────────────────────────
 
-const REGISTRE_CHIFFRE = {
-  'verif:identite': { prefixe: 'verif:' },
-  'verif:ip': { prefixe: 'verif:' },
-};
-
 type Trace = string[];
 
 function ports(faits: FaitsDeVerification, o: { refuse?: string } = {}) {
   const trace: Trace = [];
   const journal: unknown[] = [];
   const p: PortsDeVerification = {
-    limiter: async (nom) => {
-      trace.push(`limiter:${nom}`);
+    compter: async (nom) => {
+      trace.push(`compter:${nom}`);
       return { autorise: nom !== o.refuse };
     },
     anteriorite: async () => (trace.push('anteriorite'), faits.anteriorite),
@@ -149,7 +155,7 @@ describe('G-SEC-ORACLE — deux causes d’un même état, la même réponse, ap
     const rendus = new Set<string>();
     for (const [, f] of causesNonDisponible) {
       const { p } = ports({ ...LIBRE, ...f });
-      rendus.add(JSON.stringify(await verifierUneEntreprise(p, DEMANDE, REGISTRE_CHIFFRE)));
+      rendus.add(JSON.stringify(await verifierUneEntreprise(p, DEMANDE)));
     }
     expect([...rendus]).toEqual([JSON.stringify({ ok: true, dto: { etat: 'non_disponible' } })]);
   });
@@ -158,15 +164,12 @@ describe('G-SEC-ORACLE — deux causes d’un même état, la même réponse, ap
     // Le porteur de l'occupation n'entre pas dans les faits : un conseiller occupe comme un apporteur.
     const parApporteur = ports({ ...LIBRE, occupee: true, enFile: 1 });
     const parConseiller = ports({ ...LIBRE, occupee: true, enFile: 1 });
-    const a = JSON.stringify(
-      await verifierUneEntreprise(parApporteur.p, DEMANDE, REGISTRE_CHIFFRE)
-    );
+    const a = JSON.stringify(await verifierUneEntreprise(parApporteur.p, DEMANDE));
     const b = JSON.stringify(
-      await verifierUneEntreprise(
-        parConseiller.p,
-        { ...DEMANDE, porteur: { utilisateurConsoleId: '0190a5c0-0000-7000-8000-00000000000b' } },
-        REGISTRE_CHIFFRE
-      )
+      await verifierUneEntreprise(parConseiller.p, {
+        ...DEMANDE,
+        porteur: { utilisateurConsoleId: '0190a5c0-0000-7000-8000-00000000000b' },
+      })
     );
     expect(a).toBe(b);
     expect(a).toBe(JSON.stringify({ ok: true, dto: { etat: 'suivie_place_disponible' } }));
@@ -178,7 +181,7 @@ describe('G-SEC-ORACLE — deux causes d’un même état, la même réponse, ap
       { ...LIBRE, occupee: true, enFile: 2 },
       { ...LIBRE, surLaListe: true },
     ]) {
-      const r = await verifierUneEntreprise(ports(f).p, DEMANDE, REGISTRE_CHIFFRE);
+      const r = await verifierUneEntreprise(ports(f).p, DEMANDE);
       expect(r.ok).toBe(true);
       if (!r.ok) continue;
       expect(Object.keys(r.dto)).toEqual(['etat']);
@@ -187,7 +190,31 @@ describe('G-SEC-ORACLE — deux causes d’un même état, la même réponse, ap
     }
   });
 
-  it('REQ-JUR-011 : TÉMOIN — chaque fait est lu, quelle que soit la cause : le délai ne trahit rien', async () => {
+  it('REQ-UX-007 : TÉMOIN de forme — un gabarit par état, la même taille pour chaque cause de cet état', async () => {
+    const parEtat = new Map<string, Set<string>>();
+    for (const f of [
+      LIBRE,
+      { ...LIBRE, occupee: true },
+      { ...LIBRE, enFile: 1 },
+      { ...LIBRE, occupee: true, enFile: 2 },
+      { ...LIBRE, enFile: 2 },
+      { ...LIBRE, anteriorite: true },
+      { ...LIBRE, surLaListe: true },
+      { ...LIBRE, entreprise: 'fermee' as const },
+      { ...LIBRE, entreprise: 'introuvable' as const },
+    ]) {
+      const r = await verifierUneEntreprise(ports(f).p, DEMANDE);
+      if (!r.ok) throw new Error('refus inattendu');
+      const rendu = JSON.stringify(r);
+      parEtat.set(r.dto.etat, (parEtat.get(r.dto.etat) ?? new Set()).add(rendu));
+    }
+    expect([...parEtat.keys()].sort()).toEqual([...ETATS_VERIFICATION].sort());
+    for (const [etat, rendus] of parEtat) {
+      expect([...rendus]).toEqual([`{"ok":true,"dto":{"etat":"${etat}"}}`]);
+    }
+  });
+
+  it('REQ-JUR-011 : TÉMOIN — le registre public d’abord, puis chaque fait, quelle que soit la cause : le délai ne trahit rien', async () => {
     for (const f of [
       LIBRE,
       { ...LIBRE, entreprise: 'fermee' as const },
@@ -195,49 +222,38 @@ describe('G-SEC-ORACLE — deux causes d’un même état, la même réponse, ap
       { ...LIBRE, occupee: true },
     ]) {
       const { p, trace } = ports(f);
-      await verifierUneEntreprise(p, DEMANDE, REGISTRE_CHIFFRE);
+      await verifierUneEntreprise(p, DEMANDE);
       expect(trace.filter((t) => LECTURES.includes(t)).sort()).toEqual([...LECTURES].sort());
+      expect(trace.indexOf('entreprise')).toBe(2);
     }
   });
 });
 
 describe('REQ-SEC-021 — limitée par identité et par empreinte d’adresse, échec fermé', () => {
-  it('REQ-SEC-021 : les deux compteurs sont de la famille verif:, et sont consultés tous deux', async () => {
-    expect([...COMPTEURS_DE_LA_VERIFICATION]).toEqual(['verif:identite', 'verif:ip']);
+  it('REQ-SEC-021 : l’identité, puis l’empreinte d’adresse, sont comptées, dans cet ordre', async () => {
+    expect([...SUJETS_COMPTES]).toEqual(['identite', 'ip']);
     const { p, trace } = ports(LIBRE);
-    await verifierUneEntreprise(p, DEMANDE, REGISTRE_CHIFFRE);
-    expect(trace.slice(0, 2)).toEqual(['limiter:verif:identite', 'limiter:verif:ip']);
+    await verifierUneEntreprise(p, DEMANDE);
+    expect(trace.slice(0, 2)).toEqual(['compter:identite', 'compter:ip']);
   });
 
-  it('REQ-SEC-021 : TÉMOIN — un compteur ABSENT du registre REFUSE : aucun fait lu, rien au journal', async () => {
-    for (const registre of [
-      {},
-      { 'verif:identite': { prefixe: 'verif:' } },
-      { 'verif:ip': { prefixe: 'verif:' } },
-    ]) {
-      const { p, trace } = ports(LIBRE);
-      expect(await verifierUneEntreprise(p, DEMANDE, registre)).toEqual({
-        ok: false,
-        refus: 'limite',
-      });
-      expect(trace).toEqual([]);
-    }
+  it('REQ-SEC-021 : TÉMOIN — un compteur qui refuse fait refuser : aucun fait lu, rien au journal', async () => {
+    const p = ports(LIBRE);
+    p.p.compter = compterAvantLaDecision;
+    expect(await verifierUneEntreprise(p.p, DEMANDE)).toEqual({ ok: false, refus: 'limite' });
+    expect(p.trace).toEqual([]);
+    expect(p.journal).toEqual([]);
   });
 
-  it('REQ-SEC-021 : le registre réel, par défaut, est celui que le service consulte', async () => {
-    const chiffres = COMPTEURS_DE_LA_VERIFICATION.every((n) => n in COMPTEURS);
-    const { p, trace } = ports(LIBRE);
-    const r = await verifierUneEntreprise(p, DEMANDE);
-    // Tant que Williams n'a pas chiffré les limites, les deux compteurs sont absents, et tout refuse.
-    expect(r.ok).toBe(chiffres);
-    expect(trace.includes('anteriorite')).toBe(chiffres);
+  it('REQ-SEC-021 : CLIQUET — aucun compteur de la famille n’est au registre ; le jour où l’un y entre, ce témoin rougit, et le port de production l’appelle par son nom littéral', () => {
+    expect(Object.keys(COMPTEURS).filter((n) => n.startsWith(FAMILLE))).toEqual([]);
   });
 
-  it.each(['verif:identite', 'verif:ip'])(
+  it.each(['identite', 'ip'])(
     'REQ-SEC-021 : %s atteint — refusé, aucun fait lu, rien au journal',
     async (nom) => {
       const { p, trace, journal } = ports(LIBRE, { refuse: nom });
-      expect(await verifierUneEntreprise(p, DEMANDE, REGISTRE_CHIFFRE)).toEqual({
+      expect(await verifierUneEntreprise(p, DEMANDE)).toEqual({
         ok: false,
         refus: 'limite',
       });
@@ -248,20 +264,18 @@ describe('REQ-SEC-021 — limitée par identité et par empreinte d’adresse, �
 
   it('REQ-SEC-021 : sans empreinte d’adresse, le compteur ne compte rien — refusé', async () => {
     const { p, trace } = ports(LIBRE);
-    expect(await verifierUneEntreprise(p, { ...DEMANDE, sujetIp: null }, REGISTRE_CHIFFRE)).toEqual(
-      {
-        ok: false,
-        refus: 'limite',
-      }
-    );
-    expect(trace).toEqual(['limiter:verif:identite']);
+    expect(await verifierUneEntreprise(p, { ...DEMANDE, sujetIp: null })).toEqual({
+      ok: false,
+      refus: 'limite',
+    });
+    expect(trace).toEqual(['compter:identite']);
   });
 
   it.each(['12345678', '1234567890', '12345678A', ' 100000001'])(
     'REQ-SEC-021 : un SIREN mal formé (%j) est refusé avant tout compteur',
     async (siren) => {
       const { p, trace } = ports(LIBRE);
-      expect(await verifierUneEntreprise(p, { ...DEMANDE, siren }, REGISTRE_CHIFFRE)).toEqual({
+      expect(await verifierUneEntreprise(p, { ...DEMANDE, siren })).toEqual({
         ok: false,
         refus: 'siren_invalide',
       });
@@ -270,10 +284,31 @@ describe('REQ-SEC-021 — limitée par identité et par empreinte d’adresse, �
   );
 });
 
+describe('REQ-JUR-011 — le registre public indisponible : un refus nommé, jamais un état', () => {
+  it.each([
+    ['libre', LIBRE],
+    ['occupée', { ...LIBRE, occupee: true, enFile: 2 }],
+    ['sur la liste', { ...LIBRE, surLaListe: true }],
+    ['connue par antériorité', { ...LIBRE, anteriorite: true }],
+  ])(
+    'REQ-JUR-011 : TÉMOIN — %s, registre muet : registre_indisponible, AVANT toute autre lecture, compté au débit, rien au journal',
+    async (_, f) => {
+      const { p, trace, journal } = ports(f);
+      p.entreprise = async () => (trace.push('entreprise'), 'indisponible');
+      expect(JSON.stringify(await verifierUneEntreprise(p, DEMANDE))).toBe(
+        JSON.stringify({ ok: false, refus: 'registre_indisponible' })
+      );
+      // les deux compteurs ont compté la tentative ; le registre seul a été lu, rien d'autre.
+      expect(trace).toEqual(['compter:identite', 'compter:ip', 'entreprise']);
+      expect(journal).toEqual([]);
+    }
+  );
+});
+
 describe('REQ-SEC-021 — chaque vérification admise est journalisée, par identifiants seuls', () => {
   it('REQ-SEC-021 : une ligne — le porteur, le SIREN, la cause interne, l’empreinte tronquée', async () => {
     const { p, journal, trace } = ports({ ...LIBRE, surLaListe: true });
-    await verifierUneEntreprise(p, DEMANDE, REGISTRE_CHIFFRE);
+    await verifierUneEntreprise(p, DEMANDE);
     expect(journal).toEqual([
       {
         apporteurId: '0190a5c0-0000-7000-8000-00000000000a',
@@ -288,11 +323,10 @@ describe('REQ-SEC-021 — chaque vérification admise est journalisée, par iden
 
   it('REQ-SEC-021 : un utilisateur de la console est journalisé comme tel', async () => {
     const { p, journal } = ports({ ...LIBRE, occupee: true });
-    await verifierUneEntreprise(
-      p,
-      { ...DEMANDE, porteur: { utilisateurConsoleId: '0190a5c0-0000-7000-8000-00000000000b' } },
-      REGISTRE_CHIFFRE
-    );
+    await verifierUneEntreprise(p, {
+      ...DEMANDE,
+      porteur: { utilisateurConsoleId: '0190a5c0-0000-7000-8000-00000000000b' },
+    });
     expect(journal).toEqual([
       {
         apporteurId: null,
@@ -309,8 +343,47 @@ describe('REQ-SEC-021 — chaque vérification admise est journalisée, par iden
     p.journaliser = async () => {
       throw new Error('journal refusé');
     };
-    await expect(verifierUneEntreprise(p, DEMANDE, REGISTRE_CHIFFRE)).rejects.toThrow(
-      'journal refusé'
+    await expect(verifierUneEntreprise(p, DEMANDE)).rejects.toThrow('journal refusé');
+  });
+});
+
+describe('REQ-JUR-011 — la fiche du registre public, lue en échec fermé', () => {
+  const fiche = (etat: string) =>
+    ({ ok: true, fiche: { etat_administratif: etat } }) as unknown as IssueDeFiche;
+  const echec = (motif: string) =>
+    ({ ok: false, motif, marque: 'entreprise_a_verifier' }) as unknown as IssueDeFiche;
+
+  it('REQ-JUR-011 : active (A), fermée (C) ; un SIREN que le registre ne connaît pas est introuvable', () => {
+    expect(etatDepuisLaFiche(fiche('A'))).toBe('active');
+    expect(etatDepuisLaFiche(fiche('C'))).toBe('fermee');
+    expect(etatDepuisLaFiche(echec('siren_inconnu'))).toBe('introuvable');
+  });
+
+  it.each(['', 'a', 'F', ' A', 'AC'])(
+    'REQ-JUR-011 : TÉMOIN — un état administratif illisible (%j) ne rend jamais « libre » : indisponible',
+    (etat) => {
+      expect(etatDepuisLaFiche(fiche(etat))).toBe('indisponible');
+    }
+  );
+
+  it('REQ-JUR-011 : TÉMOIN — une fiche sans état administratif : indisponible', () => {
+    expect(etatDepuisLaFiche({ ok: true, fiche: {} } as unknown as IssueDeFiche)).toBe(
+      'indisponible'
     );
+  });
+
+  it.each(MOTIFS_DE_SAISIE_MANUELLE)(
+    'REQ-JUR-011 : TÉMOIN — panne du registre (%s) : indisponible',
+    (motif) => {
+      expect(etatDepuisLaFiche(echec(motif))).toBe('indisponible');
+    }
+  );
+});
+
+describe('REQ-SEC-021 — avant la décision de Williams, le compteur de production refuse', () => {
+  it('REQ-SEC-021 : TÉMOIN — aucun chiffre ne devient « pas de limite » : chaque compteur refuse', async () => {
+    for (const nom of SUJETS_COMPTES) {
+      expect(await compterAvantLaDecision(nom, DEMANDE.sujetIdentite)).toEqual({ autorise: false });
+    }
   });
 });
