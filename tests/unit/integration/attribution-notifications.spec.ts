@@ -748,7 +748,7 @@ describe('REQ-UX-016 — le courriel de la notification s’écrit dans la trans
     expect(t.lignes).toEqual([ligne]);
   });
 
-  it('REQ-UX-016 : sans notification, la ligne porte une notification NULLE (les autres courriels)', async () => {
+  it('REQ-UX-016 : sans notification, la ligne n’en porte aucune : la colonne reste nulle (les autres courriels)', async () => {
     const t = transaction();
     const ligne = await emettre(
       {
@@ -760,7 +760,7 @@ describe('REQ-UX-016 — le courriel de la notification s’écrit dans la trans
       },
       { ...dependances(true, relais(), cles()), depot: depotDesCourriels(t.tx) }
     );
-    expect(ligne.notificationEspaceId).toBeNull();
+    expect(ligne).not.toHaveProperty('notificationEspaceId');
   });
 
   it('REQ-UX-016 : TÉMOIN — le pont du passage écrit le courriel SUR la transaction, lié à la notification, et rend l’heure de l’envoi', async () => {
@@ -786,10 +786,14 @@ describe('REQ-UX-016 — le courriel de la notification s’écrit dans la trans
     const t = transaction();
     const r = relais();
     const envoyer = envoyerParLEmetteur(dependances(false, r, cles()), async () => ADRESSE);
-    const issue = await envoyer(t.tx, notif(ID_NOTIF, 'premier_rang_libere'), {
-      sujet: 'Objet',
-      corps: 'Corps',
-    });
+    const issue = await envoyer(
+      t.tx,
+      notif(ID_NOTIF, 'premier_rang_libere', { apporteurId: ID_APPORTEUR }),
+      {
+        sujet: 'Objet',
+        corps: 'Corps',
+      }
+    );
     expect(issue).toEqual({ statut: 'retenu_dmarc_non_verifie', envoyeAt: null });
     expect(r.appels).toBe(0);
     expect(t.lignes[0]).toMatchObject({ notificationEspaceId: ID_NOTIF, envoyeAt: null });

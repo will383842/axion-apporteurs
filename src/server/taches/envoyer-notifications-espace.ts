@@ -19,6 +19,11 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { finDeLaFenetreDeRedeclaration } from '../../domain/attribution/fenetre-redeclaration';
 import { TAILLES_DE_LOT } from '../../domain/seuils/ssot';
+import {
+  depotDesCourriels,
+  emettre,
+  type DependancesDeLEmetteur,
+} from '../integrations/zeptomail/emetteur';
 
 /** Une notification à porter par courriel, telle que le passage la lit. */
 export type NotificationAEnvoyer = {
@@ -160,5 +165,31 @@ export function portsDuPassage(prisma: PrismaClient, externes: GestesExternes): 
           },
         })
       ),
+  };
+}
+
+/**
+ * Le pont vers l'émetteur unique : le courriel est demandé avec le dépôt LIÉ à la transaction du
+ * passage, et sa ligne porte la notification. L'heure rendue est celle de l'envoi effectif, nulle
+ * s'il n'est pas parti — retenu ou en échec, aucun délai ne court. L'adresse est lue par l'appelant
+ * dans la même transaction ; elle n'est jamais consignée, seule son empreinte l'est.
+ */
+export function envoyerParLEmetteur(
+  dependances: Omit<DependancesDeLEmetteur, 'depot'>,
+  adresseDe: (tx: Prisma.TransactionClient, n: NotificationAEnvoyer) => Promise<string>
+): GestesExternes['envoyer'] {
+  return async (tx, n, texte) => {
+    const ligne = await emettre(
+      {
+        gabarit: n.cle,
+        a: await adresseDe(tx, n),
+        sujet: texte.sujet,
+        corps: texte.corps,
+        apporteurId: n.apporteurId,
+        notificationEspaceId: n.id,
+      },
+      { ...dependances, depot: depotDesCourriels(tx) }
+    );
+    return { statut: ligne.statut, envoyeAt: ligne.envoyeAt };
   };
 }
