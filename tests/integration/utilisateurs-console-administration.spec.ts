@@ -1,5 +1,6 @@
 // @req REQ-SEC-023
 // @req REQ-SEC-003
+// @req REQ-DM-024
 /**
  * SEC-30 — les QUATRE YEUX sur les administrateurs de la console, et la version de session, en base
  * RÉELLE (forme d'A02, migration 20261003002300).

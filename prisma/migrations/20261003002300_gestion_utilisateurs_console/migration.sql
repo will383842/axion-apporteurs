@@ -7,12 +7,13 @@
 --     est validé premier administrateur. Les autres admins existants restent EN ATTENTE, et c'est
 --     voulu : le premier les valide.
 --
--- Retour arrière (commentaire) : remettre `valide_at` à NULL ; DROP TRIGGER
+-- Retour arrière (commentaire) : DROP TRIGGER
 -- utilisateurs_console_quatre_yeux_garde, utilisateurs_console_version_de_session ; DROP FUNCTION
 -- utilisateurs_console_quatre_yeux(), utilisateurs_console_incrementer_version_de_session() ;
 -- restaurer l'ancien corps de sessions_espace_version_console() (il rendait 0) ; DROP CONSTRAINT ×6
 -- (dont utilisateurs_console_invitee_ou_activee et utilisateurs_console_activee_apres_invitation) ;
--- DROP COLUMN ×5 (le report disparaît avec activee_at). La valeur ajoutée à l'enum `agregat_journal` ne se retire pas (Postgres) : elle
+-- DROP COLUMN ×5 (le report et la validation du premier administrateur disparaissent avec leurs
+-- colonnes). La valeur ajoutée à l'enum `agregat_journal` ne se retire pas (Postgres) : elle
 -- reste inerte.
 
 -- ── 1. le journal nomme l'agrégat ────────────────────────────────────────────────────────────────
