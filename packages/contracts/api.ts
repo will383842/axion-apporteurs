@@ -228,7 +228,7 @@ const MOTIF_MOIS = '^[0-9]{4}-(0[1-9]|1[0-2])$';
 const MOTIF_UUID = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
 /**
  * Un nom d'affichage : le ou les mots du prénom, puis UNE initiale suivie d'un point (« Paul D. »,
- * « Jean-Paul D. ») — motif d'A02 (relecture de la PR 710). Le nom entier, un prénom seul, une
+ * « Jean-Paul D. ») — motif d'A02 (PR 710, commentaire 5981840348). Le nom entier, un prénom seul, une
  * adresse de courriel ou un numéro ne passent pas.
  */
 const MOTIF_NOM_AFFICHABLE = "^[\\p{L}][\\p{L}'’-]*( [\\p{L}][\\p{L}'’-]*)* \\p{L}\\.$";
@@ -254,8 +254,6 @@ function siLeStatut(statut: string, exigences: ExigenceDuStatut): FragmentSchema
     },
   };
 }
-/** Les trois champs du porteur, nuls : `libre` et `cliente`. */
-const SANS_PORTEUR: ExigenceDuStatut = { until: 'nul', apporteurRef: 'nul', nomAffichable: 'nul' };
 
 /**
  * L'API 1, `GET /api/integrations/axionia/attributions?siren=` — REQ-INT-014, INT-T07-P.
@@ -304,18 +302,21 @@ export const API_ATTRIBUTIONS: ApiDuContrat = {
           maxLength: LONGUEUR_MAX_NOM_AFFICHABLE,
         }),
       },
+      // Conditions d'A02, version consolidée et source publique : PR 710, commentaire 5981840348.
+      // `nomAffichable` est au motif OU nul pour un porteur sans nom lisible (disponibilité) : le
+      // statut et la référence passent toujours.
       allOf: [
-        siLeStatut('libre', SANS_PORTEUR),
-        // A02 (PR 710, 5981837236) : `nomAffichable` peut être nul pour un porteur sans nom lisible —
-        // le STATUT passe toujours, l'échéance et la référence restent exigées.
+        siLeStatut('libre', { until: 'nul', apporteurRef: 'nul', nomAffichable: 'nul' }),
         siLeStatut('attribuee', { until: 'pose', apporteurRef: 'pose' }),
-        siLeStatut('cliente', SANS_PORTEUR),
+        // Décision B de Williams : « Apportée par Paul » sur la fiche client — une `cliente` a un
+        // porteur ; elle n'a plus d'échéance.
+        siLeStatut('cliente', { until: 'nul', apporteurRef: 'pose' }),
       ],
       $comment:
-        'Réponse 200, fermée. `libre` et `cliente` : `until`, `apporteurRef` et `nomAffichable` ' +
-        'nuls (`allOf`), `libre` étant la même réponse pour un SIREN inconnu, au même instant, et ' +
-        '`cliente` n’exposant aucun porteur ; `attribuee` : `until` et `apporteurRef` posés, ' +
-        '`nomAffichable` nul quand le porteur n’a pas de nom lisible. `apporteurRef` est opaque, de même forme ' +
+        'Réponse 200, fermée. `libre` : `until`, `apporteurRef` et `nomAffichable` ' +
+        'nuls (`allOf`), la même réponse pour un SIREN inconnu, au même instant ; `attribuee` : ' +
+        '`until` et `apporteurRef` posés ; `cliente` : `apporteurRef` posé, `until` nul. ' +
+        '`nomAffichable` est nul quand le porteur n’a pas de nom lisible. `apporteurRef` est opaque, de même forme ' +
         'pour un apporteur et pour un conseiller salarié (W19) ; `nomAffichable` est le prénom et ' +
         'l’initiale du nom du porteur, sans mention de rôle (décisions de Williams du 2026-10-01) — ' +
         'jamais e-mail, téléphone, identifiant ni adresse. Côté axion-ia, le nom ne s’affiche qu’à ' +

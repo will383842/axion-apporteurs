@@ -168,9 +168,10 @@ if (STATUTS_D_ATTRIBUTION.some((st) => !EXIGENCES_DU_STATUT.has(st))) {
 }
 
 /**
- * La cohérence du statut, telle que le contrat la pose : un « libre » ne porte ni échéance, ni
- * référence, ni nom — c'est ce qui le rend identique à « inconnu » ; une « cliente » n'expose aucun
- * porteur ; une « attribuee » porte les trois.
+ * La cohérence du statut, telle que le contrat la pose (`if`/`then`, dérivés ici) : un « libre » ne
+ * porte ni échéance, ni référence, ni nom — c'est ce qui le rend identique à « inconnu » ; une
+ * « attribuee » porte son échéance et sa référence ; une « cliente » sa référence, sans échéance. Le
+ * nom, lui, peut manquer quand le porteur n'en a pas de lisible.
  */
 export const schemaReponseAttribution = formeDeLaReponse.refine((r) =>
   Object.entries(EXIGENCES_DU_STATUT.get(r.statut)!).every(

@@ -153,10 +153,23 @@ describe('REQ-INT-014 — le contrat juge seul la réponse : motif du nom et coh
     ['attribuée sans échéance', { ...attribuee, until: null }, false],
     ['attribuée sans référence', { ...attribuee, apporteurRef: null }, false],
     ['attribuée sans nom lisible (A02, 5981837236)', { ...attribuee, nomAffichable: null }, true],
-    ['cliente, les trois nuls', { statut: 'cliente', ...nuls }, true],
-    ['cliente avec une échéance', { statut: 'cliente', ...nuls, until: '2027-03' }, false],
-    ['cliente avec une référence', { statut: 'cliente', ...nuls, apporteurRef: REF }, false],
-    ['cliente avec un nom', { statut: 'cliente', ...nuls, nomAffichable: 'Paul D.' }, false],
+    [
+      'cliente, le porteur nommé, sans échéance',
+      { ...attribuee, statut: 'cliente', until: null },
+      true,
+    ],
+    [
+      'cliente, nom illisible',
+      { ...attribuee, statut: 'cliente', until: null, nomAffichable: null },
+      true,
+    ],
+    ['cliente avec une échéance', { ...attribuee, statut: 'cliente' }, false],
+    [
+      'cliente sans référence',
+      { ...attribuee, statut: 'cliente', until: null, apporteurRef: null },
+      false,
+    ],
+    ['cliente, les trois nuls', { statut: 'cliente', ...nuls }, false],
   ])('REQ-INT-014 : `if`/`then` du contrat — %s', (_q, r, admis) => {
     expect(valide()(r)).toBe(admis);
     expect(schemaReponseAttribution.safeParse(r).success).toBe(admis);
@@ -299,9 +312,14 @@ describe('REQ-INT-014 — le statut se lit dans l’attribution qui OCCUPE le SI
     }
   );
 
-  it('REQ-INT-014 : `convertie` — `cliente`, sans échéance, sans référence ni nom de porteur (A02, #710)', async () => {
+  it('REQ-INT-014 : `convertie` — `cliente`, sans échéance, le porteur nommé (décision B de Williams ; A02, 5981840348)', async () => {
     const r = await lire(parApporteur('convertie')).lecture;
-    expect(r).toEqual({ statut: 'cliente', until: null, apporteurRef: null, nomAffichable: null });
+    expect(r).toEqual({
+      statut: 'cliente',
+      until: null,
+      apporteurRef: referenceOpaque('apporteur', APPORTEUR, CLE_REF),
+      nomAffichable: 'Paul D.',
+    });
     expect(schemaReponseAttribution.safeParse(r).success).toBe(true);
   });
 
@@ -493,6 +511,19 @@ describe('REQ-INT-014 — `nomAffichable`, le prénom et l’initiale du nom, ri
     const [signal] = l.signaler.mock.calls[0]!;
     expect(signal).toEqual({ genre: 'nom_affichable_indisponible', nombre: 1 });
     expect(JSON.stringify(signal)).not.toMatch(new RegExp(`${SIREN_TEMOIN}|Paul|${CONSEILLER}`));
+  });
+
+  it('REQ-INT-014 : une cliente au porteur sans nom lisible — nom nul, référence posée, alerte levée', async () => {
+    const l = lire(parConseiller('convertie', 'Paul'));
+    const r = await l.lecture;
+    expect(r).toEqual({
+      statut: 'cliente',
+      until: null,
+      apporteurRef: referenceOpaque('console', CONSEILLER, CLE_REF),
+      nomAffichable: null,
+    });
+    expect(schemaReponseAttribution.safeParse(r).success).toBe(true);
+    expect(l.signaler).toHaveBeenCalledWith({ genre: 'nom_affichable_indisponible', nombre: 1 });
   });
 
   it('REQ-INT-014 : un nom lisible — aucune alerte ; une cliente ou un SIREN libre — aucune alerte', async () => {

@@ -243,8 +243,12 @@ describe('REQ-INT-014 — la forme de la réponse, jugée par le schéma', () =>
   it.each([
     ['attribuée, échéance et référence', juste],
     [
-      'cliente, sans échéance ni référence',
-      { statut: 'cliente', until: null, apporteurRef: null, nomAffichable: null },
+      'cliente, sans échéance, le porteur nommé',
+      { statut: 'cliente', until: null, apporteurRef: REF, nomAffichable: 'Paul D.' },
+    ],
+    [
+      'cliente, sans échéance, nom illisible (A02)',
+      { statut: 'cliente', until: null, apporteurRef: REF, nomAffichable: null },
     ],
     ['attribuée, décembre', { ...juste, until: '2027-12' }],
     ['attribuée, octobre', { ...juste, until: '2027-10' }],
@@ -281,16 +285,9 @@ describe('REQ-INT-014 — la forme de la réponse, jugée par le schéma', () =>
       { statut: 'libre', until: null, apporteurRef: null, nomAffichable: 'Paul D.' },
     ],
     ['nom affichable absent', { statut: 'attribuee', until: '2027-03', apporteurRef: REF }],
+    ['cliente avec une échéance', { ...juste, statut: 'cliente' }],
     [
-      'cliente avec une échéance',
-      { ...juste, statut: 'cliente', apporteurRef: null, nomAffichable: null },
-    ],
-    [
-      'cliente avec une référence',
-      { statut: 'cliente', until: null, apporteurRef: REF, nomAffichable: null },
-    ],
-    [
-      'cliente avec un nom',
+      'cliente sans référence',
       { statut: 'cliente', until: null, apporteurRef: null, nomAffichable: 'Paul D.' },
     ],
     ['attribuée sans échéance', { ...juste, until: null }],
@@ -596,8 +593,8 @@ describe('REQ-INT-014 — 6. le SIREN, puis la lecture au plancher', () => {
       lire: async () => ({
         statut: 'cliente',
         until: null,
-        apporteurRef: null,
-        nomAffichable: null,
+        apporteurRef: REF,
+        nomAffichable: 'Paul D.',
       }),
     });
     const r = await traiterAppel(requete(), 'attributions', m.frontiere);

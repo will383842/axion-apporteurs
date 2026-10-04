@@ -10,10 +10,13 @@
  *     `convertie` rend `cliente`, tout autre état occupant `attribuee` ; aucune attribution
  *     occupante, `null`. L'API 1 ne parle que des attributions de Partners : une entreprise connue
  *     par antériorité n'est jamais rendue `cliente` ici ;
- *   — une `cliente` n'expose AUCUN porteur : `until`, `apporteurRef` et `nomAffichable` nuls, et
- *     rien n'est déchiffré (condition d'A02, relecture de la PR 710, posée en `if`/`then` au contrat) ;
+ *   — une `cliente` garde son porteur (décision B de Williams : « Apportée par Paul » sur la fiche
+ *     client) : `apporteurRef` et `nomAffichable`, et `until` nul (conditions d'A02, PR 710,
+ *     commentaire 5981840348, posées en `if`/`then` au contrat) ;
  *   — `until` est le mois, à Paris, de la fin de fenêtre si elle est posée, sinon de la
- *     péremption ;
+ *     péremption, pour une `attribuee` ;
+ *   — un porteur sans nom lisible rend `nomAffichable` nul et lève l'alerte technique
+ *     `nom_affichable_indisponible` (`{ genre, nombre }`, rien d'autre) ;
  *   — `apporteurRef` est un UUID DÉRIVÉ par HMAC, sous une clé dédiée, de l'identifiant du porteur :
  *     stable pour un même porteur, de même forme pour un apporteur et pour un conseiller salarié
  *     (W19), et sans lien lisible avec un identifiant interne. La revue sécurité (A09, #561) en a
@@ -66,7 +69,7 @@ const NOM_DU_CONTRAT = (
 const FORME_NOM = new RegExp(NOM_DU_CONTRAT.pattern, 'u');
 
 /**
- * L'alerte technique d'un nom indisponible (A02, PR 710) : son genre et un NOMBRE, rien d'autre —
+ * L'alerte technique d'un nom indisponible (A02, PR 710, 5981840348) : son genre et un NOMBRE, rien d'autre —
  * ni SIREN, ni nom, ni identifiant.
  */
 export type SignalDuLecteur = {
@@ -167,11 +170,6 @@ export function lecteurDeLaBase(
       },
     });
     if (a === null) return null;
-    // Une cliente n'expose aucun porteur (A02, relecture de la PR 710) : ni échéance, ni
-    // référence, ni nom — rien n'est déchiffré.
-    if (a.statut === 'convertie') {
-      return { statut: 'cliente', until: null, apporteurRef: null, nomAffichable: null };
-    }
 
     let population: Population;
     let idPorteur: string;
@@ -196,13 +194,14 @@ export function lecteurDeLaBase(
       throw new Error('attribution_sans_porteur');
     }
 
-    // A02 (PR 710) : un porteur sans nom lisible répond quand même `attribuee` — le nom, seul, est
+    // A02 (PR 710, 5981840348) : un porteur sans nom lisible répond quand même — le nom, seul, est
     // nul, et l'alerte technique le dit, sans rien qui désigne le SIREN ni le porteur.
     if (nom === null) d.signaler({ genre: 'nom_affichable_indisponible', nombre: 1 });
+    const cliente = a.statut === 'convertie';
     const fin = a.fenetreFinAt ?? a.peremptionAt;
     return {
-      statut: 'attribuee',
-      until: fin === null ? null : moisAParis(fin),
+      statut: cliente ? 'cliente' : 'attribuee',
+      until: cliente || fin === null ? null : moisAParis(fin),
       apporteurRef: referenceOpaque(population, idPorteur, d.cleReference),
       nomAffichable: nom,
     };
