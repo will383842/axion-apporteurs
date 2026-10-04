@@ -38,7 +38,11 @@ import {
 } from '../../../src/content/micro-copy/courriels/notifications';
 import { rendreLaNotification } from '../../../src/server/notifications/envoyer';
 import { LEXIQUE_INTERDIT } from '../../../src/domain/lexique/lexique-interdit';
-import { MOTIFS_ANNULATION_CONSOLE } from '../../../src/domain/attribution/machine';
+import { MotifListeNoire } from '@prisma/client';
+import {
+  MOTIFS_ANNULATION_CONSOLE,
+  MOTIFS_LISTE_NOIRE,
+} from '../../../src/domain/attribution/machine';
 import { CHARGES_PAR_TYPE } from '../../../src/domain/evenement/charges';
 import { motifDeLaForme } from '../../../scripts/gates/lexique-apporteurs';
 import { randomBytes } from 'node:crypto';
@@ -661,7 +665,14 @@ describe('REQ-DM-006 — le motif d’une annulation par la console, liste ferm�
 
   it('REQ-DM-006 : TÉMOIN — annulee_par_la_console EXIGE son motif, et un motif de la liste', () => {
     for (const motifAnnulation of MOTIFS_ANNULATION_CONSOLE) {
-      expect(charge.safeParse({ ...base, motifAnnulation }).success, motifAnnulation).toBe(true);
+      const categorie =
+        motifAnnulation === 'entreprise_relevant_de_l_article_3_3_bis'
+          ? { categorieRelation: 'administration' }
+          : {};
+      expect(
+        charge.safeParse({ ...base, motifAnnulation, ...categorie }).success,
+        motifAnnulation
+      ).toBe(true);
     }
     expect(charge.safeParse(base).success).toBe(false);
     expect(charge.safeParse({ ...base, motifAnnulation: 'autre' }).success).toBe(false);
@@ -807,5 +818,71 @@ describe('REQ-UX-016 — le courriel de la notification s’écrit dans la trans
     expect(issue).toEqual({ statut: 'retenu_dmarc_non_verifie', envoyeAt: null });
     expect(r.appels).toBe(0);
     expect(t.lignes[0]).toMatchObject({ notificationEspaceId: ID_NOTIF, envoyeAt: null });
+  });
+});
+
+describe('REQ-DM-006 — les sources fermées du motif dans la charge : l’anomalie et la catégorie (forme d’A02)', () => {
+  const charge = CHARGES_PAR_TYPE.attribution_etat_modifie;
+  const acteur = { par: 'systeme' } as const;
+  const ANOMALIE = '0190f3a0-0000-7000-8000-0000000000aa';
+  const annulation = {
+    de: 'provisoire',
+    vers: 'annulee',
+    transition: 'annulee_par_la_console',
+    acteur,
+  } as const;
+  const anomalie = {
+    de: 'provisoire',
+    vers: 'invalidee',
+    transition: 'anomalie_confirmee',
+    acteur,
+  } as const;
+
+  it('REQ-DM-006 : la catégorie reprend l’enum de la base, un seul vocabulaire, et chaque valeur a son libellé', () => {
+    expect([...MOTIFS_LISTE_NOIRE].sort()).toEqual(Object.values(MotifListeNoire).sort());
+    expect(Object.keys(LIBELLES_DES_CATEGORIES).sort()).toEqual([...MOTIFS_LISTE_NOIRE].sort());
+  });
+
+  it('REQ-DM-006 : TÉMOIN — le motif de l’article 3.3 bis EXIGE sa catégorie, de la liste', () => {
+    const motif = { ...annulation, motifAnnulation: 'entreprise_relevant_de_l_article_3_3_bis' };
+    for (const categorieRelation of MOTIFS_LISTE_NOIRE) {
+      expect(charge.safeParse({ ...motif, categorieRelation }).success, categorieRelation).toBe(
+        true
+      );
+    }
+    expect(charge.safeParse(motif).success).toBe(false);
+    expect(charge.safeParse({ ...motif, categorieRelation: 'autre' }).success).toBe(false);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — une catégorie sans le motif de l’article 3.3 bis est INTERDITE', () => {
+    expect(
+      charge.safeParse({
+        ...annulation,
+        motifAnnulation: 'declaration_en_double',
+        categorieRelation: 'administration',
+      }).success
+    ).toBe(false);
+    expect(
+      charge.safeParse({ ...anomalie, anomalieId: ANOMALIE, categorieRelation: 'administration' })
+        .success
+    ).toBe(false);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — une anomalie confirmée EXIGE l’identifiant de SON anomalie, un uuid', () => {
+    expect(charge.safeParse({ ...anomalie, anomalieId: ANOMALIE }).success).toBe(true);
+    expect(charge.safeParse(anomalie).success).toBe(false);
+    expect(charge.safeParse({ ...anomalie, anomalieId: 'des faits en clair' }).success).toBe(false);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — un identifiant d’anomalie sur une autre transition est INTERDIT', () => {
+    expect(
+      charge.safeParse({
+        de: 'provisoire',
+        vers: 'invalidee',
+        transition: 'non_confirmee',
+        acteur,
+        anomalieId: ANOMALIE,
+      }).success
+    ).toBe(false);
   });
 });
