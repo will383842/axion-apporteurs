@@ -1,5 +1,7 @@
 // @req REQ-UX-047
 // @req REQ-DM-027
+// @req REQ-SEC-026
+// @req REQ-UX-048
 /**
  * CPL-T07 — l'écran du dossier de conformité, rendu EN PROCESSUS par son composant pur : les pièces
  * en service et leur état, les gestes que le rôle permet, le RIB sans geste (vérifié à quatre yeux
@@ -18,6 +20,10 @@ import {
 import { CONFORMITE_CONSOLE as T } from '../../../src/content/micro-copy/console/conformite';
 import { MOTIFS_REFUS_PIECE } from '../../../src/domain/kyc/pieces';
 import { roleAutorise } from '../../../src/server/roles/matrice';
+import {
+  ROUTES_LIVREES_DE_LA_CONSOLE,
+  entreesDuRole,
+} from '../../../src/server/console/navigation';
 
 const rien = async (): Promise<void> => undefined;
 const ACTIONS = { verifier: rien, ouvrir: rien, valider: rien };
@@ -128,10 +134,24 @@ describe('REQ-UX-047 — les quatre états, et jamais l’IBAN', () => {
     expect(renderToStaticMarkup(createElement(ChargementDuDossier))).toContain(T.chargement);
   });
 
-  it('REQ-DM-027 : TÉMOIN — le lecteur du dossier ne SÉLECTIONNE jamais l’IBAN, et l’écran ne le rend pas', () => {
+  it('REQ-SEC-026 : TÉMOIN — le lecteur du dossier ne SÉLECTIONNE jamais l’IBAN, et l’écran ne le rend pas', () => {
     const lecteur = readFileSync('src/server/conformite/dossier.ts', 'utf8');
     expect(lecteur).not.toMatch(/iban(Chiffre|Hash)\s*:\s*true/);
     const h = rendu(EN_COURS);
     expect(h).not.toMatch(/FR\d{2}|iban(Chiffre|Hash)/i);
+  });
+});
+
+describe('REQ-UX-048 — la route du dossier, livrée, hors du menu', () => {
+  it('REQ-UX-048 : TÉMOIN — la carte la dit livrée, la navigation la compte parmi les routes livrées, et aucun onglet ne la porte', () => {
+    const ligne = readFileSync('docs/CONSOLE-ROUTES.md', 'utf8')
+      .split(/\r?\n/)
+      .find((l) => l.startsWith('| `/console/apporteurs/[id]/conformite`'));
+    expect(ligne).toContain('| livrée |');
+    expect(ROUTES_LIVREES_DE_LA_CONSOLE).toContain('/console/apporteurs/[id]/conformite');
+    for (const role of ['admin', 'qualifieur'] as const)
+      expect(entreesDuRole(role).map((e) => e.route)).not.toContain(
+        '/console/apporteurs/[id]/conformite'
+      );
   });
 });
