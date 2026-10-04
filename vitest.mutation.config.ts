@@ -98,6 +98,9 @@ export default defineConfig({
       'tests/unit/juridique/**/*.spec.ts',
       // UX-P1-41 : les témoins du rendu de l'e-mail au contact (`src/domain/confirmation/`), en processus.
       'tests/unit/micro-copy/**/*.spec.ts',
+      // INT-T73-P : le témoin de la réconciliation des sommes, rangé sous tests/integration/ mais EN
+      // PROCESSUS (lignes simulées et faux client, aucune base, aucun dépôt git, aucun sous-processus).
+      'tests/integration/reconciliation-sommes.spec.ts',
     ],
     exclude: [
       ...(base.test?.exclude ?? []),
