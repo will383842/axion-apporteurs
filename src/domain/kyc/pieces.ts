@@ -24,6 +24,20 @@ export const STATUTS_PIECE_KYC = [
 ] as const;
 export type StatutPieceKyc = (typeof STATUTS_PIECE_KYC)[number];
 
+/**
+ * Les motifs FERMÉS d'un refus de pièce (CPL-T07, forme d'A02, valeurs de la juriste) : un refus en
+ * porte toujours UN, jamais un texte libre ni « autre ». Il entre dans la charge de
+ * `piece_kyc_statut_modifie`, exigé si et seulement si la pièce passe à `refusee`.
+ */
+export const MOTIFS_REFUS_PIECE = [
+  'illisible',
+  'au_nom_d_un_tiers',
+  'perimee',
+  'incomplete',
+  'non_conforme',
+] as const;
+export type MotifRefusPiece = (typeof MOTIFS_REFUS_PIECE)[number];
+
 /** Les types qui portent une échéance obligatoire (CHECK `pieces_kyc_echeance_requise`). */
 export const TYPES_A_ECHEANCE = ['vigilance', 'rc_pro'] as const satisfies readonly TypePieceKyc[];
 
