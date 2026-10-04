@@ -488,7 +488,7 @@ describe('REQ-SEC-023 — les courriels et leurs dates, à l’heure de Paris', 
     });
     // L'information individuelle préalable (art. L.1222-4) : la phrase de la juriste, mot pour mot.
     expect(c.corps).toContain(
-      "La façon dont Axion-IA traite vos données de connexion, dont le journal de vos accès, est décrite dans https://p.exemple.test/console/vos-donnees."
+      'La façon dont Axion-IA traite vos données de connexion, dont le journal de vos accès, est décrite dans https://p.exemple.test/console/vos-donnees.'
     );
   });
 
