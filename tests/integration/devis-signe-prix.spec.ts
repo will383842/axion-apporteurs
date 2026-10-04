@@ -62,14 +62,38 @@ const ligneDuContrat = () => {
   return lignes.items as Record<string, unknown>;
 };
 
+/**
+ * Le sens du champ, tranché par A02 (relecture du schéma de #645) : le texte FINAL, recopié ici MOT
+ * POUR MOT comme oracle. Le contrat publié doit le porter tel quel en `$comment` de la propriété.
+ */
+const SENS_DU_PRIX_DE_REFERENCE =
+  "Prix public HT de la LIGNE, en centimes : le prix public unitaire ferme en vigueur à la date de signature, multiplié par la quantité de la ligne, arrondi comme `montantHtCents`, auquel il se compare directement. `null` si l'offre n'a pas de prix public ferme (sur devis, fourchette, « à partir de », paliers, offre disparue) ou si la ligne n'a pas d'`offreCode` ; jamais un prix nul.";
+
 describe('REQ-INT-003 — le contrat publié : prixReferenceHtCents sur chaque ligne du devis signé', () => {
-  it('REQ-INT-003 : la ligne du devis signé déclare et EXIGE prixReferenceHtCents, en centimes entiers jamais négatifs, ou nul', () => {
+  it('REQ-INT-003 : la ligne du devis signé déclare et EXIGE prixReferenceHtCents, en centimes entiers strictement positifs, ou nul', () => {
     const ligne = ligneDuContrat();
     expect(ligne.additionalProperties).toBe(false);
     expect(ligne.required).toContain('prixReferenceHtCents');
     expect((ligne.properties as Record<string, unknown>).prixReferenceHtCents).toEqual({
-      anyOf: [{ type: 'integer', minimum: 0 }, { type: 'null' }],
+      $comment: SENS_DU_PRIX_DE_REFERENCE,
+      anyOf: [{ type: 'integer', minimum: 1 }, { type: 'null' }],
     });
+  });
+
+  it('REQ-INT-003 : le contrat PUBLIÉ porte le sens du champ mot pour mot, en `$comment` de la propriété', () => {
+    const publie = JSON.parse(readFileSync('packages/contracts/contracts.v3.json', 'utf8')) as {
+      $defs: Record<
+        string,
+        {
+          properties: Record<
+            string,
+            { items: { properties: Record<string, { $comment?: string }> } }
+          >;
+        }
+      >;
+    };
+    const ligne = publie.$defs[nomDefPayload('devis.signe')]!.properties.lignes!.items;
+    expect(ligne.properties.prixReferenceHtCents!.$comment).toBe(SENS_DU_PRIX_DE_REFERENCE);
   });
 
   it('REQ-INT-003 : le prix vendu de la ligne reste montantHtCents ; aucun prixVenduHt, ni sur la ligne ni sur le devis', () => {
@@ -111,6 +135,21 @@ describe('REQ-INT-003 — la réception juge le devis signé contre le contrat p
       payloadConforme(
         'devis.signe',
         devisSigne(() => null)
+      )
+    ).toBe(true);
+  });
+
+  it('REQ-INT-003 : TÉMOIN — un prix de référence à 0 est refusé hors schéma : une absence de prix s’écrit null, et un 0 ferait diviser le prorata par zéro', () => {
+    expect(
+      payloadConforme(
+        'devis.signe',
+        devisSigne(() => 0)
+      )
+    ).toBe(false);
+    expect(
+      payloadConforme(
+        'devis.signe',
+        devisSigne(() => 1)
       )
     ).toBe(true);
   });
