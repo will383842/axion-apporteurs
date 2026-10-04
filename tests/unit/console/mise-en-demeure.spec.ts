@@ -25,8 +25,21 @@ const h = vi.hoisted(() => {
     }
   }
   const MAINTENANT = 1_803_031_200_000;
-  const tx = { nom: 'tx' };
+  /** L'acteur tel que la base le relit DANS la transaction (condition de la sécurité). */
+  const relu = {
+    ligne: null as null | { role: string; desactiveAt: Date | null; valideAt: Date | null },
+    lectures: [] as unknown[],
+  };
+  const tx = {
+    utilisateurConsole: {
+      findUnique: async (a: unknown) => {
+        relu.lectures.push(a);
+        return relu.ligne;
+      },
+    },
+  };
   return {
+    relu,
     Redirection,
     MAINTENANT,
     tx,
@@ -120,6 +133,8 @@ beforeEach(() => {
   vi.mocked(mettreEnDemeure).mockReset();
   vi.mocked(mettreEnDemeure).mockResolvedValue({ decisionId: 'd', evenementId: 1n });
   h.jeton.valeur = 'JETON';
+  h.relu.ligne = { role: 'admin', desactiveAt: null, valideAt: new Date(h.MAINTENANT - 1) };
+  h.relu.lectures = [];
 });
 
 describe('REQ-SEC-023 — le droit : l’admin seul, sous step-up, jugé AVANT tout travail', () => {
@@ -141,6 +156,36 @@ describe('REQ-SEC-023 — le droit : l’admin seul, sous step-up, jugé AVANT t
       'JETON',
       expect.anything()
     );
+  });
+
+  it('REQ-SEC-023 : TÉMOIN — le droit est REJUGÉ en base, dans la transaction, avant le geste (mettreEnDemeure ne le rejuge pas)', async () => {
+    accorde();
+    await destination(formulaire());
+    expect(h.relu.lectures).toEqual([
+      {
+        where: { id: ADMIN.id },
+        select: { role: true, desactiveAt: true, valideAt: true },
+      },
+    ]);
+    // Entre le juge et la transaction, l'acteur a changé : rôle retiré, compte désactivé,
+    // administrateur sans validation, ou ligne disparue. Retour à l'accueil, rien n'est écrit.
+    const deriva = [
+      { role: 'qualifieur', desactiveAt: null, valideAt: new Date(h.MAINTENANT - 1) },
+      {
+        role: 'admin',
+        desactiveAt: new Date(h.MAINTENANT - 1),
+        valideAt: new Date(h.MAINTENANT - 1),
+      },
+      { role: 'admin', desactiveAt: null, valideAt: null },
+      null,
+    ];
+    vi.mocked(mettreEnDemeure).mockClear();
+    for (const ligne of deriva) {
+      accorde();
+      h.relu.ligne = ligne;
+      expect(await destination(formulaire()), JSON.stringify(ligne)).toBe('/console');
+    }
+    expect(vi.mocked(mettreEnDemeure)).not.toHaveBeenCalled();
   });
 
   it('REQ-SEC-023 : TÉMOIN — un relèvement manquant renvoie à la connexion, l’écran en suite ; rien n’est fait', async () => {
