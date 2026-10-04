@@ -3,6 +3,7 @@
 // @req REQ-DM-007
 // @req REQ-QA-004
 // @req REQ-SEC-042
+// @req REQ-DM-011
 /**
  * DM-08 — la machine à états d'attribution, jugée sans base (REQ-DM-006, REQ-QA-004, REQ-DM-007).
  *

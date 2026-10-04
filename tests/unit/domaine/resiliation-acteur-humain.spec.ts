@@ -3,6 +3,7 @@
 // @req REQ-SEC-032
 // @req REQ-SEC-003
 // @req REQ-SEC-005
+// @req REQ-JUR-006
 /**
  * SEC-19 — la résiliation et ce qu'elle ne peut JAMAIS être : une sanction de l'inactivité.
  *
