@@ -28,6 +28,8 @@ export const TACHES = {
   siren_refuses_purger: { req: 'REQ-DM-043' },
   /** DM-28 — la reprise des codes NAF nuls d'un dépôt en repli manuel (`completerLesCodesNaf`). */
   naf_completer: { req: 'REQ-DM-046' },
+  /** DM-61 — la suppression des notifications de l'espace douze mois après leur inscription. */
+  notifications_espace_purger: { req: 'REQ-UX-016' },
   /** DM-59 — l'effacement, à échéance, de la valeur d'une rectification demandée par le contact. */
   droits_contact_purger: { req: 'REQ-JUR-065' },
   /** SEC-58 — la purge, à échéance, du journal des accès à la console. */
