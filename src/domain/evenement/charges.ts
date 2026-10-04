@@ -41,6 +41,7 @@ import {
   GESTES_RATTACHEMENT,
   STATUTS_ANOMALIE,
 } from '../anomalie/regles';
+import { GESTES_UTILISATEUR_CONSOLE, ROLES_CONSOLE } from '../console/roles';
 
 /**
  * Les codes d'événement que porte `apporteur_statut_modifie` : la NAISSANCE (`creer`, `de` nul), puis
@@ -102,7 +103,8 @@ export type TypeEvenementJournal =
   | 'anomalie_statut_modifie'
   | 'contestation_modifiee'
   | 'rattachement_manuel_modifie'
-  | 'anomalie_gel_modifie';
+  | 'anomalie_gel_modifie'
+  | 'utilisateur_console_modifie';
 
 /** DM-08 : le porteur d'une attribution, une forme UNIQUE — sa population et son identifiant. */
 const PORTEUR = () =>
@@ -315,6 +317,31 @@ export const CHARGES_PAR_TYPE = {
       acteur: FORMES.acteur(),
     })
     .strict(),
+  // SEC-30 (forme d'A02) : tout changement d'un utilisateur de la console, agrégat
+  // `utilisateur_console` (son id est `agregatId`), dans la MÊME transaction que lui. Le rôle avant
+  // et après, rien d'autre : ni adresse, ni nom. Pour `valider`, l'acteur EST le validateur.
+  utilisateur_console_modifie: z
+    .object({
+      geste: z.enum(GESTES_UTILISATEUR_CONSOLE),
+      de: z.enum(ROLES_CONSOLE).nullable(),
+      vers: z.enum(ROLES_CONSOLE).nullable(),
+      acteur: FORMES.acteur(),
+    })
+    .strict()
+    .superRefine((c, ctx) => {
+      const juste =
+        c.geste === 'changer_role'
+          ? c.de !== null && c.vers !== null && c.de !== c.vers
+          : c.geste === 'inviter'
+            ? c.de === null && c.vers !== null
+            : c.de === null && c.vers === null;
+      if (!juste)
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['vers'],
+          message: 'roles_incoherents_avec_le_geste',
+        });
+    }),
 } satisfies Record<TypeEvenementJournal, z.ZodTypeAny>;
 
 /**
