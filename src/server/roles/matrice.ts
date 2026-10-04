@@ -55,6 +55,10 @@ export const MATRICE_DES_ROLES = {
   // DM-12 (REQ-DM-033, cadrage de la sécurité) : déchiffrer la justification d'une anomalie, par le
   // lecteur unique ; jamais au comptable ni au lecteur.
   'action:lire_justification_anomalie': { roles: ['admin', 'qualifieur'], stepUp: false },
+  // SEC-60 (REQ-SEC-058, condition de la sécurité sur SEC-58) : lire le journal des accès à la console,
+  // à l'admin SEUL, jamais en attente ; la lecture se journalise elle-même
+  // (`src/server/console/journal-des-acces.ts`).
+  'action:lire_journal_des_acces': { roles: ['admin'], stepUp: false },
   // SEC-29 : l'écran `/console` minimal (le repli de la redirection, avant l'accueil du rôle
   // d'UX-P1-16) et la déconnexion, ouverts aux quatre rôles : chacun doit pouvoir arriver et partir.
   'ecran:accueil': { roles: ['admin', 'qualifieur', 'comptable', 'lecteur'], stepUp: false },
