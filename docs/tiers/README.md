@@ -52,6 +52,7 @@ limites que **nous** appliquons, et ce que le produit fait quand le tiers ne ré
 | [`github.md`](./github.md) | Héberge le code, construit l'image, porte les secrets, ordonne les fusions | REQ-GOV-014, REQ-GOV-022, REQ-INT-031, REQ-QA-018, REQ-QA-022 | HYP-E1-24, HYP-E1-26, HYP-E1-27, HYP-E1-33, W13 | Ni fusion ni déploiement ; la production tourne sur l'image déjà tirée |
 | [`telegram.md`](./telegram.md) | Porte les alertes de console et celle de l'exercice de sauvegarde | REQ-GOV-022, REQ-INT-024, REQ-INT-025, REQ-QA-023, REQ-SEC-033 | HYP-D12, HYP-E1-24 | **Aucun repli écrit à ce jour** : l'alerte est perdue sans trace — c'est le point ouvert de cette tâche |
 | [`push-web.md`](./push-web.md) | Remet les notifications de l'espace installable à l'appareil de l'apporteur | REQ-GOV-022, REQ-INT-025, REQ-SEC-033, REQ-UX-014 | HYP-D12, W13 | Aucun droit n'est suspendu : l'espace reste la source, la notification n'était qu'un raccourci |
+| [`axionia.md`](./axionia.md) | Rend sa file de sortie à la relecture et rejoue les événements perdus, à la demande de la réconciliation quotidienne | REQ-GOV-022, REQ-INT-012, REQ-INT-013, REQ-SEC-010 | — | Aucun rattrapage ; les envois du relais continuent d'arriver, le battement de la tâche dit l'échec chaque jour |
 
 <!-- tableau-tiers:fin -->
 
