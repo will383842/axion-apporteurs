@@ -92,8 +92,10 @@ describe('REQ-UX-048 — (1) la navigation est celle de la carte', () => {
 });
 
 describe('REQ-UX-048 — (2) une entrée exige le droit ET la livraison', () => {
-  it('REQ-UX-048 : TÉMOIN — aujourd’hui aucun écran du menu n’est livré : aucun onglet, pour aucun rôle', () => {
-    for (const role of ROLES_CONSOLE) expect(entreesDuRole(role), role).toEqual([]);
+  it('REQ-UX-048 : TÉMOIN — aujourd’hui seul l’écran des utilisateurs est livré : un onglet pour l’admin, aucun pour les autres', () => {
+    expect(entreesDuRole('admin').map((e) => e.route)).toEqual(['/console/utilisateurs']);
+    for (const role of ROLES_CONSOLE.filter((r) => r !== 'admin'))
+      expect(entreesDuRole(role), role).toEqual([]);
   });
 
   it('REQ-UX-048 : TÉMOIN — tous les écrans livrés, chaque rôle voit en phase 1 le bureau de la carte, dérivé de ses droits', () => {
