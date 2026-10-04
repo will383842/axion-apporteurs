@@ -93,11 +93,6 @@ export function peutOuvrirLEspace(statut: string | null, droitsEnCours = false):
   return niveauDAcces(statut, droitsEnCours) !== 'ferme';
 }
 
-/** Vrai si le niveau admet une ÉCRITURE ; la lecture n'en admet aucune (REQ-SEC-032). */
-export function ecritureOuverte(niveau: NiveauDAcces): boolean {
-  return niveau === 'plein' || niveau === 'limite';
-}
-
 /**
  * Vrai si la route de ce segment répond à ce niveau. Défaut fermé : un segment hors des listes est
  * refusé à tout niveau, et une route ajoutée plus tard est refusée en ouverture limitée tant qu'elle
