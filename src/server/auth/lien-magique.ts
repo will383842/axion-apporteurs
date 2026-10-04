@@ -473,8 +473,11 @@ export interface TransactionDeConsommationConsole {
   ): Promise<{ id: string; utilisateurConsoleId: string | null; kid: string } | null>;
   /** Le lien de la console, sous la clé courante, est-il déjà consommé ? Absent : « invalide ». */
   dejaConsommeConsole?(tokenHash: string, kid: string): Promise<boolean>;
-  /** Vrai seulement si l'utilisateur existe et n'est pas désactivé, relu dans la transaction. */
-  utilisateurActif(utilisateurConsoleId: string): Promise<boolean>;
+  /**
+   * Vrai seulement si l'utilisateur existe, n'est pas désactivé et, s'il n'est pas encore activé, si
+   * son invitation vaut encore à `maintenant` (SEC-30) ; relu dans la transaction.
+   */
+  utilisateurActif(utilisateurConsoleId: string, maintenant: Date): Promise<boolean>;
   ouvrirSessionConsole(s: NouvelleSessionConsole): Promise<void>;
 }
 
@@ -702,7 +705,7 @@ async function ouvrirLaSessionConsole(
   lien: { id: string; utilisateurConsoleId: string },
   o: OuvertureDeSession
 ): Promise<SessionOuverteParLeLien | null> {
-  if (!(await tx.utilisateurActif(lien.utilisateurConsoleId))) return null;
+  if (!(await tx.utilisateurActif(lien.utilisateurConsoleId, o.maintenant))) return null;
   const jetonSession = tirerJeton();
   const { secret, kid } = o.configuration.session;
   await tx.ouvrirSessionConsole({
