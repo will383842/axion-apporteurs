@@ -42,6 +42,11 @@ export const TACHES = {
    */
   reconciliation_axionia: { req: 'REQ-INT-013' },
   /**
+   * SEC-18 — l'ouverture DIFFÉRÉE des anomalies d'auto-parrainage, sur les naissances de candidatures
+   * et de pièces RIB lues au journal (`src/server/taches/ouvrir-anomalies-auto-parrainage.ts`).
+   */
+  auto_parrainage_ouvrir: { req: 'REQ-SEC-031' },
+  /**
    * DM-62 — l'anonymisation des anomalies à leur échéance, et le NOMBRE des mesures ouvertes au-delà
    * de `MESURE_OUVERTE_ALERTE_JOURS` (`anonymiserLesAnomalies`).
    */
