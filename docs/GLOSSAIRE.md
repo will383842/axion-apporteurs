@@ -182,7 +182,7 @@ qui nomme un événement pointé — `attribution.confirmee_tacitement` (REQ-DM-
 
 | Valeur | Agrégat | Créateur | Charge fermée |
 | --- | --- | --- | --- |
-| `attribution_etat_modifie` | `attribution` | DM-08 | `{de, vers, transition, acteur, lienInteret?}` ; `de` : `EtatAttribution` ou nul ; `transition` : `z.enum(EVENEMENTS_ATTRIBUTION)` ; `lienInteret` : `declare` ou `non_declare` |
+| `attribution_etat_modifie` | `attribution` | DM-08 | `{de, vers, transition, acteur, lienInteret?, critere?, fait?, motifAnnulation?}` ; `de` : `EtatAttribution` ou nul ; `transition` : `z.enum(EVENEMENTS_ATTRIBUTION)` ; `lienInteret` : `declare` ou `non_declare` ; `critere` (`cliente`, `devis`, `devis_signe`) et `fait` (nature, empreinte, date) : exigés pour `anteriorite_etablie` et pour elle seule (DM-67) ; `motifAnnulation` (`MotifAnnulationConsole` : `demande_de_l_apporteur`, `declaration_en_double`, `entreprise_relevant_de_l_article_3_3_bis`, `erreur_de_saisie_de_la_societe`) : exigé pour `annulee_par_la_console` et pour elle seule (DM-55) |
 | `attribution_peremption_suspendue` | `attribution` | DM-08 | `{acteur, suspendueAt}` |
 | `attribution_porteur_reaffecte` | `attribution` | DM-08 | `{de, vers, acteur}` ; `de` et `vers` : un porteur `{type, id}`, `type` valant `utilisateur_console` (W19 (5), refus `porteur_non_conseiller`) ; `de` ≠ `vers` ; aucune donnée de personne ni date |
 | `attribution_contact_purge` | `attribution` | DM-07 | `{purgeAt, acteur}` ; `acteur` : `FORMES.acteur()` restreint au système, la purge est celle du cron |

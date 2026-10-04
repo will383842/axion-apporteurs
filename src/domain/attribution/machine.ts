@@ -167,6 +167,20 @@ const REFUSEES_A_L_APPORTEUR: readonly TransitionAttribution[] = ['prise_en_char
  * `anteriorite_etablie` ; il n'apparaît jamais dans une notification.
  */
 export const CRITERES_D_ANTERIORITE = ['cliente', 'devis', 'devis_signe'] as const;
+
+/**
+ * DM-55 (forme d'A02, valeurs de la juriste, rattrapage 98) : le motif FERMÉ d'une annulation par la
+ * console, sans « autre ». Il ne vaut que depuis `provisoire` (seule flèche de la matrice) ;
+ * `erreur_de_saisie_de_la_societe` est réservé à la prise en charge d'un conseiller, et ne notifie rien.
+ * Pas de colonne : l'événement est la trace, le motif est dans sa charge.
+ */
+export const MOTIFS_ANNULATION_CONSOLE = [
+  'demande_de_l_apporteur',
+  'declaration_en_double',
+  'entreprise_relevant_de_l_article_3_3_bis',
+  'erreur_de_saisie_de_la_societe',
+] as const;
+export type MotifAnnulationConsole = (typeof MOTIFS_ANNULATION_CONSOLE)[number];
 export type CritereDAnteriorite = (typeof CRITERES_D_ANTERIORITE)[number];
 
 export type CodeTransitionAttribution =

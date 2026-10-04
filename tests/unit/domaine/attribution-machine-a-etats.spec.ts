@@ -368,7 +368,11 @@ describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
     for (const transition of EVENEMENTS_ATTRIBUTION) {
       const de = transition in NAISSANCES_ATTRIBUTION ? null : 'active';
       const critere =
-        transition === 'anteriorite_etablie' ? { critere: 'cliente', fait: FACTURE } : {};
+        transition === 'anteriorite_etablie'
+          ? { critere: 'cliente', fait: FACTURE }
+          : transition === 'annulee_par_la_console'
+            ? { motifAnnulation: 'declaration_en_double' }
+            : {};
       expect(
         charge.safeParse({ de, vers: 'active', transition, acteur, ...critere }).success,
         transition

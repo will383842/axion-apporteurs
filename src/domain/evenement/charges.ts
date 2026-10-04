@@ -30,6 +30,7 @@ import { EVENEMENTS_APPORTEUR, MOTIFS_RESILIATION, STATUTS_APPORTEUR } from '../
 import {
   CRITERES_D_ANTERIORITE,
   ETATS_ATTRIBUTION,
+  MOTIFS_ANNULATION_CONSOLE,
   EVENEMENTS_ATTRIBUTION,
   NAISSANCES_ATTRIBUTION,
 } from '../attribution/machine';
@@ -187,8 +188,12 @@ export const CHARGES_PAR_TYPE = {
         .strict()
         .optional(),
     })
+    .extend({
+      /** DM-55 : le motif fermé d'une annulation par la console, exigé pour elle seule. */
+      motifAnnulation: z.enum(MOTIFS_ANNULATION_CONSOLE).optional(),
+    })
     .strict()
-    .superRefine(({ de, transition, critere, fait }, ctx) => {
+    .superRefine(({ de, transition, critere, fait, motifAnnulation }, ctx) => {
       if ((de === null) !== NAISSANCES.includes(transition)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -206,6 +211,13 @@ export const CHARGES_PAR_TYPE = {
       // Le fait fondateur accompagne le critère, et sa nature est celle que le critère nomme.
       const natureAttendue =
         critere === undefined ? undefined : critere === 'cliente' ? 'facture' : 'devis';
+      if ((transition === 'annulee_par_la_console') !== (motifAnnulation !== undefined)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['motifAnnulation'],
+          message: 'motif_annulation_incoherent',
+        });
+      }
       if (fait?.nature !== natureAttendue) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
