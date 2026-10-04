@@ -98,6 +98,8 @@ export default defineConfig({
       'tests/unit/juridique/**/*.spec.ts',
       // UX-P1-41 : les témoins du rendu de l'e-mail au contact (`src/domain/confirmation/`), en processus.
       'tests/unit/micro-copy/**/*.spec.ts',
+      // UX-P1-16 : le témoin de la navigation de la console, en processus (aucun dépôt git ni sous-processus).
+      'tests/unit/console/navigation-par-role.spec.ts',
     ],
     exclude: [
       ...(base.test?.exclude ?? []),
