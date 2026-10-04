@@ -44,6 +44,9 @@ const m = vi.hoisted(() => ({
   clientRejeu: vi.fn(),
   portsDeReconciliation: vi.fn(),
   clientRelecture: vi.fn(),
+  // SEC-18 : l'ouverture différée des anomalies d'auto-parrainage, simulée pour juger son inscription.
+  ouvrirLesAnomaliesDAutoParrainage: vi.fn(),
+  precedentDuBattement: vi.fn(),
 }));
 
 vi.mock('../../../src/server/queue/workers/evenement-recu', async (original) => ({
@@ -113,6 +116,11 @@ vi.mock('../../../src/server/integrations/axionia/reconciliation', () => ({
 }));
 vi.mock('../../../src/server/integrations/axionia/relecture', () => ({
   clientRelecture: m.clientRelecture,
+}));
+vi.mock('../../../src/server/taches/ouvrir-anomalies-auto-parrainage', async (original) => ({
+  ...(await original<object>()),
+  ouvrirLesAnomaliesDAutoParrainage: m.ouvrirLesAnomaliesDAutoParrainage,
+  precedentDuBattement: m.precedentDuBattement,
 }));
 
 import {
@@ -588,5 +596,30 @@ describe('REQ-QA-027 — le traitant de la candidature tire les coordonnées sur
     };
     expect([canal.urlAxionia, canal.appeler]).toEqual(['https://axion.test', fetch]);
     expect(canal.maintenantMs()).toBe(INSTANT.getTime());
+  });
+});
+
+describe('REQ-QA-027 — `auto_parrainage_ouvrir` ouvre depuis le curseur de SON battement', () => {
+  const INSTANT = new Date('2026-10-03T08:00:00.000Z');
+  beforeEach(() => {
+    vi.useFakeTimers({ now: INSTANT, toFake: ['Date'] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('REQ-QA-027 : l’ouverture reçoit le client, l’heure du système et la relecture du battement, et rend son bilan', async () => {
+    const precedent = vi.fn();
+    m.precedentDuBattement.mockReturnValue(precedent);
+    const bilan = { curseur: 3, naissancesLues: 2, ouvertes: 1 };
+    m.ouvrirLesAnomaliesDAutoParrainage.mockResolvedValue(bilan);
+    expect(await inscriptions(PRISMA).auto_parrainage_ouvrir!()).toBe(bilan);
+    expect(m.precedentDuBattement).toHaveBeenCalledWith(PRISMA);
+    const [client, d] = m.ouvrirLesAnomaliesDAutoParrainage.mock.calls[0]! as [
+      unknown,
+      { maintenant: () => Date; precedent: unknown },
+    ];
+    expect([client, d.precedent]).toEqual([PRISMA, precedent]);
+    expect(d.maintenant()).toEqual(INSTANT);
   });
 });
