@@ -10,7 +10,7 @@
  *   — un apporteur et un conseiller salarié rendent la même forme (W19), avec une référence
  *     opaque, stable, qui ne contient aucun identifiant interne.
  *
- * Le conseiller : le rôle `conseiller_salarie` n'existe pas encore dans `console_role` (SEC-31) ;
+ * Le conseiller : le rôle `conseiller_salarie` n'existe pas encore dans `console_role` ;
  * son attribution se pose dans une transaction ANNULÉE, déclencheur du rôle neutralisé, comme dans
  * `index-partiel.spec.ts`. La lecture se fait dans la même transaction, sous `partners_app`.
  */
