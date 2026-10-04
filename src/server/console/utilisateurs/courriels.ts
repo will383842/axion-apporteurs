@@ -27,7 +27,10 @@ export interface CourrielDeLAdministration {
   readonly gabarit: 'invitation_console' | 'admin_cree' | 'admin_reactive';
 }
 
-/** L'invitation : le rôle, l'adresse de connexion (sans jeton), l'échéance. */
+/** JUR-T62 : la route publique de la page « Vos données dans la console » (`docs/CONSOLE-ROUTES.md`). */
+const ROUTE_VOS_DONNEES_CONSOLE = '/console/vos-donnees';
+
+/** L'invitation : le rôle, l'adresse de connexion (sans jeton), l'échéance, la page des données. */
 export function courrielDInvitation(d: {
   a: string;
   role: ConsoleRole;
@@ -42,6 +45,8 @@ export function courrielDInvitation(d: {
       libelleRole: d.role,
       adresseConnexion: d.adresseConnexion,
       dateExpiration: dateEtHeureCompletesDeParis(echeance),
+      // JUR-T62 : la page publique « Vos données dans la console », sur la même origine que la connexion.
+      adressePolitique: new URL(ROUTE_VOS_DONNEES_CONSOLE, d.adresseConnexion).toString(),
     }),
     gabarit: 'invitation_console',
   };
