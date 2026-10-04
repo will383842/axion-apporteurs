@@ -204,10 +204,10 @@ describe('REQ-SEC-008 — SEC-47 : filtres et tris bornés aux champs RENDUS', (
   );
 });
 
-describe('REQ-SEC-008 — DM-50 : la qualité d’exercice et la profession déclarées, rendues sur SA fiche seulement', () => {
-  const DECLAREES = ['qualiteExercice', 'professionReglementee'] as const;
+describe('REQ-SEC-008 — DM-50 et DM-56 : la qualité d’exercice, la profession et le statut juridique déclarés, rendus sur SA fiche seulement', () => {
+  const DECLAREES = ['qualiteExercice', 'professionReglementee', 'statutJuridique'] as const;
 
-  it('REQ-SEC-008 : moi() rend la qualité d’exercice et la profession réglementée que l’apporteur a déclarées', async () => {
+  it('REQ-SEC-008 : moi() rend la qualité d’exercice, la profession réglementée et le statut juridique que l’apporteur a déclarés', async () => {
     const { client, appels } = fauxClient();
     await forApporteur(client, A).moi();
     const select = (appels[0]!.args as { select?: Record<string, unknown> }).select ?? {};
