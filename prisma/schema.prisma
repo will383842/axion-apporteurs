@@ -690,6 +690,11 @@ model NotificationEspace {
   /// en SQL brut (partners/ADR-0015).
   evenementId   BigInt?          @map("evenement_id")
   evenement     Evenement?       @relation(fields: [evenementId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// DM-55 : l'anomalie confirmée qui fonde une `decision_attribution`, et elle seule (CHECK
+  /// `notifications_espace_anomalie_decision_seule`, en SQL brut). Ses faits se lisent dans sa ligne au
+  /// rendu ; ils n'entrent jamais dans le journal chaîné (décision (d) de la juriste pour DM-12).
+  anomalieId    String?          @map("anomalie_id") @db.Uuid
+  anomalie      Anomalie?        @relation(fields: [anomalieId], references: [id], onDelete: SetNull, onUpdate: Restrict)
   /// DM-55 : les courriels qui l'ont portée, une tentative par ligne.
   courriels     CourrielEnvoye[]
 
@@ -1172,32 +1177,34 @@ model AlerteLiberation {
 /// Une anomalie (REQ-DM-033). Le score n'existe que pour la sincérité ; la clôture pose statut,
 /// date, auteur et justification ensemble, une fois, sans retour (fonction dédiée).
 model Anomalie {
-  id                    String              @id @default(uuid()) @db.Uuid
+  id                    String               @id @default(uuid()) @db.Uuid
   type                  TypeAnomalie
-  score                 Int?                @db.SmallInt
-  apporteurId           String?             @map("apporteur_id") @db.Uuid
-  apporteur             Apporteur?          @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  attributionId         String?             @map("attribution_id") @db.Uuid
-  attribution           Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  statut                StatutAnomalie      @default(ouverte)
-  ouverteAt             DateTime            @default(now()) @map("ouverte_at") @db.Timestamptz(3)
-  traiteParId           String?             @map("traite_par_id") @db.Uuid
-  traitePar             UtilisateurConsole? @relation(fields: [traiteParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  traiteAt              DateTime?           @map("traite_at") @db.Timestamptz(3)
+  score                 Int?                 @db.SmallInt
+  apporteurId           String?              @map("apporteur_id") @db.Uuid
+  apporteur             Apporteur?           @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attributionId         String?              @map("attribution_id") @db.Uuid
+  attribution           Attribution?         @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  statut                StatutAnomalie       @default(ouverte)
+  ouverteAt             DateTime             @default(now()) @map("ouverte_at") @db.Timestamptz(3)
+  traiteParId           String?              @map("traite_par_id") @db.Uuid
+  traitePar             UtilisateurConsole?  @relation(fields: [traiteParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  traiteAt              DateTime?            @map("traite_at") @db.Timestamptz(3)
   /// La justification, CHIFFRÉE (`CHAMPS_PII`) : elle porte un soupçon sur une personne. Posée à la
   /// clôture, vidée par la purge seule.
-  justificationChiffre  Bytes?              @map("justification_chiffre")
-  justificationPurgeeAt DateTime?           @map("justification_purgee_at") @db.Timestamptz(3)
+  justificationChiffre  Bytes?               @map("justification_chiffre")
+  justificationPurgeeAt DateTime?            @map("justification_purgee_at") @db.Timestamptz(3)
   /// L'ANONYMISATION : tout ce qui désigne une personne est vidé ; restent l'id, le type, le statut
   /// et les mois d'ouverture et de traitement (forme d'A02).
-  anonymiseeAt          DateTime?           @map("anonymisee_at") @db.Timestamptz(3)
+  anonymiseeAt          DateTime?            @map("anonymisee_at") @db.Timestamptz(3)
   /// La fin réelle de la mesure fondée sur une anomalie confirmée, posée une fois, jamais avant
   /// `traiteAt` ; elle fait courir l'échéance de l'anonymisation.
-  mesureTermineeAt      DateTime?           @map("mesure_terminee_at") @db.Timestamptz(3)
+  mesureTermineeAt      DateTime?            @map("mesure_terminee_at") @db.Timestamptz(3)
   /// Le gel pour litige : posé une fois avec sa référence (un numéro, jamais un nom), levé une fois.
-  gelLitigeAt           DateTime?           @map("gel_litige_at") @db.Timestamptz(3)
-  gelLitigeLeveAt       DateTime?           @map("gel_litige_leve_at") @db.Timestamptz(3)
-  gelLitigeRef          String?             @map("gel_litige_ref") @db.VarChar(64)
+  gelLitigeAt           DateTime?            @map("gel_litige_at") @db.Timestamptz(3)
+  gelLitigeLeveAt       DateTime?            @map("gel_litige_leve_at") @db.Timestamptz(3)
+  gelLitigeRef          String?              @map("gel_litige_ref") @db.VarChar(64)
+  /// DM-55 : les notifications des décisions qu'elle fonde.
+  notificationsEspace   NotificationEspace[]
 
   @@index([apporteurId])
   @@index([attributionId])
