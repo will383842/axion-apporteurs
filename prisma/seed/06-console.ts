@@ -6,7 +6,7 @@
  * DÉTERMINISTE : l'identifiant, les jetons et l'instant sont fournis par l'appelant, jamais tirés
  * ici ; mêmes entrées, mêmes lignes. Le courriel et le nom passent par `colonnesPii`, liés à la
  * ligne (modèle `UtilisateurConsole`) ; les empreintes des jetons viennent des producteurs réels
- * (`empreinteDuJeton`, `empreinteDeSession`, RM-03). Aucun clair ni aucun jeton n'est écrit. La
+ * (`empreinteDuJeton`, `empreinteDeSessionConsole`, RM-03). Aucun clair ni aucun jeton n'est écrit. La
  * version de la session n'est pas écrite : la base la pose à 0 pour une session de la console.
  */
 
@@ -16,7 +16,7 @@ import {
   type PrismaClient,
 } from '@prisma/client';
 import { DUREES_AUTH } from '../../src/server/auth/durees';
-import { empreinteDeSession, empreinteDuJeton } from '../../src/server/auth/lien-magique';
+import { empreinteDeSessionConsole, empreinteDuJeton } from '../../src/server/auth/lien-magique';
 import { colonnesPii, type ClesPii } from '../../src/server/securite/pii';
 
 /** Le nom du modèle dans la donnée authentifiée des blocs chiffrés d'un utilisateur de la console. */
@@ -86,7 +86,7 @@ export async function semerSessionConsole(
     data: {
       utilisateurConsoleId: s.utilisateurConsoleId,
       lienMagiqueId: lien.id,
-      tokenHash: empreinteDeSession(s.jetonSession, s.configuration.session.secret),
+      tokenHash: empreinteDeSessionConsole(s.jetonSession, s.configuration.session.secret),
       kid: s.configuration.session.kid,
       ipHash: s.ipHash,
       creeAt: s.consommeAt,

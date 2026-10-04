@@ -34,6 +34,8 @@ import {
 } from '../../content/micro-copy/courriels/notifications';
 
 const SOURCE_DES_TEXTES = 'src/content/micro-copy/courriels/notifications.ts';
+/** SEC-29 : les textes et les routes d'une notification de la CONSOLE vivent avec la console. */
+const SOURCE_DES_TEXTES_CONSOLE = 'src/content/micro-copy/console/connexion.ts';
 
 export type Declencheur = 'evenement' | 'echeance_piece' | 'calendrier_fixe';
 export type Canal = 'email' | 'espace';
@@ -331,10 +333,25 @@ export function fautesDeLaTable(
     registre: readonly TacheDuRegistre[];
     routes: readonly string[];
     textes: Readonly<Record<string, TexteDeNotification>>;
+    /**
+     * SEC-29 : les routes (`docs/CONSOLE-ROUTES.md`) et les appels des notifications de la console.
+     * Absent, une ligne destinée à la console est une faute : elle n'est jamais jugée sur l'espace.
+     */
+    console?: {
+      routes: readonly string[];
+      textes: Readonly<Record<string, { readonly appel: string }>>;
+    };
   }
 ): string[] {
   const f: string[] = [];
   for (const [cle, l] of Object.entries(table)) {
+    const deLaConsole = l.destinataire === 'utilisateur_console';
+    if (deLaConsole && ctx.console === undefined)
+      f.push(`contexte_console_absent : ${cle} est destinée à la console, jugée sans ses routes`);
+    const routes = deLaConsole ? (ctx.console?.routes ?? []) : ctx.routes;
+    const textes = deLaConsole ? (ctx.console?.textes ?? {}) : ctx.textes;
+    const sourceDesTextes = deLaConsole ? SOURCE_DES_TEXTES_CONSOLE : SOURCE_DES_TEXTES;
+    const sourceDesRoutes = deLaConsole ? 'docs/CONSOLE-ROUTES.md' : 'docs/ESPACE-ROUTES.md';
     const tache = ctx.registre.find((t) => t.id === l.emetteur);
     if (tache === undefined)
       f.push(`emetteur_inconnu : ${cle} nomme ${l.emetteur}, absent du registre`);
@@ -354,13 +371,13 @@ export function fautesDeLaTable(
       );
     if (INACTIVITE.test(l.fondement))
       f.push(`declenche_par_l_inactivite : ${cle} — « ${l.fondement} »`);
-    const texte = ctx.textes[cle];
+    const texte = textes[cle];
     if (texte === undefined)
-      f.push(`texte_absent : ${cle} n'a pas de texte dans ${SOURCE_DES_TEXTES}`);
+      f.push(`texte_absent : ${cle} n'a pas de texte dans ${sourceDesTextes}`);
     if (l.actions.length !== 1 || l.actions[0]?.libelle !== texte?.appel)
       f.push(`action_non_unique : ${cle} doit porter UN appel, celui de la micro-copie`);
-    if (l.route !== null && !ctx.routes.includes(l.route))
-      f.push(`route_non_declaree : ${cle} mène à ${l.route}, absente de docs/ESPACE-ROUTES.md`);
+    if (l.route !== null && !routes.includes(l.route))
+      f.push(`route_non_declaree : ${cle} mène à ${l.route}, absente de ${sourceDesRoutes}`);
     if (l.route === null && l.routeEnAttente === null)
       f.push(`route_absente_sans_tache : ${cle} n'a ni route ni tâche qui la posera`);
   }
