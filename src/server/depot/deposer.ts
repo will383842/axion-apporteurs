@@ -143,10 +143,21 @@ export interface DepotAReessayer {
   readonly repriseAt: number | null;
 }
 
-/** Les deux sujets de la limite de débit : des EMPREINTES, jamais l'apporteur. */
+/** Les deux sujets de la limite de débit : des EMPREINTES, jamais l'apporteur. La session est due. */
 export interface SujetsDuDebit {
   readonly ip: string | null;
-  readonly session: string | null;
+  readonly session: string;
+}
+
+/**
+ * Un dépôt sans session ni jeton : refusé avant toute lecture. Le compteur de session est
+ * obligatoire, et un dépôt n'est jamais jugé sur la seule empreinte réseau. Rien n'est écrit.
+ */
+export class SessionDeDepotAbsente extends Error {
+  constructor() {
+    super('session_absente : un dépôt porte une session de l’espace ou le jeton de son lien');
+    this.name = 'SessionDeDepotAbsente';
+  }
 }
 
 /**
@@ -166,7 +177,8 @@ export function empreinteDeSession(demande: DemandeDeDepot, cles: ClesPii): stri
  * LA limite de débit du dépôt (REQ-DM-009, texte de la juriste, arbitrage du 2026-10-04) :
  * TECHNIQUE, identique pour tous, sur l'empreinte réseau (`depot:ip`) ET l'empreinte de session
  * (`depot:session`), sur une fenêtre de l'ordre de la minute — jamais un compteur par apporteur.
- * Chacun peut seul faire réessayer ; son seul effet est là : aucune trace au dossier, aucun statut.
+ * La session est obligatoire ; l'adresse, quand elle manque, n'est pas comptée. Chacun peut seul
+ * faire réessayer ; son seul effet est là : aucune trace au dossier, aucun statut.
  */
 export async function controlerLeDebit(
   sujets: SujetsDuDebit,
@@ -176,11 +188,7 @@ export async function controlerLeDebit(
   if (sujets.ip !== null) {
     verdicts.push(await limiter('depot:ip', sujetDepuisEmpreinte(sujets.ip), maintenantMs));
   }
-  if (sujets.session !== null) {
-    verdicts.push(
-      await limiter('depot:session', sujetDepuisEmpreinte(sujets.session), maintenantMs)
-    );
-  }
+  verdicts.push(await limiter('depot:session', sujetDepuisEmpreinte(sujets.session), maintenantMs));
   const refus = verdicts.filter((v) => !v.autorise);
   if (refus.length === 0) return { autorise: true, repriseAt: null };
   const reprises = refus.flatMap((v) => (v.repriseAt === null ? [] : [v.repriseAt]));
@@ -390,11 +398,10 @@ export async function deposer(
     demande.adresseReseau === null
       ? null
       : empreinteAdresseReseau(demande.adresseReseau, ports.cles);
-  const sujets = { ip: ipHash, session: empreinteDeSession(demande, ports.cles) };
-  if (sujets.ip !== null || sujets.session !== null) {
-    const d = await ports.debit(sujets);
-    if (!d.autorise) return { reessayer: true, repriseAt: d.repriseAt };
-  }
+  const session = empreinteDeSession(demande, ports.cles);
+  if (session === null) throw new SessionDeDepotAbsente();
+  const d = await ports.debit({ ip: ipHash, session });
+  if (!d.autorise) return { reessayer: true, repriseAt: d.repriseAt };
   if ((await ports.captcha(ipHash, demande.reponseCaptcha)) === 'a_presenter') {
     return { issue: 'captcha', attributionId: null };
   }

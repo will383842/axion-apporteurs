@@ -141,7 +141,7 @@ function demande(apporteurId: string, siren: string): DemandeDeDepot {
     },
     fiche: { raisonSociale: 'Entreprise Témoin SAS', etatAdministratif: 'actif' },
     adresseReseau: '203.0.113.7',
-    session: null,
+    session: `session-${apporteurId}`,
     reponseCaptcha: null,
     agentUtilisateur: 'Mozilla/5.0 (témoin)',
     clientCapturedAt: null,
