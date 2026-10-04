@@ -1,6 +1,10 @@
 // @req REQ-SEC-022
 // @req REQ-UX-002
 // @req REQ-SEC-020
+// @req REQ-SEC-032
+// @req REQ-JUR-008
+// @req REQ-CPL-008
+// @req REQ-DM-009
 /**
  * SEC-12 — la DÉCISION d'un dépôt d'apporteur, pure : des faits lus sous verrou, une issue.
  *
@@ -12,9 +16,14 @@
  *   3. LA FILE : rang 1 puis 2 derrière un occupant, `file_complete` au-delà ; jamais de file sans
  *      occupant ;
  *   4. LES TROIS CRITÈRES DE L'ART. 3.3 (cliente, devis émis, devis signé) rendent à l'apporteur des
- *      octets IDENTIQUES : le motif stocké les distingue, l'écran jamais.
+ *      octets IDENTIQUES : le motif stocké les distingue, l'écran jamais ;
+ *   5. LA TRANSACTION DE DÉPÔT, EN PROCESSUS, sur un client simulé : ce que `deposerDans` lit, dans
+ *      quel ordre, et ce qu'elle écrit pour chaque issue ; `deposer` derrière le débit et le défi, la
+ *      notification d'un refus après la transaction. La même transaction est jugée en base réelle
+ *      (`tests/integration/concurrence.spec.ts`) ; ici, chaque branche est nommée.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createHash } from 'node:crypto';
 import {
   ISSUES_DE_REFUS,
   PLACES_EN_ATTENTE,
@@ -193,5 +202,552 @@ describe('REQ-SEC-020 — ni la zone ni le secteur ne refusent un dépôt', () =
       secteur: 'hors secteur',
     };
     expect(deciderDuDepot(horsZone)).toEqual(deciderDuDepot(LIBRE));
+  });
+});
+
+// ── 5. la transaction de dépôt, en processus ─────────────────────────────────────────────────────
+
+const doublures = vi.hoisted(() => ({
+  anterioriteDe: vi.fn(),
+  journaliserLaNaissance: vi.fn(),
+  creerLaDemande: vi.fn(),
+}));
+vi.mock('../../../src/server/entreprise-connue/projection', () => ({
+  anterioriteDe: doublures.anterioriteDe,
+}));
+vi.mock('../../../src/server/attribution/transitionner', () => ({
+  journaliserLaNaissance: doublures.journaliserLaNaissance,
+}));
+vi.mock('../../../src/server/confirmation/demandes', () => ({
+  creerLaDemande: doublures.creerLaDemande,
+}));
+
+import type { PrismaClient } from '@prisma/client';
+import {
+  DepotInterdit,
+  ErreurSaisieDepot,
+  champsRefuses,
+  deposer,
+  deposerDans,
+  parametresDuRefus,
+  versionDeLInformationDesTiers,
+  type DemandeDeDepot,
+  type PortsDuDepot,
+} from '../../../src/server/depot/deposer';
+import { CASE_INFORMATION_TIERS } from '../../../src/content/micro-copy/espace/information-tiers';
+import {
+  clesPii,
+  empreinteAdresseReseau,
+  empreinteRecherche,
+} from '../../../src/server/securite/pii';
+import { NOMS_DES_SECRETS } from '../../../src/lib/env';
+
+const CLES = clesPii({
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-sec-12-processus-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: 'a'.repeat(64),
+});
+const APPORTEUR = '11111111-1111-4111-8111-111111111111';
+const JETON = '22222222-2222-4222-8222-222222222222';
+const SIREN = '552100554';
+const MAINTENANT = new Date('2026-10-04T09:00:00.000Z');
+const CAPTURE = new Date('2026-10-04T08:59:00.000Z');
+
+type Appel = readonly [string, ...unknown[]];
+
+/** Une demande COMPLÈTE : chaque champ écrit (RM-11) ; chaque test en change un. */
+function demande(modif: Partial<DemandeDeDepot> = {}): DemandeDeDepot {
+  return {
+    apporteurId: APPORTEUR,
+    canal: 'lien_prive',
+    jetonDepotId: JETON,
+    saisie: {
+      siren: SIREN,
+      siret: '55210055400013',
+      dateContact: '2026-10-01',
+      contact: {
+        nom: '  Témoin ',
+        prenom: ' Camille ',
+        fonction: ' Gérante ',
+        email: 'camille.temoin@gmail.com',
+        telephone: '06 12 34 56 78',
+      },
+      contexte: 'Rencontrée au salon',
+      informationTiersCochee: true,
+      lienInteretDeclare: true,
+    },
+    fiche: { raisonSociale: 'Entreprise Témoin SAS', etatAdministratif: 'actif' },
+    adresseReseau: '203.0.113.7',
+    reponseCaptcha: null,
+    agentUtilisateur: 'Mozilla/5.0 (témoin)',
+    clientCapturedAt: CAPTURE,
+    ...modif,
+  };
+}
+
+/** Un client de transaction simulé : il rend les lignes réglées, et note chaque appel, dans l'ordre. */
+function transaction(regles: {
+  statut?: string | null;
+  occupation?: { occupee: boolean; en_attente: number } | null;
+  grille?: { id: string } | null;
+}) {
+  const appels: Appel[] = [];
+  const tx = {
+    $executeRaw: (gabarit: TemplateStringsArray, ...valeurs: unknown[]) => {
+      appels.push(['$executeRaw', gabarit.join('?'), ...valeurs]);
+      return Promise.resolve(1);
+    },
+    $queryRaw: (gabarit: TemplateStringsArray, ...valeurs: unknown[]) => {
+      appels.push(['$queryRaw', gabarit.join('?'), ...valeurs]);
+      const statut = regles.statut === undefined ? 'signe' : regles.statut;
+      return Promise.resolve(statut === null ? [] : [{ statut }]);
+    },
+    $queryRawUnsafe: (sql: string, ...valeurs: unknown[]) => {
+      appels.push(['$queryRawUnsafe', sql, ...valeurs]);
+      const o =
+        regles.occupation === undefined ? { occupee: false, en_attente: 0 } : regles.occupation;
+      return Promise.resolve(o === null ? [] : [o]);
+    },
+    depotRefuse: {
+      create: (a: unknown) => {
+        appels.push(['depotRefuse.create', a]);
+        return Promise.resolve({});
+      },
+    },
+    grilleCommission: {
+      findFirst: (a: unknown) => {
+        appels.push(['grilleCommission.findFirst', a]);
+        return Promise.resolve(regles.grille === undefined ? { id: 'grille-1' } : regles.grille);
+      },
+    },
+    attribution: {
+      create: (a: unknown) => {
+        appels.push(['attribution.create', a]);
+        return Promise.resolve({});
+      },
+    },
+  };
+  return { tx: tx as never, appels };
+}
+
+function ports(modif: Partial<PortsDuDepot> = {}): PortsDuDepot & { oppositions: unknown[][] } {
+  const oppositions: unknown[][] = [];
+  return {
+    cles: CLES,
+    secretConfirmation: 's'.repeat(64),
+    maintenant: () => MAINTENANT,
+    oppositionDemarchage: async (...a: unknown[]) => {
+      oppositions.push(a);
+      return false;
+    },
+    adresseDe: async (id: string) => `adresse-de-${id}`,
+    notifier: async () => undefined,
+    debit: async () => ({ autorise: true, repriseAt: null }),
+    captcha: async () => 'non_requis' as const,
+    ...modif,
+    oppositions,
+  };
+}
+
+const noms = (appels: readonly Appel[]) => appels.map((a) => a[0]);
+const ecrit = (appels: readonly Appel[], nom: string) =>
+  appels.find((a) => a[0] === nom)?.[1] as { data: Record<string, unknown> } | undefined;
+
+beforeEach(() => {
+  doublures.anterioriteDe.mockReset().mockResolvedValue({ connue: false });
+  doublures.journaliserLaNaissance.mockReset().mockResolvedValue('provisoire');
+  doublures.creerLaDemande.mockReset().mockResolvedValue('demande-1');
+});
+
+describe('REQ-JUR-008 — la saisie est jugée au serveur, champ par champ', () => {
+  it('REQ-JUR-008 : une saisie complète n’a aucun champ refusé', () => {
+    expect(champsRefuses(demande().saisie, CLES)).toEqual([]);
+  });
+
+  it('REQ-JUR-008 : chaque champ en cause est nommé, dans l’ordre du formulaire', () => {
+    const s = demande().saisie;
+    expect(
+      champsRefuses(
+        {
+          ...s,
+          contact: {
+            nom: ' ',
+            prenom: '',
+            fonction: '\t',
+            email: 'pas-une-adresse',
+            telephone: 'abc',
+          },
+          informationTiersCochee: false,
+        },
+        CLES
+      )
+    ).toEqual(['nom', 'prenom', 'fonction', 'email', 'telephone', 'informationTiers']);
+  });
+
+  it('REQ-JUR-008 : refusée, la saisie lève `ErreurSaisieDepot` nommée, AVANT toute lecture', async () => {
+    const { tx, appels } = transaction({});
+    const d = demande();
+    const e = await deposerDans(
+      tx,
+      { ...d, saisie: { ...d.saisie, informationTiersCochee: false } },
+      ports()
+    ).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(ErreurSaisieDepot);
+    expect((e as ErreurSaisieDepot).champs).toEqual(['informationTiers']);
+    expect((e as Error).message).toBe('saisie_refusee : informationTiers');
+    expect((e as Error).name).toBe('ErreurSaisieDepot');
+    expect(appels).toEqual([]);
+  });
+
+  it('REQ-JUR-008 : la version de la case est dérivée du texte : les 32 premiers caractères du SHA-256', () => {
+    expect(versionDeLInformationDesTiers()).toBe(
+      createHash('sha256').update(CASE_INFORMATION_TIERS).digest('hex').slice(0, 32)
+    );
+  });
+});
+
+describe('REQ-SEC-032 — le statut relu sous verrou ouvre, ou non, le dépôt', () => {
+  it('REQ-SEC-032 : verrou du porteur, puis du SIREN, puis le statut relu FOR UPDATE', async () => {
+    const { tx, appels } = transaction({});
+    await deposerDans(tx, demande(), ports());
+    expect(appels.slice(0, 3)).toEqual([
+      [
+        '$executeRaw',
+        'SELECT pg_advisory_xact_lock(hashtextextended(?, 0))',
+        `verrou-du-depot.porteur.${APPORTEUR}`,
+      ],
+      [
+        '$executeRaw',
+        'SELECT pg_advisory_xact_lock(hashtextextended(?, 0))',
+        `verrou-du-depot.siren.${SIREN}`,
+      ],
+      [
+        '$queryRaw',
+        `
+    SELECT statut::text AS statut
+      FROM apporteurs WHERE id = ?::uuid FOR UPDATE`,
+        APPORTEUR,
+      ],
+    ]);
+  });
+
+  it.each([[null], ['resilie'], ['candidat']])(
+    'REQ-SEC-032 : un apporteur absent ou au statut %s ne dépose pas : `DepotInterdit`, rien n’est écrit',
+    async (statut) => {
+      const { tx, appels } = transaction({ statut });
+      const e = await deposerDans(tx, demande(), ports()).catch((x: unknown) => x);
+      expect(e).toBeInstanceOf(DepotInterdit);
+      expect((e as Error).name).toBe('DepotInterdit');
+      expect((e as Error).message).toMatch(/^depot_interdit : /);
+      expect(noms(appels)).toEqual(['$executeRaw', '$executeRaw', '$queryRaw']);
+    }
+  );
+
+  it('REQ-SEC-032 : suspendu, le dépôt est `gele` : ni refus tracé, ni déclaration', async () => {
+    const { tx, appels } = transaction({ statut: 'suspendu' });
+    expect(await deposerDans(tx, demande(), ports())).toEqual({
+      issue: 'gele',
+      attributionId: null,
+    });
+    expect(noms(appels)).not.toContain('depotRefuse.create');
+    expect(noms(appels)).not.toContain('attribution.create');
+  });
+});
+
+describe('REQ-SEC-022 — les faits lus sous verrou, et le refus tracé', () => {
+  it('REQ-SEC-022 : l’antériorité est lue sur le SIREN, à l’heure du port ; l’opposition aussi', async () => {
+    const { tx } = transaction({});
+    const p = ports();
+    await deposerDans(tx, demande(), p);
+    expect(doublures.anterioriteDe).toHaveBeenCalledWith(tx, SIREN, MAINTENANT);
+    expect(p.oppositions).toEqual([[tx, SIREN]]);
+  });
+
+  it('REQ-SEC-022 : l’occupation et la file se lisent sur le SIREN, sur les états qui occupent', async () => {
+    const { tx, appels } = transaction({});
+    await deposerDans(tx, demande(), ports());
+    const lecture = appels.find((a) => a[0] === '$queryRawUnsafe')!;
+    expect(lecture[2]).toBe(SIREN);
+    expect(String(lecture[1])).toMatch(/AS occupee/);
+    expect(String(lecture[1])).toMatch(/statut = 'en_attente'\) AS en_attente/);
+  });
+
+  it.each([
+    ['client', 'anteriorite_client'],
+    ['devis', 'anteriorite_devis'],
+    ['financeur', 'entreprise_hors_perimetre'],
+  ] as const)(
+    'REQ-SEC-022 : antériorité %s → refus %s, tracé (apporteur, SIREN, motif, canal, date), rien d’autre',
+    async (origine, motif) => {
+      doublures.anterioriteDe.mockResolvedValue({ connue: true, origine });
+      const { tx, appels } = transaction({});
+      expect(await deposerDans(tx, demande(), ports())).toEqual({
+        issue: motif,
+        attributionId: null,
+      });
+      expect(ecrit(appels, 'depotRefuse.create')).toEqual({
+        data: {
+          apporteurId: APPORTEUR,
+          siren: SIREN,
+          motif,
+          canal: 'lien_prive',
+          refuseAt: MAINTENANT,
+        },
+      });
+      expect(noms(appels)).not.toContain('attribution.create');
+      expect(doublures.journaliserLaNaissance).not.toHaveBeenCalled();
+    }
+  );
+
+  it('REQ-SEC-022 : un établissement cessé, et une opposition, sont des refus tracés', async () => {
+    const cesse = transaction({});
+    expect(
+      (
+        await deposerDans(
+          cesse.tx,
+          demande({ fiche: { raisonSociale: 'X', etatAdministratif: 'cesse' } }),
+          ports()
+        )
+      ).issue
+    ).toBe('etablissement_cesse');
+    const opposee = transaction({});
+    expect(
+      (await deposerDans(opposee.tx, demande(), ports({ oppositionDemarchage: async () => true })))
+        .issue
+    ).toBe('opposition_demarchage');
+    expect(ecrit(opposee.appels, 'depotRefuse.create')?.data.motif).toBe('opposition_demarchage');
+  });
+
+  it('REQ-SEC-022 : occupée, file pleine → `file_complete`, tracé', async () => {
+    const { tx, appels } = transaction({ occupation: { occupee: true, en_attente: 2 } });
+    expect((await deposerDans(tx, demande(), ports())).issue).toBe('file_complete');
+    expect(ecrit(appels, 'depotRefuse.create')?.data.motif).toBe('file_complete');
+  });
+
+  it('REQ-SEC-022 : sans ligne d’occupation lue, rien n’occupe : la déclaration est enregistrée', async () => {
+    const { tx } = transaction({ occupation: null });
+    expect((await deposerDans(tx, demande(), ports())).issue).toBe('enregistree');
+  });
+});
+
+describe('REQ-CPL-008 — la déclaration enregistrée, et sa demande de confirmation', () => {
+  it('REQ-CPL-008 : libre → `provisoire` : chaque colonne écrite, la naissance journalisée, la demande créée', async () => {
+    const { tx, appels } = transaction({});
+    const r = await deposerDans(tx, demande(), ports());
+    expect(r.issue).toBe('enregistree');
+    expect(r.attributionId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(ecrit(appels, 'grilleCommission.findFirst')).toEqual({
+      orderBy: { version: 'desc' },
+      select: { id: true },
+    });
+    const { data } = ecrit(appels, 'attribution.create')!;
+    expect(data).toMatchObject({
+      id: r.attributionId,
+      apporteurId: APPORTEUR,
+      statut: 'provisoire',
+      rangAttente: null,
+      siren: SIREN,
+      siret: '55210055400013',
+      grilleCommissionId: 'grille-1',
+      canal: 'lien_prive',
+      jetonDepotId: JETON,
+      clientCapturedAt: CAPTURE,
+      dateContact: new Date('2026-10-01T00:00:00.000Z'),
+      informationTiersVersion: versionDeLInformationDesTiers(),
+      verificationPrioritaire: false,
+      entrepriseAVerifier: false,
+      raisonSociale: 'Entreprise Témoin SAS',
+      etatAdministratif: 'actif',
+      lienInteretDeclare: true,
+      ipHash: empreinteAdresseReseau('203.0.113.7', CLES),
+      agentHash: empreinteRecherche('agent', 'Mozilla/5.0 (témoin)', CLES),
+    });
+    // Aucune coordonnée en clair : le contact n'entre que chiffré.
+    expect(JSON.stringify(data)).not.toMatch(/Témoin"|Camille|Gérante|camille\.temoin|06 12 34/);
+    expect(doublures.journaliserLaNaissance).toHaveBeenCalledWith(tx, {
+      attributionId: r.attributionId,
+      transition: 'deposee',
+      acteur: { par: 'apporteur', id: APPORTEUR },
+      maintenant: MAINTENANT,
+    });
+    expect(doublures.creerLaDemande).toHaveBeenCalledTimes(1);
+    const [txDeLaDemande, d] = doublures.creerLaDemande.mock.calls[0]!;
+    expect(txDeLaDemande).toBe(tx);
+    expect(d).toMatchObject({
+      attributionId: r.attributionId,
+      acteur: { par: 'apporteur', id: APPORTEUR },
+    });
+    expect(d.jetonOuiHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(d.jetonNonHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(d.jetonOuiHash).not.toBe(d.jetonNonHash);
+  });
+
+  it('REQ-CPL-008 : occupée → `en_attente`, rang 1, naissance en file, AUCUNE demande', async () => {
+    const { tx, appels } = transaction({ occupation: { occupee: true, en_attente: 0 } });
+    const r = await deposerDans(tx, demande(), ports());
+    expect(r.issue).toBe('en_attente');
+    expect(ecrit(appels, 'attribution.create')?.data).toMatchObject({
+      statut: 'en_attente',
+      rangAttente: 1,
+    });
+    expect(doublures.journaliserLaNaissance.mock.calls[0]![1].transition).toBe('deposee_en_file');
+    expect(doublures.creerLaDemande).not.toHaveBeenCalled();
+  });
+
+  it('REQ-CPL-008 : sans fiche lue, l’entreprise est à vérifier ; sans adresse ni navigateur, aucune empreinte', async () => {
+    const { tx, appels } = transaction({});
+    await deposerDans(
+      tx,
+      demande({
+        fiche: { raisonSociale: null, etatAdministratif: null },
+        adresseReseau: null,
+        agentUtilisateur: null,
+      }),
+      ports()
+    );
+    expect(ecrit(appels, 'attribution.create')?.data).toMatchObject({
+      entrepriseAVerifier: true,
+      raisonSociale: null,
+      etatAdministratif: null,
+      ipHash: null,
+      agentHash: null,
+    });
+  });
+
+  it('REQ-CPL-008 : sans grille publiée, le dépôt échoue nommé, sans rien écrire', async () => {
+    const { tx, appels } = transaction({ grille: null });
+    await expect(deposerDans(tx, demande(), ports())).rejects.toThrow(/^grille_absente/);
+    expect(noms(appels)).not.toContain('attribution.create');
+  });
+});
+
+describe('REQ-DM-009 — `deposer` : le débit, le défi, la transaction, puis la notification du refus', () => {
+  function prisma(regles: Parameters<typeof transaction>[0] = {}) {
+    const t = transaction(regles);
+    const options: unknown[] = [];
+    const p = {
+      $transaction: async (f: (tx: never) => Promise<unknown>, o: unknown) => {
+        options.push(o);
+        return f(t.tx);
+      },
+    } as unknown as PrismaClient;
+    return { p, options, ...t };
+  }
+
+  it('REQ-DM-009 : le débit reçoit l’empreinte réseau ; le défi aussi, avec la réponse ; la transaction a 30 s', async () => {
+    const recus: unknown[][] = [];
+    const { p, options } = prisma();
+    const r = await deposer(
+      p,
+      demande({ reponseCaptcha: 'reponse' }),
+      ports({
+        debit: async (...a) => {
+          recus.push(['debit', ...a]);
+          return { autorise: true, repriseAt: null };
+        },
+        captcha: async (...a) => {
+          recus.push(['captcha', ...a]);
+          return 'resolu';
+        },
+      })
+    );
+    const ip = empreinteAdresseReseau('203.0.113.7', CLES);
+    expect(recus).toEqual([
+      ['debit', ip],
+      ['captcha', ip, 'reponse'],
+    ]);
+    expect(options).toEqual([{ timeout: 30_000 }]);
+    expect(r).toMatchObject({ issue: 'enregistree' });
+  });
+
+  it('REQ-DM-009 : sans adresse réseau, le débit n’est pas consulté ; le défi reçoit `null`', async () => {
+    const recus: unknown[][] = [];
+    const { p } = prisma();
+    await deposer(
+      p,
+      demande({ adresseReseau: null }),
+      ports({
+        debit: async () => {
+          recus.push(['debit']);
+          return { autorise: true, repriseAt: null };
+        },
+        captcha: async (...a) => {
+          recus.push(['captcha', ...a]);
+          return 'non_requis';
+        },
+      })
+    );
+    expect(recus).toEqual([['captcha', null, null]]);
+  });
+
+  it('REQ-DM-009 : un refus de catégorie est notifié UNE fois, après la transaction, à l’adresse de l’apporteur', async () => {
+    doublures.anterioriteDe.mockResolvedValue({ connue: true, origine: 'client' });
+    const notes: unknown[][] = [];
+    const { p } = prisma();
+    const r = await deposer(
+      p,
+      demande(),
+      ports({
+        notifier: async (...a) => {
+          notes.push(a);
+          return undefined;
+        },
+      })
+    );
+    expect(r).toEqual({ issue: 'anteriorite_client', attributionId: null });
+    expect(notes).toEqual([
+      [
+        APPORTEUR,
+        {
+          cle: 'refus_declaration',
+          a: `adresse-de-${APPORTEUR}`,
+          parametres: parametresDuRefus('anteriorite_client', 'Entreprise Témoin SAS'),
+          attributionId: null,
+        },
+      ],
+    ]);
+  });
+
+  it('REQ-DM-009 : sans raison sociale lue, le refus nomme l’entreprise par son SIREN', async () => {
+    doublures.anterioriteDe.mockResolvedValue({ connue: true, origine: 'devis' });
+    const notes: unknown[][] = [];
+    const { p } = prisma();
+    await deposer(
+      p,
+      demande({ fiche: { raisonSociale: null, etatAdministratif: 'actif' } }),
+      ports({
+        notifier: async (...a) => {
+          notes.push(a);
+          return undefined;
+        },
+      })
+    );
+    expect((notes[0]![1] as { parametres: { entreprise: string } }).parametres.entreprise).toBe(
+      SIREN
+    );
+  });
+
+  it('REQ-DM-009 : ni un dépôt enregistré, ni `gele`, ne notifient', async () => {
+    for (const regles of [{}, { statut: 'suspendu' }]) {
+      const notes: unknown[] = [];
+      const { p } = prisma(regles);
+      await deposer(p, demande(), ports({ notifier: async (...a) => notes.push(a) }));
+      expect(notes, JSON.stringify(regles)).toEqual([]);
+    }
+  });
+
+  it('REQ-DM-009 : les paramètres du refus sont dérivés du texte de l’écran ; une issue qui n’est pas un refus lève', () => {
+    const t = issueRendue('anteriorite_client');
+    expect(parametresDuRefus('anteriorite_client', 'ACME')).toEqual({
+      entreprise: 'ACME',
+      categorie: t.titre.slice('Pas enregistré : '.length),
+      motif: t.pourquoi.replace(/\.$/, ''),
+    });
+    expect(parametresDuRefus('anteriorite_client', 'ACME').motif?.endsWith('.')).toBe(false);
+    expect(() => parametresDuRefus('enregistree', 'ACME')).toThrow(
+      /^refus_sans_categorie : l'issue enregistree n'est pas un refus de l'écran$/
+    );
   });
 });
