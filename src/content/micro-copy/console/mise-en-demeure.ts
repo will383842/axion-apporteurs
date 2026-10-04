@@ -39,6 +39,7 @@ export const MISE_EN_DEMEURE_CONSOLE = {
     titre: 'Aucune mise en demeure possible',
     phrase:
       'Cet apporteur n’est pas sous contrat : une mise en demeure ne vise qu’un apporteur dont le contrat est signé. Revenez à sa fiche.',
+    action: 'Retour à la fiche',
   },
   /** Les refus du geste, tels que l'écran les dit : jamais les faits saisis. */
   refus: {
