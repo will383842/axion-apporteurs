@@ -63,6 +63,7 @@ import {
   purgerLesContestations,
   purgerLesDementis,
 } from './purger-contestations-anomalies';
+import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import {
   ouvrirLesAnomaliesDAutoParrainage,
@@ -224,6 +225,9 @@ export function inscriptions(
     contestations_purger: () =>
       purgerLesContestations(prisma, new Date(horlogeSysteme.maintenant())),
     dementis_purger: () => purgerLesDementis(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-58 : le journal des accès à la console, purgé à son échéance (la purge vide les identifiants).
+    journal_acces_console_purger: () =>
+      purgerLeJournalDesAccesConsole(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>
