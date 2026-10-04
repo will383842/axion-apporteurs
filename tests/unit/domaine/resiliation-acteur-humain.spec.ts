@@ -187,3 +187,60 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
     expect(journalSimule.ajouterEvenement).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * La LECTURE SEULE d'un apporteur résilié (REQ-SEC-032, art. 12.3), dans le cadre de la sécurité et
+ * d'A02 (#703) : une liste blanche EXPLICITE de segments, défaut fermé ; ouverte tant qu'au moins une
+ * attribution `figee_resiliation` n'est pas éteinte (`droitsEnCours`), fermée ensuite.
+ */
+describe('REQ-SEC-032 — le niveau « lecture » d’un résilié', () => {
+  it('REQ-SEC-032 : TÉMOIN — un résilié dont les droits courent est en LECTURE ; sans droits, l’espace est FERMÉ', async () => {
+    const { niveauDAcces, peutOuvrirLEspace } =
+      await import('../../../src/domain/apporteur/acces-espace');
+    expect(niveauDAcces('resilie', true)).toBe('lecture');
+    expect(peutOuvrirLEspace('resilie', true)).toBe(true);
+    expect(niveauDAcces('resilie', false)).toBe('ferme');
+    expect(niveauDAcces('resilie')).toBe('ferme');
+    // les droits en cours ne changent rien aux autres statuts
+    expect(niveauDAcces('signe', true)).toBe('plein');
+    expect(niveauDAcces('refuse', true)).toBe('ferme');
+  });
+
+  it('REQ-SEC-032 : TÉMOIN — la liste blanche de lecture est EXACTEMENT celle de la sécurité', async () => {
+    const { SEGMENTS_LECTURE } = await import('../../../src/domain/apporteur/acces-espace');
+    expect([...SEGMENTS_LECTURE]).toEqual([
+      'accueil',
+      'mes-commissions',
+      'mes-entreprises',
+      'notifications',
+      'documents',
+      'mon-contrat',
+    ]);
+  });
+
+  it('REQ-SEC-032 : TÉMOIN — en lecture, seuls les segments de la liste s’ouvrent, plus l’acceptation ; tout le reste est refusé, défaut fermé', async () => {
+    const m = await import('../../../src/domain/apporteur/acces-espace');
+    for (const s of m.SEGMENTS_LECTURE) expect(m.routeOuverte('lecture', s), s).toBe(true);
+    expect(m.routeOuverte('lecture', m.SEGMENT_DE_L_ACCEPTATION)).toBe(true);
+    const lus: readonly string[] = m.SEGMENTS_LECTURE;
+    for (const s of [...m.SEGMENTS_PLEINS, ...m.SEGMENTS_LIMITES].filter((x) => !lus.includes(x))) {
+      expect(m.routeOuverte('lecture', s), s).toBe(false);
+    }
+    for (const s of [
+      'deposer',
+      'entreprise',
+      'filleuls',
+      'profil',
+      'conformite',
+      'segment-futur',
+    ]) {
+      expect(m.routeOuverte('lecture', s), s).toBe(false);
+    }
+  });
+
+  it('REQ-SEC-032 : la liste de lecture est un SOUS-ENSEMBLE des segments protégés existants', async () => {
+    const m = await import('../../../src/domain/apporteur/acces-espace');
+    const proteges: readonly string[] = [...m.SEGMENTS_PLEINS, ...m.SEGMENTS_LIMITES];
+    for (const s of m.SEGMENTS_LECTURE) expect(proteges, s).toContain(s);
+  });
+});
