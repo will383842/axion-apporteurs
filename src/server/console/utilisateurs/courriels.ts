@@ -14,8 +14,8 @@
 import type { ConsoleRole, Prisma } from '@prisma/client';
 import { UTILISATEURS_CONSOLE } from '../../../content/micro-copy/console/utilisateurs';
 import { DUREES_AUTH } from '../../auth/durees';
-import { MODELE_UTILISATEUR_CONSOLE } from '../../auth/lien-magique-depot';
-import { CHAMPS_PII, decryptPii, type ClesPii } from '../../securite/pii';
+import { identiteDeLUtilisateurConsole } from '../../auth/lien-magique-depot';
+import type { ClesPii } from '../../securite/pii';
 import { dateEtHeureCompletesDeParis } from './dates';
 
 const C = UTILISATEURS_CONSOLE.courriels;
@@ -52,18 +52,8 @@ export function identite(nom: string | null, adresse: string): string {
   return nom ? `${nom} (${adresse})` : adresse;
 }
 
-type Ligne = { id: string; nomChiffre: Uint8Array | null; emailChiffre: Uint8Array | null };
-
-function clairs(l: Ligne, cles: ClesPii): { nom: string | null; adresse: string | null } {
-  const lire = (champ: string, bloc: Uint8Array | null) =>
-    bloc === null
-      ? null
-      : decryptPii({ modele: MODELE_UTILISATEUR_CONSOLE, champ, id: l.id }, bloc, cles);
-  return {
-    nom: lire(CHAMPS_PII.nom.chiffre, l.nomChiffre),
-    adresse: lire(CHAMPS_PII.email.chiffre, l.emailChiffre),
-  };
-}
+/** Le déchiffrement vit hors de la console (SEC-58) : dans le module d'authentification. */
+const clairs = identiteDeLUtilisateurConsole;
 
 /**
  * Les courriels `admin_cree`, construits DANS la transaction du geste : un par administrateur actif,

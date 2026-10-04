@@ -181,6 +181,26 @@ export function transactionDuCode(prisma: PrismaClient): PortsDuCode['transactio
 /** Le nom du modèle dans la donnée authentifiée des blocs chiffrés d'un utilisateur de la console. */
 export const MODELE_UTILISATEUR_CONSOLE = 'UtilisateurConsole';
 
+/**
+ * SEC-30 — l'identité d'un utilisateur de la CONSOLE (son nom et son adresse), déchiffrée ICI, dans le
+ * module qui déchiffre déjà l'adresse du courriel de connexion : jamais sous la console, où seul le
+ * lecteur unique des coordonnées d'apporteurs et de contacts déchiffre (SEC-58). Lue pour l'écran
+ * des utilisateurs (admin seul) et pour les courriels de l'administration. Un bloc absent rend `null`.
+ */
+export function identiteDeLUtilisateurConsole(
+  ligne: { id: string; nomChiffre: Uint8Array | null; emailChiffre: Uint8Array | null },
+  cles: ClesPii
+): { nom: string | null; adresse: string | null } {
+  const lire = (champ: string, bloc: Uint8Array | null) =>
+    bloc === null
+      ? null
+      : decryptPii({ modele: MODELE_UTILISATEUR_CONSOLE, champ, id: ligne.id }, bloc, cles);
+  return {
+    nom: lire(CHAMPS_PII.nom.chiffre, ligne.nomChiffre),
+    adresse: lire(CHAMPS_PII.email.chiffre, ligne.emailChiffre),
+  };
+}
+
 export type LectureDuCompteConsole = Pick<
   PortsDEmissionConsole,
   'trouverUtilisateurConsole' | 'adresseStockee'

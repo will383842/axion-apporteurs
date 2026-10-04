@@ -15,8 +15,8 @@ import type { ConsoleRole } from '@prisma/client';
 import { UTILISATEURS_CONSOLE as T } from '../../../../content/micro-copy/console/utilisateurs';
 import { requireRole } from '../../../../server/roles/require-role';
 import { ROLES_CONSOLE } from '../../../../server/roles/matrice';
-import { CHAMPS_PII, clesPii, decryptPii } from '../../../../server/securite/pii';
-import { MODELE_UTILISATEUR_CONSOLE } from '../../../../server/auth/lien-magique-depot';
+import { clesPii } from '../../../../server/securite/pii';
+import { identiteDeLUtilisateurConsole } from '../../../../server/auth/lien-magique-depot';
 import { DUREES_AUTH } from '../../../../server/auth/durees';
 import { invitationOuverte } from '../../../../server/console/utilisateurs/regles';
 import { jourDeParis, jourEtHeureDeParis } from '../../../../server/console/utilisateurs/dates';
@@ -57,6 +57,7 @@ export default async function PageUtilisateursConsole() {
       id: true,
       role: true,
       emailChiffre: true,
+      nomChiffre: true,
       desactiveAt: true,
       inviteeAt: true,
       activeeAt: true,
@@ -65,14 +66,12 @@ export default async function PageUtilisateursConsole() {
     },
   });
 
-  const adresse = (id: string, bloc: Uint8Array | null) =>
-    bloc === null
-      ? ''
-      : decryptPii(
-          { modele: MODELE_UTILISATEUR_CONSOLE, champ: CHAMPS_PII.email.chiffre, id },
-          bloc,
-          cles
-        );
+  // Le déchiffrement vit hors de la console (SEC-58) : dans le module d'authentification.
+  const adresse = (l: {
+    id: string;
+    nomChiffre: Uint8Array | null;
+    emailChiffre: Uint8Array | null;
+  }) => identiteDeLUtilisateurConsole(l, cles).adresse ?? '';
 
   const etat = (l: (typeof lignes)[number]) => {
     if (l.desactiveAt !== null) return T.etats.desactive;
@@ -117,7 +116,7 @@ export default async function PageUtilisateursConsole() {
         <tbody>
           {lignes.map((l) => {
             const derniere = l.sessionsEspace[0]?.creeAt;
-            const courriel = adresse(l.id, l.emailChiffre);
+            const courriel = adresse(l);
             return (
               <tr key={l.id}>
                 <td>
