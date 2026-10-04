@@ -30,6 +30,7 @@ import {
   motifDeLaDecision,
   parametresDeLaNotification,
   rendreDepuisLaBase,
+  texteDuPremierRangDansLEspace,
   type SourcesDuRendu,
 } from '../../../src/server/attribution/notifications';
 import {
@@ -1297,5 +1298,32 @@ describe('REQ-DM-004 — UNE heure par notification : le texte et la fenêtre di
     expect(horloge).toEqual(APRES_MINUIT);
     expect(issue).toEqual({ statut: 'envoye', envoyeAt: AVANT_MINUIT });
     expect(lignes[0]).toMatchObject({ demandeAt: AVANT_MINUIT, envoyeAt: AVANT_MINUIT });
+  });
+});
+
+describe('REQ-DM-004 — le texte de l’espace pour premier_rang_libere : la date de la fenêtre POSÉE, ou aucune (juriste)', () => {
+  const ENVOI = new Date('2027-05-10T08:00:00.000Z');
+
+  it('REQ-DM-004 : TÉMOIN (face sans envoi) — fenêtre NULLE : aucun texte daté, aucune date nulle part', () => {
+    expect(texteDuPremierRangDansLEspace('Atelier Dupont', null)).toBeNull();
+  });
+
+  it('REQ-DM-004 : TÉMOIN (face envoyée) — la date affichée est le jour de la fenêtre posée, celle que le courriel a dite', () => {
+    const fin = new Date(finDeLaFenetreDeRedeclaration(ENVOI.getTime()));
+    const texte = texteDuPremierRangDansLEspace('Atelier Dupont', fin);
+    const duCourriel = parametresDeLaNotification('premier_rang_libere', {
+      entreprise: 'Atelier Dupont',
+      envoyeLe: ENVOI,
+    }).dateLimite!;
+    expect(duCourriel).toBe('25 mai 2027');
+    expect(JSON.stringify(texte)).toContain(duCourriel);
+    expect(JSON.stringify(texte)).toContain('Atelier Dupont');
+  });
+
+  it('REQ-DM-004 : la date de l’espace suit la fenêtre POSÉE, pas un recalcul : une fenêtre d’un autre jour donne son jour', () => {
+    const fin = new Date('2027-06-02T22:00:00.000Z'); // minuit à Paris, le 3 juin : jour limite le 2
+    expect(JSON.stringify(texteDuPremierRangDansLEspace('Atelier Dupont', fin))).toContain(
+      '2 juin 2027'
+    );
   });
 });
