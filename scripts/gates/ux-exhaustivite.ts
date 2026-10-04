@@ -69,6 +69,7 @@ import * as VOCABULAIRE_DE_L_ESPACE from '../../src/content/micro-copy/espace/vo
 import * as TYPES_DE_LA_MICRO_COPIE from '../../src/content/micro-copy/types';
 import * as NOTIFICATIONS_DE_L_APPORTEUR from '../../src/content/micro-copy/courriels/notifications';
 import * as CONFIRMATION_DU_DEPOT from '../../src/content/micro-copy/espace/confirmation-du-depot';
+import * as ETATS_DES_DEPOTS from '../../src/content/micro-copy/espace/etats-attribution';
 import { ETATS_VIDES_CONSOLE } from '../../src/content/micro-copy/console/etats-vides';
 import { GABARITS } from '../../src/server/notifications/table-ssot';
 import type { ActionEcran, EtatVide, TexteIssue } from '../../src/content/micro-copy/types';
@@ -99,6 +100,7 @@ const MICRO_COPIE_DE_L_ESPACE: Readonly<Record<string, unknown>> = {
   'espace/etats-vides.ts': ETATS_VIDES_DE_L_ESPACE,
   'espace/vocabulaire.ts': VOCABULAIRE_DE_L_ESPACE,
   'espace/confirmation-du-depot.ts': CONFIRMATION_DU_DEPOT,
+  'espace/etats-attribution.ts': ETATS_DES_DEPOTS,
   // Hors d'`espace/`, mais importé par chaque module de l'espace : parcouru comme eux.
   'types.ts': TYPES_DE_LA_MICRO_COPIE,
   // UX-P1-10 : les notifications de l'apporteur (e-mail et espace), lues par lui : parcourues aussi.
@@ -232,6 +234,7 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   // L'échéance de SA confirmation tacite, et la fin de SA carence.
   'espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › enAttenteDatee': ['date'],
   'espace/confirmation-du-depot.ts › AIDE_DU_BADGE': ['delaiTacite'],
+  'espace/etats-attribution.ts › LIBELLES_DES_ETATS': ['dateFin'],
   'espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › reservationTermineeVerifiee': [
     'dateRedepot',
   ],
