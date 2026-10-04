@@ -53,6 +53,8 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
       'journal_ouvert',
       'piece_kyc_statut_modifie',
       'rattachement_manuel_modifie',
+      // SEC-30 : tout changement d'un utilisateur de la console, dans la transaction du geste.
+      'utilisateur_console_modifie',
     ]);
   });
 
