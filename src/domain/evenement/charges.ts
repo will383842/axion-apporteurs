@@ -168,7 +168,7 @@ export const CHARGES_PAR_TYPE = {
       acteur: FORMES.acteur(),
       lienInteret: z.enum(['declare', 'non_declare']).optional(),
       /**
-       * DM-67 (REQ-JUR-007) : le critère de l'antériorité établie après coup, en enum INTERNE, porté
+       * DM-67 (REQ-DM-006) : le critère de l'antériorité établie après coup, en enum INTERNE, porté
        * par `anteriorite_etablie` et par elle seule ; aucune donnée de personne.
        */
       critere: z.enum(CRITERES_D_ANTERIORITE).optional(),

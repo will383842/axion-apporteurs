@@ -215,9 +215,9 @@ describe('REQ-DM-006 — un couple absent lève une erreur typée qui le nomme, 
   });
 });
 
-describe('REQ-JUR-007 — l’antériorité établie après coup annule, depuis chaque état occupant', () => {
+describe('REQ-DM-006 — l’antériorité établie après coup annule, depuis chaque état occupant', () => {
   it.each(ETATS_OCCUPANTS)(
-    'REQ-JUR-007 : TÉMOIN — %s × anteriorite_etablie → annulee, pour un apporteur comme pour un conseiller',
+    'REQ-DM-006 : TÉMOIN — %s × anteriorite_etablie → annulee, pour un apporteur comme pour un conseiller',
     (de) => {
       for (const porteur of PORTEURS) {
         expect(transitionnerAttribution({ de, transition: 'anteriorite_etablie', porteur })).toBe(
@@ -227,7 +227,7 @@ describe('REQ-JUR-007 — l’antériorité établie après coup annule, depuis 
     }
   );
 
-  it('REQ-JUR-007 : un état qui n’occupe plus ne s’annule pas pour antériorité', () => {
+  it('REQ-DM-006 : un état qui n’occupe plus ne s’annule pas pour antériorité', () => {
     for (const de of ETATS_ATTRIBUTION.filter(
       (e) => !(ETATS_OCCUPANTS as readonly string[]).includes(e)
     )) {
@@ -386,7 +386,7 @@ describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
     expect(charge.safeParse({ ...base, siren: '552100554' }).success).toBe(false);
   });
 
-  it('REQ-JUR-007 : TÉMOIN — anteriorite_etablie porte son critère, en enum fermé ; aucune autre transition n’en porte', () => {
+  it('REQ-DM-006 : TÉMOIN — anteriorite_etablie porte son critère, en enum fermé ; aucune autre transition n’en porte', () => {
     const base = { de: 'signee', vers: 'annulee', transition: 'anteriorite_etablie', acteur };
     expect(charge.safeParse({ ...base, critere: 'cliente', fait: FACTURE }).success).toBe(true);
     for (const critere of ['devis', 'devis_signe']) {
@@ -405,7 +405,7 @@ describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
     ).toBe(false);
   });
 
-  it('REQ-JUR-007 : TÉMOIN — la RÉFÉRENCE du fait fondateur : nature, référence opaque, date ; exigée, et accordée au critère', () => {
+  it('REQ-DM-006 : TÉMOIN — la RÉFÉRENCE du fait fondateur : nature, référence opaque, date ; exigée, et accordée au critère', () => {
     const base = { de: 'active', vers: 'annulee', transition: 'anteriorite_etablie', acteur };
     // sans fait, ou avec un fait sur une autre transition : refusé
     expect(charge.safeParse({ ...base, critere: 'cliente' }).success).toBe(false);
@@ -1123,7 +1123,7 @@ describe('REQ-DM-007 — les confirmations et la charge d’apporteur, rechargé
   });
 });
 
-describe('REQ-JUR-007 — anteriorite_etablie n’est émise que par le passage de l’antériorité', () => {
+describe('REQ-DM-006 — anteriorite_etablie n’est émise que par le passage de l’antériorité', () => {
   /**
    * Les seuls fichiers de src/ qui peuvent écrire le littéral : la machine et la charge qui le
    * déclarent, l'écrivain qui le juge, et le passage quotidien qui l'émet sur les faits projetés.
@@ -1142,14 +1142,14 @@ describe('REQ-JUR-007 — anteriorite_etablie n’est émise que par le passage 
       return /\.(ts|tsx)$/.test(e.name) ? [chemin] : [];
     });
 
-  it('REQ-JUR-007 : TÉMOIN — aucun autre fichier de src/ n’écrit « anteriorite_etablie »', () => {
+  it('REQ-DM-006 : TÉMOIN — aucun autre fichier de src/ n’écrit « anteriorite_etablie »', () => {
     const fautifs = sources('src').filter(
       (f) => !PERMIS.includes(f) && /['"`]anteriorite_etablie['"`]/.test(readFileSync(f, 'utf8'))
     );
     expect(fautifs).toEqual([]);
   });
 
-  it('REQ-JUR-007 : contre-témoin — le motif lit bien la machine, qui le déclare', () => {
+  it('REQ-DM-006 : contre-témoin — le motif lit bien la machine, qui le déclare', () => {
     expect(readFileSync('src/domain/attribution/machine.ts', 'utf8')).toMatch(
       /'anteriorite_etablie'/
     );
