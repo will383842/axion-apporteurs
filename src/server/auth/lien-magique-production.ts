@@ -43,7 +43,10 @@ import { notifier, type DependancesDeLaNotification } from '../notifications/env
 import type { PortsDesAppareils } from './appareil';
 import { empreinteDeSessionConsole } from './lien-magique';
 import { depotDeSessionsConsole, type PortsDeRole } from '../roles/require-role';
-import { CODE_DU_COURRIEL_DE_CONNEXION } from '../../content/micro-copy/courriels/notifications';
+import {
+  CODE_DU_COURRIEL_DE_CONNEXION,
+  MOIS_EN_TOUTES_LETTRES,
+} from '../../content/micro-copy/courriels/notifications';
 import type {
   ConfigurationDuLien,
   PortsDeConsommation,
@@ -190,27 +193,14 @@ export function portsDeConsommation(
 /**
  * `{dateHeure}` de l'avis : l'instant de la consommation, au jour et à l'heure LÉGALE de Paris, à
  * la minute — « 4 octobre 2026 à 14 h 20 (heure de Paris) », « 1er » pour le premier du mois.
- * Rien de l'appareil, ni lieu ni navigateur (texte de la juriste).
+ * Rien de l'appareil, ni lieu ni navigateur (texte de la juriste). Les mois sont ceux de la
+ * micro-copie (DM-55), le « 1er » vit ici : la garde de la micro-copie refuse un chiffre en clair.
  */
 export function dateHeureDeLAvis(instant: Date): string {
-  const mois = [
-    'janvier',
-    'février',
-    'mars',
-    'avril',
-    'mai',
-    'juin',
-    'juillet',
-    'août',
-    'septembre',
-    'octobre',
-    'novembre',
-    'décembre',
-  ];
   const p = versParis(instant.getTime());
   const jour = p.jour === 1 ? '1er' : String(p.jour);
   const minute = String(p.minute).padStart(2, '0');
-  return `${jour} ${mois[p.mois - 1]} ${p.annee} à ${p.heure} h ${minute} (heure de Paris)`;
+  return `${jour} ${MOIS_EN_TOUTES_LETTRES[p.mois - 1]} ${p.annee} à ${p.heure} h ${minute} (heure de Paris)`;
 }
 
 /**
