@@ -62,6 +62,12 @@ const portsConsole = () => ({
 });
 
 let sequence = 0;
+/**
+ * SEC-30 (quatre yeux) : l'admin de la fixture est VALIDÉ. Le premier administrateur semé se
+ * valide lui-même (premier administrateur, sans validateur) ; chaque admin suivant est validé par
+ * lui. Un admin non validé n'aurait aucun droit d'administrateur.
+ */
+let racine: string | null = null;
 async function utilisateur(role: 'admin' | 'comptable'): Promise<string> {
   sequence += 1;
   const { id } = await semerUtilisateurConsole(base.prisma, {
@@ -72,6 +78,14 @@ async function utilisateur(role: 'admin' | 'comptable'): Promise<string> {
     creeAt: new Date(t0),
     cles: CLES,
   });
+  if (role === 'admin') {
+    await base.prisma.$executeRawUnsafe(
+      'UPDATE utilisateurs_console SET valide_par_id = $2::uuid, valide_at = clock_timestamp() WHERE id = $1::uuid',
+      id,
+      racine
+    );
+    racine ??= id;
+  }
   return id;
 }
 
