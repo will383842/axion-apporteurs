@@ -105,7 +105,7 @@ Ajouté par SEC-19, dans le cadre posé par la sécurité et A02 sur l'issue de 
   droits en cours, l'espace s'ouvre **en lecture seule** : tant qu'au moins une de ses attributions
   reste figée par la résiliation, c'est-à-dire tant qu'une commande signée avant la date d'effet peut
   encore lui ouvrir droit. Sans droit en cours, l'espace reste fermé : ses relevés, factures et motifs
-  de blocage lui sont alors envoyés par courriel (section 5).
+  de blocage lui sont alors envoyés par courriel (section 5). Aucun relevé, aucune autofacture ni aucun motif de blocage n'est émis à ce jour : il n'y a rien à lui envoyer. Les tâches qui les émettront ne sont mises en service qu'avec l'envoi par courriel, à son émission, de tout document destiné à un apporteur dont l'espace est fermé, et sans fermeture de l'espace avant la fin des délais de contestation (art. 5.5 et annexe 2).
 - **Ce qu'il voit en lecture**, et rien d'autre : l'accueil, ses commissions, ses entreprises, ses
   notifications, ses documents et son contrat. Le dépôt, les fiches d'entreprise, les filleuls, le
   profil et la conformité lui sont fermés.
