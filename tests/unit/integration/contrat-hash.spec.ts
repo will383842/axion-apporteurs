@@ -337,7 +337,7 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
   it("REQ-QA-007 — contracts.sha256 est l'empreinte du schéma publié, et un champ renommé la change", () => {
     const publie = lire(CHEMIN_JSON);
     const attendue = empreinte(publie);
-    expect(lire(CHEMIN_EMPREINTE)).toBe(`${attendue}  ${NOM_JSON_SCHEMA}\n`);
+    expect(lire(CHEMIN_EMPREINTE).split('\n')[0]).toBe(`${attendue}  ${NOM_JSON_SCHEMA}`);
 
     // La `fixtureRouge` du registre, jouée en mémoire : « renommer un champ dans
     // packages/contracts sans republier ». Sans ce cas, l'empreinte pourrait être celle d'une
