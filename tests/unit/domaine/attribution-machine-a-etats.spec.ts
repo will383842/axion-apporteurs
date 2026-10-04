@@ -824,6 +824,53 @@ describe('REQ-DM-006 — l’écrivain des transitions, en processus (client sim
     expect(evenementsEcrits()[0]!.charge.lienInteret).toBe('declare');
   });
 
+  it('REQ-JUR-007 : TÉMOIN — anteriorite_etablie écrit son critère dans l’événement, et l’état annulee', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const { tx, mises } = txSimule([ligneDe({ statut: 'signee' })]);
+    const r = await transitionnerUneAttribution(tx, {
+      attributionId: ID,
+      transition: 'anteriorite_etablie',
+      critere: 'devis_signe',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(r).toStrictEqual({ de: 'signee', vers: 'annulee' });
+    expect(mises[0]!.data.statut).toBe('annulee');
+    expect(evenementsEcrits()[0]!.charge).toMatchObject({
+      de: 'signee',
+      vers: 'annulee',
+      transition: 'anteriorite_etablie',
+      critere: 'devis_signe',
+    });
+  });
+
+  it.each([
+    ['anteriorite_etablie sans critère', 'anteriorite_etablie', undefined],
+    ['un critère sur une autre transition', 'perdue', 'cliente'],
+  ] as const)(
+    'REQ-JUR-007 : TÉMOIN — %s : refusé, nommé, et RIEN n’est écrit',
+    async (_, transition, critere) => {
+      const { transitionnerUneAttribution } = await ecrivain();
+      const { tx, mises } = txSimule([ligneDe({ statut: 'active' })]);
+      let levee: unknown = null;
+      try {
+        await transitionnerUneAttribution(tx, {
+          attributionId: ID,
+          transition,
+          ...(critere ? { critere } : {}),
+          acteur: ACTEUR,
+          maintenant: MAINTENANT,
+        });
+      } catch (e) {
+        levee = e;
+      }
+      expect(levee).toBeInstanceOf(ErreurTransitionAttribution);
+      expect((levee as ErreurTransitionAttribution).code).toBe('critere_incoherent');
+      expect(mises).toStrictEqual([]);
+      expect(evenementsEcrits()).toStrictEqual([]);
+    }
+  );
+
   it('REQ-DM-007 : les dates de la ligne passent au domaine et en reviennent, à la milliseconde', async () => {
     const { transitionnerUneAttribution } = await ecrivain();
     const confirmeeAt = new Date('2026-05-01T08:00:00.000Z');
