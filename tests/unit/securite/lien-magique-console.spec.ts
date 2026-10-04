@@ -550,9 +550,10 @@ describe('REQ-UX-048 — le courriel de la console, ligne de la table des notifi
   it('REQ-UX-048 : TÉMOIN — une ligne de la console n’a que l’e-mail, n’est jamais désactivable, et sa route est déclarée dans la carte de la console', () => {
     const carte = readFileSync('docs/CONSOLE-ROUTES.md', 'utf8');
     const console_ = lignes.filter(([, l]) => l.destinataire === 'utilisateur_console');
-    // SEC-30 : l'invitation et la création d'un administrateur rejoignent le lien de la console.
+    // SEC-30 : l'invitation, la création et la réactivation d'un administrateur rejoignent le lien de la console.
     expect(console_.map(([cle]) => cle).sort()).toEqual([
       'admin_cree',
+      'admin_reactive',
       'invitation_console',
       'lien_magique_console',
     ]);
@@ -579,8 +580,9 @@ describe('REQ-UX-048 — le courriel de la console, ligne de la table des notifi
     expect(fautes({ ...ligne, canaux: ['email', 'espace'] })).toBe(true);
     expect(fautes({ ...ligne, desactivable: true })).toBe(true);
     expect(fautes(ligne)).toBe(false);
+    // Les quatre lignes de la console : le lien, l'invitation, la création et la réactivation.
     expect(lignes.filter(([, l]) => l.destinataire === 'apporteur')).toHaveLength(
-      lignes.length - 3
+      lignes.length - 4
     );
   });
 });

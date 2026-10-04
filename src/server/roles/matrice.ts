@@ -39,14 +39,16 @@ export interface EntreeDeLaMatrice {
 
 /** La table : un droit, les rôles qui l'ont, et son step-up. */
 export const MATRICE_DES_ROLES = {
-  'action:voir_iban_en_clair': { roles: ['admin', 'comptable'], stepUp: false },
+  // Condition 4 de la sécurité (rattrapage 96) : un export de données de personnes, et l'IBAN en
+  // clair, demandent le step-up.
+  'action:voir_iban_en_clair': { roles: ['admin', 'comptable'], stepUp: true },
   'action:approuver_lot': { roles: ['admin', 'comptable'], stepUp: false },
-  'action:exporter_pain001': { roles: ['admin', 'comptable'], stepUp: false },
+  'action:exporter_pain001': { roles: ['admin', 'comptable'], stepUp: true },
   // SEC-30 (texte de la sécurité, point 4) : la levée d'un gel est sous step-up dès maintenant.
   'action:lever_gel': { roles: ['admin'], stepUp: true },
   'action:suspendre_apporteur': { roles: ['admin'], stepUp: false },
   'action:resilier_apporteur': { roles: ['admin'], stepUp: false },
-  'action:exporter_das2': { roles: ['admin'], stepUp: false },
+  'action:exporter_das2': { roles: ['admin'], stepUp: true },
   // DM-12 (REQ-DM-034, amendement A1-01) : le rattachement manuel motivé, au qualifieur (glossaire §7)
   // et à l'admin ; jamais au comptable ni au lecteur.
   'action:rattacher_manuellement': { roles: ['admin', 'qualifieur'], stepUp: false },
@@ -57,6 +59,17 @@ export const MATRICE_DES_ROLES = {
   // d'UX-P1-16) et la déconnexion, ouverts aux quatre rôles : chacun doit pouvoir arriver et partir.
   'ecran:accueil': { roles: ['admin', 'qualifieur', 'comptable', 'lecteur'], stepUp: false },
   'action:se_deconnecter': {
+    roles: ['admin', 'qualifieur', 'comptable', 'lecteur'],
+    stepUp: false,
+  },
+  // UX-P1-16 : les écrans de la PHASE 1 de la navigation (`docs/CONSOLE-ROUTES.md`), répartis selon la
+  // carte ; une entrée n'apparaît que si l'écran est AUSSI livré. Les écrans des phases 2 et 3
+  // entrent avec la tâche qui les livre. Un écran se lit sans step-up : le lire n'engage rien.
+  'ecran:qualification': { roles: ['admin', 'qualifieur', 'lecteur'], stepUp: false },
+  'ecran:apporteurs': { roles: ['admin', 'qualifieur', 'comptable'], stepUp: false },
+  'ecran:attributions': { roles: ['admin', 'qualifieur', 'lecteur'], stepUp: false },
+  // L'écran d'accès refusé, ouvert à tout rôle : il dit ce que le rôle permet et à qui s'adresser.
+  'ecran:acces_refuse': {
     roles: ['admin', 'qualifieur', 'comptable', 'lecteur'],
     stepUp: false,
   },

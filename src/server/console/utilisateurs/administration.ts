@@ -24,6 +24,7 @@ import { jugerChangementDeRole } from './regles';
 import {
   courrielDInvitation,
   courrielsDeCreationDAdministrateur,
+  courrielsDeReactivationDAdministrateur,
   type CourrielDeLAdministration,
 } from './courriels';
 
@@ -149,17 +150,37 @@ export async function desactiver(
   });
 }
 
-/** Réactiver un AUTRE utilisateur désactivé. Ses anciennes sessions restent tombées. */
+/**
+ * Réactiver un AUTRE utilisateur désactivé. Ses anciennes sessions restent tombées. Un administrateur
+ * réactivé repart en attente (déclencheur des quatre yeux) : tous les administrateurs actifs, auteur
+ * compris, en sont notifiés (`admin_reactive`, rattrapage 98).
+ */
 export async function reactiver(
   prisma: PrismaClient,
-  d: { acteur: ActeurDeLaConsole; cibleId: string; maintenant: Date }
-): Promise<void> {
+  d: {
+    acteur: ActeurDeLaConsole;
+    cibleId: string;
+    maintenant: Date;
+    /** Pour lire les adresses des administrateurs, si le compte réactivé est un administrateur. */
+    cles: ClesPii;
+  }
+): Promise<{ courriels: CourrielDeLAdministration[] }> {
   exigerUnAutreCompte(d.acteur, d.cibleId);
-  await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const cible = await lireLaCible(tx, d.cibleId);
     if (cible.desactiveAt === null) throw new ErreurAdministrationConsole('deja_dans_cet_etat');
     await tx.utilisateurConsole.update({ where: { id: cible.id }, data: { desactiveAt: null } });
     await journaliser(tx, { geste: 'reactiver', ...d, cibleId: cible.id });
+    const courriels =
+      cible.role === 'admin'
+        ? await courrielsDeReactivationDAdministrateur(tx, {
+            reactiveId: cible.id,
+            auteurId: d.acteur.id,
+            maintenant: d.maintenant,
+            cles: d.cles,
+          })
+        : [];
+    return { courriels };
   });
 }
 

@@ -1558,6 +1558,24 @@ describe('REQ-SEC-023 — SEC-30 : le step-up déclaré dans la matrice (arbitra
     for (const [droit, entree] of Object.entries(MATRICE_DES_ROLES))
       expect(typeof (entree as { stepUp?: unknown }).stepUp, droit).toBe('boolean');
   });
+
+  // Condition 4 de la sécurité (rattrapage 96) : un export de données de personnes demande le
+  // step-up ; l'IBAN en clair aussi (décision de la coordination).
+  it.each([
+    'action:exporter_pain001',
+    'action:exporter_das2',
+    'action:voir_iban_en_clair',
+  ] as const)(
+    'REQ-SEC-023 : TÉMOIN À DEUX FACES — %s : une session ouverte il y a le délai de relèvement est refusée « releve_requis » ; un instant avant, elle passe',
+    (droit) => {
+      expect(MATRICE_DES_ROLES[droit].stepUp).toBe(true);
+      expect(jugerAcces(droit, ligneOuverteIlYA(releve), T0, KID)).toEqual({
+        ok: false,
+        motif: 'releve_requis',
+      });
+      expect(jugerAcces(droit, ligneOuverteIlYA(releve - 1), T0, KID).ok).toBe(true);
+    }
+  );
 });
 
 // Forme d'A02 (rattrapage 96, quatre yeux) : un admin dont `valide_at` est nul est EN ATTENTE ; il

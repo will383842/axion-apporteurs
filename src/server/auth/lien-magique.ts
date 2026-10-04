@@ -19,6 +19,13 @@
 import { createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { DUREES_AUTH } from './durees';
 import { peutOuvrirLEspace } from '../../domain/apporteur/acces-espace';
+import {
+  cleDesAppareils,
+  confirmerALaConsommation,
+  type AppareilDeLaConnexion,
+  type AvisDAppareil,
+  type DepotDAppareils,
+} from './appareil';
 
 // ── le jeton et son empreinte ────────────────────────────────────────────────────────────────────
 
@@ -114,8 +121,14 @@ export type EtatDeConsommation = (typeof ETATS_DE_CONSOMMATION)[number];
 export function etatLu<E extends string>(liste: readonly E[], valeur: unknown): E | null {
   return (liste as readonly unknown[]).includes(valeur) ? (valeur as E) : null;
 }
+/**
+ * `appareil` (SEC-55) : présent quand la consommation confirme l'appareil — l'identifiant à POSER
+ * dans `__Host-partners-appareil` et l'issue (`connu`, `confirme`, `avis_echoue`).
+ */
 export type ResultatDeConsommation =
-  { etat: 'ouverte'; jetonSession: string } | { etat: 'lien_invalide' } | { etat: 'deja_utilise' };
+  | { etat: 'ouverte'; jetonSession: string; appareil?: AppareilDeLaConnexion }
+  | { etat: 'lien_invalide' }
+  | { etat: 'deja_utilise' };
 
 // ── les ports ────────────────────────────────────────────────────────────────────────────────────
 
@@ -432,12 +445,24 @@ export interface TransactionDeConsommation {
   statutApporteur(apporteurId: string): Promise<string | null>;
   /** Enregistre une session neuve. */
   ouvrirSession(s: NouvelleSession): Promise<void>;
+  /** SEC-55 : le dépôt des appareils DANS la transaction ; exigé quand le port `appareils` est branché. */
+  appareils?: DepotDAppareils;
+}
+
+/**
+ * SEC-55 : la confirmation de l'appareil à la consommation. Branché, il fait confirmer l'appareil qui
+ * consomme, dans la transaction ; absent, la consommation est celle d'avant (aucun appareil lu).
+ */
+export interface PortsDesAppareils {
+  /** L'avis à l'adresse vérifiée : le compte et l'instant, rien de l'appareil. */
+  aviser(avis: AvisDAppareil): Promise<void>;
 }
 
 export interface PortsDeConsommation {
   maintenant(): Date;
   transaction<T>(travail: (tx: TransactionDeConsommation) => Promise<T>): Promise<T>;
   configuration: ConfigurationDuLien;
+  appareils?: PortsDesAppareils;
 }
 
 /** SEC-29 : la transaction de consommation d'un lien de la CONSOLE. */
@@ -473,6 +498,21 @@ interface OuvertureDeSession {
   maintenant: Date;
   ipHash: string | null;
   configuration: ConfigurationDuLien;
+  /** SEC-55, espace seulement : l'identifiant lu sur la requête et l'avis, quand le port est branché. */
+  appareil?: { identifiantLu: unknown; aviser(avis: AvisDAppareil): Promise<void> };
+}
+
+/** Une session ouverte : son jeton, et l'appareil quand la consommation l'a confirmé. */
+interface SessionOuverteParLeLien {
+  jetonSession: string;
+  appareil?: AppareilDeLaConnexion;
+}
+
+/** Le résultat « ouverte », sans champ d'appareil quand aucun appareil n'a été jugé. */
+function ouverte(o: SessionOuverteParLeLien): { etat: 'ouverte' } & SessionOuverteParLeLien {
+  return o.appareil === undefined
+    ? { etat: 'ouverte', jetonSession: o.jetonSession }
+    : { etat: 'ouverte', jetonSession: o.jetonSession, appareil: o.appareil };
 }
 
 /**
@@ -490,8 +530,13 @@ async function consommer<Tx>(
   population: {
     ecrire(tx: Tx, tokenHash: string, maintenant: Date): Promise<number>;
     dejaConsomme(tx: Tx, tokenHash: string, kid: string): Promise<boolean | undefined>;
-    ouvrir(tx: Tx, tokenHash: string, o: OuvertureDeSession): Promise<string | null>;
-  }
+    ouvrir(
+      tx: Tx,
+      tokenHash: string,
+      o: OuvertureDeSession
+    ): Promise<SessionOuverteParLeLien | null>;
+  },
+  appareil?: OuvertureDeSession['appareil']
 ): Promise<ResultatDeConsommation> {
   if (!aLaFormeDUnJeton(entree.jeton)) return INVALIDE;
   const tokenHash = empreinteDuJeton(entree.jeton, ports.configuration.secret);
@@ -505,31 +550,46 @@ async function consommer<Tx>(
         (await population.dejaConsomme(tx, tokenHash, ports.configuration.kid)) === true;
       return dejaUtilise ? { etat: 'deja_utilise' } : INVALIDE;
     }
-    const jetonSession = await population.ouvrir(tx, tokenHash, {
+    const ouverture = await population.ouvrir(tx, tokenHash, {
       maintenant,
       ipHash: entree.ipHash,
       configuration: ports.configuration,
+      appareil,
     });
-    return jetonSession === null ? INVALIDE : { etat: 'ouverte', jetonSession };
+    return ouverture === null ? INVALIDE : ouverte(ouverture);
   });
 }
 
+/** L'appareil à confirmer, quand le port est branché : l'identifiant lu et l'avis. */
+function appareilAConfirmer(
+  identifiantLu: unknown,
+  appareils: PortsDesAppareils | undefined
+): OuvertureDeSession['appareil'] {
+  return appareils === undefined ? undefined : { identifiantLu, aviser: appareils.aviser };
+}
+
 export function consommerLien(
-  entree: { jeton: string; ipHash: string | null },
+  /** `identifiantAppareil` (SEC-55) : la valeur du cookie `__Host-partners-appareil`, telle que lue. */
+  entree: { jeton: string; ipHash: string | null; identifiantAppareil?: unknown },
   ports: PortsDeConsommation
 ): Promise<ResultatDeConsommation> {
-  return consommer(entree, ports, {
-    ecrire: (tx, tokenHash, maintenant) =>
-      tx.consommer(conditionDeConsommation(tokenHash, maintenant), { consommeAt: maintenant }),
-    dejaConsomme: async (tx, tokenHash, kid) => tx.dejaConsomme?.(tokenHash, kid),
-    async ouvrir(tx, tokenHash, o) {
-      const lien = await tx.lireLien(tokenHash);
-      if (lien === null || lien.kid !== o.configuration.kid) return null;
-      // Un lien de la CONSOLE ne s'ouvre pas ici : l'espace n'ouvre de session qu'à un apporteur.
-      if (lien.apporteurId === null) return null;
-      return ouvrirLaSession(tx, { id: lien.id, apporteurId: lien.apporteurId }, o);
+  return consommer(
+    entree,
+    ports,
+    {
+      ecrire: (tx, tokenHash, maintenant) =>
+        tx.consommer(conditionDeConsommation(tokenHash, maintenant), { consommeAt: maintenant }),
+      dejaConsomme: async (tx, tokenHash, kid) => tx.dejaConsomme?.(tokenHash, kid),
+      async ouvrir(tx, tokenHash, o) {
+        const lien = await tx.lireLien(tokenHash);
+        if (lien === null || lien.kid !== o.configuration.kid) return null;
+        // Un lien de la CONSOLE ne s'ouvre pas ici : l'espace n'ouvre de session qu'à un apporteur.
+        if (lien.apporteurId === null) return null;
+        return ouvrirLaSession(tx, { id: lien.id, apporteurId: lien.apporteurId }, o);
+      },
     },
-  });
+    appareilAConfirmer(entree.identifiantAppareil, ports.appareils)
+  );
 }
 
 /** SEC-29 : la consommation d'un lien de la CONSOLE, par le même parcours que l'espace. */
@@ -563,10 +623,10 @@ export function consommerLienConsole(
  * de session, ou `null` si l'apporteur ne peut pas ouvrir l'espace.
  */
 async function ouvrirLaSession(
-  tx: Pick<TransactionDeConsommation, 'statutApporteur' | 'ouvrirSession'>,
+  tx: Pick<TransactionDeConsommation, 'statutApporteur' | 'ouvrirSession' | 'appareils'>,
   lien: { id: string; apporteurId: string },
-  o: { maintenant: Date; ipHash: string | null; configuration: ConfigurationDuLien }
-): Promise<string | null> {
+  o: OuvertureDeSession
+): Promise<SessionOuverteParLeLien | null> {
   const statut = await tx.statutApporteur(lien.apporteurId);
   // Un apporteur introuvable (`null`) est jugé par le prédicat, fermé comme un statut inconnu.
   if (!peutOuvrirLEspace(statut)) return null;
@@ -581,7 +641,17 @@ async function ouvrirLaSession(
     creeAt: o.maintenant,
     expireAt: new Date(o.maintenant.getTime() + DUREES_AUTH.sessionMs.valeur),
   });
-  return jetonSession;
+  if (o.appareil === undefined) return { jetonSession };
+  // SEC-55 : l'appareil qui consomme se confirme DANS cette transaction ; le port branché sans
+  // dépôt est une faute de câblage, qui échoue fort plutôt que de laisser croire à une confirmation.
+  if (tx.appareils === undefined) throw new Error('depot_des_appareils_absent');
+  const appareil = await confirmerALaConsommation(lien.apporteurId, o.appareil.identifiantLu, {
+    depot: tx.appareils,
+    cle: cleDesAppareils(o.configuration.session.secret),
+    aviser: o.appareil.aviser,
+    maintenant: o.maintenant,
+  });
+  return { jetonSession, appareil };
 }
 
 /**
@@ -593,7 +663,7 @@ async function ouvrirLaSessionConsole(
   tx: Pick<TransactionDeConsommationConsole, 'utilisateurActif' | 'ouvrirSessionConsole'>,
   lien: { id: string; utilisateurConsoleId: string },
   o: OuvertureDeSession
-): Promise<string | null> {
+): Promise<SessionOuverteParLeLien | null> {
   if (!(await tx.utilisateurActif(lien.utilisateurConsoleId, o.maintenant))) return null;
   const jetonSession = tirerJeton();
   const { secret, kid } = o.configuration.session;
@@ -607,7 +677,7 @@ async function ouvrirLaSessionConsole(
     expireAt: new Date(o.maintenant.getTime() + DUREES_AUTH.sessionConsoleMs.valeur),
     derniereVueAt: o.maintenant,
   });
-  return jetonSession;
+  return { jetonSession };
 }
 
 // ── la vérification du code (SEC-54) ─────────────────────────────────────────────────────────────
@@ -616,14 +686,16 @@ async function ouvrirLaSessionConsole(
 export const ETATS_DU_CODE = ['ouverte', 'code_refuse', 'debit'] as const;
 export type EtatDuCode = (typeof ETATS_DU_CODE)[number];
 export type ResultatDuCode =
-  { etat: 'ouverte'; jetonSession: string } | { etat: 'code_refuse' } | { etat: 'debit' };
+  | { etat: 'ouverte'; jetonSession: string; appareil?: AppareilDeLaConnexion }
+  | { etat: 'code_refuse' }
+  | { etat: 'debit' };
 
 /** Les motifs écrits au journal (point 7) : fermés, sans rien de la personne. */
 export type MotifDuCode = 'code_refuse' | 'code_epuise' | 'debit';
 
 export interface TransactionDuCode extends Pick<
   TransactionDeConsommation,
-  'statutApporteur' | 'ouvrirSession'
+  'statutApporteur' | 'ouvrirSession' | 'appareils'
 > {
   /**
    * Le SEUL lien actif le plus récent de l'apporteur dont l'empreinte de courriel est donnée :
@@ -660,6 +732,8 @@ export interface PortsDuCode {
   /** Appelé quand le lien est annulé au cinquième échec : l'action efface le cookie d'attente. */
   lienAnnule?(): void;
   configuration: ConfigurationDuLien;
+  /** SEC-55 : la confirmation de l'appareil à la consommation par le code, comme par le clic. */
+  appareils?: PortsDesAppareils;
 }
 
 /** SEC-29 : la transaction du code de la CONSOLE ; l'essai, l'annulation et la consommation sont ceux de l'espace. */
@@ -674,7 +748,7 @@ export interface TransactionDuCodeConsole
   ): Promise<{ id: string; utilisateurConsoleId: string; kid: string } | null>;
 }
 
-export interface PortsDuCodeConsole extends Omit<PortsDuCode, 'transaction'> {
+export interface PortsDuCodeConsole extends Omit<PortsDuCode, 'transaction' | 'appareils'> {
   transaction<T>(travail: (tx: TransactionDuCodeConsole) => Promise<T>): Promise<T>;
 }
 
@@ -697,13 +771,23 @@ export function verifierLeCode(
    * d'attente `__Host-connexion_code` (lentille sécurité, 2026-10-03). L'adresse n'est jamais
    * redemandée ni transportée en clair.
    */
-  requete: { emailHash: string | null; code: string; entetes: Headers },
+  requete: {
+    emailHash: string | null;
+    code: string;
+    entetes: Headers;
+    identifiantAppareil?: unknown;
+  },
   ports: PortsDuCode
 ): Promise<ResultatDuCode> {
-  return verifier(requete, ports, {
-    lienActif: (tx, emailHash, maintenant) => tx.lienActifDe(emailHash, maintenant),
-    ouvrir: (tx, lien, o) => ouvrirLaSession(tx, lien, o),
-  });
+  return verifier(
+    requete,
+    ports,
+    {
+      lienActif: (tx, emailHash, maintenant) => tx.lienActifDe(emailHash, maintenant),
+      ouvrir: (tx, lien, o) => ouvrirLaSession(tx, lien, o),
+    },
+    appareilAConfirmer(requete.identifiantAppareil, ports.appareils)
+  );
 }
 
 /** SEC-29 : le code de la CONSOLE, par la MÊME vérification que l'espace (débit, essais, factice). */
@@ -731,8 +815,9 @@ async function verifier<
   },
   population: {
     lienActif(tx: Tx, emailHash: string, maintenant: Date): Promise<Lien | null>;
-    ouvrir(tx: Tx, lien: Lien, o: OuvertureDeSession): Promise<string | null>;
-  }
+    ouvrir(tx: Tx, lien: Lien, o: OuvertureDeSession): Promise<SessionOuverteParLeLien | null>;
+  },
+  appareil?: OuvertureDeSession['appareil']
 ): Promise<ResultatDuCode> {
   const maintenant = ports.maintenant();
   const debit = (): ResultatDuCode => {
@@ -783,11 +868,12 @@ async function verifier<
       ports.signaler('code_refuse');
       return refuse();
     }
-    const jetonSession = await population.ouvrir(tx, lien, {
+    const ouverture = await population.ouvrir(tx, lien, {
       maintenant,
       ipHash: ports.empreinteAdresseReseau(adresse),
       configuration: ports.configuration,
+      appareil,
     });
-    return jetonSession === null ? refuse() : { etat: 'ouverte', jetonSession };
+    return ouverture === null ? refuse() : ouverte(ouverture);
   });
 }

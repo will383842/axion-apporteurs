@@ -74,7 +74,12 @@ export interface EnvoiDuLien {
     a: string;
     sujet: string;
     corps: string;
-    gabarit?: 'lien_magique' | 'lien_magique_console' | 'invitation_console' | 'admin_cree';
+    gabarit?:
+      | 'lien_magique'
+      | 'lien_magique_console'
+      | 'invitation_console'
+      | 'admin_cree'
+      | 'admin_reactive';
   }): Promise<void>;
 }
 

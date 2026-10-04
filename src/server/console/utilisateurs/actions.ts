@@ -136,13 +136,17 @@ export async function reactiverLeCompte(formData: FormData): Promise<void> {
   const acteur = acteurOuRedirection(
     await requireRole('action:gerer_utilisateur_console', jeton, portsDeRoleConsole(d))
   );
-  await geste(() =>
-    reactiver(d.prisma, {
+  await geste(async () => {
+    const { courriels } = await reactiver(d.prisma, {
       acteur,
       cibleId: texte(formData, 'cibleId'),
       maintenant: new Date(d.horloge.maintenant()),
-    })
-  );
+      cles: clesPii(d.env),
+    });
+    d.planifier(async () => {
+      for (const c of courriels) await d.envoi.envoyer(c);
+    });
+  });
 }
 
 export async function relancerLInvitation(formData: FormData): Promise<void> {

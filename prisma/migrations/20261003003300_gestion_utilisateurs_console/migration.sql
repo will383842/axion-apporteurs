@@ -1,5 +1,5 @@
 -- SEC-30 (REQ-SEC-003, REQ-SEC-023, REQ-DM-024) — la gestion des utilisateurs de la console.
--- Préfixe réservé : 20261003002300. ADDITIVE, SAUF deux points acceptés par A02 :
+-- Préfixe réservé : 20261003003300 (002300 avant le renommage, sous 002700 fusionnée). ADDITIVE, SAUF deux points acceptés par A02 :
 --   — le corps de `sessions_espace_version_console()` est remplacé (CREATE OR REPLACE) : c'est une
 --     fonction d'INSERT, non protectrice ; son déclencheur n'est pas recréé ;
 --   — DEUX lignes de données : (a) le REPORT des comptes existants, activés depuis leur création
@@ -44,13 +44,16 @@ CREATE TRIGGER utilisateurs_console_version_de_session BEFORE UPDATE ON "utilisa
 
 -- La session de la console COPIE la version de son utilisateur à l'ouverture (elle rendait 0).
 -- Même nom de fonction, même déclencheur `sessions_espace_version_de_console`, ordre inchangé.
--- Une session SANS population (ni apporteur ni utilisateur) n'est pas lue ici : le CHECK
--- `sessions_espace_une_population` la refuse en se nommant, au lieu d'un « no rows » anonyme.
+-- Une session SANS population (ni apporteur ni utilisateur) n'est pas lue ici : sa version vaut 0,
+-- comme avant SEC-30, et le CHECK `sessions_espace_une_population` la refuse en se nommant, au lieu
+-- d'un « no rows » ou d'un NOT NULL anonymes.
 CREATE OR REPLACE FUNCTION sessions_espace_version_console() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF NEW."apporteur_id" IS NULL AND NEW."utilisateur_console_id" IS NOT NULL THEN
     SELECT u."session_version" INTO STRICT NEW."session_version"
       FROM "utilisateurs_console" u WHERE u."id" = NEW."utilisateur_console_id";
+  ELSIF NEW."apporteur_id" IS NULL THEN
+    NEW."session_version" := 0;
   END IF;
   RETURN NEW;
 END;
