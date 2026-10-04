@@ -17,9 +17,10 @@
  * `lueAt` n'est lu ici par rien, et aucun délai ne s'y appuie (garde `notifications-lue-at-inerte`).
  */
 import type { StatutCourriel } from '@prisma/client';
-import { SEUILS } from '../../domain/seuils/ssot';
+import { FAITS_ANOMALIE_CARACTERES_MAX, SEUILS } from '../../domain/seuils/ssot';
 import {
   CORPS_DE_LA_LIBERATION,
+  MOTIFS_DES_DECISIONS,
   TEXTES_DES_NOTIFICATIONS,
   type CauseDeLiberation,
 } from '../../content/micro-copy/courriels/notifications';
@@ -62,7 +63,22 @@ const PARAMETRE = /\{([a-zA-Z]+)\}/g;
  * saut de ligne), ni caractère de FORMAT (catégorie Cf : U+202E et les isolats retournent un sujet,
  * U+200B le cachent).
  */
-const VALEUR = /^[^\p{Cc}\p{Cf}]{1,300}$/u;
+const VALEUR = /^[^\p{Cc}\p{Cf}]+$/u;
+
+/** La longueur d'une valeur, en points de code. */
+const LONGUEUR_DE_VALEUR_MAX = 300;
+
+/**
+ * DM-55 (arbitrage de la sécurité) : `{motif}` d'une décision porte les faits retenus, bornés par
+ * `FAITS_ANOMALIE_CARACTERES_MAX` ; sa borne est celle des faits plus le plus long gabarit de motif,
+ * dérivée de leurs sources. Toute autre valeur garde la borne commune.
+ */
+export const LONGUEUR_DU_MOTIF_MAX =
+  FAITS_ANOMALIE_CARACTERES_MAX.valeur +
+  Math.max(...Object.values(MOTIFS_DES_DECISIONS).map((t) => [...t].length));
+
+const borneDe = (parametre: string): number =>
+  parametre === 'motif' ? LONGUEUR_DU_MOTIF_MAX : LONGUEUR_DE_VALEUR_MAX;
 
 function cleDeLaTable(cle: string): GabaritDeLApporteur {
   const lue = schemaGabarit.safeParse(cle);
@@ -118,7 +134,7 @@ export function rendreLaNotification(
   if (enTrop !== undefined) throw new NotificationRefusee('parametre_en_trop', enTrop);
   for (const p of attendus) {
     const v: unknown = parametres[p];
-    if (typeof v !== 'string' || !VALEUR.test(v))
+    if (typeof v !== 'string' || !VALEUR.test(v) || [...v].length > borneDe(p))
       throw new NotificationRefusee('parametre_invalide', p);
   }
   const valeurs: Readonly<Record<string, string>> = { ...parametres, ...PARAMETRES_DE_LA_SSOT };
@@ -161,6 +177,24 @@ export interface DemandeDeNotification {
   cause?: CauseDeLiberation;
 }
 
+/**
+ * La composition d'un courriel de notification, UNE fois pour tous ses émetteurs (`notifier()` et
+ * le passage d'envoi de DM-55) : le titre en sujet ; le corps, puis l'appel à l'action suivi du lien
+ * de sa route quand elle existe.
+ */
+export function composerLeCourriel(
+  cle: string,
+  texte: TexteRendu,
+  urlDeLEspace: URL
+): { sujet: string; corps: string } {
+  const route = GABARITS[cleDeLaTable(cle)].route;
+  const lien = route === null ? null : new URL(route, urlDeLEspace).href;
+  const corps = [texte.corps, lien === null ? texte.appel : `${texte.appel} : ${lien}`]
+    .filter((x): x is string => x !== null)
+    .join('\n\n');
+  return { sujet: texte.titre, corps };
+}
+
 export async function notifier(
   demande: DemandeDeNotification,
   d: DependancesDeLaNotification
@@ -187,14 +221,11 @@ export async function notifier(
     if (preference?.active === false)
       return { notificationId, courriel: 'desactive_par_preference' };
   }
-  const lien = ligne.route === null ? null : new URL(ligne.route, d.urlDeLEspace).href;
-  const corps = [texte.corps, lien === null ? texte.appel : `${texte.appel} : ${lien}`]
-    .filter((x): x is string => x !== null)
-    .join('\n\n');
+  const { sujet, corps } = composerLeCourriel(cle, texte, d.urlDeLEspace);
   const courriel = await d.envoyerCourriel({
     gabarit: cle,
     a: demande.a,
-    sujet: texte.titre,
+    sujet,
     corps,
     apporteurId: d.acces.apporteurId,
   });
