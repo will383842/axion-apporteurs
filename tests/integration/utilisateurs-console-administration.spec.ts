@@ -1,6 +1,8 @@
 // @req REQ-SEC-023
 // @req REQ-SEC-003
 // @req REQ-DM-024
+// @req REQ-UX-047
+// @req REQ-UX-048
 /**
  * SEC-30 — les QUATRE YEUX sur les administrateurs de la console, et la version de session, en base
  * RÉELLE (forme d'A02, migration 20261003002300).
@@ -33,6 +35,13 @@ import {
   inviter,
 } from '../../src/server/console/utilisateurs/administration';
 import { ajouterEvenement } from '../../src/server/evenement/journal';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import {
+  FormulaireDeDesactivation,
+  FormulaireDInvitation,
+} from '../../src/server/console/utilisateurs/formulaires';
+import { UTILISATEURS_CONSOLE } from '../../src/content/micro-copy/console/utilisateurs';
 
 // Le journal réel, épiable : un témoin fait refuser UN événement pour prouver que le geste tombe avec.
 vi.mock('../../src/server/evenement/journal', async (original) => {
@@ -451,5 +460,35 @@ describe('REQ-SEC-023 — SEC-30 : les gestes du serveur, chacun avec son évén
       select: { desactiveAt: true, sessionVersion: true },
     });
     expect(l).toEqual({ desactiveAt: null, sessionVersion: 0 });
+  });
+});
+
+// REQ-UX-047 (acceptance (7) de la tâche) : inviter en quatre interactions au plus, désactiver en
+// trois au plus. Compté comme REQ-UX-001 le compte : un champ rempli vaut une interaction, un choix
+// dans un groupe en vaut une, un bouton en vaut une ; un champ caché n'en vaut aucune. Le parcours
+// E2E réel est une dette de QA-T16 (aucun parcours Playwright n'existe encore).
+describe('REQ-UX-047 REQ-UX-048 — SEC-30 : le budget d’interactions de l’écran des utilisateurs', () => {
+  const action = async () => {};
+  const interactions = (html: string) => {
+    const champs = (html.match(/<input(?![^>]*type="(?:hidden|radio)")[^>]*>/g) ?? []).length;
+    const groupes = new Set(
+      [...html.matchAll(/<input[^>]*type="radio"[^>]*name="([^"]+)"/g)].map((m) => m[1])
+    ).size;
+    const boutons = (html.match(/<button[^>]*type="submit"/g) ?? []).length;
+    return champs + groupes + boutons;
+  };
+
+  it('REQ-UX-047 REQ-UX-048 : TÉMOIN — inviter tient en quatre interactions au plus, et chaque rôle s’y explique en une phrase', () => {
+    const html = renderToStaticMarkup(createElement(FormulaireDInvitation, { action }));
+    expect(interactions(html)).toBeLessThanOrEqual(4);
+    for (const phrase of Object.values(UTILISATEURS_CONSOLE.roles))
+      expect(html).toContain(phrase.slice(0, 20));
+  });
+
+  it('REQ-UX-047 : TÉMOIN — désactiver tient en trois interactions au plus', () => {
+    const html = renderToStaticMarkup(
+      createElement(FormulaireDeDesactivation, { action, cibleId: randomUUID() })
+    );
+    expect(interactions(html)).toBeLessThanOrEqual(3);
   });
 });

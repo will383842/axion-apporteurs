@@ -33,6 +33,10 @@ import {
   relancerLInvitation,
   validerUnAdministrateur,
 } from '../../../../server/console/utilisateurs/actions';
+import {
+  FormulaireDeDesactivation,
+  FormulaireDInvitation,
+} from '../../../../server/console/utilisateurs/formulaires';
 
 // Lue à chaque requête : la page lit le cookie de session et la base.
 export const dynamic = 'force-dynamic';
@@ -117,22 +121,7 @@ export default async function PageUtilisateursConsole() {
       <h1>{T.titre}</h1>
       <section aria-labelledby="inviter">
         <h2 id="inviter">{T.invitation.titre}</h2>
-        <form action={inviterUnePersonne}>
-          <label>
-            {T.invitation.champCourriel}
-            <input type="email" name="email" required autoComplete="off" />
-          </label>
-          <fieldset>
-            <legend>{T.invitation.champRole}</legend>
-            {ROLES_CONSOLE.map((r: ConsoleRole) => (
-              <label key={r}>
-                <input type="radio" name="role" value={r} required /> {r} — {T.roles[r]}
-              </label>
-            ))}
-          </fieldset>
-          <p>{T.invitation.roleChangeable}</p>
-          <button type="submit">{T.invitation.envoyer}</button>
-        </form>
+        <FormulaireDInvitation action={inviterUnePersonne} />
       </section>
 
       {autres.length === 0 ? (
@@ -206,10 +195,7 @@ export default async function PageUtilisateursConsole() {
                           <button type="submit">{T.actions.valider}</button>
                         </form>
                       ) : null}
-                      <form action={desactiverLeCompte}>
-                        <input type="hidden" name="cibleId" value={l.id} />
-                        <button type="submit">{T.actions.desactiver}</button>
-                      </form>
+                      <FormulaireDeDesactivation action={desactiverLeCompte} cibleId={l.id} />
                     </>
                   )}
                 </td>
