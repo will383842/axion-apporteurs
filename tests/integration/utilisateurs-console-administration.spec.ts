@@ -11,7 +11,7 @@
  * La session d'APPORTEUR, qui copie la version de son apporteur, n'est pas touchée par la migration :
  * son témoin reste `sessions-revocables.spec.ts` (versions 0 puis 1), inchangé.
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -26,7 +26,19 @@ import { clesPii } from '../../src/server/securite/pii';
 import { tirerJeton } from '../../src/server/auth/lien-magique';
 import { depotDeSessionsConsole, requireRole } from '../../src/server/roles/require-role';
 import { semerSessionConsole, semerUtilisateurConsole } from '../../prisma/seed/06-console';
-import { inviter } from '../../src/server/console/utilisateurs/administration';
+import {
+  changerLeRole,
+  desactiver as desactiverParLeServeur,
+  ErreurAdministrationConsole,
+  inviter,
+} from '../../src/server/console/utilisateurs/administration';
+import { ajouterEvenement } from '../../src/server/evenement/journal';
+
+// Le journal réel, épiable : un témoin fait refuser UN événement pour prouver que le geste tombe avec.
+vi.mock('../../src/server/evenement/journal', async (original) => {
+  const vrai = await original<typeof import('../../src/server/evenement/journal')>();
+  return { ...vrai, ajouterEvenement: vi.fn(vrai.ajouterEvenement) };
+});
 
 let base: Base;
 let app: PrismaClient;
@@ -377,5 +389,67 @@ describe('REQ-SEC-023 — SEC-30 : la ligne de données de la migration ne valid
     });
     expect(valides.map((v) => v.id)).toEqual([ancien]);
     expect(recent).not.toBe(ancien);
+  });
+});
+
+describe('REQ-SEC-023 — SEC-30 : les gestes du serveur, chacun avec son événement', () => {
+  const evenements = (id: string) =>
+    base.prisma.evenement.count({
+      where: { type: 'utilisateur_console_modifie', agregatId: id },
+    });
+
+  it('REQ-SEC-023 : TÉMOIN — un admin change le rôle d’un autre : la version monte d’un cran et l’événement est écrit', async () => {
+    await tronquer();
+    const premier = await utilisateur('admin');
+    await valider(app, premier, null);
+    const c = await utilisateur('comptable');
+    const avant = await evenements(c);
+    await changerLeRole(app, {
+      acteur: { id: premier, role: 'admin' },
+      cibleId: c,
+      vers: 'lecteur',
+      maintenant: new Date(t0),
+    });
+    const l = await base.prisma.utilisateurConsole.findUniqueOrThrow({
+      where: { id: c },
+      select: { role: true, sessionVersion: true },
+    });
+    expect(l).toEqual({ role: 'lecteur', sessionVersion: 1 });
+    expect(await evenements(c)).toBe(avant + 1);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN — l’auto-promotion est refusée, nommée, et rien n’est écrit', async () => {
+    await tronquer();
+    const premier = await utilisateur('admin');
+    await valider(app, premier, null);
+    const err = await changerLeRole(app, {
+      acteur: { id: premier, role: 'admin' },
+      cibleId: premier,
+      vers: 'lecteur',
+      maintenant: new Date(t0),
+    }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ErreurAdministrationConsole);
+    expect((err as ErreurAdministrationConsole).motif).toBe('auto_changement');
+    expect(await evenements(premier)).toBe(0);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN — un changement dont l’événement est refusé fait échouer la transaction : la désactivation n’a pas eu lieu', async () => {
+    await tronquer();
+    const premier = await utilisateur('admin');
+    await valider(app, premier, null);
+    const c = await utilisateur('comptable');
+    vi.mocked(ajouterEvenement).mockRejectedValueOnce(new Error('charge refusée'));
+    await expect(
+      desactiverParLeServeur(app, {
+        acteur: { id: premier, role: 'admin' },
+        cibleId: c,
+        maintenant: new Date(t0),
+      })
+    ).rejects.toThrow('charge refusée');
+    const l = await base.prisma.utilisateurConsole.findUniqueOrThrow({
+      where: { id: c },
+      select: { desactiveAt: true, sessionVersion: true },
+    });
+    expect(l).toEqual({ desactiveAt: null, sessionVersion: 0 });
   });
 });
