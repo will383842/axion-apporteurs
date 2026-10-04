@@ -39,14 +39,16 @@ export interface EntreeDeLaMatrice {
 
 /** La table : un droit, les rôles qui l'ont, et son step-up. */
 export const MATRICE_DES_ROLES = {
-  'action:voir_iban_en_clair': { roles: ['admin', 'comptable'], stepUp: false },
+  // Condition 4 de la sécurité (rattrapage 96) : un export de données de personnes, et l'IBAN en
+  // clair, demandent le step-up.
+  'action:voir_iban_en_clair': { roles: ['admin', 'comptable'], stepUp: true },
   'action:approuver_lot': { roles: ['admin', 'comptable'], stepUp: false },
-  'action:exporter_pain001': { roles: ['admin', 'comptable'], stepUp: false },
+  'action:exporter_pain001': { roles: ['admin', 'comptable'], stepUp: true },
   // SEC-30 (texte de la sécurité, point 4) : la levée d'un gel est sous step-up dès maintenant.
   'action:lever_gel': { roles: ['admin'], stepUp: true },
   'action:suspendre_apporteur': { roles: ['admin'], stepUp: false },
   'action:resilier_apporteur': { roles: ['admin'], stepUp: false },
-  'action:exporter_das2': { roles: ['admin'], stepUp: false },
+  'action:exporter_das2': { roles: ['admin'], stepUp: true },
   // DM-12 (REQ-DM-034, amendement A1-01) : le rattachement manuel motivé, au qualifieur (glossaire §7)
   // et à l'admin ; jamais au comptable ni au lecteur.
   'action:rattacher_manuellement': { roles: ['admin', 'qualifieur'], stepUp: false },
