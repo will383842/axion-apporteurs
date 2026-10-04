@@ -28,7 +28,7 @@ describe('REQ-SEC-001 — statuts qui ouvrent l’espace, défaut fermé (HYP-SE
       'kyc_en_cours',
       'pret_a_signer',
     ]);
-    expect(STATUTS_APPORTEUR.filter(peutOuvrirLEspace)).toEqual([
+    expect(STATUTS_APPORTEUR.filter((s) => peutOuvrirLEspace(s))).toEqual([
       'kyc_en_cours',
       'pret_a_signer',
       'signe',

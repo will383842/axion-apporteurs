@@ -952,6 +952,7 @@ describe('REQ-UX-016 — le texte rendu depuis la base, à l’heure de l’envo
     attributionId: ATT,
     evenementId: '42',
     anomalieId: null,
+    decisionContratId: null,
     ...o,
   });
 

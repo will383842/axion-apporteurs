@@ -996,8 +996,10 @@ describe('REQ-JUR-006 — le rendu par le passage, depuis la décision', () => {
 
   async function chiffre(id: string, texte: string) {
     const { colonnesPii } = await import('../../../src/server/securite/pii');
-    return colonnesPii({ modele: 'DecisionDeContrat', id }, { texte }, await clesDeTest())
-      .texteChiffre;
+    return (
+      colonnesPii({ modele: 'DecisionDeContrat', id }, { texte }, await clesDeTest())
+        .texteChiffre ?? null
+    );
   }
 
   const N = (cle: string, o: Record<string, unknown> = {}) => ({
