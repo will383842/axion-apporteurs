@@ -15,8 +15,11 @@
 import { describe, it, expect } from 'vitest';
 import { SEUILS, TAILLES_DE_LOT } from '../../../src/domain/seuils/ssot';
 import { MS_PAR_JOUR } from '../../../src/domain/temps/calendrier-civil';
+import type { PrismaClient } from '@prisma/client';
 import {
+  CLES_PAR_COURRIEL,
   envoyerLesNotificationsDeLEspace,
+  portsDuPassage,
   type NotificationAEnvoyer,
   type PortsDuPassage,
 } from '../../../src/server/taches/envoyer-notifications-espace';
@@ -161,5 +164,109 @@ describe('REQ-DM-004 — la fenêtre de redéclaration court de l’ENVOI EFFECT
     const t = ports([notif('n1', 'premier_rang_libere')]);
     await envoyerLesNotificationsDeLEspace(t.p);
     expect(t.rendus).toEqual([{ id: 'n1', envoyeLe: MAINTENANT.toISOString() }]);
+  });
+});
+
+// ── l'adaptateur Prisma ─────────────────────────────────────────────────────────────────────────
+
+describe('REQ-UX-016 — l’adaptateur du passage, sur la base', () => {
+  type Appel = { quoi: string; args: unknown };
+  function client(o: { lignes?: unknown[]; verrou?: unknown[] } = {}) {
+    const appels: Appel[] = [];
+    const tx = {
+      $queryRaw: async (sql: TemplateStringsArray, ...valeurs: unknown[]) => {
+        appels.push({ quoi: 'verrou', args: { sql: sql.join('?'), valeurs } });
+        return o.verrou ?? [{ id: 'n1' }];
+      },
+      attribution: {
+        updateMany: async (args: unknown) => {
+          appels.push({ quoi: 'fenetre', args });
+          return { count: 1 };
+        },
+      },
+    };
+    const prisma = {
+      notificationEspace: {
+        findMany: async (args: unknown) => {
+          appels.push({ quoi: 'lot', args });
+          return o.lignes ?? [];
+        },
+      },
+      $transaction: async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx),
+    } as unknown as PrismaClient;
+    return { prisma, appels };
+  }
+  const externes = {
+    maintenant: () => MAINTENANT,
+    rendre: async () => ({ sujet: 's', corps: 'c' }),
+    envoyer: async () => ({ statut: 'envoye' as const, envoyeAt: MAINTENANT }),
+  };
+
+  it('REQ-UX-016 : le lot — clés à canal courriel, PORTANT leur événement, sans courriel non échoué, dans l’ordre d’inscription', async () => {
+    const c = client({
+      lignes: [
+        {
+          id: 'n1',
+          cle: 'premier_rang_libere',
+          apporteurId: 'a',
+          attributionId: 't',
+          evenementId: 42n,
+        },
+      ],
+    });
+    const lus = await portsDuPassage(c.prisma, externes).lireLot(7);
+    expect(lus).toEqual([
+      {
+        id: 'n1',
+        cle: 'premier_rang_libere',
+        apporteurId: 'a',
+        attributionId: 't',
+        evenementId: '42',
+      },
+    ]);
+    expect(c.appels[0]!.args).toEqual({
+      where: {
+        cle: { in: CLES_PAR_COURRIEL },
+        evenementId: { not: null },
+        courriels: { none: { statut: { not: 'echec' } } },
+      },
+      orderBy: [{ creeAt: 'asc' }, { id: 'asc' }],
+      take: 7,
+      select: { id: true, cle: true, apporteurId: true, attributionId: true, evenementId: true },
+    });
+    expect(CLES_PAR_COURRIEL).toContain('decision_attribution');
+    expect(CLES_PAR_COURRIEL).toContain('premier_rang_libere');
+  });
+
+  it('REQ-UX-016 : le verrou — FOR UPDATE SKIP LOCKED, et seulement sans courriel non échoué', async () => {
+    const pris = client({ verrou: [] });
+    const libre = client();
+    const n = notif('n1', 'decision_attribution');
+    const ports = portsDuPassage(pris.prisma, externes);
+    expect(await ports.dansUneTransaction((g) => g.verrouiller(n))).toBe(false);
+    expect(
+      await portsDuPassage(libre.prisma, externes).dansUneTransaction((g) => g.verrouiller(n))
+    ).toBe(true);
+    const { sql, valeurs } = libre.appels[0]!.args as { sql: string; valeurs: unknown[] };
+    expect(sql).toMatch(/FOR UPDATE SKIP LOCKED/);
+    expect(sql).toMatch(/NOT EXISTS[\s\S]*courriels_envoyes[\s\S]*<> 'echec'/);
+    expect(valeurs).toEqual(['n1']);
+  });
+
+  it('REQ-DM-004 : la fenêtre n’est posée que si elle est encore NULLE — un rejeu ne la déplace pas', async () => {
+    const c = client();
+    const finAt = new Date('2027-05-25T08:00:00.000Z');
+    await portsDuPassage(c.prisma, externes).dansUneTransaction((g) =>
+      g.poserLaFenetre('att-1', finAt)
+    );
+    expect(c.appels).toEqual([
+      {
+        quoi: 'fenetre',
+        args: {
+          where: { id: 'att-1', fenetreRedeclarationFinAt: null },
+          data: { fenetreRedeclarationFinAt: finAt },
+        },
+      },
+    ]);
   });
 });
