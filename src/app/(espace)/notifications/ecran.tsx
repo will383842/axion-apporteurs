@@ -16,18 +16,9 @@ import { ETATS_VIDES_ESPACE } from '../../../content/micro-copy/espace/etats-vid
 import { NOTIFICATIONS } from '../../../content/micro-copy/espace/notifications';
 // Mobile d'abord, par une feuille de la même origine : un style en ligne serait refusé par la CSP.
 import styles from './notifications.module.css';
+import type { NotificationDeLEspace } from '../../../server/notifications/espace';
 
-/** Une notification telle que l'écran la reçoit : des textes déjà rendus, jamais un identifiant d'attribution. */
-export type NotificationDeLEspace = {
-  readonly id: string;
-  readonly titre: string;
-  readonly corps: string | null;
-  readonly appel: string | null;
-  /** La route de l'espace où la notification mène, ou `null` : elle n'est alors pas un lien. */
-  readonly route: string | null;
-  /** Le jour d'inscription dans l'espace, en clair : il ne fait courir aucun délai. */
-  readonly quand: string;
-};
+export type { NotificationDeLEspace };
 
 /** La route de la carte des écrans (docs/ESPACE-ROUTES.md) dont l'état vide est lu ici. */
 const ROUTE = '/notifications';
