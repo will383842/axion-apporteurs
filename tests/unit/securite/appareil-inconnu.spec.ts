@@ -47,6 +47,7 @@ import {
   exigerAppareilConfirme,
   jugerAppareil,
   tirerIdentifiantDAppareil,
+  type AppareilVu,
   type AvisDAppareil,
   type DepotDAppareils,
   type PortsDAppareil,
@@ -307,8 +308,10 @@ describe('REQ-SEC-003 — SEC-55 dans une action de l’espace : après `actionE
 function depotEnMemoire(ordre: string[], connus: string[] = []) {
   const vus = new Set(connus);
   return {
-    reconnaitre: vi.fn(async (a: { empreinte: string }) => (vus.has(a.empreinte) ? 1 : 0)),
-    confirmer: vi.fn(async (a: { empreinte: string }) => {
+    reconnaitre: vi.fn(async (a: AppareilVu, _maintenant: Date, _vuApres: Date) =>
+      vus.has(a.empreinte) ? 1 : 0
+    ),
+    confirmer: vi.fn(async (a: AppareilVu, _maintenant: Date) => {
       ordre.push('confirmer');
       vus.add(a.empreinte);
     }),

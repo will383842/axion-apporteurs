@@ -16,14 +16,16 @@
  *     elle ne signe rien d'autre — et avec son `kid`. Jamais l'adresse réseau, jamais l'identifiant.
  *  2. Elle vit au plus la DURÉE D'UNE SESSION après sa dernière vue : au-delà, l'appareil redevient
  *     inconnu, et `purger-appareils.ts` efface la ligne.
- *  3. Un appareil inconnu est REFUSÉ (`appareil_inconnu`) tant que la session n'a pas été
- *     fraîchement authentifiée sur lui. La confirmation renforcée est ce relèvement (REQ-SEC-004) :
- *     un nouveau lien, ou son code (SEC-54), envoyés à l'adresse vérifiée et consommés sur CET
- *     appareil, puisque le cookie de session qu'ils posent lui appartient. L'avis à l'adresse
- *     vérifiée part D'ABORD, l'appareil devient connu ENSUITE : aucun appareil ne devient connu sans
- *     son avis.
+ *  3. Un appareil inconnu est REFUSÉ (`appareil_inconnu`), quelle que soit la fraîcheur de la
+ *     session : la garde ne confirme JAMAIS. L'appareil se confirme À LA CONSOMMATION d'un lien ou de
+ *     son code (SEC-54), envoyés à l'adresse vérifiée, sur l'appareil qui consomme et dans la même
+ *     transaction (`confirmerALaConsommation`). Un cookie de session volé ne suffit donc pas : le
+ *     relèvement est une propriété de la SESSION, pas de l'appareil (note de la lentille sécurité sur
+ *     4913c6a3). L'avis à l'adresse vérifiée part D'ABORD, l'appareil devient connu ENSUITE : aucun
+ *     appareil ne devient connu sans son avis ; un avis qui échoue le laisse inconnu.
  *  4. En échec FERMÉ : un identifiant absent ou hors forme ne produit AUCUNE empreinte ; l'appareil
- *     compte comme inconnu, et rien ne le confirme. L'action pose alors un identifiant neuf.
+ *     compte comme inconnu, et la garde ne lit rien. À la consommation, un identifiant neuf est tiré
+ *     à sa place et rendu à l'appelant, qui le pose ; le hors-forme n'est jamais écrit.
  *  5. Un appareil est connu pour UN compte : la reconnaissance porte le compte de la session.
  *
  * AUCUNE LECTURE D'ENVIRONNEMENT ET AUCUN CADRICIEL ICI : clé, horloge, dépôts et avis entrent par
@@ -31,12 +33,11 @@
  */
 
 import { createHmac, hkdfSync, randomBytes } from 'node:crypto';
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import { kidDe } from '../../lib/env';
 import { DUREES_AUTH } from './durees';
 import {
   exigerSession,
-  sessionRelevee,
   type PortsDeSession,
   type SessionOuverte,
   type VerdictDeSession,
@@ -113,12 +114,28 @@ export interface AvisDAppareil {
   confirmeAt: Date;
 }
 
+/** Les ports de la GARDE : elle lit la session et reconnaît l'appareil, elle n'avise jamais. */
 export interface PortsDAppareil {
   session: PortsDeSession;
   depot: DepotDAppareils;
   /** La clé des appareils et son `kid` (`cleDesAppareils`). */
   cle: { readonly secret: string; readonly kid: string };
+}
+
+/** Les ports de la CONFIRMATION, à la consommation d'un lien ou d'un code de l'espace. */
+export interface PortsDeConfirmation {
+  /** Le dépôt de la transaction de la consommation : la confirmation en partage l'issue. */
+  depot: DepotDAppareils;
+  cle: { readonly secret: string; readonly kid: string };
   aviser(avis: AvisDAppareil): Promise<void>;
+  maintenant: Date;
+}
+
+/** Ce que la consommation rend de l'appareil : l'identifiant à POSER et l'issue, rien d'autre. */
+export type IssueDeLAppareil = 'connu' | 'confirme' | 'avis_echoue';
+export interface AppareilDeLaConnexion {
+  identifiant: string;
+  issue: IssueDeLAppareil;
 }
 
 export type VerdictDAppareil = VerdictDeSession | { ok: false; motif: 'appareil_inconnu' };
@@ -130,10 +147,16 @@ function inconnu(): { ok: false; motif: 'appareil_inconnu' } {
   return { ok: false, motif: 'appareil_inconnu' };
 }
 
+/** La limite de vue : un appareil vu à cet instant ou avant n'est plus reconnu. */
+function vuApresDe(maintenant: Date): Date {
+  return new Date(maintenant.getTime() - DUREES_AUTH.sessionMs.valeur);
+}
+
 /**
  * L'appareil d'une session DÉJÀ acceptée : dans une action de l'espace, celle qu'`actionEspace`
  * (SEC-53 : session et acceptation de la politique) rend à son corps, qui n'est pas relue ici.
- * Connu, il passe ; inconnu, il est refusé, sauf confirmation renforcée sur cette session.
+ * Connu, il passe ; inconnu, il est refusé — même sur une session fraîche : la garde ne confirme
+ * jamais, la confirmation est celle de la consommation.
  */
 export async function jugerAppareil(
   session: SessionOuverte,
@@ -144,17 +167,43 @@ export async function jugerAppareil(
   if (empreinte === null) return inconnu();
   const maintenant = ports.session.maintenant();
   const appareil = { apporteurId: session.apporteurId, empreinte, kid: ports.cle.kid };
-  const vuApres = new Date(maintenant.getTime() - DUREES_AUTH.sessionMs.valeur);
-  if ((await ports.depot.reconnaitre(appareil, maintenant, vuApres)) === 1) return { ok: true };
-  if (!sessionRelevee(session, maintenant)) return inconnu();
-  await ports.aviser({ apporteurId: appareil.apporteurId, confirmeAt: maintenant });
-  await ports.depot.confirmer(appareil, maintenant);
-  return { ok: true };
+  const connu = (await ports.depot.reconnaitre(appareil, maintenant, vuApresDe(maintenant))) === 1;
+  return connu ? { ok: true } : inconnu();
 }
 
 /**
- * La session de la requête, sur un appareil CONNU ou CONFIRMÉ à l'instant : la session d'abord,
- * relue en base, puis `jugerAppareil`. Une session refusée est rendue telle quelle.
+ * La CONFIRMATION, à la consommation d'un lien ou d'un code de l'espace, sur l'appareil qui
+ * consomme, dans la transaction de la consommation (note de la lentille sécurité sur 4913c6a3).
+ * L'identifiant lu sur la requête est gardé s'il a la forme d'un tirage ; sinon un identifiant
+ * neuf le remplace. Connu de ce compte, l'appareil est reconnu ; neuf, l'avis part D'ABORD, puis il
+ * est confirmé. Un avis qui échoue le laisse inconnu : la connexion n'en dépend pas, l'issue le dit.
+ * Rend l'identifiant à poser et l'issue, jamais l'empreinte.
+ */
+export async function confirmerALaConsommation(
+  apporteurId: string,
+  identifiantLu: unknown,
+  ports: PortsDeConfirmation
+): Promise<AppareilDeLaConnexion> {
+  const lu = empreinteDAppareil(identifiantLu, ports.cle.secret);
+  const identifiant = lu === null ? tirerIdentifiantDAppareil() : (identifiantLu as string);
+  const empreinte = lu ?? (empreinteDAppareil(identifiant, ports.cle.secret) as string);
+  const appareil = { apporteurId, empreinte, kid: ports.cle.kid };
+  const { maintenant } = ports;
+  if ((await ports.depot.reconnaitre(appareil, maintenant, vuApresDe(maintenant))) === 1) {
+    return { identifiant, issue: 'connu' };
+  }
+  try {
+    await ports.aviser({ apporteurId, confirmeAt: maintenant });
+  } catch {
+    return { identifiant, issue: 'avis_echoue' };
+  }
+  await ports.depot.confirmer(appareil, maintenant);
+  return { identifiant, issue: 'confirme' };
+}
+
+/**
+ * La session de la requête, sur un appareil CONNU : la session d'abord, relue en base, puis
+ * `jugerAppareil`. Une session refusée est rendue telle quelle.
  */
 export async function exigerAppareilConfirme(
   jeton: string | undefined,
@@ -169,8 +218,13 @@ export async function exigerAppareilConfirme(
 
 // ── l'adaptateur Prisma ──────────────────────────────────────────────────────────────────────────
 
-/** Le dépôt en base. Les empreintes arrivent CALCULÉES : aucune clé n'entre ici. */
-export function depotDAppareils(prisma: PrismaClient): DepotDAppareils {
+/**
+ * Le dépôt en base, sur le client ou dans une transaction (celle de la consommation). Les
+ * empreintes arrivent CALCULÉES : aucune clé n'entre ici.
+ */
+export function depotDAppareils(
+  prisma: Pick<PrismaClient | Prisma.TransactionClient, 'appareilConnu'>
+): DepotDAppareils {
   return {
     async reconnaitre({ apporteurId, empreinte, kid }, maintenant, vuApres) {
       const { count } = await prisma.appareilConnu.updateMany({
