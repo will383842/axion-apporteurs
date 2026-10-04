@@ -301,6 +301,9 @@ describe('REQ-JUR-063 — un module du domaine pur', () => {
         )
       );
     }
-    expect(source).not.toContain('process.env');
+    // Un usage réel, `process.env` en tête d'expression. Stryker, qui mute ce module en porte A,
+    // instrumente le fichier sur disque et y injecte `g.process.env` dans son préambule : ce
+    // membre-là, précédé d'un point, n'est pas un usage du module.
+    expect(source).not.toMatch(/(?<![.\w$])process\.env/);
   });
 });
