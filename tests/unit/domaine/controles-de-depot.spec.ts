@@ -232,6 +232,7 @@ import {
   deposerDans,
   empreinteDeSession,
   parametresDuRefus,
+  SessionDeDepotAbsente,
   versionDeLInformationDesTiers,
   type DemandeDeDepot,
   type PortsDuDepot,
@@ -667,24 +668,27 @@ describe('REQ-DM-009 — `deposer` : le débit, le défi, la transaction, puis l
     expect(r).toMatchObject({ issue: 'enregistree' });
   });
 
-  it('REQ-DM-009 : sans adresse réseau ni session, le débit n’est pas consulté ; le défi reçoit `null`', async () => {
+  it('REQ-DM-009 : sans session ni jeton, le dépôt est refusé : ni débit, ni défi, ni transaction', async () => {
     const recus: unknown[][] = [];
-    const { p } = prisma();
-    await deposer(
-      p,
-      demande({ adresseReseau: null, canal: 'espace', jetonDepotId: null, session: null }),
-      ports({
-        debit: async () => {
-          recus.push(['debit']);
-          return { autorise: true, repriseAt: null };
-        },
-        captcha: async (...a) => {
-          recus.push(['captcha', ...a]);
-          return 'non_requis';
-        },
-      })
-    );
-    expect(recus).toEqual([['captcha', null, null]]);
+    const { p, options } = prisma();
+    await expect(
+      deposer(
+        p,
+        demande({ canal: 'espace', jetonDepotId: null, session: null }),
+        ports({
+          debit: async () => {
+            recus.push(['debit']);
+            return { autorise: true, repriseAt: null };
+          },
+          captcha: async () => {
+            recus.push(['captcha']);
+            return 'non_requis';
+          },
+        })
+      )
+    ).rejects.toBeInstanceOf(SessionDeDepotAbsente);
+    expect(recus).toEqual([]);
+    expect(options).toEqual([]);
   });
 
   it('REQ-DM-009 : sans adresse réseau, la session de l’espace est seule comptée', async () => {

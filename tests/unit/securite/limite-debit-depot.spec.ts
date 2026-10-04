@@ -5,13 +5,15 @@
  * (REQ-DM-009, texte de la juriste du rattrapage 84).
  *
  * CE QU'IL PROUVE (arbitrage de la coordination du 2026-10-04, sécurité et juriste) :
- *   1. DIX DÉPÔTS À LA MAIN, à intervalle humain, passent tous ;
+ *   1. DIX DÉPÔTS À LA MAIN, à quinze secondes d'intervalle, passent TOUS — une tentative en erreur
+ *      corrigée dans la foulée comprise ;
  *   2. DEUX compteurs, `depot:ip` et `depot:session`, sur une fenêtre DE L'ORDRE DE LA MINUTE, leurs
  *      valeurs lues dans la SSOT ; au-delà de l'un OU de l'autre, la réponse demande de réessayer,
  *      avec l'heure de reprise, et RIEN n'est écrit : le client de base n'est même pas touché ;
  *   3. le compteur de session borne UN déposant qui change d'adresse ; deux déposants derrière la
  *      même adresse ne se gênent pas sous le plafond réseau ; aucun compteur n'est clé sur
- *      l'apporteur — la session est une EMPREINTE (cookie de l'espace, ou jeton du lien privé) ;
+ *      l'apporteur — la session est une EMPREINTE (cookie de l'espace, ou jeton du lien privé) ; elle
+ *      est OBLIGATOIRE : un dépôt sans session ni jeton est refusé, jamais jugé sur la seule adresse ;
  *   4. LE CAPTCHA (REQ-DM-010) se décide sur un signal TECHNIQUE : le port ne reçoit que l'empreinte
  *      réseau et la réponse au défi, jamais l'apporteur ; présenté, il ne laisse aucune trace ; résolu,
  *      il ne refuse rien.
@@ -31,6 +33,7 @@ import {
   controlerLeDebit,
   deposer,
   empreinteDeSession,
+  SessionDeDepotAbsente,
   type DemandeDeDepot,
   type PortsDuDepot,
 } from '../../../src/server/depot/deposer';
@@ -106,13 +109,19 @@ describe('REQ-DM-009 — une limite technique, jamais un compte par apporteur', 
       limite: SEUILS.DEPOT_DEBIT_SESSION_PAR_FENETRE.valeur,
       fenetreSecondes: fenetre,
     });
-    expect(COMPTEURS['depot:ip'].surPanne).toBe(COMPTEURS['depot:session'].surPanne);
+    expect(SEUILS.DEPOT_DEBIT_SESSION_PAR_FENETRE.valeur).toBe(5);
+    expect(SEUILS.DEPOT_DEBIT_IP_PAR_FENETRE.valeur).toBe(10);
+    expect(COMPTEURS['depot:ip'].surPanne).toBe('refuser');
+    expect(COMPTEURS['depot:session'].surPanne).toBe('refuser');
   });
 
-  it('REQ-DM-009 : dix dépôts à la main, une minute d’écart, passent tous', async () => {
+  it('REQ-DM-009 : dix dépôts à la main, quinze secondes d’écart, passent TOUS — une erreur corrigée dans la foulée comprise', async () => {
     magasinEnMemoire();
-    for (let i = 0; i < 10; i += 1) {
-      expect(await controlerLeDebit({ ip: IP, session: SESSION }, T0 + i * MINUTE)).toEqual({
+    const instants = Array.from({ length: 10 }, (_, i) => T0 + i * 15_000);
+    // La troisième tentative est refusée à la saisie, puis corrigée et renvoyée deux secondes après.
+    instants.splice(3, 0, T0 + 2 * 15_000 + 2_000);
+    for (const t of instants) {
+      expect(await controlerLeDebit({ ip: IP, session: SESSION }, t)).toEqual({
         autorise: true,
         repriseAt: null,
       });
@@ -175,15 +184,44 @@ describe('REQ-DM-009 — une limite technique, jamais un compte par apporteur', 
     expect(cles).toEqual([`depot:ip:${IP}`, `depot:session:${SESSION}`]);
   });
 
-  it('REQ-DM-009 : un sujet absent n’est pas compté ; sans aucun sujet, rien n’est consommé', async () => {
+  it('REQ-DM-009 : sans adresse réseau, la session seule est comptée', async () => {
     const { cles } = magasinEnMemoire();
     await controlerLeDebit({ ip: null, session: SESSION }, T0);
-    await controlerLeDebit({ ip: IP, session: null }, T0 + 1);
-    expect(await controlerLeDebit({ ip: null, session: null }, T0 + 2)).toEqual({
-      autorise: true,
-      repriseAt: null,
-    });
-    expect(cles).toEqual([`depot:session:${SESSION}`, `depot:ip:${IP}`]);
+    expect(cles).toEqual([`depot:session:${SESSION}`]);
+  });
+
+  it('REQ-DM-009 : face ROUGE — un dépôt sans session ni jeton est refusé, sans débit ni base : jamais jugé sur la seule adresse', async () => {
+    const prismaInterdit = new Proxy(
+      {},
+      {
+        get(_c, propriete) {
+          throw new Error(`base touchée : ${String(propriete)}`);
+        },
+      }
+    ) as PrismaClient;
+    const appels: unknown[] = [];
+    const ports = {
+      cles: CLES,
+      debit: async (sujets: unknown) => {
+        appels.push(sujets);
+        return { autorise: true, repriseAt: null };
+      },
+      captcha: async () => 'non_requis' as const,
+    } as unknown as PortsDuDepot;
+    for (const demande of [
+      { canal: 'espace', session: null, jetonDepotId: null, adresseReseau: ADRESSE },
+      {
+        canal: 'lien_prive',
+        session: 'cookie-de-session',
+        jetonDepotId: null,
+        adresseReseau: ADRESSE,
+      },
+    ]) {
+      await expect(
+        deposer(prismaInterdit, demande as unknown as DemandeDeDepot, ports)
+      ).rejects.toBeInstanceOf(SessionDeDepotAbsente);
+    }
+    expect(appels).toEqual([]);
   });
 
   it('REQ-DM-009 : la session est une empreinte — le cookie de l’espace, le jeton du lien privé, jamais l’apporteur', () => {
@@ -282,6 +320,8 @@ describe('REQ-DM-010 — le captcha, sur un signal technique seulement', () => {
     } as unknown as PortsDuDepot;
     const demande = {
       apporteurId: '33333333-3333-4333-8333-333333333333',
+      canal: 'espace',
+      session: 'cookie-de-session',
       adresseReseau: ADRESSE,
       reponseCaptcha: null,
     } as unknown as DemandeDeDepot;
@@ -304,7 +344,12 @@ describe('REQ-DM-010 — le captcha, sur un signal technique seulement', () => {
     } as unknown as PortsDuDepot;
     await deposer(
       prismaInterdit,
-      { adresseReseau: ADRESSE, reponseCaptcha: 'reponse-du-defi' } as unknown as DemandeDeDepot,
+      {
+        canal: 'espace',
+        session: 'cookie-de-session',
+        adresseReseau: ADRESSE,
+        reponseCaptcha: 'reponse-du-defi',
+      } as unknown as DemandeDeDepot,
       ports
     );
     expect(appels).toEqual([[EMPREINTE, 'reponse-du-defi']]);
