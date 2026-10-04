@@ -27,6 +27,7 @@ const m = vi.hoisted(() => ({
   minimiserCandidatures: vi.fn(),
   purgerLesContacts: vi.fn(),
   purgerLesSirenRefuses: vi.fn(),
+  purgerLesEntreprisesConnues: vi.fn(),
   purgerLesValeursDesDroits: vi.fn(),
   purgerLesNotificationsDeLEspace: vi.fn(),
   purgerLeJournalDesAccesConsole: vi.fn(),
@@ -70,6 +71,10 @@ vi.mock('../../../src/server/taches/minimiser-candidatures', () => ({
 }));
 vi.mock('../../../src/server/taches/purger-contacts', () => ({
   purgerLesContacts: m.purgerLesContacts,
+}));
+vi.mock('../../../src/server/taches/purger-entreprises-connues', async (original) => ({
+  ...(await original<object>()),
+  purgerLesEntreprisesConnues: m.purgerLesEntreprisesConnues,
 }));
 vi.mock('../../../src/server/taches/purger-siren-refuses', () => ({
   purgerLesSirenRefuses: m.purgerLesSirenRefuses,
@@ -271,6 +276,7 @@ describe('REQ-QA-027 — les passages planifiés reçoivent le client et l’heu
   const PURGES = [
     ['contacts_purger', 'purgerLesContacts'],
     ['siren_refuses_purger', 'purgerLesSirenRefuses'],
+    ['entreprises_connues_purger', 'purgerLesEntreprisesConnues'],
     ['droits_contact_purger', 'purgerLesValeursDesDroits'],
     ['droits_contact_anonymiser', 'anonymiserLesTracesDesDroits'],
     ['notifications_espace_purger', 'purgerLesNotificationsDeLEspace'],
