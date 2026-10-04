@@ -62,6 +62,8 @@ export const ROUTES_LIVREES_DE_LA_CONSOLE: readonly string[] = [
   '/console/acces-refuse',
   // SEC-30 : l'administration des utilisateurs de la console.
   '/console/utilisateurs',
+  // CPL-T07 : le dossier de conformité d'un apporteur, ouvert depuis sa fiche (hors du menu).
+  '/console/apporteurs/[id]/conformite',
 ];
 
 /** La liste de préférence de l'accueil, rôle par rôle (`docs/CONSOLE-ROUTES.md`). */

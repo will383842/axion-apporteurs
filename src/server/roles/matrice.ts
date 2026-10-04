@@ -81,6 +81,13 @@ export const MATRICE_DES_ROLES = {
   // écran sans (le lire n'engage rien).
   'ecran:utilisateurs_console': { roles: ['admin'], stepUp: false },
   'action:gerer_utilisateur_console': { roles: ['admin'], stepUp: true },
+  // CPL-T07 : le dossier de conformité. Vérifier une pièce (jamais un RIB, vérifié à quatre yeux
+  // ailleurs) à l'admin et au qualifieur ; ouvrir et valider le dossier à l'admin seul — la
+  // validation mène à la signature, sous step-up (condition de la sécurité).
+  'ecran:conformite_apporteur': { roles: ['admin', 'qualifieur'], stepUp: false },
+  'action:verifier_piece': { roles: ['admin', 'qualifieur'], stepUp: false },
+  'action:ouvrir_kyc': { roles: ['admin'], stepUp: false },
+  'action:valider_kyc': { roles: ['admin'], stepUp: true },
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, EntreeDeLaMatrice>>;
 
 /**
