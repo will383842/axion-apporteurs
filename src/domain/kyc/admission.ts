@@ -3,12 +3,15 @@
  *
  * LES MOTIFS sont des codes du domaine, NON persistés (précision (c) d'A02 : aucune migration pour
  * eux), rendus ensemble et dans cet ordre quand plusieurs valent :
- *   — `siren_inactif` : l'absence de SIREN actif ; un état inconnu vaut inactif (échec fermé) ;
+ *   — `siren_inactif` : l'absence de SIREN actif ; un état inconnu vaut absence (échec fermé) ;
  *   — `lien_avec_la_societe` : la personne salariée, dirigeante ou associée d'Axion-IA, sur sa SEULE
  *     déclaration — jamais déduit du contrôle croisé ;
  *   — `statut_hors_liste` : un statut hors de la liste fermée de REQ-DM-065 ;
  *   — `profession_exclue` : un code NAF de la liste des professions dont la déontologie interdit de
- *     percevoir un apport (avocats, notaires, commissaires de justice, professions de santé).
+ *     percevoir une commission pour apport de clientèle (avocats, notaires, commissaires de justice,
+ *     professions de santé). Le code lu est celui de l'unité légale du candidat, au jour de la
+ *     décision ; il n'est qu'un indice : la même profession déclarée sous un autre code relève du
+ *     signal de REQ-JUR-022, jamais de l'exclusion d'office.
  *
  * LE CONTRÔLE CROISÉ (REQ-CPL-030) ne refuse jamais : une correspondance avec un conseiller salarié
  * actif BLOQUE pour revue humaine, et la réponse au candidat est IDENTIQUE qu'il y ait correspondance
@@ -32,11 +35,26 @@ export const MOTIFS_REFUS_ADMISSION = [
 export type MotifRefusAdmission = (typeof MOTIFS_REFUS_ADMISSION)[number];
 
 /**
- * Les codes NAF des professions exclues d'office, liste arrêtée par A07 et figée par un témoin.
- * EN ATTENTE : la liste n'est pas encore versée (question posée sur #563) ; tant qu'elle est vide,
- * le témoin de `profession_exclue` rougit.
+ * Les codes NAF (rév. 2) des professions exclues d'office, liste FINALE arrêtée par A07 (#563,
+ * commentaire 5981998246) et figée par un témoin, dans son ordre. Seul y entre un code qui désigne
+ * À LUI SEUL une profession dont la déontologie interdit la commission d'apport : `86.90C`, `86.90F`
+ * et `75.00Z`, qui mêlent professions et activités libres ou ne sont pas des professions de santé,
+ * en restent dehors et relèvent de la revue humaine (REQ-JUR-022).
  */
-export const CODES_NAF_EXCLUS: readonly string[] = [];
+export const CODES_NAF_EXCLUS: readonly string[] = [
+  '69.10Z', // activités juridiques : avocats, notaires, commissaires de justice
+  '86.10Z', // activités hospitalières
+  '86.21Z', // médecins généralistes
+  '86.22A', // radiodiagnostic et radiothérapie
+  '86.22B', // activités chirurgicales
+  '86.22C', // autres médecins spécialistes
+  '86.23Z', // pratique dentaire
+  '86.90A', // ambulances
+  '86.90B', // laboratoires d'analyses médicales
+  '86.90D', // infirmiers et sages-femmes
+  '86.90E', // rééducation, appareillage, pédicures-podologues
+  '47.73Z', // pharmacie d'officine
+];
 
 /** La forme d'une empreinte de recherche : 64 hexadécimaux minuscules (HMAC-SHA-256). */
 const FORME_EMPREINTE = /^[0-9a-f]{64}$/;
