@@ -26,7 +26,8 @@ import {
   limiteDuJournalDesAcces,
   purgerLeJournalDesAccesConsole,
 } from '../../../src/server/taches/purger-journal-acces-console';
-import { clesPii, empreinteAdresseReseau } from '../../../src/server/securite/pii';
+import { clesPii, empreinteAdresseReseau, encryptPii } from '../../../src/server/securite/pii';
+import { MODELE_APPORTEUR } from '../../../src/server/auth/lien-magique-depot';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 
 const UTILISATEUR = '0190a5c0-0000-7000-8000-000000000001';
@@ -165,6 +166,149 @@ describe('REQ-SEC-058 — la trace d’une lecture de coordonnées précède la 
       'utilisateurConsoleId',
     ]);
   });
+});
+
+// ── les blocs lus, déchiffrés sous LEUR ligne ───────────────────────────────────────────────────
+
+/**
+ * Un faux client qui rend, à la seconde lecture, des blocs VRAIMENT chiffrés : chacun sous son modèle,
+ * son champ et l'identifiant de sa fiche. Un bloc déchiffré sous une autre ligne échoue (AAD), un
+ * champ oublié dans la sélection revient `undefined` : la sortie le montre.
+ */
+function fauxClientChiffre(blocs: Record<string, Uint8Array | null> | null) {
+  const appels: Appel[] = [];
+  let lecture = 0;
+  const lire = (quoi: string) => async (args: unknown) => {
+    appels.push({ quoi, args });
+    lecture += 1;
+    if (lecture === 1) return { id: 'x' };
+    if (blocs === null) return null;
+    const select = (args as { select: Record<string, boolean> }).select;
+    return Object.fromEntries(
+      Object.entries(select)
+        .filter(([, v]) => v)
+        .map(([k]) => [k, blocs[k]])
+    );
+  };
+  const tx = {
+    journalAccesConsole: {
+      create: async (args: unknown) => {
+        appels.push({ quoi: 'journalAccesConsole.create', args });
+        return {};
+      },
+    },
+    apporteur: { findUnique: lire('apporteur.findUnique') },
+    attribution: { findUnique: lire('attribution.findUnique') },
+  };
+  const client = {
+    $transaction: async (f: (t: typeof tx) => Promise<unknown>) => f(tx),
+  } as unknown as PrismaClient;
+  return { client, appels };
+}
+
+const chiffre = (modele: string, champ: string, id: string, clair: string) =>
+  encryptPii({ modele, champ, id }, clair, CLES);
+
+describe('REQ-SEC-058 — les coordonnées sortent déchiffrées, champ par champ, sous leur ligne', () => {
+  it('REQ-SEC-058 : TÉMOIN — apporteur : les quatre blocs, sélectionnés par leur nom, déchiffrés chacun sous le sien', async () => {
+    const blocs = {
+      nomChiffre: chiffre(MODELE_APPORTEUR, 'nomChiffre', APPORTEUR, 'Fictif'),
+      prenomChiffre: chiffre(MODELE_APPORTEUR, 'prenomChiffre', APPORTEUR, 'Alix'),
+      emailChiffre: chiffre(MODELE_APPORTEUR, 'emailChiffre', APPORTEUR, 'alix@exemple.test'),
+      telephoneChiffre: null,
+    };
+    const f = fauxClientChiffre(blocs);
+    expect(
+      await lireCoordonneesDeLApporteur(
+        f.client,
+        { utilisateurConsoleId: UTILISATEUR, apporteurId: APPORTEUR, adresse: null },
+        CLES
+      )
+    ).toEqual({ nom: 'Fictif', prenom: 'Alix', email: 'alix@exemple.test', telephone: null });
+    expect(f.appels[0]!.args).toEqual({ where: { id: APPORTEUR }, select: { id: true } });
+    expect(f.appels[2]!.args).toEqual({
+      where: { id: APPORTEUR },
+      select: { nomChiffre: true, prenomChiffre: true, emailChiffre: true, telephoneChiffre: true },
+    });
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — contact : les cinq blocs, sous le modèle de l’attribution qui le porte', async () => {
+    const blocs = {
+      nomContactChiffre: chiffre('attribution', 'nomContactChiffre', ATTRIBUTION, 'Fictive'),
+      prenomContactChiffre: chiffre('attribution', 'prenomContactChiffre', ATTRIBUTION, 'Camille'),
+      fonctionContactChiffre: chiffre(
+        'attribution',
+        'fonctionContactChiffre',
+        ATTRIBUTION,
+        'Gérante'
+      ),
+      emailChiffre: chiffre('attribution', 'emailChiffre', ATTRIBUTION, 'camille@exemple.test'),
+      telephoneChiffre: chiffre('attribution', 'telephoneChiffre', ATTRIBUTION, '0100000000'),
+    };
+    const f = fauxClientChiffre(blocs);
+    expect(
+      await lireCoordonneesDuContact(
+        f.client,
+        { utilisateurConsoleId: UTILISATEUR, attributionId: ATTRIBUTION, adresse: null },
+        CLES
+      )
+    ).toEqual({
+      nom: 'Fictive',
+      prenom: 'Camille',
+      fonction: 'Gérante',
+      email: 'camille@exemple.test',
+      telephone: '0100000000',
+    });
+    expect(f.appels[0]!.args).toEqual({ where: { id: ATTRIBUTION }, select: { id: true } });
+    expect(f.appels[2]!.args).toEqual({
+      where: { id: ATTRIBUTION },
+      select: {
+        nomContactChiffre: true,
+        prenomContactChiffre: true,
+        fonctionContactChiffre: true,
+        emailChiffre: true,
+        telephoneChiffre: true,
+      },
+    });
+  });
+
+  it('REQ-SEC-058 : une adresse absente laisse l’empreinte nulle', async () => {
+    const f = fauxClientChiffre({});
+    await journaliserConnexionConsole(
+      f.client,
+      { utilisateurConsoleId: UTILISATEUR, adresse: null },
+      CLES
+    );
+    expect((f.appels[0]!.args as { data: { ipHash: unknown } }).data.ipHash).toBeNull();
+  });
+
+  it.each([
+    ['apporteur', 'lecture_coordonnees_apporteur'],
+    ['contact', 'lecture_coordonnees_contact'],
+  ] as const)(
+    'REQ-SEC-058 : %s — une fiche disparue entre la trace et la lecture est refusée, nommée par sa nature',
+    async (quoi, nature) => {
+      const f = fauxClientChiffre(null);
+      const lecture =
+        quoi === 'apporteur'
+          ? lireCoordonneesDeLApporteur(
+              f.client,
+              { utilisateurConsoleId: UTILISATEUR, apporteurId: APPORTEUR, adresse: null },
+              CLES
+            )
+          : lireCoordonneesDuContact(
+              f.client,
+              { utilisateurConsoleId: UTILISATEUR, attributionId: ATTRIBUTION, adresse: null },
+              CLES
+            );
+      const e = await lecture.catch((x: unknown) => x);
+      expect(e).toBeInstanceOf(CibleInconnue);
+      expect((e as Error).name).toBe('CibleInconnue');
+      expect((e as Error).message).toBe(`cible inconnue pour ${nature}`);
+      // la trace, elle, est écrite : l'accès a été tenté.
+      expect(f.appels.map((a) => a.quoi)).toContain('journalAccesConsole.create');
+    }
+  );
 });
 
 // ── la purge ────────────────────────────────────────────────────────────────────────────────────
