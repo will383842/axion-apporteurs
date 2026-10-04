@@ -4171,7 +4171,7 @@
     {
       "id": "REQ-GOV-010",
       "domaine": "gouvernance-agents",
-      "texte": "`docs/CHARTE-AGENTS.md` définit neuf droits exclusifs portés par les quinze postes de `docs/CHARTE-AGENTS.md` §4 : l'attribution des tâches et l'écriture de `docs/tasks.json` et de la vue `docs/PLAN-STATE.md` reviennent à A01 avec l'outillage de lot (`pnpm lot:cloture`, seul écrivain des LIVRAISONS — `statut`, `pr`, `branch`, `owner` — et le verbe hors dépôt `lever-attente` (outils de reprise, relu par les lentilles securite et exactitude le 2026-10-01), seul écrivain des LEVÉES d'attente — `attente_externe` → `a_faire` sur décision citée, jamais une livraison ; `pnpm plan-state:build`) — il n'existe pas de poste « orchestrateur » ; architecte (seul à accepter un ADR), gardien du spec (seul à modifier REQUIREMENTS/PRESEANCE/DECISIONS/GLOSSAIRE), leads de domaine (découpent, valident l'acceptation), développeurs (une tâche revendiquée à la fois), relecteurs adversariaux, vérificateurs de tests, release manager (seul à fusionner), documentaliste (LECONS.md). Gate : PR modifiant un fichier réservé sans le label du rôle → rouge.",
+      "texte": "`docs/CHARTE-AGENTS.md` définit neuf droits exclusifs portés par les quinze postes de `docs/CHARTE-AGENTS.md` §4 : l'attribution des tâches et l'écriture de `docs/tasks.json` et de la vue `docs/PLAN-STATE.md` reviennent à A01 avec l'outillage de lot (`pnpm lot:cloture`, seul écrivain des LIVRAISONS — `statut`, `pr`, `branch`, `owner` — et le verbe hors dépôt `lever-attente` (outils de reprise, relu par les lentilles securite et exactitude le 2026-10-01), seul écrivain des LEVÉES d'attente — `attente_externe` → `a_faire` sur décision citée, jamais une livraison ; `pnpm plan-state:build`) ; SAUF l'ajout, par la PR d'une tâche hors de la zone gouvernance, aux `paths` de ses propres tâches du chemin d'un fichier qu'elle touche, sous le label `role:gardien-spec` et jugé par la lentille exactitude (GOV-145, décision de Will du 2026-10-04) — il n'existe pas de poste « orchestrateur » ; architecte (seul à accepter un ADR), gardien du spec (seul à modifier REQUIREMENTS/PRESEANCE/DECISIONS/GLOSSAIRE), leads de domaine (découpent, valident l'acceptation), développeurs (une tâche revendiquée à la fois), relecteurs adversariaux, vérificateurs de tests, release manager (seul à fusionner), documentaliste (LECONS.md). Gate : PR modifiant un fichier réservé sans le label du rôle → rouge.",
       "source": "nouvelle",
       "statut": "active",
       "remplaceePar": null,
@@ -4184,7 +4184,8 @@
         "GOV-024",
         "GOV-062",
         "GOV-090",
-        "GOV-116"
+        "GOV-116",
+        "GOV-145"
       ]
     },
     {
@@ -4209,6 +4210,7 @@
         "GOV-101",
         "GOV-124",
         "GOV-126",
+        "GOV-145",
         "QA-T60"
       ]
     },
@@ -4253,7 +4255,8 @@
         "GOV-093",
         "GOV-095",
         "GOV-101",
-        "GOV-124"
+        "GOV-124",
+        "GOV-145"
       ]
     },
     {

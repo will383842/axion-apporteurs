@@ -23882,6 +23882,44 @@
         "fusionneeAt": "2026-10-04T05:22:15Z"
       },
       "motif": null
+    },
+    {
+      "id": "GOV-145",
+      "titre": "gov:pr assouplit trois règles décidées par Will : l'auteur déclare ses chemins dans sa PR, une ligne de journal ne périme plus les accords, la case « Relecteur ≠ auteur » se dérive des revues",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-pr.ts",
+        "scripts/lot/revues.ts",
+        "tests/unit/gouvernance/assouplissements-gov-pr.spec.ts",
+        "docs/CHARTE-AGENTS.md",
+        "docs/CONVENTIONS.md"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-010",
+        "REQ-GOV-011",
+        "REQ-GOV-013"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Versée par sa propre PR (A01), sur décision de Will du 2026-10-04 (points 2, 3 et 5 de la proposition de la coordination de 07h17). (2) Une PR d'auteur — tâche du titre hors zone `gouvernance` — qui touche `docs/tasks.json` n'y fait qu'AJOUTER aux `paths` d'une de SES tâches le chemin d'un fichier qu'elle touche, sous `role:gardien-spec`, jugé par la lentille `exactitude` dans la même relecture ; tout autre écart est refusé par la famille `registre_reecrit_par_une_pr_d_auteur` (`ecartsDuRegistreDUnePrDAuteur`), en échec fermé si le registre de base est illisible ; REQ-GOV-010 est amendée en ce sens. (3) L'empreinte du diff propre exclut l'entrée de journal de la PR jugée (`docs/journal/AAAA-MM-pr-<n>.md`, forme exacte, ce numéro seul) quand chacun de ses titres à la tête n'ouvre que son entrée : un accord, `exactitude` comprise, survit à une tête qui n'ajoute qu'une ligne de journal ; l'entrée d'une autre PR, un titre étranger, un numéro inconnu ou un delta incalculable laissent l'empreinte complète. (5) La case « Relecteur ≠ auteur » est jugée remplie quand `lireRevues` la coche (lentilles exigées acceptées sur la tête exacte ou y survivant, aucune en refus, périmée ou rendue par l'auteur), même si le corps porte `[ ]`. TÉMOINS : `tests/unit/gouvernance/assouplissements-gov-pr.spec.ts` (deux faces par point, vus rougir sur main) et `pnpm gov:pr --prove` (témoins et contre-témoins des points 2 et 5). La décision se trace au prochain lot dédié du gardien-spec (DECISIONS.md).",
+      "tests": {
+        "REQ-GOV-010": [
+          "tests/unit/gouvernance/assouplissements-gov-pr.spec.ts"
+        ],
+        "REQ-GOV-011": [
+          "tests/unit/gouvernance/assouplissements-gov-pr.spec.ts"
+        ],
+        "REQ-GOV-013": [
+          "tests/unit/gouvernance/assouplissements-gov-pr.spec.ts"
+        ]
+      }
     }
   ]
 }
