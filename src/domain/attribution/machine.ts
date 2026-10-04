@@ -176,7 +176,9 @@ export type CodeTransitionAttribution =
   | 'naissance_refusee'
   | 'transition_refusee'
   | 'refusee_au_porteur'
-  | 'autre_commande_valable';
+  | 'autre_commande_valable'
+  | 'critere_incoherent'
+  | 'acteur_refuse';
 
 export class ErreurTransitionAttribution extends Error {
   readonly code: CodeTransitionAttribution;
