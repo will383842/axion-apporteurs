@@ -7,7 +7,14 @@
  *      sessions d'avant tombent (REQ-SEC-003) ; l'apporteur se reconnecte par lien magique, en
  *      lecture seule (art. 12.3) ;
  *   4. l'événement `apporteur_statut_modifie` est écrit par l'écrivain unique du journal ;
- *   5. les jetons de dépôt sont révoqués (`revoquerJetonsALaResiliation`, REQ-SEC-005).
+ *   5. TOUTES les attributions de l'apporteur sont transitionnées, chacune avec son événement (art. 12,
+ *      A02 et juriste sur #703) : `figee` (vers `figee_resiliation`) avec commande, `fin_de_contrat`
+ *      sans ; aucune attribution en file ou occupante n'est laissée telle quelle ;
+ *   6. les jetons de dépôt sont révoqués (`revoquerJetonsALaResiliation`, REQ-SEC-005).
+ *
+ * LA RÉSILIATION POUR MANQUEMENT (art. 11.2, REQ-JUR-006) est refusée (`mise_en_demeure_requise`)
+ * sans une mise en demeure du MÊME article, envoyée et échue, sauf inexécution irrémédiable. On
+ * cherche UNE mise en demeure échue de l'article en cause ; on n'en compte jamais.
  *
  * LA COUPURE APPARTIENT À LA RÉSILIATION SEULE : la suspension n'appelle jamais ce module
  * (REQ-SEC-032, REQ-SEC-019).
@@ -20,8 +27,14 @@
 import type { Prisma } from '@prisma/client';
 import { transitionner } from '../../domain/apporteur/matrice';
 import type { MotifResiliation, StatutApporteur } from '../../domain/apporteur/statut';
-import { ajouterEvenement } from '../evenement/journal';
+import {
+  jugerLaResiliationPourManquement,
+  type ArticleMiseEnDemeure,
+} from '../../domain/apporteur/resiliation';
+import type { EtatAttribution } from '../../domain/attribution/machine';
+import { ajouterEvenement, lireLaChargeDUnFait } from '../evenement/journal';
 import { revoquerJetonsALaResiliation } from '../auth/jeton-depot';
+import { transitionnerUneAttribution } from '../attribution/transitionner';
 
 type Tx = Prisma.TransactionClient;
 
@@ -29,7 +42,11 @@ type Tx = Prisma.TransactionClient;
 export type ActeurDeResiliation = { readonly par: 'utilisateur_console'; readonly id: string };
 
 export class ErreurResiliation extends Error {
-  readonly code: 'acteur_non_humain' | 'apporteur_introuvable';
+  readonly code:
+    | 'acteur_non_humain'
+    | 'apporteur_introuvable'
+    | 'manquement_incoherent'
+    | 'mise_en_demeure_requise';
 
   constructor(code: ErreurResiliation['code'], detail: string) {
     super(`${code} : ${detail}`);
@@ -41,8 +58,56 @@ export class ErreurResiliation extends Error {
 export interface DemandeDeResiliation {
   readonly apporteurId: string;
   readonly motif: MotifResiliation;
+  /**
+   * Pour `manquement_grave`, et lui seul : l'article en cause (liste fermée de l'art. 11.2) et, le cas
+   * échéant, l'inexécution irrémédiable, cochée — motivée par la décision.
+   */
+  readonly manquement?: {
+    readonly article: ArticleMiseEnDemeure;
+    readonly inexecutionIrremediable: boolean;
+  };
   readonly acteur: ActeurDeResiliation;
   readonly maintenant: Date;
+}
+
+/** Les attributions que la fin du contrat traite : la file et les occupantes, sauf celles déjà figées. */
+const A_TRAITER = [
+  'en_attente',
+  'provisoire',
+  'active',
+  'rdv_pris',
+  'proposition',
+  'signee',
+  'convertie',
+] as const satisfies readonly EtatAttribution[];
+
+/** Les états AVEC commande : ils gardent le droit à commission (art. 12.3), par `figee`. */
+const AVEC_COMMANDE: readonly string[] = ['signee', 'convertie'];
+
+/**
+ * Les `envoye_at` des mises en demeure de CET article : chaque notification `mise_en_demeure` de
+ * l'apporteur mène à son fait (l'article, relu par le lecteur du journal) et à ses courriels envoyés.
+ */
+async function envoisDeLArticle(
+  tx: Tx,
+  apporteurId: string,
+  article: ArticleMiseEnDemeure
+): Promise<(number | null)[]> {
+  const notifications = await tx.notificationEspace.findMany({
+    where: { apporteurId, cle: 'mise_en_demeure', evenementId: { not: null } },
+    select: {
+      evenementId: true,
+      courriels: { where: { statut: 'envoye' }, select: { envoyeAt: true } },
+    },
+  });
+  const envois: (number | null)[] = [];
+  for (const n of notifications) {
+    const fait = await lireLaChargeDUnFait(tx, String(n.evenementId));
+    const charge = fait?.charge as { article?: string } | undefined;
+    if (fait?.type !== 'apporteur_mis_en_demeure' || charge?.article !== article) continue;
+    for (const c of n.courriels) envois.push(c.envoyeAt === null ? null : c.envoyeAt.getTime());
+  }
+  return envois;
 }
 
 async function statutVerrouille(tx: Tx, apporteurId: string): Promise<StatutApporteur> {
@@ -64,12 +129,34 @@ export async function resilierUnApporteur(
       'une résiliation est un acte d’un utilisateur de la console, jamais du système'
     );
   }
+  const { manquement } = demande;
+  if ((motif === 'manquement_grave') !== (manquement !== undefined)) {
+    throw new ErreurResiliation(
+      'manquement_incoherent',
+      "l'article en cause accompagne manquement_grave, et lui seul"
+    );
+  }
   const de = await statutVerrouille(tx, apporteurId);
   const { statut: vers, resiliationMotif } = transitionner({
     de,
     evenementApporteur: 'resilier',
     motif,
   });
+  if (manquement !== undefined) {
+    const verdict = jugerLaResiliationPourManquement({
+      envoisDeLArticle: manquement.inexecutionIrremediable
+        ? []
+        : await envoisDeLArticle(tx, apporteurId, manquement.article),
+      maintenant: maintenant.getTime(),
+      inexecutionIrremediable: manquement.inexecutionIrremediable,
+    });
+    if (!verdict.ok) {
+      throw new ErreurResiliation(
+        verdict.motif,
+        `aucune mise en demeure de l'article ${manquement.article} envoyée et échue`
+      );
+    }
+  }
   await tx.apporteur.update({
     where: { id: apporteurId },
     data: { statut: vers, resiliationMotif, sessionVersion: { increment: 1 } },
@@ -87,6 +174,19 @@ export async function resilierUnApporteur(
       acteur,
     },
   });
+  const attributions = await tx.attribution.findMany({
+    where: { apporteurId, statut: { in: [...A_TRAITER] } },
+    select: { id: true, statut: true },
+    orderBy: { id: 'asc' },
+  });
+  for (const a of attributions) {
+    await transitionnerUneAttribution(tx, {
+      attributionId: a.id,
+      transition: AVEC_COMMANDE.includes(a.statut) ? 'figee' : 'fin_de_contrat',
+      acteur,
+      maintenant,
+    });
+  }
   const jetonsRevoques = await revoquerJetonsALaResiliation(tx, apporteurId, maintenant);
   return { de, vers, jetonsRevoques };
 }

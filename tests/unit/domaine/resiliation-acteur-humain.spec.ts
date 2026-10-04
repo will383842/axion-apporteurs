@@ -62,15 +62,28 @@ describe('REQ-JUR-042 — aucun motif de résiliation ne nomme l’inactivité',
  * la matrice, le statut et son motif, l'incrément de `sessionVersion`, l'événement par l'écrivain
  * unique, la révocation des jetons — et un acteur HUMAIN seulement (garde GATE-JUR-ACTEUR-HUMAIN).
  */
-const journalSimule = vi.hoisted(() => ({ ajouterEvenement: vi.fn() }));
+const journalSimule = vi.hoisted(() => ({
+  ajouterEvenement: vi.fn(),
+  lireLaChargeDUnFait: vi.fn(),
+}));
 vi.mock('../../../src/server/evenement/journal', () => journalSimule);
+// La transition d'une attribution a ses propres témoins (DM-08) : ici, seul l'APPEL est jugé.
+const transitionnerSimule = vi.hoisted(() => ({ transitionnerUneAttribution: vi.fn() }));
+vi.mock('../../../src/server/attribution/transitionner', () => transitionnerSimule);
 
 const ID = '0190f0a0-0000-7000-8000-0000000000a1';
 const MAINTENANT = new Date('2027-03-01T09:00:00.000Z');
 const CONSOLE = { par: 'utilisateur_console', id: '0190f0a0-0000-7000-8000-0000000000c1' } as const;
 
-function txSimule(statutInitial: string) {
+function txSimule(
+  statutInitial: string,
+  monde: {
+    attributions?: { id: string; statut: string }[];
+    misesEnDemeure?: { evenementId: bigint; courriels: { envoyeAt: Date }[] }[];
+  } = {}
+) {
   let statut = statutInitial;
+  const lectures: unknown[] = [];
   const ordre: string[] = [];
   const mises: unknown[] = [];
   const revocations: unknown[] = [];
@@ -94,8 +107,22 @@ function txSimule(statutInitial: string) {
         return { count: 1 };
       },
     },
+    attribution: {
+      findMany: async (q: unknown) => {
+        ordre.push('attributions');
+        lectures.push(q);
+        return monde.attributions ?? [];
+      },
+    },
+    notificationEspace: {
+      findMany: async (q: unknown) => {
+        ordre.push('mises_en_demeure');
+        lectures.push(q);
+        return monde.misesEnDemeure ?? [];
+      },
+    },
   };
-  return { tx: tx as never, ordre, mises, revocations };
+  return { tx: tx as never, ordre, mises, revocations, lectures };
 }
 
 async function refusDe(p: Promise<unknown>): Promise<{ code: string }> {
@@ -111,6 +138,9 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
   beforeEach(() => {
     journalSimule.ajouterEvenement.mockReset();
     journalSimule.ajouterEvenement.mockResolvedValue({ id: '1', selfHash: 'x' });
+    journalSimule.lireLaChargeDUnFait.mockReset();
+    transitionnerSimule.transitionnerUneAttribution.mockReset();
+    transitionnerSimule.transitionnerUneAttribution.mockResolvedValue({});
   });
 
   it('REQ-SEC-032 : TÉMOIN — signe → resilie, motif posé, sessionVersion incrémentée, événement écrit, jetons révoqués, dans cet ordre', async () => {
@@ -159,6 +189,7 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
     await resilierUnApporteur(depuisSuspendu.tx, {
       apporteurId: ID,
       motif: 'manquement_grave',
+      manquement: { article: '6', inexecutionIrremediable: true },
       acteur: CONSOLE,
       maintenant: MAINTENANT,
     });
@@ -192,6 +223,143 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
     expect(e.code).toBe('acteur_non_humain');
     expect(t.ordre).toStrictEqual([]);
     expect(journalSimule.ajouterEvenement).not.toHaveBeenCalled();
+  });
+
+  it('REQ-DM-011 : TÉMOIN — la résiliation transitionne TOUTES les attributions à traiter : figee avec commande, fin_de_contrat sans', async () => {
+    const { resilierUnApporteur } = await import('../../../src/server/apporteur/resiliation');
+    const attributions = [
+      { id: 'a-attente', statut: 'en_attente' },
+      { id: 'a-provisoire', statut: 'provisoire' },
+      { id: 'a-active', statut: 'active' },
+      { id: 'a-rdv', statut: 'rdv_pris' },
+      { id: 'a-proposition', statut: 'proposition' },
+      { id: 'a-signee', statut: 'signee' },
+      { id: 'a-convertie', statut: 'convertie' },
+    ];
+    const t = txSimule('signe', { attributions });
+    await resilierUnApporteur(t.tx, {
+      apporteurId: ID,
+      motif: 'ordinaire_axion',
+      acteur: CONSOLE,
+      maintenant: MAINTENANT,
+    });
+    expect(t.lectures[0]).toStrictEqual({
+      where: {
+        apporteurId: ID,
+        statut: {
+          in: [
+            'en_attente',
+            'provisoire',
+            'active',
+            'rdv_pris',
+            'proposition',
+            'signee',
+            'convertie',
+          ],
+        },
+      },
+      select: { id: true, statut: true },
+      orderBy: { id: 'asc' },
+    });
+    const appels = transitionnerSimule.transitionnerUneAttribution.mock.calls.map((c) => c[1]);
+    expect(appels).toStrictEqual(
+      attributions.map((a) => ({
+        attributionId: a.id,
+        transition: a.statut === 'signee' || a.statut === 'convertie' ? 'figee' : 'fin_de_contrat',
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+      }))
+    );
+    // Les attributions après le statut et son événement, avant les jetons.
+    expect(t.ordre.indexOf('apporteur.update')).toBeLessThan(t.ordre.indexOf('attributions'));
+    expect(t.ordre.indexOf('attributions')).toBeLessThan(t.ordre.indexOf('jetons'));
+  });
+
+  it('REQ-JUR-006 : TÉMOIN — manquement_grave sans mise en demeure ÉCHUE du même article est refusée (mise_en_demeure_requise), et rien n’est écrit', async () => {
+    const { resilierUnApporteur } = await import('../../../src/server/apporteur/resiliation');
+    // Une mise en demeure de l'article 6, envoyée il y a 5 jours ; une autre, de l'article 7, échue.
+    journalSimule.lireLaChargeDUnFait.mockImplementation(async (_tx: unknown, id: string) => ({
+      type: 'apporteur_mis_en_demeure',
+      charge: { article: id === '11' ? '6' : '7', acteur: CONSOLE },
+    }));
+    const t = txSimule('signe', {
+      misesEnDemeure: [
+        {
+          evenementId: 11n,
+          courriels: [{ envoyeAt: new Date(MAINTENANT.getTime() - 5 * 86_400_000) }],
+        },
+        {
+          evenementId: 12n,
+          courriels: [{ envoyeAt: new Date(MAINTENANT.getTime() - 40 * 86_400_000) }],
+        },
+      ],
+    });
+    const e = await refusDe(
+      resilierUnApporteur(t.tx, {
+        apporteurId: ID,
+        motif: 'manquement_grave',
+        manquement: { article: '6', inexecutionIrremediable: false },
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+      })
+    );
+    expect(e.code).toBe('mise_en_demeure_requise');
+    expect(t.mises).toStrictEqual([]);
+    expect(journalSimule.ajouterEvenement).not.toHaveBeenCalled();
+    expect(t.lectures[0]).toStrictEqual({
+      where: { apporteurId: ID, cle: 'mise_en_demeure', evenementId: { not: null } },
+      select: {
+        evenementId: true,
+        courriels: { where: { statut: 'envoye' }, select: { envoyeAt: true } },
+      },
+    });
+  });
+
+  it('REQ-JUR-006 : manquement_grave est admise avec une mise en demeure du même article, envoyée et échue', async () => {
+    const { resilierUnApporteur } = await import('../../../src/server/apporteur/resiliation');
+    journalSimule.lireLaChargeDUnFait.mockResolvedValue({
+      type: 'apporteur_mis_en_demeure',
+      charge: { article: '6', acteur: CONSOLE },
+    });
+    const t = txSimule('signe', {
+      misesEnDemeure: [
+        {
+          evenementId: 11n,
+          courriels: [{ envoyeAt: new Date(MAINTENANT.getTime() - 40 * 86_400_000) }],
+        },
+      ],
+    });
+    const r = await resilierUnApporteur(t.tx, {
+      apporteurId: ID,
+      motif: 'manquement_grave',
+      manquement: { article: '6', inexecutionIrremediable: false },
+      acteur: CONSOLE,
+      maintenant: MAINTENANT,
+    });
+    expect(r.vers).toBe('resilie');
+  });
+
+  it('REQ-JUR-006 : le manquement accompagne manquement_grave, et lui seul (manquement_incoherent)', async () => {
+    const { resilierUnApporteur } = await import('../../../src/server/apporteur/resiliation');
+    const sans = await refusDe(
+      resilierUnApporteur(txSimule('signe').tx, {
+        apporteurId: ID,
+        motif: 'manquement_grave',
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+      })
+    );
+    expect(sans.code).toBe('manquement_incoherent');
+    const enTrop = await refusDe(
+      resilierUnApporteur(txSimule('signe').tx, {
+        apporteurId: ID,
+        motif: 'ordinaire_axion',
+        manquement: { article: '6', inexecutionIrremediable: true },
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+      })
+    );
+    expect(enTrop.code).toBe('manquement_incoherent');
   });
 });
 
