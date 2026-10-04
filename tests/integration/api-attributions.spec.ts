@@ -51,7 +51,7 @@ const CLES = clesPii({
   ),
   PII_ENCRYPTION_KEY: 'e'.repeat(64),
 });
-const CLE_REFERENCE = 'temoin-int-t07-reference-'.padEnd(48, '0');
+const CLE_REFERENCE = { APPORTEUR_REF_KEY: 'temoin-int-t07-reference-'.padEnd(48, '0') };
 const DEPS = { cles: CLES, cleReference: CLE_REFERENCE };
 
 const chiffrer = (modele: string, champ: string, id: string, clair: string) =>
@@ -195,7 +195,7 @@ describe('REQ-INT-014 — le lecteur de l’API 1, sur la base, sous le rôle d�
     expect(r).toEqual({
       statut: 'attribuee',
       until: '2026-11',
-      apporteurRef: referenceOpaque(apporteurId, CLE_REFERENCE),
+      apporteurRef: referenceOpaque('apporteur', apporteurId, CLE_REFERENCE),
       nomAffichable: 'Anne-Marie L.',
     });
     expect(schemaReponseAttribution.safeParse(r).success).toBe(true);
@@ -223,7 +223,7 @@ describe('REQ-INT-014 — le lecteur de l’API 1, sur la base, sous le rôle d�
     expect(await lecteurDeLaBase(app, DEPS)(convertie)).toEqual({
       statut: 'cliente',
       until: null,
-      apporteurRef: referenceOpaque(apporteurId, CLE_REFERENCE),
+      apporteurRef: referenceOpaque('apporteur', apporteurId, CLE_REFERENCE),
       nomAffichable: 'Paul D.',
     });
   });
@@ -242,7 +242,7 @@ describe('REQ-INT-014 — le lecteur de l’API 1, sur la base, sous le rôle d�
     });
     expect(await lecteurDeLaBase(app, DEPS)(siren)).toMatchObject({
       nomAffichable: 'Inès R.',
-      apporteurRef: referenceOpaque(actuel, CLE_REFERENCE),
+      apporteurRef: referenceOpaque('apporteur', actuel, CLE_REFERENCE),
     });
   });
 
@@ -262,7 +262,7 @@ describe('REQ-INT-014 — le lecteur de l’API 1, sur la base, sous le rôle d�
     expect(r).toEqual({
       statut: 'attribuee',
       until: '2027-04',
-      apporteurRef: referenceOpaque(conseillerId, CLE_REFERENCE),
+      apporteurRef: referenceOpaque('console', conseillerId, CLE_REFERENCE),
       nomAffichable: 'Claire D.',
     });
     expect(schemaReponseAttribution.safeParse(r).success).toBe(true);

@@ -14,7 +14,10 @@
  *     péremption ; `null` pour `cliente` ;
  *   — `apporteurRef` est un UUID DÉRIVÉ par HMAC, sous une clé dédiée, de l'identifiant du porteur :
  *     stable pour un même porteur, de même forme pour un apporteur et pour un conseiller salarié
- *     (W19), et sans lien lisible avec un identifiant interne ;
+ *     (W19), et sans lien lisible avec un identifiant interne. La revue sécurité (A09, #561) en a
+ *     fixé la clé (`APPORTEUR_REF_KEY`, à elle seule, hors rotation courante) et la dérivation
+ *     (séparée par population : un `apporteurId` et un `utilisateurConsoleId` ne donnent jamais
+ *     la même référence). Partners ne stocke pas la correspondance : il la recalcule ;
  *   — `nomAffichable` est le prénom et l'initiale du nom d'un apporteur, ou, pour un conseiller
  *     (dont la fiche ne porte qu'un nom), le premier mot de son nom et l'initiale du dernier — la
  *     même forme, sans mention de rôle.
@@ -35,8 +38,18 @@ import { clesPii, decryptPii, type ClesPii } from '../../securite/pii';
 import { MODELE_APPORTEUR, MODELE_UTILISATEUR_CONSOLE } from '../../auth/lien-magique-depot';
 import type { LecteurDAttribution, ReponseAttribution } from './api-entrante';
 
-/** La variable qui porte la clé de dérivation des références (nom PROVISOIRE, en revue sécurité). */
-export const VARIABLE_CLE_REFERENCE = 'APPORTEUR_REF_HMAC_CLE';
+/** La variable qui porte la clé de dérivation des références (revue sécurité, #561). */
+export const VARIABLE_CLE_REFERENCE = 'APPORTEUR_REF_KEY';
+
+/**
+ * La clé de pseudonymisation des porteurs. Elle ne sert qu'à dériver `apporteurRef` : jamais à
+ * signer ni à authentifier. Ce type deviendra `Pick<Secrets, 'APPORTEUR_REF_KEY'>` quand
+ * `src/lib/env.ts` la déclarera (chemin hors de cette tâche, demandé en rattrapage).
+ */
+export type CleDesReferences = { readonly APPORTEUR_REF_KEY: string };
+
+/** La population du porteur : elle entre dans la dérivation. */
+export type Population = 'apporteur' | 'console';
 
 /** 32 octets au moins, comme les autres secrets HMAC du dépôt. */
 const LONGUEUR_MIN_CLE = 32;
@@ -47,24 +60,30 @@ const FORME_NOM = /^[\p{L}][\p{L} '’.-]{0,63}$/u;
 export interface DependancesDuLecteur {
   readonly cles: ClesPii;
   /** La clé de dérivation des références opaques. */
-  readonly cleReference: string;
+  readonly cleReference: CleDesReferences;
 }
 
 // ── Les dérivations ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * La référence opaque d'un porteur : HMAC-SHA256 sous la clé dédiée, séparé par domaine, mis en
- * forme d'UUID (version 4, variante RFC 4122). Une clé absente ou trop courte lève : jamais une
+ * La référence opaque d'un porteur : HMAC-SHA-256 sous `APPORTEUR_REF_KEY` de
+ * « partners.apporteur-ref.v1|population|id », dont les 128 premiers bits sont mis en forme
+ * d'UUID (version 8, variante RFC 9562). Une clé absente ou trop courte lève : jamais une
  * référence dérivée d'une clé faible.
  */
-export function referenceOpaque(idPorteur: string, cle: string): string {
-  if (cle.length < LONGUEUR_MIN_CLE) {
+export function referenceOpaque(
+  population: Population,
+  idPorteur: string,
+  cle: CleDesReferences
+): string {
+  const k = cle.APPORTEUR_REF_KEY;
+  if (k.length < LONGUEUR_MIN_CLE) {
     throw new Error('cle_reference : absente ou trop courte');
   }
-  const h = createHmac('sha256', cle)
-    .update(`partners.apporteur-ref.v1\u001f${idPorteur}`, 'utf8')
+  const h = createHmac('sha256', k)
+    .update(`partners.apporteur-ref.v1|${population}|${idPorteur}`, 'utf8')
     .digest();
-  h[6] = (h[6]! & 0x0f) | 0x40;
+  h[6] = (h[6]! & 0x0f) | 0x80;
   h[8] = (h[8]! & 0x3f) | 0x80;
   const x = h.subarray(0, 16).toString('hex');
   return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
@@ -130,10 +149,12 @@ export function lecteurDeLaBase(
     });
     if (a === null) return null;
 
+    let population: Population;
     let idPorteur: string;
     let nom: string | null;
     if (a.apporteur !== null) {
       const { id, prenomChiffre, nomChiffre } = a.apporteur;
+      population = 'apporteur';
       idPorteur = id;
       nom = nomAffichable(
         dechiffrer(MODELE_APPORTEUR, 'prenomChiffre', id, prenomChiffre, d.cles),
@@ -141,6 +162,7 @@ export function lecteurDeLaBase(
       );
     } else if (a.utilisateurConsole !== null) {
       const { id, nomChiffre } = a.utilisateurConsole;
+      population = 'console';
       idPorteur = id;
       nom = nomAffichableDuConseiller(
         dechiffrer(MODELE_UTILISATEUR_CONSOLE, 'nomChiffre', id, nomChiffre, d.cles)
@@ -155,7 +177,7 @@ export function lecteurDeLaBase(
     return {
       statut: cliente ? 'cliente' : 'attribuee',
       until: cliente || fin === null ? null : moisAParis(fin),
-      apporteurRef: referenceOpaque(idPorteur, d.cleReference),
+      apporteurRef: referenceOpaque(population, idPorteur, d.cleReference),
       nomAffichable: nom,
     };
   };
@@ -172,6 +194,6 @@ export const lecteurDeProduction: LecteurDAttribution = async (siren) => {
   client ??= new PrismaClient();
   return lecteurDeLaBase(client, {
     cles: clesPii(process.env),
-    cleReference: process.env[VARIABLE_CLE_REFERENCE] ?? '',
+    cleReference: { APPORTEUR_REF_KEY: process.env[VARIABLE_CLE_REFERENCE] ?? '' },
   })(siren);
 };

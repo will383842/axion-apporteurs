@@ -12,6 +12,8 @@
  *     autre champ n'est admis.
  */
 import { describe, it, expect, vi } from 'vitest';
+import { createHmac } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import type { PrismaClient } from '@prisma/client';
 import {
   API_ATTRIBUTIONS,
@@ -28,6 +30,7 @@ import {
 import {
   lecteurDeLaBase,
   nomAffichable,
+  VARIABLE_CLE_REFERENCE,
   referenceOpaque,
 } from '../../../src/server/integrations/axionia/attributions-dto';
 import { ETATS_OCCUPANTS } from '../../../src/domain/attribution/etats';
@@ -151,7 +154,7 @@ const CLES = clesPii({
   ),
   PII_ENCRYPTION_KEY: 'b'.repeat(64),
 });
-const CLE_REF = 'c'.repeat(64);
+const CLE_REF = { APPORTEUR_REF_KEY: 'c'.repeat(64) };
 const APPORTEUR = '11111111-1111-4111-8111-111111111111';
 const CONSEILLER = '22222222-2222-4222-8222-222222222222';
 const FIN = new Date('2027-03-15T10:00:00.000Z');
@@ -188,7 +191,7 @@ const parConseiller = (statut: string, nom = 'Julie Martin') => ({
     nomChiffre: bloc('UtilisateurConsole', 'nomChiffre', CONSEILLER, nom),
   },
 });
-const lire = (ligne: Ligne | null, cleReference = CLE_REF) => {
+const lire = (ligne: Ligne | null, cleReference: { APPORTEUR_REF_KEY: string } = CLE_REF) => {
   const b = base(ligne);
   return { b, lecture: lecteurDeLaBase(b.prisma, { cles: CLES, cleReference })(SIREN_TEMOIN) };
 };
@@ -268,21 +271,69 @@ describe('REQ-INT-014 — `apporteurRef`, opaque, de même forme pour les deux p
     expect(a.apporteurRef).toMatch(UUID);
     expect(a.apporteurRef).toBe(b.apporteurRef);
     expect(a.apporteurRef).not.toBe(APPORTEUR);
-    expect(a.apporteurRef).toBe(referenceOpaque(APPORTEUR, CLE_REF));
+    expect(a.apporteurRef).toBe(referenceOpaque('apporteur', APPORTEUR, CLE_REF));
   });
 
   it('REQ-INT-014 : la référence dépend de la clé — une autre clé, une autre référence', () => {
-    expect(referenceOpaque(APPORTEUR, CLE_REF)).not.toBe(
-      referenceOpaque(APPORTEUR, 'd'.repeat(64))
+    expect(referenceOpaque('apporteur', APPORTEUR, CLE_REF)).not.toBe(
+      referenceOpaque('apporteur', APPORTEUR, { APPORTEUR_REF_KEY: 'd'.repeat(64) })
     );
-    expect(referenceOpaque(APPORTEUR, CLE_REF)).not.toBe(referenceOpaque(CONSEILLER, CLE_REF));
+    expect(referenceOpaque('apporteur', APPORTEUR, CLE_REF)).not.toBe(
+      referenceOpaque('console', CONSEILLER, CLE_REF)
+    );
   });
 
   it('REQ-INT-014 : une clé absente ou trop courte — la lecture lève, jamais une référence faible', async () => {
-    await expect(lire(parApporteur('active'), '').lecture).rejects.toThrow(/cle_reference/);
-    await expect(lire(parApporteur('active'), 'c'.repeat(31)).lecture).rejects.toThrow(
+    await expect(lire(parApporteur('active'), { APPORTEUR_REF_KEY: '' }).lecture).rejects.toThrow(
       /cle_reference/
     );
+    await expect(
+      lire(parApporteur('active'), { APPORTEUR_REF_KEY: 'c'.repeat(31) }).lecture
+    ).rejects.toThrow(/cle_reference/);
+  });
+
+  it('REQ-INT-014 : la clé est `APPORTEUR_REF_KEY` (revue sécurité du 2026-10-04), et rien d’autre', () => {
+    expect(VARIABLE_CLE_REFERENCE).toBe('APPORTEUR_REF_KEY');
+  });
+
+  it('REQ-INT-014 : HMAC-SHA-256 de « partners.apporteur-ref.v1|population|id », 128 bits en UUID version 8', () => {
+    const attendu = createHmac('sha256', CLE_REF.APPORTEUR_REF_KEY)
+      .update(`partners.apporteur-ref.v1|apporteur|${APPORTEUR}`, 'utf8')
+      .digest();
+    attendu[6] = (attendu[6]! & 0x0f) | 0x80;
+    attendu[8] = (attendu[8]! & 0x3f) | 0x80;
+    const x = attendu.subarray(0, 16).toString('hex');
+    const r = referenceOpaque('apporteur', APPORTEUR, CLE_REF);
+    expect(r).toBe(
+      `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`
+    );
+    expect(r[14]).toBe('8');
+    expect('89ab').toContain(r[19]);
+  });
+
+  it('REQ-INT-014 : un MÊME identifiant donne deux références selon la population — jamais de collision apporteur / console', () => {
+    const id = APPORTEUR;
+    expect(referenceOpaque('apporteur', id, CLE_REF)).not.toBe(
+      referenceOpaque('console', id, CLE_REF)
+    );
+    expect(referenceOpaque('console', id, CLE_REF)).toBe(referenceOpaque('console', id, CLE_REF));
+    for (const p of ['apporteur', 'console'] as const) {
+      expect(referenceOpaque(p, id, CLE_REF)).not.toBe(id);
+    }
+  });
+
+  it('REQ-INT-014 : un conseiller est dérivé sous la population `console`', async () => {
+    const c = (await lire(parConseiller('active')).lecture) as { apporteurRef: string };
+    expect(c.apporteurRef).toBe(referenceOpaque('console', CONSEILLER, CLE_REF));
+  });
+
+  it('REQ-INT-014 : TÉMOIN STATIQUE — le module de dérivation n’importe aucun journal applicatif', () => {
+    const source = readFileSync('src/server/integrations/axionia/attributions-dto.ts', 'utf8');
+    const imports = [...source.matchAll(/^import[^;]*?from\s+'([^']+)'/gms)].map((m) => m[1]!);
+    expect(imports.length).toBeGreaterThan(0);
+    for (const i of imports) {
+      expect(i).not.toMatch(/logger|journal|pino|sentry/i);
+    }
   });
 
   it('REQ-SEC-042 : un conseiller au même stade répond comme un apporteur — même forme, hors la seule référence', async () => {
