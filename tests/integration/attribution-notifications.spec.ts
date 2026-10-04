@@ -267,7 +267,7 @@ describe('REQ-DM-006 — la décision écrit sa notification, dans la transactio
     const apporteur = await unApporteur();
     const id = await semer(apporteur, 'provisoire');
     const anomalie = await base.prisma.anomalie.create({
-      data: { type: 'sincerite', apporteurId: apporteur, attributionId: id },
+      data: { type: 'sincerite', score: 40, apporteurId: apporteur, attributionId: id },
     });
     await transition({
       attributionId: id,
