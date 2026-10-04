@@ -101,6 +101,11 @@ export const LISTE_BLANCHE_PAR_CONTENU: { chemin: string; motif: string; lignes:
     lignes: ['"$id": "https://axion-ia.com/contrats/partners/evenements/v3",'],
   },
   {
+    chemin: 'packages/contracts/api.ts',
+    motif: 'chemin HTTP d’axion-ia, pas la table (la route de relecture du contrat, INT-T70-P)',
+    lignes: ["chemin: '/api/partners/evenements',"],
+  },
+  {
     chemin: 'src/server/integrations/axionia/relecture.ts',
     motif: 'le chemin de la route de relecture d’axion-ia (INT-T08-P), pas la table',
     lignes: ["export const CHEMIN_RELECTURE = '/api/partners/evenements';"],
