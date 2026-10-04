@@ -66,6 +66,7 @@ import {
 import {
   COOKIE_DATTENTE,
   MODELE_APPORTEUR,
+  dateHeureDeLAvis,
   dependancesDuProcessus,
   envoiDesNotifications,
   portsDeConsommation,
@@ -903,6 +904,29 @@ describe('REQ-SEC-003 — le BRANCHEMENT en production (SEC-62) : l’avis « no
       });
       expect(envoyerCourriel.mock.calls[0]?.[0].corps, iso).toContain(attendu);
     }
+  });
+
+  it('REQ-SEC-003 : les douze mois en toutes lettres, au jour et à l’heure de Paris (heure d’hiver jusqu’au dernier dimanche de mars, d’été jusqu’au dernier dimanche d’octobre)', () => {
+    const mois = [
+      'janvier',
+      'février',
+      'mars',
+      'avril',
+      'mai',
+      'juin',
+      'juillet',
+      'août',
+      'septembre',
+      'octobre',
+      'novembre',
+      'décembre',
+    ];
+    mois.forEach((nom, i) => {
+      const heure = i >= 3 && i <= 9 ? 12 : 11;
+      expect(dateHeureDeLAvis(new Date(Date.UTC(2027, i, 15, 10, 7)))).toBe(
+        `15 ${nom} 2027 à ${heure} h 07 (heure de Paris)`
+      );
+    });
   });
 
   it('REQ-SEC-003 : (3) échec fermé — un courriel qui n’est pas `envoye` (en échec, retenu), ou un émetteur qui lève, fait LEVER l’avis : rien ne sera confirmé', async () => {
