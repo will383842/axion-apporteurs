@@ -209,7 +209,8 @@ export type CodeTransitionAttribution =
   | 'motif_incoherent'
   | 'porteur_refuse'
   | 'anomalie_refusee'
-  | 'fait_posterieur_au_depot';
+  | 'fait_posterieur_au_depot'
+  | 'reference_du_fait_invalide';
 
 export class ErreurTransitionAttribution extends Error {
   readonly code: CodeTransitionAttribution;

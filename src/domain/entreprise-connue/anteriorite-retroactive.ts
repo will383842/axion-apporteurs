@@ -68,3 +68,63 @@ export function doitEtreAnnulee(
 export function canalDInformation(porteur: TypePorteur): 'espace' | 'console' {
   return porteur === 'conseiller' ? 'console' : 'espace';
 }
+
+/** Un fait daté qui porte son identifiant d'axionia (`factureId`, `devisId`), nul s'il n'en a pas. */
+export type FaitsIdentifiesDeLEntreprise = FaitsDatesDeLEntreprise & {
+  /** Les mêmes factures que `facturesAt`, avec leur identifiant. */
+  factures: readonly { id: string | null; at: Date }[];
+  /** Les mêmes devis que `devis`, avec leur identifiant. */
+  devisIdentifies: readonly { id: string | null; devis: DevisConnu }[];
+};
+
+/** Le fait qui fonde l'annulation : sa nature, son identifiant d'axionia et sa date. */
+export type FaitFondateurAuDepot = {
+  nature: 'facture' | 'devis';
+  id: string;
+  le: Date;
+};
+
+const plusRecent = <T>(liste: readonly T[], date: (x: T) => number): T | null =>
+  liste.reduce<T | null>((plus, x) => (plus === null || date(x) > date(plus) ? x : plus), null);
+
+/**
+ * DM-67, condition (c) de la sécurité : le critère rempli au dépôt AVEC le fait qui le fonde, ou
+ * `null`. « cliente » : la DERNIÈRE facture antérieure au dépôt ; « devis_signe » : le devis signé
+ * avant le dépôt, non entièrement facturé, le plus récemment signé, daté de sa signature ; « devis » :
+ * le devis émis le plus récemment avant le dépôt, daté de son émission. Un fait fondateur SANS
+ * identifiant ne fonde rien : on n'annule jamais ce qu'on ne saurait citer.
+ */
+export function fondementAuDepot(
+  faits: FaitsIdentifiesDeLEntreprise,
+  deposeeAt: Date
+): { critere: CritereDAnteriorite; fait: FaitFondateurAuDepot } | null {
+  const critere = critereAuDepot(faits, deposeeAt);
+  if (critere === null) return null;
+  const t = deposeeAt.getTime();
+  let fait: FaitFondateurAuDepot | null = null;
+  if (critere === 'cliente') {
+    const f = plusRecent(
+      faits.factures.filter((x) => x.at.getTime() < t),
+      (x) => x.at.getTime()
+    );
+    if (f !== null && f.id !== null) fait = { nature: 'facture', id: f.id, le: f.at };
+  } else if (critere === 'devis_signe') {
+    const d = plusRecent(
+      faits.devisIdentifies.filter(
+        (x) =>
+          x.devis.signeAt !== null &&
+          x.devis.signeAt.getTime() < t &&
+          !estEntierementFacture(x.devis)
+      ),
+      (x) => x.devis.signeAt!.getTime()
+    );
+    if (d !== null && d.id !== null) fait = { nature: 'devis', id: d.id, le: d.devis.signeAt! };
+  } else {
+    const d = plusRecent(
+      faits.devisIdentifies.filter((x) => x.devis.emisAt.getTime() < t),
+      (x) => x.devis.emisAt.getTime()
+    );
+    if (d !== null && d.id !== null) fait = { nature: 'devis', id: d.id, le: d.devis.emisAt };
+  }
+  return fait === null ? null : { critere, fait };
+}

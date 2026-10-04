@@ -24,10 +24,11 @@ import {
   type DevisConnu,
 } from '../../domain/entreprise-connue/anteriorite';
 import {
-  doitEtreAnnulee,
-  type FaitsDatesDeLEntreprise,
+  fondementAuDepot,
+  type FaitsIdentifiesDeLEntreprise,
 } from '../../domain/entreprise-connue/anteriorite-retroactive';
-import { transitionnerUneAttribution } from '../attribution/transitionner';
+import { refDuFaitFondateur, transitionnerUneAttribution } from '../attribution/transitionner';
+import { occupe } from '../../domain/attribution/etats';
 
 type Charge = Record<string, unknown>;
 export type FaitRecu = { eventType: TypeEvenementRecu; charge: unknown; survenuAt: Date };
@@ -57,7 +58,7 @@ const date = (c: Charge, champ: string): Date | null => {
 export function faitsDatesAuDepot(
   recus: readonly FaitRecu[],
   deposeeAt: Date
-): FaitsDatesDeLEntreprise {
+): FaitsIdentifiesDeLEntreprise {
   const t = deposeeAt.getTime();
   const avantLeDepot = (d: Date | null): d is Date => d !== null && d.getTime() < t;
   const lus = [...recus]
@@ -87,9 +88,8 @@ export function faitsDatesAuDepot(
       annulee: f.id !== null && annulees.has(f.id),
     }));
 
-  const facturesAt = factures
-    .filter((f) => estPrestationFacturee(f, avoirsDe(f.id)))
-    .map((f) => f.emiseLe);
+  const facturees = factures.filter((f) => estPrestationFacturee(f, avoirsDe(f.id)));
+  const facturesAt = facturees.map((f) => f.emiseLe);
 
   const parDevis = new Map<
     string,
@@ -110,6 +110,7 @@ export function faitsDatesAuDepot(
     parDevis.set(id, d);
   }
   const devis: DevisConnu[] = [];
+  const devisIdentifies: { id: string; devis: DevisConnu }[] = [];
   for (const [id, d] of parDevis) {
     // Un devis signé sans émission reçue : son émission est au plus tard sa signature.
     const emisAt =
@@ -118,7 +119,7 @@ export function faitsDatesAuDepot(
         : (d.emisAt ?? d.signeAt);
     if (emisAt === null) continue;
     const siennes = factures.filter((f) => texte(f.c, 'devisId') === id);
-    devis.push({
+    const connu: DevisConnu = {
       emisAt,
       signeAt: d.signeAt,
       montantTotalHtCents: d.montant,
@@ -126,9 +127,17 @@ export function faitsDatesAuDepot(
         siennes,
         siennes.flatMap((f) => avoirsDe(f.id))
       ),
-    });
+    };
+    devis.push(connu);
+    devisIdentifies.push({ id, devis: connu });
   }
-  return { facturesAt, devis };
+  return {
+    facturesAt,
+    devis,
+    // DM-67, condition (c) : les mêmes faits, avec leur identifiant d'axion-ia, pour le fait fondateur.
+    factures: facturees.map((f) => ({ id: f.id, at: f.emiseLe })),
+    devisIdentifies,
+  };
 }
 
 /** Les faits d'axionia d'un SIREN : par lui, par ses clients, et par les factures et devis trouvés. */
@@ -224,14 +233,24 @@ export async function rapprocherLesAnteriorites(
       if (connuDepuis.get(a.siren)! >= a.deposeeAt.getTime()) continue;
       examinees += 1;
       if (!faitsDe.has(a.siren)) faitsDe.set(a.siren, await lireLesFaitsDuSiren(prisma, a.siren));
-      const critere = doitEtreAnnulee(a, faitsDatesAuDepot(faitsDe.get(a.siren)!, a.deposeeAt));
-      if (critere === null) continue;
+      if (!occupe(a.statut)) continue;
+      const fondement = fondementAuDepot(
+        faitsDatesAuDepot(faitsDe.get(a.siren)!, a.deposeeAt),
+        a.deposeeAt
+      );
+      if (fondement === null) continue;
       try {
         await prisma.$transaction((tx) =>
           transitionnerUneAttribution(tx, {
             attributionId: a.id,
             transition: 'anteriorite_etablie',
-            critere,
+            critere: fondement.critere,
+            // La RÉFÉRENCE du fait fondateur (condition (c) de la sécurité, voie (a) d'A02).
+            fait: {
+              nature: fondement.fait.nature,
+              ref: refDuFaitFondateur(fondement.fait.nature, fondement.fait.id),
+              le: fondement.fait.le.toISOString(),
+            },
             acteur: { par: 'systeme' },
             maintenant,
           })

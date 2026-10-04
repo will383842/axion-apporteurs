@@ -20,6 +20,7 @@
  * confirmation tacite) et les déclencheurs (Qualification, devis, condition suspensive) sont à leurs
  * tâches ; ils appellent ce module.
  */
+import { createHash } from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import {
   ErreurTransitionAttribution,
@@ -76,6 +77,28 @@ export type FaitFondateur = {
   readonly ref: string;
   readonly le: string;
 };
+
+/** Un identifiant d'axion-ia : un UUID, aléatoire et non séquentiel (`@default(uuid())` côté axion-ia). */
+const IDENTIFIANT_AXIONIA = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * DM-25 — LA référence du fait fondateur d'`anteriorite_etablie` (voie (a) d'A02, #731, 5984318182,
+ * arbitrée par la coordination) : un SHA-256 hexadécimal, SANS clé, de
+ * « partners.anteriorite.v1|<nature>|<id> », où `id` est l'identifiant OPAQUE de la pièce dans
+ * axion-ia (`devisId`, `factureId`), à l'octet. Jamais le numéro, le client ni le SIREN. Un id qui
+ * n'est pas un UUID est refusé, nommé : une empreinte sans clé ne vaut que sur un id non énumérable.
+ */
+export function refDuFaitFondateur(nature: FaitFondateur['nature'], id: string): string {
+  if (!IDENTIFIANT_AXIONIA.test(id)) {
+    throw new ErreurTransitionAttribution(
+      'reference_du_fait_invalide',
+      `${nature} : l'identifiant d'axion-ia n'a pas la forme d'un UUID`
+    );
+  }
+  return createHash('sha256')
+    .update(`partners.anteriorite.v1|${nature}|${id}`, 'utf8')
+    .digest('hex');
+}
 
 export interface DemandeEcriture {
   readonly attributionId: string;

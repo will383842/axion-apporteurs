@@ -11,10 +11,14 @@
  *     l'écrivain des transitions. Une attribution déjà annulée n'occupe plus : rien n'est rejoué.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createHash } from 'node:crypto';
 import { TypeEvenementRecu, type PrismaClient } from '@prisma/client';
 
 const transitionner = vi.hoisted(() => ({ transitionnerUneAttribution: vi.fn() }));
-vi.mock('../../../src/server/attribution/transitionner', () => transitionner);
+vi.mock('../../../src/server/attribution/transitionner', async (original) => ({
+  ...(await original<typeof import('../../../src/server/attribution/transitionner')>()),
+  ...transitionner,
+}));
 
 import {
   faitsDatesAuDepot,
@@ -39,6 +43,11 @@ const lu = (
   charge,
   survenuAt,
 });
+/** Un identifiant d'axion-ia, UUID déterministe par libellé (les vrais sont `@default(uuid())`). */
+const U = (libelle: string): string => {
+  const h = createHash('sha256').update(libelle).digest('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
+};
 const facture = (id: string, montant: number, emiseLe: Date, extra: Record<string, unknown> = {}) =>
   lu(
     T.facture_emise,
@@ -50,9 +59,9 @@ describe('REQ-JUR-007 — les faits, tels qu’ils étaient au dépôt', () => {
   it('REQ-JUR-007 : TÉMOIN — une facture avant le dépôt compte ; pile au dépôt ou après, non', () => {
     const f = faitsDatesAuDepot(
       [
-        facture('f-avant', 100, avant(1)),
-        facture('f-pile', 100, DEPOT),
-        facture('f-apres', 100, apres(1)),
+        facture(U('f-avant'), 100, avant(1)),
+        facture(U('f-pile'), 100, DEPOT),
+        facture(U('f-apres'), 100, apres(1)),
       ],
       DEPOT
     );
@@ -62,10 +71,10 @@ describe('REQ-JUR-007 — les faits, tels qu’ils étaient au dépôt', () => {
   it('REQ-JUR-007 : TÉMOIN — annulée AVANT le dépôt, elle ne compte pas ; annulée APRÈS, elle comptait au dépôt', () => {
     const f = faitsDatesAuDepot(
       [
-        facture('f-1', 100, avant(10 * JOUR)),
-        lu(T.facture_annulee, { factureId: 'f-1' }, avant(JOUR)),
-        facture('f-2', 100, avant(10 * JOUR)),
-        lu(T.facture_annulee, { factureId: 'f-2' }, apres(JOUR)),
+        facture(U('f-1'), 100, avant(10 * JOUR)),
+        lu(T.facture_annulee, { factureId: U('f-1') }, avant(JOUR)),
+        facture(U('f-2'), 100, avant(10 * JOUR)),
+        lu(T.facture_annulee, { factureId: U('f-2') }, apres(JOUR)),
       ],
       DEPOT
     );
@@ -75,16 +84,16 @@ describe('REQ-JUR-007 — les faits, tels qu’ils étaient au dépôt', () => {
   it('REQ-JUR-007 : TÉMOIN — éteinte par un avoir AVANT le dépôt, elle ne compte pas ; par un avoir APRÈS, elle comptait', () => {
     const f = faitsDatesAuDepot(
       [
-        facture('f-1', 100, avant(10 * JOUR)),
+        facture(U('f-1'), 100, avant(10 * JOUR)),
         lu(
           T.avoir_emis,
-          { avoirDeFactureId: 'f-1', montantHtCents: -100, emisLe: iso(avant(JOUR)) },
+          { avoirDeFactureId: U('f-1'), montantHtCents: -100, emisLe: iso(avant(JOUR)) },
           avant(JOUR)
         ),
-        facture('f-2', 100, avant(10 * JOUR)),
+        facture(U('f-2'), 100, avant(10 * JOUR)),
         lu(
           T.avoir_emis,
-          { avoirDeFactureId: 'f-2', montantHtCents: -100, emisLe: iso(apres(JOUR)) },
+          { avoirDeFactureId: U('f-2'), montantHtCents: -100, emisLe: iso(apres(JOUR)) },
           apres(JOUR)
         ),
       ],
@@ -98,12 +107,12 @@ describe('REQ-JUR-007 — les faits, tels qu’ils étaient au dépôt', () => {
       [
         lu(
           T.devis_emis,
-          { devisId: 'd-1', emisLe: iso(avant(20 * JOUR)), siren: SIREN },
+          { devisId: U('d-1'), emisLe: iso(avant(20 * JOUR)), siren: SIREN },
           avant(20 * JOUR)
         ),
         lu(
           T.devis_signe,
-          { devisId: 'd-1', signeLe: iso(avant(10 * JOUR)), montantTotalHtCents: 1000 },
+          { devisId: U('d-1'), signeLe: iso(avant(10 * JOUR)), montantTotalHtCents: 1000 },
           avant(10 * JOUR)
         ),
       ],
@@ -122,22 +131,22 @@ describe('REQ-JUR-007 — les faits, tels qu’ils étaient au dépôt', () => {
   it('REQ-JUR-007 : TÉMOIN — le facturé du devis AU DÉPÔT : factures antérieures seules, avoirs et annulations antérieurs seuls', () => {
     const signe = lu(
       T.devis_signe,
-      { devisId: 'd-1', signeLe: iso(avant(30 * JOUR)), montantTotalHtCents: 1000 },
+      { devisId: U('d-1'), signeLe: iso(avant(30 * JOUR)), montantTotalHtCents: 1000 },
       avant(30 * JOUR)
     );
     const f = faitsDatesAuDepot(
       [
         signe,
-        facture('f-1', 600, avant(20 * JOUR), { devisId: 'd-1' }),
-        facture('f-2', 400, avant(15 * JOUR), { devisId: 'd-1' }),
+        facture(U('f-1'), 600, avant(20 * JOUR), { devisId: U('d-1') }),
+        facture(U('f-2'), 400, avant(15 * JOUR), { devisId: U('d-1') }),
         // un avoir POSTÉRIEUR ne rend pas « non facturé » ce qui l'était au dépôt
         lu(
           T.avoir_emis,
-          { avoirDeFactureId: 'f-2', montantHtCents: -400, emisLe: iso(apres(JOUR)) },
+          { avoirDeFactureId: U('f-2'), montantHtCents: -400, emisLe: iso(apres(JOUR)) },
           apres(JOUR)
         ),
         // une facture POSTÉRIEURE n'entre pas dans le facturé au dépôt
-        facture('f-3', 999, apres(2 * JOUR), { devisId: 'd-1' }),
+        facture(U('f-3'), 999, apres(2 * JOUR), { devisId: U('d-1') }),
       ],
       DEPOT
     );
@@ -146,12 +155,12 @@ describe('REQ-JUR-007 — les faits, tels qu’ils étaient au dépôt', () => {
     const partiel = faitsDatesAuDepot(
       [
         signe,
-        facture('f-1', 600, avant(20 * JOUR), { devisId: 'd-1' }),
-        facture('f-2', 400, avant(15 * JOUR), { devisId: 'd-1' }),
-        lu(T.facture_annulee, { factureId: 'f-2' }, avant(5 * JOUR)),
+        facture(U('f-1'), 600, avant(20 * JOUR), { devisId: U('d-1') }),
+        facture(U('f-2'), 400, avant(15 * JOUR), { devisId: U('d-1') }),
+        lu(T.facture_annulee, { factureId: U('f-2') }, avant(5 * JOUR)),
         lu(
           T.avoir_emis,
-          { avoirDeFactureId: 'f-1', montantHtCents: 100, emisLe: iso(avant(JOUR)) },
+          { avoirDeFactureId: U('f-1'), montantHtCents: 100, emisLe: iso(avant(JOUR)) },
           avant(JOUR)
         ),
       ],
@@ -163,8 +172,8 @@ describe('REQ-JUR-007 — les faits, tels qu’ils étaient au dépôt', () => {
   it('REQ-JUR-007 : un fait à la charge illisible est ignoré, jamais lu comme une date', () => {
     const f = faitsDatesAuDepot(
       [
-        facture('f-1', 100, avant(JOUR), { emiseLe: 'pas une date' }),
-        lu(T.devis_emis, { devisId: 'd-1', emisLe: 'demain' }, avant(JOUR)),
+        facture(U('f-1'), 100, avant(JOUR), { emiseLe: 'pas une date' }),
+        lu(T.devis_emis, { devisId: U('d-1'), emisLe: 'demain' }, avant(JOUR)),
         lu(T.devis_emis, { emisLe: iso(avant(JOUR)) }, avant(JOUR)),
       ],
       DEPOT
@@ -233,16 +242,23 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
     const prisma = base({
       connues: [{ siren: SIREN, origine: 'client', connueDepuisAt: avant(30 * JOUR) }],
       attributions: [{ id: 'a-1', siren: SIREN, statut: 'active', deposeeAt: DEPOT }],
-      recus: [facture('f-1', 100, avant(30 * JOUR))],
+      recus: [facture(U('f-1'), 100, avant(30 * JOUR))],
     });
     expect(await rapprocherLesAnteriorites(prisma, MAINTENANT)).toEqual({
       examinees: 1,
       annulees: 1,
     });
+    const { refDuFaitFondateur } = await import('../../../src/server/attribution/transitionner');
     expect(transitionner.transitionnerUneAttribution).toHaveBeenCalledWith('tx', {
       attributionId: 'a-1',
       transition: 'anteriorite_etablie',
       critere: 'cliente',
+      // DM-67, condition (c) : la référence de la facture qui fonde l'annulation, et sa date.
+      fait: {
+        nature: 'facture',
+        ref: refDuFaitFondateur('facture', U('f-1')),
+        le: avant(30 * JOUR).toISOString(),
+      },
       acteur: { par: 'systeme' },
       maintenant: MAINTENANT,
     });
@@ -252,7 +268,7 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
     const prisma = base({
       connues: [{ siren: SIREN, origine: 'client', connueDepuisAt: avant(30 * JOUR) }],
       attributions: [{ id: 'a-1', siren: SIREN, statut: 'active', deposeeAt: DEPOT }],
-      recus: [facture('f-1', 100, apres(JOUR))],
+      recus: [facture(U('f-1'), 100, apres(JOUR))],
     });
     expect(await rapprocherLesAnteriorites(prisma, MAINTENANT)).toEqual({
       examinees: 1,
@@ -277,7 +293,7 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
     const prisma = base({
       connues: [{ siren: SIREN, origine: 'client', connueDepuisAt: avant(30 * JOUR) }],
       attributions: [{ id: 'a-1', siren: SIREN, statut: 'annulee', deposeeAt: DEPOT }],
-      recus: [facture('f-1', 100, avant(30 * JOUR))],
+      recus: [facture(U('f-1'), 100, avant(30 * JOUR))],
     });
     expect(await rapprocherLesAnteriorites(prisma, MAINTENANT)).toEqual({
       examinees: 0,
@@ -289,7 +305,7 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
     const prisma = base({
       connues: [{ siren: SIREN, origine: 'financeur', connueDepuisAt: avant(30 * JOUR) }],
       attributions: [{ id: 'a-1', siren: SIREN, statut: 'active', deposeeAt: DEPOT }],
-      recus: [facture('f-1', 100, avant(30 * JOUR))],
+      recus: [facture(U('f-1'), 100, avant(30 * JOUR))],
     });
     expect(await rapprocherLesAnteriorites(prisma, MAINTENANT)).toEqual({
       examinees: 0,
@@ -310,7 +326,7 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
         { id: 'a-1', siren: SIREN, statut: 'active', deposeeAt: DEPOT },
         { id: 'a-2', siren: SIREN, statut: 'signee', deposeeAt: DEPOT },
       ],
-      recus: [facture('f-1', 100, avant(30 * JOUR))],
+      recus: [facture(U('f-1'), 100, avant(30 * JOUR))],
     });
     expect(await rapprocherLesAnteriorites(prisma, MAINTENANT)).toEqual({
       examinees: 2,
@@ -320,9 +336,9 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
 
   it('REQ-JUR-007 : TÉMOIN — un devis lu par son SIREN ET par son client ne compte qu’une fois (copies de la base)', async () => {
     const vieux = avant(900 * JOUR);
-    const emis = { devisId: 'd-1', emisLe: iso(vieux), siren: SIREN, clientId: 'cli-1' };
+    const emis = { devisId: U('d-1'), emisLe: iso(vieux), siren: SIREN, clientId: 'cli-1' };
     const signe = {
-      devisId: 'd-1',
+      devisId: U('d-1'),
       signeLe: iso(vieux),
       montantTotalHtCents: 1000,
       clientId: 'cli-1',
@@ -332,7 +348,7 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
       lu(T.devis_emis, emis, vieux),
       lu(T.devis_signe, signe, vieux),
       // la facture du devis, hors fenêtre cliente : 600 sur 1000, le devis signé reste ouvert
-      facture('f-1', 600, avant(800 * JOUR), { devisId: 'd-1', clientId: 'cli-1' }),
+      facture(U('f-1'), 600, avant(800 * JOUR), { devisId: U('d-1'), clientId: 'cli-1' }),
     ];
     const prisma = base({
       connues: [{ siren: SIREN, origine: 'devis', connueDepuisAt: vieux }],
@@ -357,7 +373,7 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
     const prisma = base({
       connues: [{ siren: SIREN, origine: 'client', connueDepuisAt: avant(30 * JOUR) }],
       attributions: [{ id: 'a-1', siren: SIREN, statut: 'active', deposeeAt: DEPOT }],
-      recus: [facture('f-1', 100, avant(30 * JOUR))],
+      recus: [facture(U('f-1'), 100, avant(30 * JOUR))],
     });
     await expect(rapprocherLesAnteriorites(prisma, MAINTENANT)).rejects.toThrow(
       'base indisponible'
@@ -384,5 +400,20 @@ describe('REQ-JUR-007 — le rapprochement des antériorités est inscrit au lan
     expect(source).toMatch(
       /anteriorites_rapprocher: \(\) =>\s*rapprocherLesAnteriorites\(prisma, new Date\(horlogeSysteme\.maintenant\(\)\)\)/
     );
+  });
+});
+
+describe('REQ-JUR-007 — un identifiant d’axion-ia hors forme arrête le passage, nommé', () => {
+  it('REQ-JUR-007 : TÉMOIN — une facture fondatrice dont l’id n’est pas un UUID : reference_du_fait_invalide, et rien n’est écrit', async () => {
+    transitionner.transitionnerUneAttribution.mockReset();
+    const prisma = base({
+      connues: [{ siren: SIREN, origine: 'client', connueDepuisAt: avant(30 * JOUR) }],
+      attributions: [{ id: 'a-1', siren: SIREN, statut: 'active', deposeeAt: DEPOT }],
+      recus: [facture('FAC-2026-0001', 100, avant(30 * JOUR))],
+    });
+    await expect(rapprocherLesAnteriorites(prisma, MAINTENANT)).rejects.toThrow(
+      /^reference_du_fait_invalide/
+    );
+    expect(transitionner.transitionnerUneAttribution).not.toHaveBeenCalled();
   });
 });
