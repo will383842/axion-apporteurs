@@ -850,6 +850,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › reservationTerminee : Réservation terminée · l'entreprise est de nouveau disponible
       espace/confirmation-du-depot.ts › AIDE_DU_BADGE : Sans réponse de votre contact, votre dépôt est confirmé {delaiTacite} après la réception de notre e-mail.
       espace/confirmation-du-depot.ts › CARENCE_DU_REDEPOT : Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}.
+      espace/information-tiers.ts › CASE_INFORMATION_TIERS : Cette personne sait qu'Axion-IA va la contacter.
       espace/etats-attribution.ts › LIBELLES_DES_ETATS › en_attente › libelle : En attente
       espace/etats-attribution.ts › LIBELLES_DES_ETATS › en_attente › phrase : Cette entreprise est déjà réservée. Votre dépôt attend, avec son heure d’envoi.
       espace/etats-attribution.ts › LIBELLES_DES_ETATS › provisoire › libelle : En cours de confirmation
