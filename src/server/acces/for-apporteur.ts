@@ -90,8 +90,12 @@ export type ModeleCloisonne = (typeof MODELES_CLOISONNES)[number];
  * coordination, sécurité et juriste, 2026-10-03). Une anomalie n'est jamais affichée à l'apporteur :
  * son EFFET l'est, par la vue qui le porte, et son existence l'est sur demande d'accès (art. 15).
  * Aucune relation de l'espace n'y mène : elles sont refusées sur chaque modèle qui les porte.
+ *
+ * SEC-55 : l'appareil connu non plus. Signal de sécurité du compte, il n'est inscrit ni au dossier
+ * de l'apporteur ni sur ses dépôts ; seule la garde de connexion le lit et l'écrit
+ * (`src/server/auth/appareil.ts`), sous le compte de la session.
  */
-export const MODELES_SANS_VUE_APPORTEUR = ['anomalie'] as const;
+export const MODELES_SANS_VUE_APPORTEUR = ['anomalie', 'appareilConnu'] as const;
 
 /**
  * DM-07 : les modèles cloisonnés dont la table est en AJOUT SEUL — branchée sur le gabarit

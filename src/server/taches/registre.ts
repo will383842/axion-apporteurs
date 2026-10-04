@@ -26,12 +26,19 @@ export const TACHES = {
   contacts_purger: { req: 'REQ-DM-031' },
   /** DM-53 — la purge du SIREN des dépôts refusés, douze mois après le refus. */
   siren_refuses_purger: { req: 'REQ-DM-043' },
+  /**
+   * DM-66 — l'effacement des projections de l'antériorité (`devis_connus`, `entreprises_connues`)
+   * quand elles ne fondent plus aucun refus (`purgerLesEntreprisesConnues`).
+   */
+  entreprises_connues_purger: { req: 'REQ-DM-029' },
   /** DM-28 — la reprise des codes NAF nuls d'un dépôt en repli manuel (`completerLesCodesNaf`). */
   naf_completer: { req: 'REQ-DM-046' },
   /** DM-61 — la suppression des notifications de l'espace douze mois après leur inscription. */
   notifications_espace_purger: { req: 'REQ-UX-016' },
   /** DM-59 — l'effacement, à échéance, de la valeur d'une rectification demandée par le contact. */
   droits_contact_purger: { req: 'REQ-JUR-065' },
+  /** SEC-55 — la purge des appareils connus, une durée de session après leur dernière vue. */
+  appareils_purger: { req: 'REQ-SEC-003' },
   /** SEC-58 — la purge, à échéance, du journal des accès à la console. */
   journal_acces_console_purger: { req: 'REQ-SEC-023' },
   /**

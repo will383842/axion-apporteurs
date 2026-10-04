@@ -304,6 +304,7 @@ model Apporteur {
   alertesLiberation       AlerteLiberation[]
   anomalies               Anomalie[]
   contestations           Contestation[]
+  appareilsConnus         AppareilConnu[]
 
   /// CPL-T06 (REQ-CPL-006) : les décisions sur la candidature, en ajout seul.
   decisionsCandidature DecisionCandidature[]
@@ -313,7 +314,9 @@ model Apporteur {
 }
 
 /// Un jeton de dépôt privé (REQ-DM-012). Seule l'EMPREINTE se stocke ; un jeton révoqué ne se
-/// réactive pas (déclencheur `jetons_depot_revocation_definitive`, SQL brut).
+/// réactive pas (déclencheur `jetons_depot_revocation_definitive`, SQL brut). Un seul jeton ACTIF
+/// par apporteur (REQ-SEC-005, SEC-11) : index unique partiel `jetons_depot_un_actif_par_apporteur`,
+/// SQL brut. Aucune colonne d'expiration : l'échéance se dérive de `creeAt` et de la SSOT.
 model JetonDepot {
   id             String    @id @default(uuid()) @db.Uuid
   apporteurId    String    @map("apporteur_id") @db.Uuid
@@ -385,6 +388,27 @@ model SessionEspace {
   @@index([apporteurId])
   @@index([utilisateurConsoleId])
   @@map("sessions_espace")
+}
+
+/// SEC-55 (REQ-SEC-003) : un appareil sur lequel une confirmation renforcée a eu lieu, par apporteur.
+/// Un signal de sécurité du COMPTE, jamais une anomalie : il n'est inscrit ni au dossier ni sur un
+/// dépôt, et n'a AUCUNE vue dans l'espace. Seule l'EMPREINTE de l'appareil est gardée — un HMAC
+/// tronqué à 128 bits, sous la clé dédiée des appareils (`kid`) —, jamais l'adresse réseau ni
+/// l'identifiant en clair (CHECK `appareils_connus_empreinte_forme`, SQL brut). La dernière vue
+/// avance à chaque reconnaissance ; la ligne est purgée une durée de session après elle
+/// (`appareils_purger`). Migration `20261003002800_appareils_connus`.
+model AppareilConnu {
+  id            String    @id @default(uuid()) @db.Uuid
+  apporteurId   String    @map("apporteur_id") @db.Uuid
+  apporteur     Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  empreinte     String    @db.Char(32)
+  kid           String    @db.Char(8)
+  confirmeAt    DateTime  @map("confirme_at") @db.Timestamptz(3)
+  derniereVueAt DateTime  @map("derniere_vue_at") @db.Timestamptz(3)
+
+  @@unique([apporteurId, empreinte, kid])
+  @@index([derniereVueAt])
+  @@map("appareils_connus")
 }
 
 // ── SEC-17 : les utilisateurs de la console ─────────────────────────────────
