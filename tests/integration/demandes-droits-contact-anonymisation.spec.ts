@@ -476,6 +476,61 @@ describe('REQ-JUR-065 — DM-68 : la trace anonymisée ne garde de ses dates que
     expect((await lire(aout)).traitee_at?.toISOString()).toBe('2026-08-01T00:00:00.000Z');
   });
 
+  it('REQ-JUR-065 : TÉMOIN — une anonymisation écrite sans troncature est tronquée par la base, dans la même instruction', async () => {
+    const id = await uneDemande({
+      recueAt: new Date('2026-06-11T07:42:10.123Z'),
+      prolongeeAt: new Date('2026-07-01T00:00:00.001Z'),
+      traiteeAt: new Date('2026-07-31T23:59:59.999Z'),
+      droit: 'rectification',
+    });
+    const avant = await lire(id);
+    expect(avant.valeur_purgee_at).not.toBeNull();
+    // Un autre chemin que la tâche, une console ou un correctif manuel : il ne tronque rien.
+    await expect(
+      maj(
+        `UPDATE demandes_droits_contact SET attribution_id = NULL, trace_anonymisee_at = $2
+         WHERE id = $1::uuid`,
+        id,
+        new Date('2031-10-17T15:04:05.678Z')
+      )
+    ).resolves.toBe(1);
+    expect(await lire(id)).toEqual({
+      ...tronquee(avant),
+      attribution_id: null,
+      trace_anonymisee_at: new Date('2031-10-01T00:00:00.000Z'),
+    });
+  });
+
+  it('REQ-JUR-065 : TÉMOIN — à l’anonymisation, une date NULL reste NULL', async () => {
+    // Jamais close, jamais prolongée, sans valeur : seule la réception a une date.
+    const jamaisClose = () =>
+      uneDemande({
+        recueAt: new Date('2026-07-15T12:00:00.000Z'),
+        traiteeAt: null,
+        prolongeeAt: null,
+      });
+    const id = await jamaisClose();
+    await anonymiserLesTracesDesDroits(app, MAINTENANT);
+    const l = await lire(id);
+    expect(l.recue_at.toISOString()).toBe('2026-07-01T00:00:00.000Z');
+    expect([l.traitee_at, l.prolongee_at, l.valeur_purgee_at]).toEqual([null, null, null]);
+    // Une valeur posée sur une date NULL dans l'écriture d'anonymisation est refusée, même un
+    // début de mois : la troncature n'invente aucune date.
+    const autre = await jamaisClose();
+    expect(
+      await refus(
+        maj(
+          `UPDATE demandes_droits_contact SET ${ANONYMISER.replace(
+            `prolongee_at = ${AU_MOIS('prolongee_at')}`,
+            `prolongee_at = ${AU_MOIS('recue_at')}`
+          )} WHERE id = $1::uuid`,
+          autre
+        )
+      )
+    ).toContain(GABARIT);
+    expect((await lire(autre)).attribution_id).not.toBeNull();
+  });
+
   it('REQ-JUR-065 : TÉMOIN — une troncature hors de l’écriture d’anonymisation est refusée', async () => {
     const id = await uneDemande({ recueAt: decale(-60), traiteeAt: decale(-10) });
     for (const c of ['recue_at', 'traitee_at']) {
