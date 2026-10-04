@@ -45,7 +45,9 @@ import { transitionnerUneAttribution } from '../attribution/transitionner';
 import {
   dateEnClair,
   faitsPourLeCourriel,
+  jugerLesFaitsSaisis,
   type MotifDeNonRendu,
+  type RefusDesFaits,
 } from '../attribution/notifications';
 import {
   NotificationRefusee,
@@ -69,7 +71,7 @@ export class ErreurResiliation extends Error {
     | 'mise_en_demeure_requise'
     | 'motif_de_la_decision_incoherent'
     | 'date_de_reception_requise'
-    | 'faits_refuses'
+    | RefusDesFaits
     | 'article_hors_liste'
     | 'statut_sans_contrat'
     | 'preavis_non_notifie';
@@ -115,11 +117,10 @@ function jourDeParis(instant: Date): Date {
   return new Date(Date.UTC(annee, mois - 1, jour));
 }
 
-/** Un texte saisi par une personne, sous les règles de `{faits}` (DM-55) : non vide, borné. */
+/** Un texte saisi par une personne, jugé par le JUGE UNIQUE des faits (DM-55) : un refus nommé. */
 function exigerUnTexteAdmis(texte: string): void {
-  if (faitsPourLeCourriel(texte) === null) {
-    throw new ErreurResiliation('faits_refuses', 'texte vide ou au-delà de la borne de DM-55');
-  }
+  const verdict = jugerLesFaitsSaisis(texte);
+  if (!verdict.ok) throw new ErreurResiliation(verdict.motif, 'le texte saisi est refusé');
 }
 
 function exigerUnActeurHumain(acteur: { par: string }): void {

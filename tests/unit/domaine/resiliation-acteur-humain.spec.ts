@@ -868,10 +868,12 @@ describe('REQ-JUR-006 — les émetteurs : la mise en demeure et la décision de
     };
     expect(await code('signe', { acteur: { par: 'systeme' } })).toBe('acteur_non_humain');
     expect(await code('signe', { article: '11.2' })).toBe('article_hors_liste');
-    expect(await code('signe', { faits: '   ' })).toBe('faits_refuses');
+    expect(await code('signe', { faits: '   ' })).toBe('faits_vides');
+    expect(await code('signe', { faits: 'Voir https://exemple.test/x' })).toBe('faits_avec_lien');
+    expect(await code('signe', { faits: 'Une fraude avérée' })).toBe('faits_avec_mot_refuse');
     expect(
       await code('signe', { faits: 'x'.repeat(FAITS_ANOMALIE_CARACTERES_MAX.valeur + 1) })
-    ).toBe('faits_refuses');
+    ).toBe('faits_trop_longs');
     expect(await code('resilie', {})).toBe('statut_sans_contrat');
     expect(await code('kyc_en_cours', {})).toBe('statut_sans_contrat');
     expect(journalSimule.ajouterEvenement).not.toHaveBeenCalled();
@@ -1260,5 +1262,56 @@ describe('REQ-SEC-032 — aucune action serveur de l’espace n’échappe au ju
     }
     // Chaque exemption existe encore, et reste une action serveur : une exemption morte rougit.
     for (const f of Object.keys(EXEMPTIONS)) expect(actions, f).toContain(f);
+  });
+});
+
+/**
+ * Le JUGE UNIQUE des faits saisis par une personne (sécurité, #703, 5981620953, condition 2) : vide,
+ * borne de DM-55 en points de code, liens et mots refusés — un refus NOMMÉ. Le même contrôle de contenu
+ * que celui des décisions de DM-55 ; la mise en demeure et la décision motivée l'appliquent.
+ */
+describe('REQ-JUR-006 — le juge unique des faits saisis', () => {
+  it('REQ-JUR-006 : TÉMOIN — vide, trop long, avec un lien ou un mot refusé : chaque refus est nommé ; un texte juste passe', async () => {
+    const { jugerLesFaitsSaisis } = await import('../../../src/server/attribution/notifications');
+    const { FAITS_ANOMALIE_CARACTERES_MAX } = await import('../../../src/domain/seuils/ssot');
+    const max = FAITS_ANOMALIE_CARACTERES_MAX.valeur;
+    expect(jugerLesFaitsSaisis('Trois dépôts sans échange réel')).toEqual({ ok: true });
+    expect(jugerLesFaitsSaisis('é'.repeat(max))).toEqual({ ok: true });
+    expect(jugerLesFaitsSaisis(' \n\t ')).toEqual({ ok: false, motif: 'faits_vides' });
+    expect(jugerLesFaitsSaisis('é'.repeat(max + 1))).toEqual({
+      ok: false,
+      motif: 'faits_trop_longs',
+    });
+    for (const lien of ['https://a.b', 'voir www.site', 'site.fr', 'x.com']) {
+      expect(jugerLesFaitsSaisis(`Faits : ${lien}`), lien).toEqual({
+        ok: false,
+        motif: 'faits_avec_lien',
+      });
+    }
+    for (const mot of ['fraude', 'Anomalies', 'SANCTION']) {
+      expect(jugerLesFaitsSaisis(`Une ${mot} relevée`), mot).toEqual({
+        ok: false,
+        motif: 'faits_avec_mot_refuse',
+      });
+    }
+  });
+
+  it('REQ-JUR-006 : la décision motivée d’une résiliation passe par le même juge', async () => {
+    const { resilierUnApporteur } = await import('../../../src/server/apporteur/resiliation');
+    const e = await refusDe(
+      resilierUnApporteur(
+        txSimule('signe').tx,
+        {
+          apporteurId: ID,
+          motif: 'manquement_grave',
+          manquement: { article: '6', inexecutionIrremediable: true },
+          motifDeLaDecision: 'Voir https://exemple.test',
+          acteur: CONSOLE,
+          maintenant: MAINTENANT,
+        },
+        await clesDeTest()
+      )
+    );
+    expect(e.code).toBe('faits_avec_lien');
   });
 });
