@@ -778,6 +778,8 @@ function txSimule(lignes: LigneSimulee[]) {
       findUnique: async (q: { select?: { deposeeAt?: boolean } }) =>
         q.select?.deposeeAt ? { deposeeAt: deposeeDuBanc } : null,
     },
+    // DM-25 : l'antériorité établie écrit sa notification ; le banc partagé l'accepte sans la juger.
+    notificationEspace: { create: async () => ({}) },
   };
   return { tx: tx as never, verrous, mises };
 }
