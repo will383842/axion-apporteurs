@@ -208,7 +208,8 @@ export const PARAGRAPHES_DE_LA_RESILIATION = {
 
 /**
  * SEC-19 — le paragraphe COMMUN de la résiliation (juriste, #703, 5980966503, MOT POUR MOT), dont la
- * dernière phrase est celle de 5981529273, MOT POUR MOT : dans le courriel ET dans l'espace.
+ * première phrase est celle de 5982317891 et la dernière celle de 5981529273, MOT POUR MOT : dans le
+ * courriel ET dans l'espace.
  */
 export const PARAGRAPHE_COMMUN_DE_LA_RESILIATION =
-  "Vos attributions provisoires et vos déclarations en attente sont annulées ; vos attributions sans commande prennent fin. Les commandes signées avant la fin du contrat continuent de vous ouvrir droit à commission, au fur et à mesure de leurs encaissements, quelle qu'en soit la date. Les commissions déjà acquises vous sont payées au dernier relevé. Vous gardez l'accès en lecture à votre espace jusqu'à l'extinction de vos droits : reconnectez-vous avec votre adresse e-mail pour y accéder.";
+  "Vos dépôts en cours de confirmation et vos dépôts en attente sont annulés ; vos réservations sans commande prennent fin. Les commandes signées avant la fin du contrat continuent de vous ouvrir droit à commission, au fur et à mesure de leurs encaissements, quelle qu'en soit la date. Les commissions déjà acquises vous sont payées au dernier relevé. Vous gardez l'accès en lecture à votre espace jusqu'à l'extinction de vos droits : reconnectez-vous avec votre adresse e-mail pour y accéder.";
