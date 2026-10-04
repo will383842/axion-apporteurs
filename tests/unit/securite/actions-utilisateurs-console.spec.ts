@@ -246,11 +246,12 @@ describe('REQ-SEC-023 — le geste reçoit ses arguments exacts ; l’écran rev
 
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — inviter : sans adresse ou sans rôle valide, « saisie » ; sinon l’adresse taillée, la connexion SANS jeton, chaque courriel envoyé', async () => {
     admis();
-    for (const champs of [
+    const saisies: Record<string, string>[] = [
       { email: '   ', role: 'lecteur' },
       { email: 'n@exemple.test', role: 'personne' },
       { role: 'lecteur' },
-    ])
+    ];
+    for (const champs of saisies)
       expect(await vers(inviterUnePersonne(formulaire(champs))), JSON.stringify(champs)).toBe(
         `${ECRAN}?refus=saisie`
       );
