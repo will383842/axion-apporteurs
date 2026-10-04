@@ -133,6 +133,32 @@ export const SEUILS = {
     renvois: art('3.3'),
     verifieLe: LE,
   },
+  // SEC-11 : le jeton de dépôt privé expire douze mois après son émission ; aucune colonne ne porte
+  // l'échéance, elle se dérive de `cree_at` (cadrage d'A02 du 2026-09-26, partners/ADR-0022).
+  JETON_DEPOT_DUREE_MOIS: {
+    valeur: 12,
+    unite: 'mois',
+    source: 'REQ-SEC-005 (jeton de dépôt privé, expirant à 12 mois)',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
+  // SEC-18 : la tâche différée qui ouvre les anomalies d'auto-parrainage (forme d'A02, PR 601). Sa
+  // cadence, et la fenêtre qui borne ce qu'elle relit en arrière au premier passage ou après une
+  // panne. Valeurs proposées par l'auteur, à confirmer par la coordination.
+  AUTO_PARRAINAGE_CADENCE_MINUTES: {
+    valeur: 60,
+    unite: 'minutes',
+    source: 'REQ-SEC-031 (contrôle différé, forme d’A02 du 2026-10-03), valeur proposée par A05',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
+  AUTO_PARRAINAGE_FENETRE_JOURS: {
+    valeur: 7,
+    unite: 'jours',
+    source: 'REQ-SEC-031 (contrôle différé, forme d’A02 du 2026-10-03), valeur proposée par A05',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
   ANTERIORITE_DEVIS_MOIS: {
     valeur: 6,
     unite: 'mois',
