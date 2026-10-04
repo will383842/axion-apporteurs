@@ -153,17 +153,16 @@ const passage = () =>
     portsDuPassage(app, {
       maintenant: () => horloge,
       rendre: async () => ({ sujet: 'Objet', corps: 'Corps' }),
-      envoyer: (tx, n, texte) =>
+      envoyer: (tx, n, texte, envoyeLe) =>
         envoyerParLEmetteur(
           {
             configuration: { expediteur: 'camille@envoi.partners.test', dmarcVerifie },
             relais,
             cles: CLES,
-            maintenant: () => horloge,
             nouvelId: randomUUID,
           },
           async () => 'destinataire@envoi.partners.test'
-        )(tx, n, texte),
+        )(tx, n, texte, envoyeLe),
     })
   );
 

@@ -809,7 +809,7 @@ describe('REQ-UX-016 — le courriel de la notification s’écrit dans la trans
     const r = relais();
     const envoyer = envoyerParLEmetteur(dependances(true, r, c), async () => ADRESSE);
     const n = notif(ID_NOTIF, 'premier_rang_libere', { apporteurId: ID_APPORTEUR });
-    const issue = await envoyer(t.tx, n, { sujet: 'Objet', corps: 'Corps' });
+    const issue = await envoyer(t.tx, n, { sujet: 'Objet', corps: 'Corps' }, INSTANT);
     expect(issue).toEqual({ statut: 'envoye', envoyeAt: INSTANT });
     expect(r.appels).toBe(1);
     expect(t.lignes).toHaveLength(1);
@@ -832,7 +832,8 @@ describe('REQ-UX-016 — le courriel de la notification s’écrit dans la trans
       {
         sujet: 'Objet',
         corps: 'Corps',
-      }
+      },
+      INSTANT
     );
     expect(issue).toEqual({ statut: 'retenu_dmarc_non_verifie', envoyeAt: null });
     expect(r.appels).toBe(0);
