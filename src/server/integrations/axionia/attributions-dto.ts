@@ -81,7 +81,7 @@ export function referenceOpaque(
     throw new Error('cle_reference : absente ou trop courte');
   }
   const h = createHmac('sha256', k)
-    .update(`partners.apporteur-ref.v1|${population}|${idPorteur}`, 'utf8')
+    .update(`partners.apporteur-ref.v1|${population}|${idPorteur}`)
     .digest();
   h[6] = (h[6]! & 0x0f) | 0x80;
   h[8] = (h[8]! & 0x3f) | 0x80;
@@ -89,7 +89,7 @@ export function referenceOpaque(
   return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
 }
 
-const mots = (texte: string | null): string[] => (texte ?? '').trim().split(/\s+/u).filter(Boolean);
+const mots = (texte: string | null): string[] => (texte ?? '').split(/\s/u).filter(Boolean);
 
 /** Une initiale, en majuscule, suivie d'un point. */
 const initiale = (mot: string): string => `${[...mot][0]!.toLocaleUpperCase('fr-FR')}.`;
@@ -99,11 +99,11 @@ const sousLaForme = (nom: string): string | null => (FORME_NOM.test(nom) ? nom :
 
 /**
  * Le nom d'affichage d'un apporteur : le prénom, puis l'initiale du nom de famille. Sans
- * prénom, rien : une initiale seule n'est pas un nom d'affichage.
+ * prénom, rien : une initiale seule n'est pas un nom d'affichage — elle ne tient pas la forme du
+ * contrat, qui exige une lettre en tête.
  */
 export function nomAffichable(prenom: string | null, nom: string | null): string | null {
   const p = mots(prenom);
-  if (p.length === 0) return null;
   const premier = mots(nom)[0];
   return sousLaForme(premier === undefined ? p.join(' ') : `${p.join(' ')} ${initiale(premier)}`);
 }
@@ -111,14 +111,13 @@ export function nomAffichable(prenom: string | null, nom: string | null): string
 /** Le nom d'affichage d'un conseiller : le premier mot de son nom, puis l'initiale du dernier. */
 export function nomAffichableDuConseiller(nom: string | null): string | null {
   const n = mots(nom);
-  if (n.length === 0) return null;
-  return n.length === 1 ? nomAffichable(n[0]!, null) : nomAffichable(n[0]!, n[n.length - 1]!);
+  return nomAffichable(n[0] ?? null, n.length > 1 ? n[n.length - 1]! : null);
 }
 
 /** Le mois `AAAA-MM`, à Paris, d'un instant. */
 export function moisAParis(instant: Date): string {
   const d = versParis(instant.getTime());
-  return `${String(d.annee).padStart(4, '0')}-${String(d.mois).padStart(2, '0')}`;
+  return `${d.annee}-${String(d.mois).padStart(2, '0')}`;
 }
 
 // ── Le lecteur ──────────────────────────────────────────────────────────────────────────────────

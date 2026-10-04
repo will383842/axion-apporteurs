@@ -11,7 +11,7 @@
  *   — `nomAffichable` (décision de Williams du 2026-10-01, option B) : null pour `libre`, et aucun
  *     autre champ n'est admis.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createHmac } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import type { PrismaClient } from '@prisma/client';
@@ -31,11 +31,24 @@ import {
   lecteurDeLaBase,
   nomAffichable,
   VARIABLE_CLE_REFERENCE,
+  lecteurDeProduction,
   referenceOpaque,
 } from '../../../src/server/integrations/axionia/attributions-dto';
 import { ETATS_OCCUPANTS } from '../../../src/domain/attribution/etats';
 import { clesPii, encryptPii } from '../../../src/server/securite/pii';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
+
+/** Le client de production, simulé : on compte ses constructions et on choisit sa ligne. */
+const prod = vi.hoisted(() => ({ constructions: 0, ligne: null as unknown }));
+vi.mock('@prisma/client', async (original) => ({
+  ...(await original<typeof import('@prisma/client')>()),
+  PrismaClient: class {
+    constructor() {
+      prod.constructions += 1;
+    }
+    attribution = { findFirst: async () => prod.ligne };
+  },
+}));
 
 type Schema = Record<string, unknown>;
 const NOMS = [
@@ -292,6 +305,12 @@ describe('REQ-INT-014 — `apporteurRef`, opaque, de même forme pour les deux p
     ).rejects.toThrow(/cle_reference/);
   });
 
+  it('REQ-INT-014 : 32 octets exactement suffisent — le plancher est inclus', () => {
+    expect(referenceOpaque('apporteur', APPORTEUR, { APPORTEUR_REF_KEY: 'c'.repeat(32) })).toMatch(
+      UUID
+    );
+  });
+
   it('REQ-INT-014 : la clé est `APPORTEUR_REF_KEY` (revue sécurité du 2026-10-04), et rien d’autre', () => {
     expect(VARIABLE_CLE_REFERENCE).toBe('APPORTEUR_REF_KEY');
   });
@@ -370,12 +389,32 @@ describe('REQ-INT-014 — `nomAffichable`, le prénom et l’initiale du nom, ri
     ['un prénom et un nom', 'Jean-Pierre', 'dupont', 'Jean-Pierre D.'],
     ['des espaces en trop', '  Anne  ', '  le  Gall ', 'Anne L.'],
     ['un prénom seul', 'Paul', null, 'Paul'],
+    ['un prénom composé de deux mots, sans nom', 'Jean Paul', null, 'Jean Paul'],
+    ['un prénom composé de deux mots, et un nom', 'Jean Paul', 'Martin', 'Jean Paul M.'],
     ['un nom seul : rien, l’initiale ne suffit pas', null, 'Dupont', null],
     ['ni l’un ni l’autre', null, null, null],
     ['un courriel glissé dans le prénom', 'paul@example.test', 'Dupont', null],
     ['un numéro glissé dans le prénom', '0612345678', 'Dupont', null],
   ])('REQ-INT-014 : %s', (_q, prenom, nom, attendu) => {
     expect(nomAffichable(prenom, nom)).toBe(attendu);
+  });
+
+  it('REQ-INT-014 : un prénom ou un nom absent de la fiche (colonne nulle) — rien n’est déchiffré, le nom suit la règle', async () => {
+    const sansPrenom = parApporteur('active');
+    (sansPrenom.apporteur as Ligne).prenomChiffre = null;
+    expect(await lire(sansPrenom).lecture).toMatchObject({ nomAffichable: null });
+    const sansNom = parApporteur('active');
+    (sansNom.apporteur as Ligne).nomChiffre = null;
+    expect(await lire(sansNom).lecture).toMatchObject({ nomAffichable: 'Paul' });
+    const conseiller = parConseiller('active');
+    (conseiller.utilisateurConsole as Ligne).nomChiffre = null;
+    expect(await lire(conseiller).lecture).toMatchObject({ nomAffichable: null });
+  });
+
+  it('REQ-INT-014 : une ligne sans aucun porteur — la lecture lève, jamais une réponse sans porteur', async () => {
+    await expect(
+      lire({ ...parApporteur('active'), apporteur: null, utilisateurConsole: null }).lecture
+    ).rejects.toThrow(/attribution_sans_porteur/);
   });
 
   it('REQ-INT-014 : un bloc illisible — la lecture lève (503), le nom ne passe jamais en clair', async () => {
@@ -388,5 +427,39 @@ describe('REQ-INT-014 — `nomAffichable`, le prénom et l’initiale du nom, ri
     for (const l of [parApporteur('active'), parApporteur('convertie'), parConseiller('signee')]) {
       expect(schemaReponseAttribution.safeParse(await lire(l).lecture).success).toBe(true);
     }
+  });
+});
+
+describe('REQ-INT-014 — le lecteur de production : clés relues à chaque appel, un seul client', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const environnement = (cleReference: string | undefined) => {
+    for (const n of NOMS_DES_SECRETS) {
+      vi.stubEnv(n, `temoin-int-t07-${n.toLowerCase()}-`.padEnd(48, '0'));
+    }
+    vi.stubEnv('PII_ENCRYPTION_KEY', 'b'.repeat(64));
+    vi.stubEnv(VARIABLE_CLE_REFERENCE, cleReference);
+  };
+
+  it('REQ-INT-014 : la clé posée — la réponse est lue, déchiffrée et dérivée sous la clé de l’environnement', async () => {
+    environnement(CLE_REF.APPORTEUR_REF_KEY);
+    prod.ligne = parApporteur('active');
+    const r = await lecteurDeProduction(SIREN_TEMOIN);
+    expect(r).toEqual({
+      statut: 'attribuee',
+      until: '2027-03',
+      apporteurRef: referenceOpaque('apporteur', APPORTEUR, CLE_REF),
+      nomAffichable: 'Paul D.',
+    });
+    await lecteurDeProduction(SIREN_TEMOIN);
+    expect(prod.constructions).toBe(1);
+  });
+
+  it('REQ-INT-014 : la clé absente — la lecture lève (503), jamais une référence sous une clé vide', async () => {
+    environnement(undefined);
+    prod.ligne = parApporteur('active');
+    await expect(lecteurDeProduction(SIREN_TEMOIN)).rejects.toThrow(/cle_reference/);
   });
 });
