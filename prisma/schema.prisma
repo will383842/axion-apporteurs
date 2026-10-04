@@ -81,6 +81,7 @@ enum TypeEvenementJournal {
   rattachement_manuel_modifie
   anomalie_gel_modifie
   utilisateur_console_modifie
+  apporteur_mis_en_demeure
 
   @@map("type_evenement_journal")
 }
