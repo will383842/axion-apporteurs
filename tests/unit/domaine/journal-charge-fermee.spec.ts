@@ -1,4 +1,5 @@
 // @req REQ-DM-041
+// @req REQ-INT-012
 /**
  * La charge d'un événement est un schéma Zod FERMÉ par type, sans donnée personnelle — DM-01
  * (gate `journal:sans-pii`, partners/ADR-0015 décision 4).
@@ -26,6 +27,7 @@ import {
   prouver,
   vueDuDepot,
   FAMILLES,
+  LISTE_BLANCHE_PAR_CONTENU,
   type Vue,
 } from '../../../scripts/gates/journal-sans-pii';
 
@@ -887,5 +889,56 @@ describe('REQ-DM-041 — la garde sort en code non nul sur une faute, et en zér
     });
     expect(prove.status, prove.stderr).toBe(0);
     expect(prove.stdout).toContain('familles rougissent');
+  });
+});
+
+// ── la route de relecture déclarée au contrat (INT-T70-P, rattrapage 95) ─────────────────────
+
+describe('REQ-INT-012 — la route de relecture déclarée au contrat nomme le chemin HTTP d’axion-ia, pas la table', () => {
+  const CHEMIN_API = 'packages/contracts/api.ts';
+  const LIGNE_ADMISE = "chemin: '/api/partners/evenements',";
+
+  it('REQ-INT-012 : la liste blanche NOMMÉE porte UNE seule entrée pour api.ts, sur la chaîne exacte, avec sa raison', () => {
+    const entrees = LISTE_BLANCHE_PAR_CONTENU.filter((e) => e.chemin === CHEMIN_API);
+    expect(entrees).toHaveLength(1);
+    expect(entrees[0]!.lignes).toEqual([LIGNE_ADMISE]);
+    expect(entrees[0]!.motif).toContain('chemin HTTP d’axion-ia, pas la table');
+  });
+
+  it('REQ-INT-012 : le dépôt réel ne rougit pas sur api.ts, qui déclare la route', () => {
+    expect(ou(vueDuDepot()).filter((f) => f.includes(CHEMIN_API))).toEqual([]);
+  });
+
+  it('REQ-INT-012 : contre-témoin — une vraie écriture ajoutée à api.ts rougit sur CETTE ligne', () => {
+    const vue = vueDuDepot();
+    const fautive = {
+      ...vue,
+      code: vue.code.map((f) =>
+        f.chemin === CHEMIN_API
+          ? { chemin: CHEMIN_API, contenu: `${f.contenu}\nawait tx.evenement.create({ data });` }
+          : f
+      ),
+    };
+    const contenu = fautive.code.find((f) => f.chemin === CHEMIN_API)!.contenu;
+    const ligne = contenu.split('\n').findIndex((l) => l.includes('tx.evenement.create')) + 1;
+    expect(ou(fautive)).toEqual([`ecrivain_hors_journal ${CHEMIN_API}:${ligne}`]);
+  });
+
+  it('REQ-INT-012 : contre-témoin — la même route nommée hors de la ligne admise rougit', () => {
+    const vue = vueDuDepot();
+    const fautive = {
+      ...vue,
+      code: vue.code.map((f) =>
+        f.chemin === CHEMIN_API
+          ? {
+              chemin: CHEMIN_API,
+              contenu: `${f.contenu}\nconst autre = '/api/partners/evenements';`,
+            }
+          : f
+      ),
+    };
+    expect(ou(fautive).some((f) => f.startsWith(`ecrivain_hors_journal ${CHEMIN_API}:`))).toBe(
+      true
+    );
   });
 });
