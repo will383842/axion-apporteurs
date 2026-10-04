@@ -29,7 +29,8 @@ import {
   limiteDuJournalDesAcces,
   purgerLeJournalDesAccesConsole,
 } from '../../src/server/taches/purger-journal-acces-console';
-import { clesPii, empreinteAdresseReseau } from '../../src/server/securite/pii';
+import { clesPii, colonnesPii, empreinteAdresseReseau } from '../../src/server/securite/pii';
+import { MODELE_UTILISATEUR_CONSOLE } from '../../prisma/seed/06-console';
 import { NOMS_DES_SECRETS } from '../../src/lib/env';
 
 let base: Base;
@@ -69,17 +70,27 @@ let fondateur: string | null = null;
 async function unUtilisateur(role: ConsoleRole, desactiveAt: Date | null = null): Promise<string> {
   const creeAt = new Date('2026-01-01T00:00:00.000Z');
   if (role !== 'admin')
-    return (await base.prisma.utilisateurConsole.create({ data: { role, creeAt, desactiveAt } }))
-      .id;
+    return (
+      await base.prisma.utilisateurConsole.create({
+        data: { ...uneAdresse(), role, creeAt, desactiveAt },
+      })
+    ).id;
   if (fondateur === null)
     fondateur = (
       await base.prisma.utilisateurConsole.create({
-        data: { role: 'admin', creeAt, valideAt: creeAt, valideParId: null },
+        data: { ...uneAdresse(), role: 'admin', creeAt, valideAt: creeAt, valideParId: null },
       })
     ).id;
   return (
     await base.prisma.utilisateurConsole.create({
-      data: { role: 'admin', creeAt, desactiveAt, valideAt: creeAt, valideParId: fondateur },
+      data: {
+        ...uneAdresse(),
+        role: 'admin',
+        creeAt,
+        desactiveAt,
+        valideAt: creeAt,
+        valideParId: fondateur,
+      },
     })
   ).id;
 }
@@ -88,9 +99,24 @@ async function unUtilisateur(role: ConsoleRole, desactiveAt: Date | null = null)
 async function unAdminEnAttente(): Promise<string> {
   return (
     await base.prisma.utilisateurConsole.create({
-      data: { role: 'admin', creeAt: new Date('2026-01-01T00:00:00.000Z') },
+      data: { ...uneAdresse(), role: 'admin', creeAt: new Date('2026-01-01T00:00:00.000Z') },
     })
   ).id;
+}
+
+/**
+ * Un compte de console actif porte son adresse (CHECK `utilisateurs_console_adresse_si_actif`) :
+ * chiffrée et en empreinte, liées à la ligne, comme le fait `semerUtilisateurConsole`.
+ */
+function uneAdresse(): { id: string; emailChiffre: Buffer; emailHash: string } {
+  const id = randomUUID();
+  const { emailChiffre, emailHash } = colonnesPii(
+    { modele: MODELE_UTILISATEUR_CONSOLE, id },
+    { email: `console-${id}@exemple.invalid`, nom: null },
+    cles
+  );
+  if (!emailChiffre || !emailHash) throw new Error('colonnes de courriel absentes');
+  return { id, emailChiffre: Buffer.from(emailChiffre), emailHash };
 }
 
 /** Une connexion de l'utilisateur, posée à la date donnée : la trace qu'on viendra lire. */
