@@ -20,6 +20,8 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createHmac, hkdfSync } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { extrairePolitique } from '../../../src/domain/rgpd/politique';
 import type { PrismaClient } from '@prisma/client';
 import { NOMS_DES_SECRETS, kidDe } from '../../../src/lib/env';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
@@ -810,5 +812,34 @@ describe('REQ-SEC-003 — l’action de connexion lit le cookie de l’appareil,
     const { verifierUnCodeDeConnexion } = await actions();
     await expect(verifierUnCodeDeConnexion(formulaire)).rejects.toThrow('NEXT_REDIRECT');
     expect(posesDeLAppareil()).toEqual([]);
+  });
+});
+
+describe('REQ-SEC-003 — la politique de l’espace nomme les deux cookies strictement nécessaires (texte de la juriste)', () => {
+  const PHRASE =
+    "pour sécuriser la connexion à l'espace, deux cookies strictement nécessaires au service demandé sont déposés : l'un, __Host-connexion_code, garde l'empreinte de l'adresse saisie le temps du lien de connexion, pour vérifier le code reçu par courriel ; l'autre, __Host-partners-appareil, porte un identifiant de l'appareil, dont la Société ne garde qu'une empreinte, effacée trente jours après la dernière utilisation de l'appareil ; ils ne servent à aucune autre fin, ne sont lus par aucun tiers et ne demandent pas de consentement (loi Informatique et Libertés, art. 82)";
+  const ligneFinalite = (): string[] => {
+    const registre = readFileSync('docs/rgpd/registre-article-30.md', 'utf8');
+    const ligne = registre
+      .split(/\r?\n/)
+      .find((l) => l.startsWith('| Finalité | Recevoir la candidature'));
+    return (ligne ?? '').split('|').map((c) => c.trim());
+  };
+
+  it('REQ-SEC-003 : la Finalité de TRT-APPORTEURS se termine par la phrase de la juriste, MOT POUR MOT, précédée de « ; »', () => {
+    expect(ligneFinalite()[2]!.endsWith(`; ${PHRASE}`)).toBe(true);
+  });
+
+  it('REQ-SEC-003 : la phrase atteint la politique de l’espace, dans la rubrique Finalité, sans « À compléter » qui la retienne', () => {
+    const lue = extrairePolitique(readFileSync('docs/rgpd/registre-article-30.md', 'utf8'));
+    expect(lue.ok).toBe(true);
+    if (!lue.ok) return;
+    const finalite = lue.politique.rubriques.find((r) => r.cle === 'finalite')!;
+    const texte = finalite.contenu.map((s) => (s.type === 'texte' ? s.texte : '')).join('');
+    expect(texte).toContain(PHRASE);
+  });
+
+  it('REQ-SEC-003 : la ligne cite ses sources — SEC-54, SEC-55 et l’art. 82 de la loi Informatique et Libertés', () => {
+    expect(ligneFinalite()[3]).toContain('SEC-54 · SEC-55 · loi Informatique et Libertés art. 82');
   });
 });
