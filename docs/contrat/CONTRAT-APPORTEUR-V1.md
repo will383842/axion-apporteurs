@@ -545,7 +545,13 @@ de l'article 13 du règlement (UE) 2016/679**, de la transmission de ses coordon
 **7.2** La Société est responsable du traitement de ces données. Elle en informe la personne concernée dans
 les conditions de l'article 14 du règlement (UE) 2016/679 et les conserve pour la durée nécessaire au suivi de l'affaire et aux finalités de l'article 3.5 alinéa
 4, dans la limite des durées de conservation qu'elle porte à la connaissance de la personne ; elle l'informe
-de son droit de s'opposer à tout moment à la prospection.
+de son droit de s'opposer à tout moment à la prospection. La Société conserve en outre ces données dans son
+outil de gestion de la relation client, à des fins de prospection et de gestion de sa relation commerciale
+avec l'entreprise, aussi longtemps qu'elle poursuit cette activité, sans échéance fixée à l'avance. La
+personne concernée peut à tout moment s'opposer à la prospection et demander l'effacement de ses données ;
+la Société les met à jour ou les efface dès qu'elle apprend qu'elles ne sont plus exactes, notamment
+lorsque la personne n'exerce plus la fonction pour laquelle elles ont été recueillies. L'Apporteur en
+informe la personne lorsqu'il recueille ses coordonnées.
 
 **7.3** L'Apporteur ne collecte ni ne transmet aucune donnée relevant de l'article 9 du même règlement.
 

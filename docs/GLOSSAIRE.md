@@ -122,7 +122,7 @@ ordinaire **reste `prevue`** (l'attribution passe `figee_resiliation`) ; `conser
 | `IssueDepot`           | `enregistree`, `prioritaire`, `en_attente`, `file_complete`, `anteriorite_client`, `anteriorite_devis`, `etablissement_cesse`, `entreprise_hors_perimetre`, `opposition_demarchage`, `gele`, `captcha`, `brouillon_hors_ligne` — alignée le 2026-09-26 sur REQ-UX-002 et sur `ISSUES_DEPOT` : `fermee`, `financeur` et `deja_connue` sont renommées sur les catégories du contrat | REQ-UX-002 |
 | `StatutLot`            | `brouillon`, `approuve`, `exporte`, `rapproche`                                            | REQ-UX-025   |
 | `StatutAnomalie`       | `ouverte`, `levee`, `confirmee`                                                            | REQ-DM-033   |
-| `MotifListeNoire`      | `opco`, `france_travail`, `region`, `of_partenaire`, `autre`                               | REQ-DM-028   |
+| `MotifListeNoire`      | `administration`, `financeur_public`, `financeur_paritaire`, `organisme_de_formation_partenaire` — les catégories de l'art. 3.3 bis (b), sans valeur « autre » (exigence de la juriste, 2026-10-03) | REQ-DM-028   |
 | `OrigineEntrepriseConnue` | `client`, `devis`, `financeur` — `demande_entrante` retirée le 2026-09-26, comme REQ-DM-029 l'a retirée : aucun événement ne la transporte | REQ-DM-029   |
 | `TypeReprise`          | `avoir`, `paiement_rembourse` (synonyme interdit : `payment_refund`)                       | REQ-DM-019   |
 | `ConsoleRole`          | `admin`, `qualifieur`, `comptable`, `lecteur`                                              | REQ-SEC-023  |
