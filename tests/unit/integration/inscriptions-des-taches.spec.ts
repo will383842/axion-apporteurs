@@ -28,9 +28,10 @@ const m = vi.hoisted(() => ({
   purgerLesContacts: vi.fn(),
   purgerLesSirenRefuses: vi.fn(),
   purgerLesValeursDesDroits: vi.fn(),
+  purgerLesNotificationsDeLEspace: vi.fn(),
+  purgerLeJournalDesAccesConsole: vi.fn(),
   // DM-60 : l'anonymisation des traces de droits, et la réconciliation composée sur ses ports.
   anonymiserLesTracesDesDroits: vi.fn(),
-  purgerLeJournalDesAccesConsole: vi.fn(),
   passageQuotidien: vi.fn(),
   reconcilier: vi.fn(),
   clientRejeu: vi.fn(),
@@ -76,7 +77,12 @@ vi.mock('../../../src/server/taches/purger-siren-refuses', () => ({
 vi.mock('../../../src/server/taches/purger-valeurs-droits-contact', () => ({
   purgerLesValeursDesDroits: m.purgerLesValeursDesDroits,
 }));
-vi.mock('../../../src/server/taches/purger-journal-acces-console', () => ({
+vi.mock('../../../src/server/taches/purger-notifications-espace', async (original) => ({
+  ...(await original<object>()),
+  purgerLesNotificationsDeLEspace: m.purgerLesNotificationsDeLEspace,
+}));
+vi.mock('../../../src/server/taches/purger-journal-acces-console', async (original) => ({
+  ...(await original<object>()),
   purgerLeJournalDesAccesConsole: m.purgerLeJournalDesAccesConsole,
 }));
 vi.mock('../../../src/server/taches/anonymiser-traces-droits-contact', () => ({
@@ -267,6 +273,7 @@ describe('REQ-QA-027 — les passages planifiés reçoivent le client et l’heu
     ['siren_refuses_purger', 'purgerLesSirenRefuses'],
     ['droits_contact_purger', 'purgerLesValeursDesDroits'],
     ['droits_contact_anonymiser', 'anonymiserLesTracesDesDroits'],
+    ['notifications_espace_purger', 'purgerLesNotificationsDeLEspace'],
     ['anomalies_anonymiser', 'anonymiserLesAnomalies'],
     ['contestations_purger', 'purgerLesContestations'],
     ['dementis_purger', 'purgerLesDementis'],
