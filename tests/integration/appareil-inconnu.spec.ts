@@ -26,6 +26,7 @@ import { clesPii, colonnesPii } from '../../src/server/securite/pii';
 import {
   MODELE_APPORTEUR,
   ecrituresDeLien,
+  transactionDeConfirmation,
   transactionDeConsommation,
 } from '../../src/server/auth/lien-magique-depot';
 import {
@@ -162,9 +163,16 @@ const CONFIGURATION_DU_LIEN = {
 
 /**
  * La connexion RÉELLE : un lien émis, puis consommé sur l'appareil donné, à l'instant donné, par
- * `consommerLien` dans sa transaction en base. L'avis est un double.
+ * `consommerLien` dans sa transaction en base ; l'appareil se confirme ENSUITE, dans la transaction
+ * courte de confirmation, en base aussi (voie (b) de la lentille sécurité). L'avis est un double,
+ * que le témoin peut remplacer pour agir pendant qu'il est en vol.
  */
-async function connecter(apporteurId: string, identifiantAppareil: unknown, maintenant: Date) {
+async function connecter(
+  apporteurId: string,
+  identifiantAppareil: unknown,
+  maintenant: Date,
+  pendantLAvis?: (avis: { apporteurId: string; confirmeAt: Date }) => Promise<void>
+) {
   const jeton = tirerJeton();
   await ecrituresDeLien(app).insererLien({
     apporteurId,
@@ -174,17 +182,31 @@ async function connecter(apporteurId: string, identifiantAppareil: unknown, main
     creeAt: maintenant,
     expireAt: new Date(maintenant.getTime() + DUREES_AUTH.lienMagiqueMs.valeur),
   });
-  const aviser = vi.fn(async (_avis: { apporteurId: string; confirmeAt: Date }) => undefined);
+  const aviser = vi.fn(async (avis: { apporteurId: string; confirmeAt: Date }) => {
+    if (pendantLAvis) await pendantLAvis(avis);
+  });
   const resultat = await consommerLien(
     { jeton, ipHash: null, identifiantAppareil },
     {
       maintenant: () => maintenant,
       transaction: transactionDeConsommation(app),
       configuration: CONFIGURATION_DU_LIEN,
-      appareils: { aviser },
+      appareils: {
+        aviser,
+        maintenant: () => maintenant,
+        transaction: transactionDeConfirmation(app),
+      },
     }
   );
   return { resultat, aviser };
+}
+
+/** Les sessions de l'espace d'un apporteur, telles que la base les rend, vues d'une AUTRE connexion. */
+function sessionsDe(apporteurId: string) {
+  return base.prisma.sessionEspace.findMany({
+    where: { apporteurId },
+    select: { lienMagiqueId: true, revoqueAt: true },
+  });
 }
 
 /** Les appareils connus d'un apporteur, tels que la base les rend. */
@@ -380,6 +402,120 @@ describe('REQ-SEC-003 — SEC-55 : un nouvel appareil se confirme à la CONSOMMA
       ).toEqual({ ok: false, motif: 'appareil_inconnu' });
     }
     expect(await appareilsDe(a)).toEqual([]);
+  });
+});
+
+describe('REQ-SEC-003 — voie (b) de la lentille sécurité, en base réelle : la consommation se VALIDE, l’avis part hors de toute transaction, puis une transaction courte rejuge et confirme', () => {
+  it('REQ-SEC-003 : (1) pendant l’avis, la consommation est DÉJÀ validée — vue d’une autre connexion, la session existe — et l’appareil n’est PAS confirmé', async () => {
+    const a = await apporteur();
+    const vu: { sessions: number; appareils: number }[] = [];
+    const connexion = await connecter(
+      a,
+      tirerIdentifiantDAppareil(),
+      d('2026-10-03T13:00:00.000Z'),
+      async () => {
+        vu.push({
+          sessions: (await sessionsDe(a)).length,
+          appareils: (await appareilsDe(a)).length,
+        });
+      }
+    );
+    expect(vu).toEqual([{ sessions: 1, appareils: 0 }]);
+    expect(connexion.resultat).toMatchObject({ etat: 'ouverte', appareil: { issue: 'confirme' } });
+    expect(await appareilsDe(a)).toHaveLength(1);
+  });
+
+  it('REQ-SEC-003 : (3) TÉMOIN — un arrêt du processus entre la consommation et la confirmation (avis jamais rendu) laisse l’appareil NON confirmé ; la session est ouverte', async () => {
+    const a = await apporteur();
+    void connecter(
+      a,
+      tirerIdentifiantDAppareil(),
+      d('2026-10-03T13:10:00.000Z'),
+      () => new Promise<void>(() => undefined)
+    );
+    await vi.waitFor(async () => expect(await sessionsDe(a)).toHaveLength(1));
+    expect(await appareilsDe(a)).toEqual([]);
+  });
+
+  it('REQ-SEC-003 : (3) un avis refusé ou en échec ne confirme RIEN — `avis_echoue`, la session ouverte, aucune ligne d’appareil', async () => {
+    const a = await apporteur();
+    const connexion = await connecter(
+      a,
+      tirerIdentifiantDAppareil(),
+      d('2026-10-03T13:20:00.000Z'),
+      async () => {
+        throw new Error('avis_en_echec');
+      }
+    );
+    expect(connexion.resultat).toMatchObject({
+      etat: 'ouverte',
+      appareil: { issue: 'avis_echoue' },
+    });
+    expect(await sessionsDe(a)).toHaveLength(1);
+    expect(await appareilsDe(a)).toEqual([]);
+  });
+
+  it('REQ-SEC-003 : (2) la session révoquée pendant l’avis — la transaction de confirmation la rejuge : RIEN n’est confirmé', async () => {
+    const a = await apporteur();
+    const connexion = await connecter(
+      a,
+      tirerIdentifiantDAppareil(),
+      d('2026-10-03T13:30:00.000Z'),
+      async () => {
+        await base.prisma.sessionEspace.updateMany({
+          where: { apporteurId: a },
+          data: { revoqueAt: d('2026-10-03T13:30:00.000Z') },
+        });
+      }
+    );
+    expect(connexion.resultat).toMatchObject({
+      etat: 'ouverte',
+      appareil: { issue: 'non_confirme' },
+    });
+    expect(await appareilsDe(a)).toEqual([]);
+  });
+
+  it('REQ-SEC-003 : (2) l’apporteur qui n’est plus actif pendant l’avis — RIEN n’est confirmé', async () => {
+    const a = await apporteur();
+    const connexion = await connecter(
+      a,
+      tirerIdentifiantDAppareil(),
+      d('2026-10-03T13:40:00.000Z'),
+      async () => {
+        await base.prisma.apporteur.update({ where: { id: a }, data: { statut: 'resilie' } });
+      }
+    );
+    expect(connexion.resultat).toMatchObject({
+      etat: 'ouverte',
+      appareil: { issue: 'non_confirme' },
+    });
+    expect(await appareilsDe(a)).toEqual([]);
+  });
+
+  it('REQ-SEC-003 : (2) idempotente — un appareil devenu connu pendant l’avis n’est pas confirmé deux fois : RIEN n’est réécrit, l’issue dit `connu`', async () => {
+    const a = await apporteur();
+    const identifiant = tirerIdentifiantDAppareil();
+    const avant = d('2026-10-03T13:49:00.000Z');
+    const connexion = await connecter(a, identifiant, d('2026-10-03T13:50:00.000Z'), async () => {
+      await base.prisma.appareilConnu.create({
+        data: {
+          apporteurId: a,
+          empreinte: empreinteDAppareil(identifiant, CLE.secret) as string,
+          kid: CLE.kid,
+          confirmeAt: avant,
+          derniereVueAt: avant,
+        },
+      });
+    });
+    expect(connexion.resultat).toMatchObject({ etat: 'ouverte', appareil: { issue: 'connu' } });
+    expect(await appareilsDe(a)).toEqual([
+      {
+        empreinte: empreinteDAppareil(identifiant, CLE.secret),
+        kid: CLE.kid,
+        confirmeAt: avant,
+        derniereVueAt: avant,
+      },
+    ]);
   });
 });
 
