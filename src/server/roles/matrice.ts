@@ -88,6 +88,11 @@ export const MATRICE_DES_ROLES = {
   'action:verifier_piece': { roles: ['admin', 'qualifieur'], stepUp: false },
   'action:ouvrir_kyc': { roles: ['admin'], stepUp: false },
   'action:valider_kyc': { roles: ['admin'], stepUp: true },
+  // UX-P1-57 (conditions de la sécurité, #703) : la mise en demeure est un acte juridique qui ouvre la
+  // voie à la résiliation sans préavis ; à l'admin seul, sous step-up. Son écran, à l'admin seul : le
+  // relèvement est exigé par le geste, que l'action rejuge.
+  'ecran:mise_en_demeure': { roles: ['admin'], stepUp: false },
+  'action:mettre_en_demeure': { roles: ['admin'], stepUp: true },
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, EntreeDeLaMatrice>>;
 
 /**
