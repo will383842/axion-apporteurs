@@ -13,7 +13,12 @@
  *     courte que la vraie.
  */
 import { describe, it, expect } from 'vitest';
-import { SEUILS, TAILLES_DE_LOT } from '../../../src/domain/seuils/ssot';
+import { FUSEAU_DES_DELAIS, SEUILS, TAILLES_DE_LOT } from '../../../src/domain/seuils/ssot';
+import {
+  fenetreOuverte,
+  finDeLaFenetreDeRedeclaration,
+  jourLimiteDeLaFenetre,
+} from '../../../src/domain/attribution/fenetre-redeclaration';
 import { MS_PAR_JOUR } from '../../../src/domain/temps/calendrier-civil';
 import { readdirSync, readFileSync } from 'node:fs';
 import type { PrismaClient } from '@prisma/client';
@@ -33,7 +38,6 @@ import {
 } from '../../../src/server/taches/envoyer-notifications-espace';
 
 const MAINTENANT = new Date('2027-05-10T08:00:00.000Z');
-const FENETRE_MS = SEUILS.FILE_FENETRE_REDECLARATION_JOURS.valeur * MS_PAR_JOUR;
 
 const notif = (
   id: string,
@@ -125,18 +129,21 @@ describe('REQ-UX-016 — le passage envoie chaque notification une fois, sous ve
 });
 
 describe('REQ-DM-004 — la fenêtre de redéclaration court de l’ENVOI EFFECTIF', () => {
-  it('REQ-DM-004 : TÉMOIN — premier_rang_libere envoyé : la fenêtre vaut envoye_at + la durée de la SSOT, à la milliseconde', async () => {
+  it('REQ-DM-004 : TÉMOIN — premier_rang_libere envoyé : la fenêtre finit à minuit (Paris) après le jour envoi + 15, calculée par le domaine', async () => {
     const envoyeAt = new Date(MAINTENANT.getTime() + 1234);
     const t = ports([notif('n1', 'premier_rang_libere')], {
       issue: () => ({ statut: 'envoye', envoyeAt }),
     });
     await envoyerLesNotificationsDeLEspace(t.p);
     expect(t.fenetres).toEqual([
-      { attributionId: 'att-n1', finAt: new Date(envoyeAt.getTime() + FENETRE_MS) },
+      {
+        attributionId: 'att-n1',
+        finAt: new Date(finDeLaFenetreDeRedeclaration(envoyeAt.getTime())),
+      },
     ]);
   });
 
-  it('REQ-DM-004 : TÉMOIN — relais en panne, puis envoi deux heures plus tard : l’échéance est l’envoi + 15 jours', async () => {
+  it('REQ-DM-004 : TÉMOIN — relais en panne, puis envoi deux heures plus tard : l’échéance part de l’envoi effectif', async () => {
     const enPanne = ports([notif('n1', 'premier_rang_libere')], {
       issue: () => ({ statut: 'echec', envoyeAt: null }),
     });
@@ -148,7 +155,9 @@ describe('REQ-DM-004 — la fenêtre de redéclaration court de l’ENVOI EFFECT
       issue: () => ({ statut: 'envoye', envoyeAt: plusTard }),
     });
     await envoyerLesNotificationsDeLEspace(rejeu.p);
-    expect(rejeu.fenetres[0]!.finAt.getTime()).toBe(plusTard.getTime() + FENETRE_MS);
+    expect(rejeu.fenetres[0]!.finAt.getTime()).toBe(
+      finDeLaFenetreDeRedeclaration(plusTard.getTime())
+    );
   });
 
   it.each(['retenu_adresse_supprimee', 'retenu_dmarc_non_verifie'] as const)(
@@ -448,5 +457,66 @@ describe('REQ-UX-016 — les paramètres de chaque clé, exactement', () => {
     expect(() =>
       parametresDeLaNotification('decision_attribution', { entreprise: 'x', envoyeLe: MAINTENANT })
     ).toThrow(/motif_manquant/);
+  });
+});
+
+// ── la fin de la fenêtre de redéclaration (juriste et A02) ─────────────────────────────────────
+
+describe('REQ-DM-004 — la fenêtre finit à MINUIT, heure de Paris, après le jour envoi + 15 jours (borne exclusive)', () => {
+  /** Un instant donné en heure de Paris : « AAAA-MM-JJTHH:MM » plus son décalage du moment. */
+  const paris = (iso: string) => new Date(iso).getTime();
+
+  it('REQ-DM-004 : TÉMOIN — envoyé le 10 à 23 h 50 (Paris) : la fenêtre ferme le 26 à 0 h (Paris), exclue', () => {
+    const fin = finDeLaFenetreDeRedeclaration(paris('2027-05-10T23:50:00.000+02:00'));
+    expect(new Date(fin).toISOString()).toBe('2027-05-25T22:00:00.000Z');
+  });
+
+  it('REQ-DM-004 : TÉMOIN — envoyé à 23 h 30 (Paris), le jour d’envoi est celui de Paris, pas celui d’UTC', () => {
+    // 23 h 30 le 31 janvier à Paris = 22 h 30 UTC le 31 : le jour d'envoi est le 31.
+    const fin = finDeLaFenetreDeRedeclaration(paris('2027-01-31T23:30:00.000+01:00'));
+    expect(new Date(fin).toISOString()).toBe('2027-02-15T23:00:00.000Z');
+  });
+
+  it('REQ-DM-004 : TÉMOIN — fin − 1 ms est dans la fenêtre, fin ne l’est plus (comparaison stricte)', () => {
+    const fin = finDeLaFenetreDeRedeclaration(paris('2027-05-10T12:00:00.000+02:00'));
+    expect(fenetreOuverte(fin - 1, fin)).toBe(true);
+    expect(fenetreOuverte(fin, fin)).toBe(false);
+    expect(fenetreOuverte(fin + 1, fin)).toBe(false);
+  });
+
+  it.each([
+    [
+      'la veille du passage à l’heure d’été (mars)',
+      '2027-03-27T12:00:00.000+01:00',
+      '2027-04-11T22:00:00.000Z',
+    ],
+    [
+      'la veille du passage à l’heure d’hiver (octobre)',
+      '2027-10-30T12:00:00.000+02:00',
+      '2027-11-14T23:00:00.000Z',
+    ],
+  ])('REQ-DM-004 : TÉMOIN — envoyé %s : le jour de fin ne bouge pas', (_, envoi, attendu) => {
+    expect(new Date(finDeLaFenetreDeRedeclaration(paris(envoi))).toISOString()).toBe(attendu);
+  });
+
+  it('REQ-DM-004 : TÉMOIN — sur un échantillon d’heures d’envoi, la fin n’est JAMAIS avant envoi + 15 jours', () => {
+    const quinze = SEUILS.FILE_FENETRE_REDECLARATION_JOURS.valeur * MS_PAR_JOUR;
+    const debut = paris('2027-01-01T00:00:00.000+01:00');
+    for (let h = 0; h < 24 * 400; h += 7) {
+      const envoi = debut + h * 3600 * 1000 + 17 * 60 * 1000;
+      const fin = finDeLaFenetreDeRedeclaration(envoi);
+      expect(fin - envoi, new Date(envoi).toISOString()).toBeGreaterThanOrEqual(quinze);
+      // … et jamais plus d'un jour au-delà : c'est la fin du jour, pas un report
+      expect(fin - envoi).toBeLessThanOrEqual(quinze + 25 * 3600 * 1000);
+    }
+  });
+
+  it('REQ-DM-004 : la date limite affichée est le jour de (fin − 1 ms) : envoi + 15 jours, à Paris', () => {
+    const fin = finDeLaFenetreDeRedeclaration(paris('2027-05-10T23:50:00.000+02:00'));
+    expect(jourLimiteDeLaFenetre(fin)).toEqual({ annee: 2027, mois: 5, jour: 25 });
+  });
+
+  it('REQ-DM-004 : le fuseau des délais est nommé dans la SSOT, à côté de la durée', () => {
+    expect(FUSEAU_DES_DELAIS).toBe('Europe/Paris');
   });
 });

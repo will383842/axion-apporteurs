@@ -91,6 +91,51 @@ export const CORPS_DE_LA_LIBERATION = {
 export type CauseDeLiberation = keyof typeof CORPS_DE_LA_LIBERATION;
 
 /**
+ * DM-55 — le `{motif}` de `decision_attribution`, par décision (textes de la juriste, rattrapage 98,
+ * MOT POUR MOT, sans point final : le corps le pose). `{faits}` est le texte de la mesure notifiée
+ * (DM-12) ; `{raison}` vient de la liste fermée des motifs d'annulation par la console.
+ */
+export const MOTIFS_DES_DECISIONS = {
+  anomalie_confirmee:
+    "À la vérification, ce dépôt ne remplit pas les conditions de l'article 3.7 du contrat. Faits retenus : {faits}",
+  non_confirmee:
+    "L'entreprise a indiqué expressément n'avoir eu aucun échange avec vous (contrat, article 3.7) ; vous pouvez demander à Axion-IA l'extrait de sa réponse",
+  non_confirmee_par_courriel:
+    "L'entreprise a indiqué expressément n'avoir eu aucun échange avec vous (contrat, article 3.7) ; vous pouvez demander à Axion-IA l'extrait de sa réponse",
+  annulee_par_la_console:
+    'Axion-IA a annulé ce dépôt avant sa confirmation, pour la raison suivante : {raison}',
+} as const;
+
+/**
+ * DM-55 — le libellé de `{raison}`, par motif d'annulation par la console (juriste, rattrapage 98,
+ * MOT POUR MOT, sans point final). `erreur_de_saisie_de_la_societe` n'a AUCUN libellé pour
+ * l'apporteur : il ne vaut que pour la prise en charge d'un conseiller, et ne notifie rien.
+ */
+export const RAISONS_D_ANNULATION = {
+  demande_de_l_apporteur: 'à votre demande',
+  declaration_en_double:
+    'vous aviez déjà déposé cette entreprise, et ce dépôt faisait double emploi avec le premier',
+  entreprise_relevant_de_l_article_3_3_bis:
+    '{categorie} (contrat, article 3.3 bis), situation qui existait déjà à la date de votre dépôt',
+} as const;
+
+/** Les mois en toutes lettres, pour une date en clair (« 25 mai 2027 »). */
+export const MOIS_EN_TOUTES_LETTRES = [
+  'janvier',
+  'février',
+  'mars',
+  'avril',
+  'mai',
+  'juin',
+  'juillet',
+  'août',
+  'septembre',
+  'octobre',
+  'novembre',
+  'décembre',
+] as const;
+
+/**
  * SEC-54 — les deux phrases qui encadrent le code à six chiffres, dans le MÊME courriel que le lien
  * (`lien_magique`). Le code est une seconde forme du lien : il ne sert qu'une fois et ne vaut pas plus
  * longtemps que lui. Le code lui-même n'est pas un paramètre de texte : l'envoi le pose seul, sur sa
