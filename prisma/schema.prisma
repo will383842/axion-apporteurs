@@ -80,6 +80,7 @@ enum TypeEvenementJournal {
   contestation_modifiee
   rattachement_manuel_modifie
   anomalie_gel_modifie
+  utilisateur_console_modifie
 
   @@map("type_evenement_journal")
 }
@@ -94,6 +95,7 @@ enum AgregatJournal {
   contrat
   demande_confirmation
   anomalie
+  utilisateur_console
 
   @@map("agregat_journal")
 }
@@ -421,14 +423,27 @@ model AppareilConnu {
 /// empreinte, ensemble) ne peut manquer que sur un utilisateur désactivé (DM-44, CHECK
 /// `utilisateurs_console_adresse_si_actif`).
 model UtilisateurConsole {
-  id           String      @id @default(uuid()) @db.Uuid
-  role         ConsoleRole
-  nomChiffre   Bytes?      @map("nom_chiffre")
-  emailChiffre Bytes?      @map("email_chiffre")
-  emailHash    String?     @unique @map("email_hash") @db.Char(64)
-  creeAt       DateTime    @map("cree_at") @db.Timestamptz(3)
+  id                     String               @id @default(uuid()) @db.Uuid
+  role                   ConsoleRole
+  nomChiffre             Bytes?               @map("nom_chiffre")
+  emailChiffre           Bytes?               @map("email_chiffre")
+  emailHash              String?              @unique @map("email_hash") @db.Char(64)
+  creeAt                 DateTime             @map("cree_at") @db.Timestamptz(3)
   /// Non nulle : l'utilisateur ne franchit plus la requête suivante, quelle que soit la date posée.
-  desactiveAt  DateTime?   @map("desactive_at") @db.Timestamptz(3)
+  desactiveAt            DateTime?            @map("desactive_at") @db.Timestamptz(3)
+  /// SEC-30 (REQ-SEC-003) : incrémentée par la BASE à tout changement de rôle et à toute
+  /// désactivation ; une session d'une version antérieure est refusée (`version_perimee`).
+  sessionVersion         Int                  @default(0) @map("session_version")
+  /// SEC-30 (REQ-DM-024) : l'invitation et l'activation ; l'échéance se dérive d'`inviteeAt` et de
+  /// `DUREES_AUTH.invitationConsoleMs`, jamais d'une colonne.
+  inviteeAt              DateTime?            @map("invitee_at") @db.Timestamptz(3)
+  activeeAt              DateTime?            @default(dbgenerated("clock_timestamp()")) @map("activee_at") @db.Timestamptz(3)
+  /// SEC-30 (quatre yeux, déclencheur `utilisateurs_console_quatre_yeux`) : un admin dont `valideAt`
+  /// est nul est EN ATTENTE ; il n'a aucun droit d'administrateur.
+  valideParId            String?              @map("valide_par_id") @db.Uuid
+  validePar              UtilisateurConsole?  @relation("ValidationDesAdministrateurs", fields: [valideParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  valideAt               DateTime?            @map("valide_at") @db.Timestamptz(3)
+  administrateursValides UtilisateurConsole[] @relation("ValidationDesAdministrateurs")
 
   liensMagiques            LienMagique[]
   sessionsEspace           SessionEspace[]
