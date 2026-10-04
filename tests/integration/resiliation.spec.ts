@@ -20,6 +20,8 @@ import {
 import { ajouterEvenement } from '../../src/server/evenement/journal';
 import { resilierUnApporteur } from '../../src/server/apporteur/resiliation';
 import { ARTICLES_MISE_EN_DEMEURE } from '../../src/domain/apporteur/resiliation';
+import { NOMS_DES_SECRETS } from '../../src/lib/env';
+import { clesPii } from '../../src/server/securite/pii';
 
 let base: Base;
 let app: PrismaClient;
@@ -31,6 +33,14 @@ const hex = (octets: number) => randomBytes(octets).toString('hex');
 let sirens = 700000000;
 const unSiren = () => String((sirens += 1));
 const GARDE = 'decisions_de_contrat_garde';
+/** Des clés de test, fabriquées à l'exécution (jamais un secret réel). */
+const CLES = clesPii({
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-sec-19-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: 'f'.repeat(64),
+});
 
 beforeAll(async () => {
   base = await demarrerBase();
@@ -310,12 +320,17 @@ describe('REQ-DM-011 — la résiliation, en base réelle', () => {
       bloc()
     );
     const r = await app.$transaction((tx) =>
-      resilierUnApporteur(tx, {
-        apporteurId,
-        motif: 'ordinaire_axion',
-        acteur: { par: 'utilisateur_console', id: adminId },
-        maintenant: MAINTENANT,
-      })
+      resilierUnApporteur(
+        tx,
+        {
+          apporteurId,
+          motif: 'ordinaire_apporteur',
+          dateReception: MAINTENANT,
+          acteur: { par: 'utilisateur_console', id: adminId },
+          maintenant: MAINTENANT,
+        },
+        CLES
+      )
     );
     expect(r).toMatchObject({ de: 'signe', vers: 'resilie' });
     const apres = await base.prisma.attribution.findUniqueOrThrow({

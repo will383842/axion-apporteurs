@@ -71,7 +71,8 @@ export class ErreurResiliation extends Error {
     | 'date_de_reception_requise'
     | 'faits_refuses'
     | 'article_hors_liste'
-    | 'statut_sans_contrat';
+    | 'statut_sans_contrat'
+    | 'preavis_non_notifie';
 
   constructor(code: ErreurResiliation['code'], detail: string) {
     super(`${code} : ${detail}`);
@@ -287,6 +288,15 @@ export async function resilierUnApporteur(
     );
   }
   if (motifDeLaDecision !== undefined) exigerUnTexteAdmis(motifDeLaDecision);
+  // La juriste (#703, 5982404858) : le préavis d'une résiliation par la Société court de l'ENVOI de
+  // l'écrit. Tant que le geste « notifier la résiliation par la Société » (tâche jumelle) n'existe pas,
+  // ce motif est REFUSÉ : un courriel parti à la date d'effet ne laisserait aucun préavis.
+  if (motif === 'ordinaire_axion') {
+    throw new ErreurResiliation(
+      'preavis_non_notifie',
+      "la résiliation par la Société exige l'écrit préalable qui fait courir le préavis"
+    );
+  }
   if (motif === 'ordinaire_apporteur' && dateReception === undefined) {
     throw new ErreurResiliation(
       'date_de_reception_requise',

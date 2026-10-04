@@ -163,7 +163,8 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
       t.tx,
       {
         apporteurId: ID,
-        motif: 'ordinaire_axion',
+        motif: 'ordinaire_apporteur',
+        dateReception: MAINTENANT,
         acteur: CONSOLE,
         maintenant: MAINTENANT,
       },
@@ -175,7 +176,7 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
         where: { id: ID },
         data: {
           statut: 'resilie',
-          resiliationMotif: 'ordinaire_axion',
+          resiliationMotif: 'ordinaire_apporteur',
           sessionVersion: { increment: 1 },
         },
       },
@@ -189,7 +190,7 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
         de: 'signe',
         vers: 'resilie',
         transition: 'resilier',
-        resiliationMotif: 'ordinaire_axion',
+        resiliationMotif: 'ordinaire_apporteur',
         acteur: CONSOLE,
       },
     });
@@ -222,7 +223,8 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
         deja.tx,
         {
           apporteurId: ID,
-          motif: 'ordinaire_axion',
+          motif: 'ordinaire_apporteur',
+          dateReception: MAINTENANT,
           acteur: CONSOLE,
           maintenant: MAINTENANT,
         },
@@ -243,7 +245,8 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
         t.tx,
         {
           apporteurId: ID,
-          motif: 'ordinaire_axion',
+          motif: 'ordinaire_apporteur',
+          dateReception: MAINTENANT,
           acteur: SYSTEME as never,
           maintenant: MAINTENANT,
         },
@@ -271,7 +274,8 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
       t.tx,
       {
         apporteurId: ID,
-        motif: 'ordinaire_axion',
+        motif: 'ordinaire_apporteur',
+        dateReception: MAINTENANT,
         acteur: CONSOLE,
         maintenant: MAINTENANT,
       },
@@ -403,7 +407,8 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
         txSimule('signe').tx,
         {
           apporteurId: ID,
-          motif: 'ordinaire_axion',
+          motif: 'ordinaire_apporteur',
+          dateReception: MAINTENANT,
           manquement: { article: '6', inexecutionIrremediable: true },
           acteur: CONSOLE,
           maintenant: MAINTENANT,
@@ -938,7 +943,7 @@ describe('REQ-JUR-006 — les émetteurs : la mise en demeure et la décision de
       cles
     );
     expect(avec.ecrits.find((e) => 'decision' in e)).toBeDefined();
-    for (const motif of ['ordinaire_apporteur', 'ordinaire_axion', 'fin_de_plein_droit']) {
+    for (const motif of ['ordinaire_apporteur', 'fin_de_plein_droit']) {
       const t = txSimule('signe');
       await resilierUnApporteur(t.tx, demande(motif) as never, cles);
       const d = txSimule('signe');
@@ -1151,5 +1156,29 @@ describe('REQ-SEC-032 — la reconnexion par lien d’un résilié', () => {
     expect(source.match(/await ouvertureDuCompte\(/g) ?? []).toHaveLength(2);
     const horsDuJuge = source.split('export async function ouvertureDuCompte')[0]!;
     expect(horsDuJuge).not.toMatch(/peutOuvrirLEspace\(/);
+  });
+});
+
+/**
+ * La juriste (#703, 5982404858), voie (2) retenue par la coordination : le préavis d'une résiliation
+ * par la Société court de l'ENVOI de l'écrit. Tant que la tâche jumelle (notifier à la décision) n'est
+ * pas livrée, la résiliation REFUSE `ordinaire_axion` — échec fermé, refus nommé, rien d'écrit.
+ */
+describe('REQ-JUR-006 — ordinaire_axion attend la notification préalable', () => {
+  it('REQ-JUR-006 : TÉMOIN — la résiliation ordinaire_axion est refusée (preavis_non_notifie), et rien n’est écrit ; les trois autres motifs passent', async () => {
+    const { resilierUnApporteur } = await import('../../../src/server/apporteur/resiliation');
+    journalSimule.ajouterEvenement.mockReset();
+    journalSimule.ajouterEvenement.mockResolvedValue({ id: '1', selfHash: 'x' });
+    const t = txSimule('signe');
+    const e = await refusDe(
+      resilierUnApporteur(
+        t.tx,
+        { apporteurId: ID, motif: 'ordinaire_axion', acteur: CONSOLE, maintenant: MAINTENANT },
+        await clesDeTest()
+      )
+    );
+    expect(e.code).toBe('preavis_non_notifie');
+    expect(t.ordre).toStrictEqual([]);
+    expect(journalSimule.ajouterEvenement).not.toHaveBeenCalled();
   });
 });
