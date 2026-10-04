@@ -19,6 +19,18 @@ export const VOS_DONNEES_CONSOLE = {
     transferts: 'Hors de l’Union européenne',
     droits: 'Vos droits',
   },
+  /**
+   * Art. 13 (juriste, 2026-10-04) : l'identité et les coordonnées du responsable, LUES dans
+   * `config/entite.json` par `entiteContractante`, jamais retapées ; puis le caractère obligatoire,
+   * mot pour mot.
+   */
+  responsable: {
+    titre: 'Qui en est responsable',
+    phrase: (d: { denomination: string; siege: string }) =>
+      `${d.denomination}, ${d.siege}, est responsable du traitement de ces données.`,
+  },
+  obligatoire:
+    "L'adresse électronique est nécessaire pour vous donner accès à la console : sans elle, aucun accès ne peut être ouvert.",
   // Un passage que le registre ne tranche pas encore : aucune question interne n'est lue.
   aCompleter: 'En cours de rédaction',
   // Tant qu'un passage reste en cours de rédaction, la page le dit en tête : elle n'est pas en vigueur.

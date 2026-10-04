@@ -11,7 +11,14 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { extrairePageDeLaConsole } from '../../../../domain/rgpd/politique-console';
 import { CHEMIN_DU_REGISTRE } from '../../../../server/rgpd/acceptation';
-import { EcranErreurVosDonneesConsole, EcranVosDonneesConsole } from './ecran';
+import { entiteContractante, estSentinelle } from '../../../../config/entite';
+import { EcranErreurVosDonneesConsole, EcranVosDonneesConsole, type Responsable } from './ecran';
+
+/** Le responsable du traitement, lu dans `config/entite.json` (RM-01) ; `null` sur une sentinelle. */
+function responsable(): Responsable {
+  const { denomination, siege } = entiteContractante();
+  return estSentinelle(denomination) || estSentinelle(siege) ? null : { denomination, siege };
+}
 
 // Lue à chaque requête : le registre fait foi au moment de l'affichage.
 export const dynamic = 'force-dynamic';
@@ -25,5 +32,5 @@ export default function PageVosDonneesConsole() {
   }
   const lue = extrairePageDeLaConsole(registre);
   if (!lue.ok) return <EcranErreurVosDonneesConsole />;
-  return <EcranVosDonneesConsole page={lue.page} />;
+  return <EcranVosDonneesConsole page={lue.page} responsable={responsable()} />;
 }
