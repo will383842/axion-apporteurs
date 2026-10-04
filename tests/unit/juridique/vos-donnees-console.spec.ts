@@ -239,11 +239,28 @@ describe('REQ-JUR-068 — la page lit le registre, elle ne l’écrit pas', () =
 
 describe('REQ-JUR-068 — ce que le registre ne tranche pas s’affiche « en cours de rédaction »', () => {
   it('REQ-JUR-068 : la base légale « À compléter » est rendue en cours de rédaction, sans sa question ni sa proposition', () => {
-    const cellule = blocConsole(REGISTRE).get('Base légale') ?? '';
+    // Le registre réel tranche la base légale (JUR-T62) : le manque est posé dans une copie, au bloc
+    // de TRT-CONSOLE, avec une question et une proposition internes qui ne doivent jamais sortir.
+    const lignes = REGISTRE.split('\n');
+    const debut = lignes.findIndex((l) => /^### TRT-CONSOLE\b/.test(l));
+    const i = lignes.findIndex((l, n) => n > debut && l.startsWith('| Base légale | '));
+    expect(i).toBeGreaterThan(debut);
+    const avecManque = lignes
+      .map((l, n) =>
+        n === i
+          ? l.replace(
+              /^(\| [^|]+\| )/u,
+              `$1${MARQUE_A_COMPLETER} Question : laquelle ? Proposition : l'intérêt légitime. `
+            )
+          : l
+      )
+      .join('\n');
+    const cellule = blocConsole(avecManque).get('Base légale') ?? '';
     expect(cellule.startsWith(MARQUE_A_COMPLETER)).toBe(true);
-    const base = politiqueDe(REGISTRE).rubriques.find((r) => r.cle === 'baseLegale');
+    const base = politiqueDe(avecManque).rubriques.find((r) => r.cle === 'baseLegale');
     expect(base?.contenu).toEqual([{ type: 'a_completer' }]);
-    const texte = texteDe(rendre(politiqueDe(REGISTRE)));
+    const texte = texteDe(rendre(politiqueDe(avecManque)));
+    expect(texte).not.toMatch(/Question|Proposition/);
     expect(VOS_DONNEES_CONSOLE.aCompleter).toMatch(/en cours de rédaction/i);
     expect(texte).toContain(VOS_DONNEES_CONSOLE.aCompleter);
   });
@@ -270,8 +287,14 @@ describe('REQ-JUR-068 — ce que le registre ne tranche pas s’affiche « en co
       "ce journal ne sert ni à mesurer l'activité des utilisateurs de la console ni à les évaluer"
     );
     expect(texte).toContain(
-      "Compte désactivé : le nom et l'adresse, cinq ans après la désactivation, preuve des actes accomplis dans la console, puis effacés ; l'identifiant reste."
+      "Accès désactivé : le nom et l'adresse, cinq ans après la désactivation, preuve des actes accomplis dans la console, puis effacés ; l'identifiant reste."
     );
+    // Juriste, #708 (garde du lexique, REQ-JUR-039) : « compte désactivé » retiendrait toute la durée.
+    expect(texte).toMatch(/Journal des accès\s*:\s*douze mois/);
+    expect(texte).toContain(
+      "elles ne portent aucune donnée personnelle, ni d'un utilisateur de la console ni d'un apporteur : seulement leur catégorie, des codes tirés de listes fermées, des nombres, un horodatage et un identifiant technique."
+    );
+    expect(texte).not.toMatch(/déploiement, sauvegarde, restauration/);
     expect(texte).toContain(
       'Elles ne sont pas en service à ce jour ; le pays du service et l’encadrement du transfert seront précisés ici avant leur mise en service.'.replace(
         /’/g,
@@ -349,7 +372,8 @@ describe('REQ-JUR-068 — la page est publique : accessible sans session', () =>
   it('REQ-JUR-068 : TÉMOIN — l’écran de connexion de la console porte le lien « Vos données dans la console »', () => {
     const connexion = readFileSync(join(RACINE, ECRAN_DE_CONNEXION), 'utf8');
     expect(connexion).toContain(`<a href="${ROUTE}">{VOS_DONNEES_CONSOLE.titre}</a>`);
-    expect(connexion.split(ROUTE).length - 1).toBe(1);
+    // Le seul lien : le chemin d'import de la micro-copie contient aussi « /console/vos-donnees ».
+    expect(connexion.split(`href="${ROUTE}"`).length - 1).toBe(1);
   });
 });
 
