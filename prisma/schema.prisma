@@ -111,6 +111,9 @@ model Evenement {
   prevHash  String               @unique @map("prev_hash") @db.Char(64)
   selfHash  String               @unique @map("self_hash") @db.Char(64)
 
+  /// DM-55 : les notifications de l'espace que cet événement a produites.
+  notificationsEspace NotificationEspace[]
+
   @@index([agregat, agregatId])
   @@map("evenements")
 }
@@ -635,23 +638,28 @@ enum MotifSuppressionCourriel {
 /// Chaque demande d'envoi, qu'elle parte ou non (REQ-INT-022, REQ-INT-023, REQ-UX-016). Aucun corps,
 /// aucune adresse : l'empreinte de recherche seule. DM-07 y a ajouté `attribution_id`.
 model CourrielEnvoye {
-  id                   String         @id @default(uuid()) @db.Uuid
+  id                   String              @id @default(uuid()) @db.Uuid
   /// Exception E2 de partners/ADR-0022 (point 9) : clé de `src/server/notifications/table-ssot.ts`.
-  gabarit              String         @db.VarChar(64)
+  gabarit              String              @db.VarChar(64)
   /// Empreinte de l'adresse de destination (`empreinteRecherche('courriel', …)`).
-  emailHash            String         @map("email_hash") @db.Char(64)
-  apporteurId          String?        @map("apporteur_id") @db.Uuid
-  apporteur            Apporteur?     @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  emailHash            String              @map("email_hash") @db.Char(64)
+  apporteurId          String?             @map("apporteur_id") @db.Uuid
+  apporteur            Apporteur?          @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
   statut               StatutCourriel
-  demandeAt            DateTime       @map("demande_at") @db.Timestamptz(3)
+  demandeAt            DateTime            @map("demande_at") @db.Timestamptz(3)
   /// La date qui fait courir un délai (REQ-UX-016) — jamais une date de lecture.
-  envoyeAt             DateTime?      @map("envoye_at") @db.Timestamptz(3)
-  fournisseurMessageId String?        @map("fournisseur_message_id") @db.VarChar(200)
+  envoyeAt             DateTime?           @map("envoye_at") @db.Timestamptz(3)
+  fournisseurMessageId String?             @map("fournisseur_message_id") @db.VarChar(200)
   /// Un code fermé, jamais la réponse du relais.
-  erreur               String?        @db.VarChar(300)
+  erreur               String?             @db.VarChar(300)
   /// L'attribution dont le courriel parle (DM-07), nulle sinon.
-  attributionId        String?        @map("attribution_id") @db.Uuid
-  attribution          Attribution?   @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attributionId        String?             @map("attribution_id") @db.Uuid
+  attribution          Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// DM-55 : la notification de l'espace que le courriel porte. Au plus un courriel non échoué par
+  /// notification : index unique partiel `courriels_envoyes_un_par_notification`, en SQL brut. SET NULL :
+  /// la purge de DM-61 supprime la notification, le courriel (preuve du délai) reste.
+  notificationEspaceId String?             @map("notification_espace_id") @db.Uuid
+  notificationEspace   NotificationEspace? @relation(fields: [notificationEspaceId], references: [id], onDelete: SetNull, onUpdate: Restrict)
 
   @@index([emailHash])
   @@index([apporteurId, gabarit])
@@ -666,16 +674,24 @@ model CourrielEnvoye {
 /// AUCUN calcul de délai : un délai court de `courriels_envoyes.envoye_at` (garde
 /// `notifications-lue-at-inerte`).
 model NotificationEspace {
-  id            String       @id @default(uuid()) @db.Uuid
-  apporteurId   String       @map("apporteur_id") @db.Uuid
-  apporteur     Apporteur    @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  cle           String       @db.VarChar(64)
-  attributionId String?      @map("attribution_id") @db.Uuid
-  attribution   Attribution? @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  id            String           @id @default(uuid()) @db.Uuid
+  apporteurId   String           @map("apporteur_id") @db.Uuid
+  apporteur     Apporteur        @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  cle           String           @db.VarChar(64)
+  attributionId String?          @map("attribution_id") @db.Uuid
+  attribution   Attribution?     @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   /// L'heure d'inscription dans l'espace, PAS un horodatage opposable : aucun délai ne s'y appuie ;
   /// un délai court de `courriels_envoyes.envoye_at` (relecture A02, 2026-10-02).
-  creeAt        DateTime     @default(now()) @map("cree_at") @db.Timestamptz(3)
-  lueAt         DateTime?    @map("lue_at") @db.Timestamptz(3)
+  creeAt        DateTime         @default(now()) @map("cree_at") @db.Timestamptz(3)
+  lueAt         DateTime?        @map("lue_at") @db.Timestamptz(3)
+  /// DM-55 : l'événement du journal qui a produit la notification. L'idempotence tient au fait :
+  /// index unique partiel `notifications_espace_une_par_evenement` (cle, evenement_id), et CHECK
+  /// `notifications_espace_machine_a_son_evenement` (les deux clés de la machine ont leur événement),
+  /// en SQL brut (partners/ADR-0015).
+  evenementId   BigInt?          @map("evenement_id")
+  evenement     Evenement?       @relation(fields: [evenementId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// DM-55 : les courriels qui l'ont portée, une tentative par ligne.
+  courriels     CourrielEnvoye[]
 
   @@index([apporteurId, creeAt])
   @@index([attributionId])
