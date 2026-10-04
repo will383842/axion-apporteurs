@@ -94,8 +94,8 @@ function plafond(nom: 'depot:ip' | 'depot:session'): number {
 
 describe('REQ-DM-009 — une limite technique, jamais un compte par apporteur', () => {
   it('REQ-DM-009 : deux compteurs, réseau et session, sur une fenêtre de l’ordre de la minute, lus dans la SSOT', () => {
-    const fenetre = SEUILS.DEPOT_DEBIT_FENETRE_SECONDES.valeur;
-    expect(fenetre).toBe(60);
+    expect(SEUILS.DEPOT_DEBIT_FENETRE_MINUTES.valeur).toBe(1);
+    const fenetre = SEUILS.DEPOT_DEBIT_FENETRE_MINUTES.valeur * 60;
     expect(COMPTEURS['depot:ip']).toMatchObject({
       prefixe: 'depot:',
       limite: SEUILS.DEPOT_DEBIT_IP_PAR_FENETRE.valeur,
@@ -231,7 +231,7 @@ describe('REQ-DM-009 — une limite technique, jamais un compte par apporteur', 
       jetonDepotId: null,
       adresseReseau: ADRESSE,
     } as unknown as DemandeDeDepot;
-    await deposer({} as PrismaClient, demande, ports);
+    await deposer(Object.create(null) as PrismaClient, demande, ports);
     expect(appels).toEqual([{ ip: EMPREINTE, session: empreinteDeSession(demande, CLES) }]);
   });
 

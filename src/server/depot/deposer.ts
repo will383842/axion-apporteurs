@@ -27,7 +27,7 @@
  * La transaction est exposée (`deposerDans`) pour qu'une autre écriture la compose.
  */
 import type { Prisma, PrismaClient } from '@prisma/client';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 import {
   deciderDuDepot,
   estUnRefus,
@@ -95,6 +95,12 @@ export interface DemandeDeDepot {
   readonly fiche: FicheDuDepot;
   /** L'adresse réseau du client, telle que lue par le serveur ; jamais stockée, seule son empreinte. */
   readonly adresseReseau: string | null;
+  /**
+   * L'identifiant de la session de l'espace (canal `espace`), tel que le cookie le porte ; jamais
+   * stocké, seule son empreinte sert de sujet au compteur `depot:session`. Le canal `lien_prive`
+   * n'en a pas : sa session est le jeton du lien (`jetonDepotId`).
+   */
+  readonly session: string | null;
   /** La réponse au défi anti-automatisation, si l'écran en a présenté un. */
   readonly reponseCaptcha: string | null;
   /** L'en-tête de navigateur ; jamais stocké, seule son empreinte (type `agent`). */
@@ -114,7 +120,7 @@ export interface PortsDuDepot {
   /** L'émetteur des notifications (`notifier`, lié à la couche cloisonnée du destinataire). */
   notifier(apporteurId: string, demande: DemandeDeNotification): Promise<unknown>;
   /** La limite de débit technique (`controlerLeDebit` en production), jugée avant toute lecture. */
-  debit(ipHash: string): Promise<DebitDuDepot>;
+  debit(sujets: SujetsDuDebit): Promise<DebitDuDepot>;
   /**
    * Le défi anti-automatisation (REQ-DM-010) : décidé sur un signal TECHNIQUE de l'empreinte réseau,
    * identique pour tous. Le port ne reçoit ni l'apporteur ni ses dépôts — il ne peut pas les compter.
@@ -137,17 +143,48 @@ export interface DepotAReessayer {
   readonly repriseAt: number | null;
 }
 
+/** Les deux sujets de la limite de débit : des EMPREINTES, jamais l'apporteur. */
+export interface SujetsDuDebit {
+  readonly ip: string | null;
+  readonly session: string | null;
+}
+
 /**
- * LA limite de débit du dépôt (REQ-DM-009, texte de la juriste) : TECHNIQUE, identique pour tous,
- * sur l'EMPREINTE réseau seule — le compteur `depot:ip` du registre, jamais un compteur par
- * identité. Son seul effet est de faire réessayer : aucune trace au dossier, aucun statut.
+ * L'empreinte de la session du déposant, sujet du compteur `depot:session` : l'identifiant de session
+ * de l'espace, ou le jeton du lien privé. HMAC-SHA256 sous PII_HASH_KEY, séparé par domaine et par
+ * canal : la valeur en clair n'entre jamais dans une clé du cache, et l'apporteur n'y entre pas.
+ */
+export function empreinteDeSession(demande: DemandeDeDepot, cles: ClesPii): string | null {
+  const valeur = demande.canal === 'lien_prive' ? demande.jetonDepotId : demande.session;
+  if (valeur === null || valeur === undefined) return null;
+  return createHmac('sha256', cles.empreintes)
+    .update(['partners.depot.session.v1', demande.canal, valeur].join('\u001f'), 'utf8')
+    .digest('hex');
+}
+
+/**
+ * LA limite de débit du dépôt (REQ-DM-009, texte de la juriste, arbitrage du 2026-10-04) :
+ * TECHNIQUE, identique pour tous, sur l'empreinte réseau (`depot:ip`) ET l'empreinte de session
+ * (`depot:session`), sur une fenêtre de l'ordre de la minute — jamais un compteur par apporteur.
+ * Chacun peut seul faire réessayer ; son seul effet est là : aucune trace au dossier, aucun statut.
  */
 export async function controlerLeDebit(
-  ipHash: string,
+  sujets: SujetsDuDebit,
   maintenantMs: number
 ): Promise<DebitDuDepot> {
-  const v = await limiter('depot:ip', sujetDepuisEmpreinte(ipHash), maintenantMs);
-  return { autorise: v.autorise, repriseAt: v.autorise ? null : v.repriseAt };
+  const verdicts = [];
+  if (sujets.ip !== null) {
+    verdicts.push(await limiter('depot:ip', sujetDepuisEmpreinte(sujets.ip), maintenantMs));
+  }
+  if (sujets.session !== null) {
+    verdicts.push(
+      await limiter('depot:session', sujetDepuisEmpreinte(sujets.session), maintenantMs)
+    );
+  }
+  const refus = verdicts.filter((v) => !v.autorise);
+  if (refus.length === 0) return { autorise: true, repriseAt: null };
+  const reprises = refus.flatMap((v) => (v.repriseAt === null ? [] : [v.repriseAt]));
+  return { autorise: false, repriseAt: reprises.length === 0 ? null : Math.max(...reprises) };
 }
 
 export interface IssueDuDepot {
@@ -353,8 +390,9 @@ export async function deposer(
     demande.adresseReseau === null
       ? null
       : empreinteAdresseReseau(demande.adresseReseau, ports.cles);
-  if (ipHash !== null) {
-    const d = await ports.debit(ipHash);
+  const sujets = { ip: ipHash, session: empreinteDeSession(demande, ports.cles) };
+  if (sujets.ip !== null || sujets.session !== null) {
+    const d = await ports.debit(sujets);
     if (!d.autorise) return { reessayer: true, repriseAt: d.repriseAt };
   }
   if ((await ports.captcha(ipHash, demande.reponseCaptcha)) === 'a_presenter') {

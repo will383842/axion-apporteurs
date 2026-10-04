@@ -403,16 +403,31 @@ export const SEUILS = {
   },
   // DM-40 (REQ-DM-060, HYP-W20-REBOND) : au-delà, le dépôt reste dans la liste d'appels et l'action
   // « Corriger l'adresse » disparaît.
-  // SEC-12 (REQ-DM-009) : la SEULE limite de débit du dépôt, technique, identique pour tous, sur
-  // l'empreinte réseau (compteur `depot:ip`). Les valeurs sont celles que REQ-SEC-016 chiffre
-  // aujourd'hui ; le texte de la juriste veut une fenêtre « de l'ordre de la minute », et
-  // l'alignement de REQ-SEC-016 appartient au gardien de la spécification.
-  DEPOT_DEBIT_TENTATIVES_MAX: {
-    valeur: 20,
-    unite: 'tentatives',
-    source: 'REQ-SEC-016 (dépôt limité à 20 / 10 min par hash IP), REQ-DM-009',
+  // SEC-12 (REQ-DM-009) : la limite de débit du dépôt, technique et identique pour tous, sur DEUX
+  // compteurs — l'empreinte réseau (`depot:ip`) et l'empreinte de la session (`depot:session`) —, sur
+  // une fenêtre « de l'ordre de la minute » (texte de la juriste, rattrapage 84). Les valeurs sont
+  // celles de l'arbitrage : le plafond réseau tient compte d'une adresse partagée, et aucun des deux
+  // n'est plus lâche que l'ancien 20 / 10 min ramené à la minute.
+  DEPOT_DEBIT_FENETRE_MINUTES: {
+    valeur: 1,
+    unite: 'minutes',
+    source: 'arbitrage coordination du 2026-10-04, sécurité et juriste ; REQ-DM-009',
     renvois: [],
-    verifieLe: '2026-10-03',
+    verifieLe: '2026-10-04',
+  },
+  DEPOT_DEBIT_IP_PAR_FENETRE: {
+    valeur: 5,
+    unite: 'tentatives',
+    source: 'arbitrage coordination du 2026-10-04, sécurité et juriste ; REQ-DM-009',
+    renvois: [],
+    verifieLe: '2026-10-04',
+  },
+  DEPOT_DEBIT_SESSION_PAR_FENETRE: {
+    valeur: 3,
+    unite: 'tentatives',
+    source: 'arbitrage coordination du 2026-10-04, sécurité et juriste ; REQ-DM-009',
+    renvois: [],
+    verifieLe: '2026-10-04',
   },
   CORRECTIONS_ADRESSE_MAX: {
     valeur: 2,

@@ -143,15 +143,25 @@ export const COMPTEURS = {
     ancre: 'par email au code de la console',
     verifieLe: '2026-10-03',
   },
-  // SEC-12 : la valeur vit dans la SSOT (RM-10), confrontée par la garde au texte de REQ-SEC-016.
+  // SEC-12 : deux compteurs, l'empreinte réseau et l'empreinte de session, sur la même fenêtre ; les
+  // valeurs vivent dans la SSOT (RM-10), confrontées par la garde au texte de REQ-SEC-016.
   'depot:ip': {
     prefixe: 'depot:',
-    limite: SEUILS.DEPOT_DEBIT_TENTATIVES_MAX.valeur,
-    fenetreSecondes: 600,
+    limite: SEUILS.DEPOT_DEBIT_IP_PAR_FENETRE.valeur,
+    fenetreSecondes: SEUILS.DEPOT_DEBIT_FENETRE_MINUTES.valeur * 60,
     surPanne: 'laisser-passer',
     source: 'REQ-SEC-016',
     ancre: 'par hash IP',
-    verifieLe: '2026-09-19',
+    verifieLe: '2026-10-04',
+  },
+  'depot:session': {
+    prefixe: 'depot:',
+    limite: SEUILS.DEPOT_DEBIT_SESSION_PAR_FENETRE.valeur,
+    fenetreSecondes: SEUILS.DEPOT_DEBIT_FENETRE_MINUTES.valeur * 60,
+    surPanne: 'laisser-passer',
+    source: 'REQ-SEC-016',
+    ancre: 'par empreinte de session',
+    verifieLe: '2026-10-04',
   },
   'depot:identite': {
     prefixe: 'depot:',

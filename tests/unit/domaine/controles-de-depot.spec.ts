@@ -230,6 +230,7 @@ import {
   champsRefuses,
   deposer,
   deposerDans,
+  empreinteDeSession,
   parametresDuRefus,
   versionDeLInformationDesTiers,
   type DemandeDeDepot,
@@ -281,6 +282,7 @@ function demande(modif: Partial<DemandeDeDepot> = {}): DemandeDeDepot {
     },
     fiche: { raisonSociale: 'Entreprise Témoin SAS', etatAdministratif: 'actif' },
     adresseReseau: '203.0.113.7',
+    session: null,
     reponseCaptcha: null,
     agentUtilisateur: 'Mozilla/5.0 (témoin)',
     clientCapturedAt: CAPTURE,
@@ -637,7 +639,7 @@ describe('REQ-DM-009 — `deposer` : le débit, le défi, la transaction, puis l
     return { p, options, ...t };
   }
 
-  it('REQ-DM-009 : le débit reçoit l’empreinte réseau ; le défi aussi, avec la réponse ; la transaction a 30 s', async () => {
+  it('REQ-DM-009 : le débit reçoit l’empreinte réseau et celle du jeton ; le défi, l’empreinte réseau et la réponse ; la transaction a 30 s', async () => {
     const recus: unknown[][] = [];
     const { p, options } = prisma();
     const r = await deposer(
@@ -655,20 +657,22 @@ describe('REQ-DM-009 — `deposer` : le débit, le défi, la transaction, puis l
       })
     );
     const ip = empreinteAdresseReseau('203.0.113.7', CLES);
+    const session = empreinteDeSession(demande(), CLES);
+    expect(session).toMatch(/^[0-9a-f]{64}$/);
     expect(recus).toEqual([
-      ['debit', ip],
+      ['debit', { ip, session }],
       ['captcha', ip, 'reponse'],
     ]);
     expect(options).toEqual([{ timeout: 30_000 }]);
     expect(r).toMatchObject({ issue: 'enregistree' });
   });
 
-  it('REQ-DM-009 : sans adresse réseau, le débit n’est pas consulté ; le défi reçoit `null`', async () => {
+  it('REQ-DM-009 : sans adresse réseau ni session, le débit n’est pas consulté ; le défi reçoit `null`', async () => {
     const recus: unknown[][] = [];
     const { p } = prisma();
     await deposer(
       p,
-      demande({ adresseReseau: null }),
+      demande({ adresseReseau: null, canal: 'espace', jetonDepotId: null, session: null }),
       ports({
         debit: async () => {
           recus.push(['debit']);
@@ -681,6 +685,28 @@ describe('REQ-DM-009 — `deposer` : le débit, le défi, la transaction, puis l
       })
     );
     expect(recus).toEqual([['captcha', null, null]]);
+  });
+
+  it('REQ-DM-009 : sans adresse réseau, la session de l’espace est seule comptée', async () => {
+    const recus: unknown[][] = [];
+    const { p } = prisma();
+    const d = demande({
+      adresseReseau: null,
+      canal: 'espace',
+      jetonDepotId: null,
+      session: 'cookie-de-session',
+    });
+    await deposer(
+      p,
+      d,
+      ports({
+        debit: async (...a) => {
+          recus.push(a);
+          return { autorise: true, repriseAt: null };
+        },
+      })
+    );
+    expect(recus).toEqual([[{ ip: null, session: empreinteDeSession(d, CLES) }]]);
   });
 
   it('REQ-DM-009 : un refus de catégorie est notifié UNE fois, après la transaction, à l’adresse de l’apporteur', async () => {
