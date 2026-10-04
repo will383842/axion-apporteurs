@@ -92,13 +92,13 @@ passage suivant rappelle. Les valeurs de ce débit vivent dans son code, elles n
 | Contrat / plan souscrit | Sans objet : dépôt de la même société, aucun contrat de service |
 | Sous-traitance (art. 28 RGPD) | Sans objet : même responsable de traitement (une autre application de la Société), ni sous-traitant ni destinataire tiers ; la relecture rend des enveloppes complètes du contrat, coordonnées du candidat comprises |
 | Localisation des données | Celle de l'hébergement d'axion-ia, hors du périmètre de cette fiche |
-| Secrets | Le secret de relecture signe les requêtes des deux routes ; le secret d'émission signe les réponses, vérifiées par la même fonction que les webhooks (`verifierSignatureAxionia`), donc sur l'horodatage et le corps seuls : la forme canonique de la signature de la réponse, qui la lierait à sa requête, et sa fraîcheur restent à livrer (rubrique 8) |
+| Secrets | Le secret de relecture signe les requêtes des deux routes ; le secret d'émission signe les réponses. La page de relecture se vérifie sur la forme CANONIQUE `<horodatage>.<after_sequence>.<limit>.<x-axionia-derniere-sequence>.<x-axionia-suite>.<corps exact>`, construite par la fonction partagée du contrat (`packages/contracts/signature-relecture.ts`, vecteurs figés par `openssl`, couverts par `contracts.sha256`) : elle lie la page à sa requête, et la forme courte n'est jamais acceptée en repli. Toute réponse, relecture ou rejeu, est refusée hors d'une fraîcheur de 300 s sur `x-axionia-timestamp`. La réponse de rejeu garde sa forme `<horodatage>.<corps>` et n'est acceptée que si `rearmes ∪ introuvables` égale exactement l'ensemble dédoublonné des identifiants demandés, `rearmes ∩ introuvables` étant vide (INT-T74-P) |
 
 ## 8. À confirmer, et par qui
 
 | Question | Qui | Avant quoi |
 | --- | --- | --- |
-| La forme canonique de la signature d'une réponse de relecture ou de rejeu (liée à sa requête, avec sa fraîcheur) : tant qu'elle n'est pas livrée, une réponse authentique peut être resservie pour une autre requête | `A01` répartit ; le lecteur date sa lecture dans la fiche | avant le rattrapage historique, qui réemploiera le même client |
+| La bascule de la forme canonique : Partners l'exige dès la fusion d'INT-T74-P, qui ne fusionne qu'après INT-T72-A, qui la pose côté axion-ia. La route de relecture est déclarée au contrat depuis #639 (`API_RELECTURE`, son `$comment` porte l'ordre canonique) | `A01` répartit ; le lecteur date sa lecture dans la fiche | avant la fusion d'INT-T74-P |
 
 ## 9. Référence à citer dans une fixture
 

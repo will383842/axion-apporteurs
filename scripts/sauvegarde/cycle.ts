@@ -48,6 +48,10 @@ import { exercer, jugerFraicheur, type Verdict } from './exercice';
 import { SEUILS } from '../../src/domain/seuils/ssot';
 import { creerAlerteur, type ObjetAlerte } from '../../src/server/integrations/telegram/alertes';
 import type { Notifieur } from '../../src/lib/notify';
+import {
+  TransfertNonConsigne,
+  exigerLeTransfertConsigne,
+} from '../../src/server/integrations/telegram/transfert';
 
 export const PREFIXES = {
   depot: 'partners/',
@@ -388,6 +392,21 @@ function notifieurTelegram(jeton: string, salon: string): Notifieur {
 const SECRETS_DU_CANAL = ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'] as const;
 
 /**
+ * SEC-64 (sécurité, 5982916235) : le canal réel ne se construit qu'avec la décision du transfert
+ * consignée. Un refus est NOMMÉ en `::error::` et rien ne part : faux, l'appelant ne construit rien.
+ */
+function canalConsigne(commande: string): boolean {
+  try {
+    exigerLeTransfertConsigne(process.env);
+    return true;
+  } catch (e) {
+    if (!(e instanceof TransfertNonConsigne)) throw e;
+    console.error(`::error title=${commande}::${e.message}`);
+    return false;
+  }
+}
+
+/**
  * L'alerteur de la forge pour `rechiffrer` et la garde des clairs (QA-T53). Leur canal n'est PAS une
  * condition pour juger : sans lui, la garde juge quand même, et l'alerte qui ne peut partir est
  * NOMMÉE en `::error::`. Un envoi refusé par Telegram est nommé aussi, sans masquer l'échec qui
@@ -409,6 +428,16 @@ function alerteDeLaForge(commande: string): {
       alerter: async (o) => {
         console.error(
           `::error title=${commande}::alerte ${o.categorie} NON envoyée : ${m.join(', ')} absent(s)`
+        );
+      },
+    };
+  }
+  if (!canalConsigne(commande)) {
+    return {
+      canalEteint: true,
+      alerter: async (o) => {
+        console.error(
+          `::error title=${commande}::alerte ${o.categorie} NON envoyée : transfert_telegram_non_consigne`
         );
       },
     };
@@ -456,6 +485,7 @@ async function commande(nom: string): Promise<number> {
       'TELEGRAM_CHAT_ID',
     ]);
     if (m.length) return sauter('sauvegarde:exercice', m, sauvegardeActivee());
+    if (!canalConsigne('sauvegarde:exercice')) return 1;
     const alerteur = creerAlerteur({
       notifieur: notifieurTelegram(
         process.env.TELEGRAM_BOT_TOKEN ?? '',

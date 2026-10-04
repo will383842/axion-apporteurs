@@ -201,6 +201,50 @@ export function schemaSansChemin(taches: readonly Tache[], chemins: readonly str
     .map((t) => t.id);
 }
 
+// ── la porte de mise en service (GOV-147, REQ-GOV-034) ───────────────────────
+/** La porte de mise en service : la mise en production n'a lieu que si ses dépendances sont fusionnées. */
+export const PORTE_DE_MISE_EN_SERVICE = 'GOV-146';
+/** Hors de la règle : la porte elle-même, et cette règle, qui nomment le marqueur sans le porter. */
+const HORS_DE_LA_PORTE: ReadonlySet<string> = new Set([PORTE_DE_MISE_EN_SERVICE, 'GOV-147']);
+/**
+ * Le marqueur (rattrapage 108) : « BLOQUANTE AVANT LA MISE EN SERVICE » ou « … POUR LA MISE EN
+ * SERVICE », insensible à la casse. Il s'écrit uniformément sous la première forme.
+ */
+export const MARQUEUR_BLOQUANTE = /BLOQUANTE\s+(?:AVANT|POUR)\s+LA\s+MISE\s+EN\s+SERVICE/i;
+
+/**
+ * Toute tâche NON FUSIONNÉE qui porte le marqueur, au titre ou à l'acceptance, figure dans les
+ * dépendances de la porte ; sinon `bloquante_hors_porte`. « Figure » se lit sur la FERMETURE des
+ * dépendances : la porte ne s'ouvre que si toutes sont fusionnées, et `dep_non_livree` refuse
+ * qu'une tâche le soit avant les siennes ; une tâche atteinte par une chaîne est donc déjà exigée.
+ * Une tâche fusionnée (ou au-delà) est déjà satisfaite. Sans porte, rien n'exige une tâche marquée.
+ */
+export function bloquantesHorsPorte(taches: readonly Tache[]): Faute[] {
+  const parId = new Map(taches.map((t) => [t.id, t]));
+  const exigees = new Set<string>();
+  const pile = [...(parId.get(PORTE_DE_MISE_EN_SERVICE)?.deps ?? [])];
+  while (pile.length > 0) {
+    const d = pile.pop()!;
+    if (exigees.has(d)) continue;
+    exigees.add(d);
+    pile.push(...(parId.get(d)?.deps ?? []));
+  }
+  const fautes: Faute[] = [];
+  for (const t of taches) {
+    if (HORS_DE_LA_PORTE.has(t.id) || LIVREE.has(t.statut) || exigees.has(t.id)) continue;
+    if (!MARQUEUR_BLOQUANTE.test(t.titre) && !MARQUEUR_BLOQUANTE.test(t.acceptance ?? '')) continue;
+    fautes.push({
+      famille: 'bloquante_hors_porte',
+      message:
+        `${t.id} est marquée « BLOQUANTE AVANT LA MISE EN SERVICE » et n'est pas fusionnée, mais elle ` +
+        `n'est ni une dépendance de ${PORTE_DE_MISE_EN_SERVICE} ni atteinte par l'une d'elles : la ` +
+        `porte pourrait s'ouvrir sans elle. Ajoute-la aux \`deps\` de ${PORTE_DE_MISE_EN_SERVICE}, ` +
+        `ou retire le marqueur s'il ne la désigne pas.`,
+    });
+  }
+  return fautes;
+}
+
 /**
  * Les vues hors ligne d'UNE passe (veto sécurité 5328941794, PR 168) : l'instant fourni par
  * l'appelant, rien d'autre. L'existence et l'ascendance du SHA d'une attestation — d'ici comme
@@ -380,6 +424,7 @@ export function controler(
   for (const t of taches) if (couleur.get(t.id) === BLANC) visiter(t.id);
 
   fautes.push(...schemaChampFaux(taches, chemins));
+  fautes.push(...bloquantesHorsPorte(taches));
 
   return fautes;
 }
@@ -403,6 +448,7 @@ export const FAMILLES = [
   'etat_cible_sans_operation',
   'operation_sans_effet',
   'schema_champ_faux',
+  'bloquante_hors_porte',
   ...FAMILLES_ATTESTATION,
 ];
 
@@ -961,6 +1007,29 @@ if (LANCE_EN_SCRIPT) {
           const t = aFaireIci(d);
           t.schema = false;
           t.paths = [...t.paths, `${chemins[0]}schema.prisma`];
+          return d;
+        },
+      },
+      {
+        // GOV-147 — une tâche « a_faire » hors de la porte reçoit le marqueur.
+        famille: 'bloquante_hors_porte',
+        defaut: () => {
+          const d = copie();
+          const exigees = new Set<string>();
+          const pile = [...(d.taches.find((t) => t.id === PORTE_DE_MISE_EN_SERVICE)?.deps ?? [])];
+          while (pile.length > 0) {
+            const id = pile.pop()!;
+            if (exigees.has(id)) continue;
+            exigees.add(id);
+            pile.push(...(d.taches.find((t) => t.id === id)?.deps ?? []));
+          }
+          const t = choisir(
+            d,
+            (x) =>
+              x.statut === 'a_faire' && !exigees.has(x.id) && x.id !== PORTE_DE_MISE_EN_SERVICE,
+            '« a_faire » hors de la porte de mise en service'
+          );
+          t.acceptance = `BLOQUANTE AVANT LA MISE EN SERVICE. ${t.acceptance ?? ''}`;
           return d;
         },
       },

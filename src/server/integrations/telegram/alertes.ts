@@ -363,3 +363,13 @@ export function notifieurTelegram(
     },
   };
 }
+
+// ── le transfert hors de l'Union européenne (SEC-64) ─────────────────────────────────────────────
+
+// Le verrou vit dans un module PUR, importable par les scripts de la forge (sécurité, 5982916235).
+export {
+  DECISION_TRANSFERT_TELEGRAM,
+  TransfertNonConsigne,
+  exigerLeTransfertConsigne,
+  type DecisionDuTransfert,
+} from './transfert';
