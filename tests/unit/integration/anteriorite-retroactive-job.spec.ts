@@ -397,8 +397,10 @@ describe('REQ-JUR-007 — le rapprochement des antériorités est inscrit au lan
   it('REQ-JUR-007 : TÉMOIN STATIQUE — son inscription appelle rapprocherLesAnteriorites sur le client, à l’heure du système', async () => {
     const { readFileSync } = await import('node:fs');
     const source = readFileSync('src/server/taches/inscriptions.ts', 'utf8');
+    // Une forme que l'instrumentation de la mutation garde : elle enveloppe la flèche dans un ternaire
+    // sans en retirer le texte (vu au premier passage de la mutation, PR 731).
     expect(source).toMatch(
-      /anteriorites_rapprocher: \(\) =>\s*rapprocherLesAnteriorites\(prisma, new Date\(horlogeSysteme\.maintenant\(\)\)\)/
+      /anteriorites_rapprocher:[\s\S]{0,200}?\(\) =>\s*rapprocherLesAnteriorites\(prisma, new Date\(horlogeSysteme\.maintenant\(\)\)\)/
     );
   });
 });
