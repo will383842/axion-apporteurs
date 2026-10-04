@@ -86,14 +86,14 @@ function chargeDuProducteur(type: string): Record<string, unknown> {
   // porte qu'à l'arrivée d'INT-T46-A (exemption nommée `SANS_FIXTURE_V3` de `contrat-hash.spec.ts`) :
   // une facture SANS devis, forme v3 permise ; une valeur de la fixture, dès qu'elle existe, l'emporte.
   if (type === FACTURE) return { devisId: null, ...e.payload };
-  // INT-T48-P : la v3 exige `prixReferenceHt` (nullable) sur chaque ligne du devis signé, que la
+  // INT-T48-P : la v3 exige `prixReferenceHtCents` (nullable) sur chaque ligne du devis signé, que la
   // fixture du producteur ne porte pas encore (même exemption nommée) : une ligne SANS prix de
   // référence, forme v3 permise ; une valeur de la fixture, dès qu'elle existe, l'emporte.
   if (Array.isArray(e.payload['lignes']))
     return {
       ...e.payload,
       lignes: (e.payload['lignes'] as Record<string, unknown>[]).map((l) => ({
-        prixReferenceHt: null,
+        prixReferenceHtCents: null,
         ...l,
       })),
     };

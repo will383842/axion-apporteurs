@@ -693,7 +693,7 @@
                   }
                 ]
               },
-              "prixReferenceHt": {
+              "prixReferenceHtCents": {
                 "anyOf": [
                   {
                     "minimum": 0,
@@ -713,7 +713,7 @@
               "offreCode",
               "commissionId",
               "commission",
-              "prixReferenceHt"
+              "prixReferenceHtCents"
             ],
             "type": "object"
           },

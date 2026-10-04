@@ -147,7 +147,7 @@ const SANS_FIXTURE_V3 = {
    * contrat avant que le producteur d'axion-ia ne l'émette. Même règle que `devisId` : exempté de
    * la confrontation à la fixture, exigé par le contrat publié, levé dès que la fixture le porte.
    */
-  ligne: { type: 'devis.signe', liste: 'lignes', nom: 'prixReferenceHt' },
+  ligne: { type: 'devis.signe', liste: 'lignes', nom: 'prixReferenceHtCents' },
 } as const;
 
 /** Les types confrontés à la fixture : tous, sauf le type exempté. */
@@ -471,7 +471,7 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
     )[liste]!['items'] as Schema;
   };
 
-  it('REQ-INT-003 — l’exemption de la ligne ne masque rien : le contrat PUBLIÉ EXIGE `prixReferenceHt` sur chaque ligne du devis signé, et la confrontation ne retire que lui', () => {
+  it('REQ-INT-003 — l’exemption de la ligne ne masque rien : le contrat PUBLIÉ EXIGE `prixReferenceHtCents` sur chaque ligne du devis signé, et la confrontation ne retire que lui', () => {
     const { nom } = SANS_FIXTURE_V3.ligne;
     const publiee = ligneDuDevisSigne(contratJsonSchema());
     expect(publiee['additionalProperties']).toBe(false);
@@ -485,7 +485,7 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
     ).toEqual([nom]);
   });
 
-  it('REQ-QA-007 — TÉMOIN DE LEVÉE : dès qu’une ligne de devis signé de la fixture porte `prixReferenceHt`, l’exemption de la ligne doit tomber', () => {
+  it('REQ-QA-007 — TÉMOIN DE LEVÉE : dès qu’une ligne de devis signé de la fixture porte `prixReferenceHtCents`, l’exemption de la ligne doit tomber', () => {
     const { type, liste, nom } = SANS_FIXTURE_V3.ligne;
     const lignes = [...PRODUCTEUR.evenements, ...PRODUCTEUR.horsContratV1]
       .filter((c) => c.event_type === type)
@@ -493,7 +493,7 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
     expect(lignes.length, `la fixture porte au moins une ligne de ${type}`).toBeGreaterThan(0);
     expect(
       lignes.filter((l) => Object.hasOwn(l, nom)),
-      'la fixture porte `prixReferenceHt` : retirer la ligne de SANS_FIXTURE_V3'
+      'la fixture porte `prixReferenceHtCents` : retirer la ligne de SANS_FIXTURE_V3'
     ).toEqual([]);
   });
 

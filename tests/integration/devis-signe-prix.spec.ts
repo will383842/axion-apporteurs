@@ -1,19 +1,19 @@
 // @req REQ-INT-003
 // @req REQ-QA-007
 /**
- * INT-T48-P — chaque ligne du devis signé porte `prixReferenceHt`, le prix PUBLIC en vigueur à la
+ * INT-T48-P — chaque ligne du devis signé porte `prixReferenceHtCents`, le prix PUBLIC en vigueur à la
  * date du devis signé, en centimes entiers ; le prix vendu de la ligne reste `montantHtCents`, et
  * aucun `prixVenduHt` n'existe au niveau du devis (décision de Williams du 2026-10-01, C-07).
  *
  * UNE LIGNE SANS PRIX PUBLIC (la conférence, palier au forfait sur devis, rattrapage 36) porte
- * `prixReferenceHt: null` : l'absence de prix de référence n'est jamais lue comme un prix nul. Le
+ * `prixReferenceHtCents: null` : l'absence de prix de référence n'est jamais lue comme un prix nul. Le
  * champ reste EXIGÉ : le producteur écrit chaque champ, nuls compris (`payloads.ts`, `ferme`).
  *
  * AMENDEMENT DE LA VERSION 3, PAS UNE MONTÉE. Le contrat v3 n'est pas encore adopté par axion-ia :
  * le champ l'amende, `contracts.v3.json` et son empreinte sont régénérés par `pnpm contracts:export`.
  *
  * D'OÙ VIENNENT LES CHARGES (RM-03). La ligne est PRISE dans la fixture du producteur réel ; le seul
- * champ ajouté est `prixReferenceHt`, que le producteur n'émet pas encore (tâche jumelle côté
+ * champ ajouté est `prixReferenceHtCents`, que le producteur n'émet pas encore (tâche jumelle côté
  * axion-ia), nommé ici et nulle part ailleurs. Rien d'autre n'est inventé.
  *
  * Aucune base : la réception juge le payload contre les `$defs` PUBLIÉS, le même valideur que la
@@ -41,7 +41,7 @@ function devisSigne(prixDeReference: (ligne: Record<string, unknown>) => unknown
   const payload = structuredClone(e.payload);
   const lignes = payload.lignes as Record<string, unknown>[];
   expect(lignes.length).toBeGreaterThan(0);
-  payload.lignes = lignes.map((l) => ({ ...l, prixReferenceHt: prixDeReference(l) }));
+  payload.lignes = lignes.map((l) => ({ ...l, prixReferenceHtCents: prixDeReference(l) }));
   return payload;
 }
 
@@ -49,7 +49,7 @@ const sansLeChamp = () => {
   const p = devisSigne(() => 0);
   p.lignes = (p.lignes as Record<string, unknown>[]).map((l) => {
     const reste = { ...l };
-    delete reste.prixReferenceHt;
+    delete reste.prixReferenceHtCents;
     return reste;
   });
   return p;
@@ -62,12 +62,12 @@ const ligneDuContrat = () => {
   return lignes.items as Record<string, unknown>;
 };
 
-describe('REQ-INT-003 — le contrat publié : prixReferenceHt sur chaque ligne du devis signé', () => {
-  it('REQ-INT-003 : la ligne du devis signé déclare et EXIGE prixReferenceHt, en centimes entiers jamais négatifs, ou nul', () => {
+describe('REQ-INT-003 — le contrat publié : prixReferenceHtCents sur chaque ligne du devis signé', () => {
+  it('REQ-INT-003 : la ligne du devis signé déclare et EXIGE prixReferenceHtCents, en centimes entiers jamais négatifs, ou nul', () => {
     const ligne = ligneDuContrat();
     expect(ligne.additionalProperties).toBe(false);
-    expect(ligne.required).toContain('prixReferenceHt');
-    expect((ligne.properties as Record<string, unknown>).prixReferenceHt).toEqual({
+    expect(ligne.required).toContain('prixReferenceHtCents');
+    expect((ligne.properties as Record<string, unknown>).prixReferenceHtCents).toEqual({
       anyOf: [{ type: 'integer', minimum: 0 }, { type: 'null' }],
     });
   });
@@ -87,13 +87,13 @@ describe('REQ-INT-003 — le contrat publié : prixReferenceHt sur chaque ligne 
       $defs: Record<string, unknown>;
     };
     expect(JSON.stringify(publie.$defs[nomDefPayload('devis.signe')])).toContain(
-      '"prixReferenceHt"'
+      '"prixReferenceHtCents"'
     );
   });
 });
 
 describe('REQ-INT-003 — la réception juge le devis signé contre le contrat publié', () => {
-  it('REQ-INT-003 : TÉMOIN — une charge dont une ligne n’a pas prixReferenceHt est refusée hors schéma', () => {
+  it('REQ-INT-003 : TÉMOIN — une charge dont une ligne n’a pas prixReferenceHtCents est refusée hors schéma', () => {
     expect(payloadConforme('devis.signe', sansLeChamp())).toBe(false);
   });
 
@@ -128,11 +128,11 @@ describe('REQ-INT-003 — la réception juge le devis signé contre le contrat p
     ).toBe(false);
   });
 
-  it('REQ-INT-003 : Partners le CONSERVE — la charge gardée porte prixReferenceHt et reste conforme à sa version', () => {
-    expect(CHAMPS_NON_CONSERVES as readonly string[]).not.toContain('prixReferenceHt');
+  it('REQ-INT-003 : Partners le CONSERVE — la charge gardée porte prixReferenceHtCents et reste conforme à sa version', () => {
+    expect(CHAMPS_NON_CONSERVES as readonly string[]).not.toContain('prixReferenceHtCents');
     const gardee = chargeConservee(devisSigne((l) => l.montantHtCents));
     const lignes = gardee.lignes as Record<string, unknown>[];
-    for (const l of lignes) expect(Object.hasOwn(l, 'prixReferenceHt')).toBe(true);
+    for (const l of lignes) expect(Object.hasOwn(l, 'prixReferenceHtCents')).toBe(true);
     expect(chargeConforme('devis.signe', gardee, SCHEMA_VERSION)).toBe(true);
   });
 });
