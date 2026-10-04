@@ -181,16 +181,59 @@ describe('REQ-UX-016 — le lecteur dédié : l’apporteur de la session, et de
     },
   });
 
-  /** Un faux client : il garde la requête et rend les lignes de l'apporteur demandé. */
+  type Requete = {
+    where: { apporteurId: string; cle: { in: string[] } };
+    orderBy: Record<string, string>[];
+    select: Selection;
+  };
+  type Selection = { [champ: string]: true | { select: Selection } };
+
+  /** Ne garde d'un enregistrement que les champs SÉLECTIONNÉS, comme le client de base. */
+  function projeter(valeur: unknown, selection: Selection): unknown {
+    if (valeur === null) return null;
+    const source = valeur as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(selection).flatMap(([champ, choix]) => {
+        if (choix === true) return [[champ, source[champ]]];
+        if (typeof choix === 'object' && choix !== null && 'select' in choix)
+          return [[champ, projeter(source[champ], choix.select)]];
+        return [];
+      })
+    );
+  }
+
+  /** Compare deux lignes selon un tri du client de base ; une direction inconnue est refusée. */
+  function comparer(tri: Record<string, string>[]) {
+    return (a: Ligne, b: Ligne): number => {
+      for (const critere of tri) {
+        for (const [champ, sens] of Object.entries(critere)) {
+          if (sens !== 'asc' && sens !== 'desc') throw new Error(`tri invalide : ${sens}`);
+          const x = (a as Record<string, unknown>)[champ] as Date | string;
+          const y = (b as Record<string, unknown>)[champ] as Date | string;
+          const ordre = x < y ? -1 : x > y ? 1 : 0;
+          if (ordre !== 0) return sens === 'asc' ? ordre : -ordre;
+        }
+      }
+      return 0;
+    };
+  }
+
+  /**
+   * Un faux client qui se conduit comme le client de base : il filtre par l'apporteur et par les
+   * clés demandées, trie, et ne rend que les champs sélectionnés. Il garde chaque requête.
+   */
   function client(lignes: Ligne[]) {
     const requetes: unknown[] = [];
     const c = {
       notificationEspace: {
-        findMany: async (args: { where: { apporteurId: string } }) => {
+        findMany: async (args: Requete) => {
           requetes.push(args);
           return lignes
-            .filter((l) => l.apporteurId === args.where.apporteurId)
-            .map(({ apporteurId: _a, ...l }) => l);
+            .filter(
+              (l) => l.apporteurId === args.where.apporteurId && args.where.cle.in.includes(l.cle)
+            )
+            .sort(comparer(args.orderBy))
+            .map((l) => projeter(l, args.select));
         },
       },
     } as unknown as ClientDesNotifications;
@@ -229,6 +272,36 @@ describe('REQ-UX-016 — le lecteur dédié : l’apporteur de la session, et de
     expect(r.where.cle.in).not.toContain('decision_attribution');
     expect(entreeDeLEspace({ ...decision, attribution: decision.attribution })).toBeNull();
     expect(liste(rendues)).not.toContain('une décision concerne votre dépôt');
+  });
+
+  it('REQ-UX-016 : les plus récentes d’abord ; à la même heure, l’ordre de l’identifiant', async () => {
+    const tot = { ...ligneDe('b', MOI, FIN), creeAt: new Date('2027-05-01T08:00:00.000Z') };
+    const memeHeureA = { ...ligneDe('a', MOI, FIN), creeAt: new Date('2027-05-09T08:00:00.000Z') };
+    const memeHeureC = { ...ligneDe('c', MOI, FIN), creeAt: new Date('2027-05-09T08:00:00.000Z') };
+    const rendues = await notificationsDeLEspace(client([tot, memeHeureC, memeHeureA]).c, MOI);
+    expect(rendues.map((n) => n.id)).toEqual(['a', 'c', 'b']);
+    expect(rendues.map((n) => n.quand)).toEqual(['9 mai 2027', '9 mai 2027', '1 mai 2027']);
+  });
+
+  it('REQ-UX-016 : sans raison sociale, le repli nomme le numéro saisi au dépôt', async () => {
+    const sansNom = ligneDe('1', MOI, FIN);
+    sansNom.attribution!.raisonSociale = null;
+    const rendues = await notificationsDeLEspace(client([sansNom]).c, MOI);
+    expect(rendues).toHaveLength(1);
+    expect(rendues[0]!.titre).toContain('Entreprise n° 552100554');
+  });
+
+  it('REQ-UX-016 : une notification sans attribution est écartée, sans lever', async () => {
+    const orpheline = { ...ligneDe('1', MOI, FIN), attribution: null };
+    await expect(notificationsDeLEspace(client([orpheline]).c, MOI)).resolves.toEqual([]);
+    expect(
+      entreeDeLEspace({
+        id: '1',
+        cle: 'premier_rang_libere',
+        creeAt: new Date(),
+        attribution: null,
+      })
+    ).toBeNull();
   });
 
   it('REQ-UX-016 : l’écran ne reçoit que des textes — aucun identifiant d’attribution ni numéro d’entreprise', async () => {
