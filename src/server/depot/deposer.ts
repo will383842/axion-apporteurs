@@ -35,7 +35,7 @@ import {
   type IssueDepot,
 } from '../../domain/depot/issue-depot';
 import { niveauDAcces } from '../../domain/apporteur/acces-espace';
-import { clauseEtatsOccupants } from '../../domain/attribution/etats';
+import { ETATS_OCCUPANTS } from '../../domain/attribution/etats';
 import { anterioriteDe } from '../entreprise-connue/projection';
 import { journaliserLaNaissance } from '../attribution/transitionner';
 import { creerLaDemande } from '../confirmation/demandes';
@@ -223,18 +223,17 @@ export async function deposerDans(
   if (a === undefined || niveauDAcces(a.statut) !== 'plein') throw new DepotInterdit();
 
   const anteriorite = await anterioriteDe(tx, siren, maintenant);
-  const [occupation] = await tx.$queryRawUnsafe<{ occupee: boolean; en_attente: number }[]>(
-    `SELECT EXISTS (SELECT 1 FROM attributions WHERE siren = $1 AND statut IN (${clauseEtatsOccupants()})) AS occupee,
-            (SELECT count(*)::int FROM attributions WHERE siren = $1 AND statut = 'en_attente') AS en_attente`,
-    siren
-  );
+  const occupants = await tx.attribution.count({
+    where: { siren, statut: { in: [...ETATS_OCCUPANTS] } },
+  });
+  const enAttente = await tx.attribution.count({ where: { siren, statut: 'en_attente' } });
   const faits: FaitsDuDepot = {
     apporteurGele: a.statut === 'suspendu',
     etablissementCesse: demande.fiche.etatAdministratif === 'cesse',
     anteriorite: anteriorite.connue ? anteriorite.origine : 'aucune',
     oppositionDemarchage: await ports.oppositionDemarchage(tx, siren),
-    occupee: occupation?.occupee ?? false,
-    enAttente: occupation?.en_attente ?? 0,
+    occupee: occupants > 0,
+    enAttente,
     verificationPrioritaire: false,
   };
   const decision = deciderDuDepot(faits);
