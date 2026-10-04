@@ -438,6 +438,28 @@ export const PARAMETRES = {
 } as const satisfies Record<string, Parametre>;
 
 /**
+ * Les TAILLES DE LOT des passages planifiés — ni un délai, ni un montant : la borne d'un travail par
+ * lots, sourcée et datée comme les seuils (RM-10), hors de `SEUILS` pour la même raison que les
+ * paramètres.
+ */
+export type TailleDeLot = {
+  readonly valeur: number;
+  readonly unite: 'notifications';
+  readonly source: string;
+  readonly verifieLe: string;
+};
+
+export const TAILLES_DE_LOT = {
+  // DM-55 : le passage d'envoi des notifications de l'espace prend ses notifications par lots bornés.
+  NOTIFICATIONS_ENVOI_LOT: {
+    valeur: 100,
+    unite: 'notifications',
+    source: "DM-55, forme d'A02 (rattrapage 98) : le passage d'envoi, en lots bornés par la SSOT",
+    verifieLe: '2026-10-04',
+  },
+} as const satisfies Record<string, TailleDeLot>;
+
+/**
  * Les BUDGETS D'EXPÉRIENCE de REQ-UX-047 (QA-T58, sorti du point 4 de GOV-113) — une seule source,
  * lue par la fixture de mesure (QA-T33) et par la garde des écrans (GOV-113). Hors de `SEUILS` pour la
  * même raison que les paramètres : ni un délai du contrat, ni un montant. Une exigence plus stricte

@@ -1,0 +1,86 @@
+/**
+ * Le passage d'envoi des notifications de l'espace (DM-55, REQ-UX-016, REQ-DM-004) — forme d'A02.
+ *
+ * La notification est écrite DANS la transaction de la transition ; son courriel part APRÈS le
+ * commit, par ce passage, une seule fois et rejouable :
+ *   — il prend les notifications des clés à canal courriel qui n'ont AUCUN courriel non échoué, par
+ *     lots bornés (`TAILLES_DE_LOT.NOTIFICATIONS_ENVOI_LOT`), dans l'ordre d'inscription ;
+ *   — chacune dans SA transaction : le verrou (`FOR UPDATE SKIP LOCKED` — deux passages ne prennent
+ *     pas la même), le rendu du texte à l'heure de l'envoi, l'envoi et la ligne du courriel (dépôt lié
+ *     à la transaction ; l'index `courriels_envoyes_un_par_notification` refuse un second courriel
+ *     non échoué), puis la fenêtre, puis le commit ;
+ *   — LE DÉLAI COURT DE L'ENVOI EFFECTIF (REQ-UX-016, juriste) : pour `premier_rang_libere`, la
+ *     fenêtre de redéclaration est posée à `envoye_at` + `FILE_FENETRE_REDECLARATION_JOURS`, une fois
+ *     (le port ne pose que si elle est nulle). Un courriel en échec ou retenu ne pose rien : aucun
+ *     délai ne court tant qu'il n'est pas parti.
+ * Un plantage entre le relais et le commit n'écrit rien : le passage suivant renvoie. Le doublon
+ * possible est un second courriel d'INFORMATION, jamais un délai raccourci.
+ */
+import { SEUILS, TAILLES_DE_LOT } from '../../domain/seuils/ssot';
+import { MS_PAR_JOUR } from '../../domain/temps/calendrier-civil';
+
+/** Une notification à porter par courriel, telle que le passage la lit. */
+export type NotificationAEnvoyer = {
+  id: string;
+  cle: string;
+  apporteurId: string;
+  attributionId: string | null;
+  evenementId: string | null;
+};
+
+export type IssueDeLEnvoi = {
+  statut: 'envoye' | 'echec' | 'retenu_adresse_supprimee' | 'retenu_dmarc_non_verifie';
+  /** L'heure de l'envoi effectif, consignée avec le courriel ; nulle s'il n'est pas parti. */
+  envoyeAt: Date | null;
+};
+
+/** Les gestes d'une transaction du passage, liés à elle. */
+export type GestesDeLaTransaction = {
+  /** Le verrou ; faux si la notification est prise ailleurs, ou déjà portée par un courriel non échoué. */
+  verrouiller(n: NotificationAEnvoyer): Promise<boolean>;
+  /** Le texte, rendu à l'heure de l'envoi ; nul si un paramètre manque. */
+  rendre(n: NotificationAEnvoyer, envoyeLe: Date): Promise<{ sujet: string; corps: string } | null>;
+  /** L'envoi par l'émetteur unique, et sa ligne de courriel, liée à la notification. */
+  envoyer(n: NotificationAEnvoyer, texte: { sujet: string; corps: string }): Promise<IssueDeLEnvoi>;
+  /** La fenêtre de redéclaration, posée seulement si elle est encore nulle. */
+  poserLaFenetre(attributionId: string, finAt: Date): Promise<void>;
+};
+
+export type PortsDuPassage = {
+  maintenant(): Date;
+  lireLot(take: number): Promise<NotificationAEnvoyer[]>;
+  dansUneTransaction<T>(fn: (g: GestesDeLaTransaction) => Promise<T>): Promise<T>;
+};
+
+/** Les clés dont l'envoi fait courir la fenêtre de redéclaration (art. 3.5 al. 2). */
+const CLES_A_FENETRE: ReadonlySet<string> = new Set(['premier_rang_libere']);
+
+type Bilan = { envoyees: number; echecs: number; retenues: number; sautees: number };
+
+export async function envoyerLesNotificationsDeLEspace(p: PortsDuPassage): Promise<Bilan> {
+  const bilan: Bilan = { envoyees: 0, echecs: 0, retenues: 0, sautees: 0 };
+  const lot = await p.lireLot(TAILLES_DE_LOT.NOTIFICATIONS_ENVOI_LOT.valeur);
+  for (const n of lot) {
+    const issue = await p.dansUneTransaction(async (g) => {
+      if (!(await g.verrouiller(n))) return 'sautee' as const;
+      const texte = await g.rendre(n, p.maintenant());
+      if (texte === null) {
+        throw new Error(`texte_introuvable : la notification ${n.id} (${n.cle}) ne se rend pas`);
+      }
+      const envoi = await g.envoyer(n, texte);
+      if (envoi.statut !== 'envoye') return envoi.statut === 'echec' ? 'echec' : 'retenue';
+      if (CLES_A_FENETRE.has(n.cle) && n.attributionId !== null && envoi.envoyeAt !== null) {
+        const finAt = new Date(
+          envoi.envoyeAt.getTime() + SEUILS.FILE_FENETRE_REDECLARATION_JOURS.valeur * MS_PAR_JOUR
+        );
+        await g.poserLaFenetre(n.attributionId, finAt);
+      }
+      return 'envoyee' as const;
+    });
+    if (issue === 'sautee') bilan.sautees += 1;
+    else if (issue === 'echec') bilan.echecs += 1;
+    else if (issue === 'retenue') bilan.retenues += 1;
+    else bilan.envoyees += 1;
+  }
+  return bilan;
+}

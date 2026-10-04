@@ -13,7 +13,7 @@
  *     courte que la vraie.
  */
 import { describe, it, expect } from 'vitest';
-import { SEUILS } from '../../../src/domain/seuils/ssot';
+import { SEUILS, TAILLES_DE_LOT } from '../../../src/domain/seuils/ssot';
 import { MS_PAR_JOUR } from '../../../src/domain/temps/calendrier-civil';
 import {
   envoyerLesNotificationsDeLEspace,
@@ -91,7 +91,7 @@ describe('REQ-UX-016 — le passage envoie chaque notification une fois, sous ve
       retenues: 0,
       sautees: 0,
     });
-    expect(t.trace).toEqual([`lot:${SEUILS.NOTIFICATIONS_ENVOI_LOT.valeur}`, 'tx', 'tx']);
+    expect(t.trace).toEqual([`lot:${TAILLES_DE_LOT.NOTIFICATIONS_ENVOI_LOT.valeur}`, 'tx', 'tx']);
     expect(t.envoyes).toEqual(['n1', 'n2']);
   });
 
