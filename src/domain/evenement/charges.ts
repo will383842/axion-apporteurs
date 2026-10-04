@@ -30,6 +30,8 @@ import { EVENEMENTS_APPORTEUR, MOTIFS_RESILIATION, STATUTS_APPORTEUR } from '../
 import {
   CRITERES_D_ANTERIORITE,
   ETATS_ATTRIBUTION,
+  MOTIFS_ANNULATION_CONSOLE,
+  MOTIFS_LISTE_NOIRE,
   EVENEMENTS_ATTRIBUTION,
   NAISSANCES_ATTRIBUTION,
 } from '../attribution/machine';
@@ -41,6 +43,7 @@ import {
   GESTES_RATTACHEMENT,
   STATUTS_ANOMALIE,
 } from '../anomalie/regles';
+import { GESTES_UTILISATEUR_CONSOLE, ROLES_CONSOLE } from '../console/roles';
 
 /**
  * Les codes d'événement que porte `apporteur_statut_modifie` : la NAISSANCE (`creer`, `de` nul), puis
@@ -102,7 +105,8 @@ export type TypeEvenementJournal =
   | 'anomalie_statut_modifie'
   | 'contestation_modifiee'
   | 'rattachement_manuel_modifie'
-  | 'anomalie_gel_modifie';
+  | 'anomalie_gel_modifie'
+  | 'utilisateur_console_modifie';
 
 /** DM-08 : le porteur d'une attribution, une forme UNIQUE — sa population et son identifiant. */
 const PORTEUR = () =>
@@ -187,8 +191,14 @@ export const CHARGES_PAR_TYPE = {
         .strict()
         .optional(),
     })
+    .extend({
+      /** DM-55 : le motif fermé d'une annulation par la console, exigé pour elle seule. */
+      motifAnnulation: z.enum(MOTIFS_ANNULATION_CONSOLE).optional(),
+      /** DM-55 : la catégorie de l'article 3.3 bis, exigée avec ce motif et lui seul. */
+      categorieRelation: z.enum(MOTIFS_LISTE_NOIRE).optional(),
+    })
     .strict()
-    .superRefine(({ de, transition, critere, fait }, ctx) => {
+    .superRefine(({ de, transition, critere, fait, motifAnnulation, categorieRelation }, ctx) => {
       if ((de === null) !== NAISSANCES.includes(transition)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -206,6 +216,23 @@ export const CHARGES_PAR_TYPE = {
       // Le fait fondateur accompagne le critère, et sa nature est celle que le critère nomme.
       const natureAttendue =
         critere === undefined ? undefined : critere === 'cliente' ? 'facture' : 'devis';
+      if ((transition === 'annulee_par_la_console') !== (motifAnnulation !== undefined)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['motifAnnulation'],
+          message: 'motif_annulation_incoherent',
+        });
+      }
+      if (
+        (motifAnnulation === 'entreprise_relevant_de_l_article_3_3_bis') !==
+        (categorieRelation !== undefined)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['categorieRelation'],
+          message: 'categorie_incoherente',
+        });
+      }
       if (fait?.nature !== natureAttendue) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -315,6 +342,31 @@ export const CHARGES_PAR_TYPE = {
       acteur: FORMES.acteur(),
     })
     .strict(),
+  // SEC-30 (forme d'A02) : tout changement d'un utilisateur de la console, agrégat
+  // `utilisateur_console` (son id est `agregatId`), dans la MÊME transaction que lui. Le rôle avant
+  // et après, rien d'autre : ni adresse, ni nom. Pour `valider`, l'acteur EST le validateur.
+  utilisateur_console_modifie: z
+    .object({
+      geste: z.enum(GESTES_UTILISATEUR_CONSOLE),
+      de: z.enum(ROLES_CONSOLE).nullable(),
+      vers: z.enum(ROLES_CONSOLE).nullable(),
+      acteur: FORMES.acteur(),
+    })
+    .strict()
+    .superRefine((c, ctx) => {
+      const juste =
+        c.geste === 'changer_role'
+          ? c.de !== null && c.vers !== null && c.de !== c.vers
+          : c.geste === 'inviter'
+            ? c.de === null && c.vers !== null
+            : c.de === null && c.vers === null;
+      if (!juste)
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['vers'],
+          message: 'roles_incoherents_avec_le_geste',
+        });
+    }),
 } satisfies Record<TypeEvenementJournal, z.ZodTypeAny>;
 
 /**

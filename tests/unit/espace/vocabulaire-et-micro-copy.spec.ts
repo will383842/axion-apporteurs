@@ -903,6 +903,31 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › corps : {decision}. Motif : {motif}.
       courriels/notifications.ts › CORPS_DE_LA_LIBERATION › demande_verifiee : Ce dépôt a pris fin sans confirmation de l'échange. Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}. Cette fin n'emporte aucune autre conséquence pour vous.
       courriels/notifications.ts › CORPS_DE_LA_LIBERATION › peremption_ou_fin_de_duree : Cette entreprise est de nouveau disponible, y compris pour un nouveau dépôt de votre part.
+      courriels/notifications.ts › MOTIFS_DES_DECISIONS › anomalie_confirmee : À la vérification, ce dépôt ne remplit pas les conditions de l'article 3.7 du contrat. Faits retenus : {faits}
+      courriels/notifications.ts › MOTIFS_DES_DECISIONS › non_confirmee : L'entreprise a indiqué expressément n'avoir eu aucun échange avec vous (contrat, article 3.7) ; vous pouvez demander à Axion-IA l'extrait de sa réponse
+      courriels/notifications.ts › MOTIFS_DES_DECISIONS › non_confirmee_par_courriel : L'entreprise a indiqué expressément n'avoir eu aucun échange avec vous (contrat, article 3.7) ; vous pouvez demander à Axion-IA l'extrait de sa réponse
+      courriels/notifications.ts › MOTIFS_DES_DECISIONS › annulee_par_la_console : Axion-IA a annulé ce dépôt avant sa confirmation, pour la raison suivante : {raison}
+      courriels/notifications.ts › RAISONS_D_ANNULATION › demande_de_l_apporteur : à votre demande
+      courriels/notifications.ts › RAISONS_D_ANNULATION › declaration_en_double : vous aviez déjà déposé cette entreprise, et ce dépôt faisait double emploi avec le premier
+      courriels/notifications.ts › RAISONS_D_ANNULATION › entreprise_relevant_de_l_article_3_3_bis : {categorie} (contrat, article 3.3 bis), situation qui existait déjà à la date de votre dépôt
+      courriels/notifications.ts › ENTREPRISE_DE_REPLI : Entreprise n° {numeroEntreprise}
+      courriels/notifications.ts › FAITS_NON_CONSERVES : les faits vous ont été indiqués dans le courriel qui vous a informé de cette décision
+      courriels/notifications.ts › LIBELLES_DES_CATEGORIES › administration : l'entreprise est une administration avec laquelle Axion-IA est en relation
+      courriels/notifications.ts › LIBELLES_DES_CATEGORIES › financeur_public : l'entreprise est un financeur public avec lequel Axion-IA est en relation
+      courriels/notifications.ts › LIBELLES_DES_CATEGORIES › financeur_paritaire : l'entreprise est un financeur paritaire avec lequel Axion-IA est en relation
+      courriels/notifications.ts › LIBELLES_DES_CATEGORIES › organisme_de_formation_partenaire : l'entreprise est un organisme de formation avec lequel Axion-IA est en relation
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 0 : janvier
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 1 : février
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 2 : mars
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 3 : avril
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 4 : mai
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 5 : juin
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 6 : juillet
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 7 : août
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 8 : septembre
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 9 : octobre
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 10 : novembre
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 11 : décembre
       courriels/notifications.ts › CODE_DU_COURRIEL_DE_CONNEXION › avant : Vous pouvez aussi saisir ce code sur la page de connexion :
       courriels/notifications.ts › CODE_DU_COURRIEL_DE_CONNEXION › apres : Il ne sert qu’une fois, et pas plus longtemps que le lien."
     `);

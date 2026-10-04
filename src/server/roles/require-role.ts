@@ -23,7 +23,13 @@
 import type { ConsoleRole, PrismaClient } from '@prisma/client';
 import { DUREES_AUTH } from '../auth/durees';
 import { empreinteDeSessionConsole } from '../auth/lien-magique';
-import { droitDeclare, roleAutorise, type DroitConsole } from './matrice';
+import {
+  droitDeclare,
+  exigeLeStepUp,
+  ouvertATousLesRoles,
+  roleAutorise,
+  type DroitConsole,
+} from './matrice';
 
 /** Les motifs de refus : une liste FERMÉE. Le motif part au journal, jamais au navigateur. */
 export const MOTIFS_DE_REFUS_CONSOLE = [
@@ -38,6 +44,13 @@ export const MOTIFS_DE_REFUS_CONSOLE = [
   'role_refuse',
   // SEC-29 : la session de la console sans activité depuis plus que l'inactivité de `durees.ts`.
   'inactive',
+  // SEC-30 : la session est d'une version antérieure à celle de son utilisateur (rôle changé,
+  // désactivation) : toutes ses sessions tombent ensemble.
+  'version_perimee',
+  // SEC-30 : un droit à step-up, sur une session ouverte depuis le délai de relèvement ou plus.
+  'releve_requis',
+  // SEC-30 (quatre yeux) : un admin non validé par un autre admin n'a aucun droit d'administrateur.
+  'admin_en_attente',
 ] as const;
 export type MotifDeRefusConsole = (typeof MOTIFS_DE_REFUS_CONSOLE)[number];
 
@@ -51,7 +64,19 @@ export interface LigneDeSessionConsole {
    * une session jamais vue : refusée comme inactive, en échec fermé.
    */
   derniereVueAt?: Date | null;
-  utilisateurConsole: { id: string; role: ConsoleRole; desactiveAt: Date | null } | null;
+  /** SEC-30 : l'ouverture de la session, lue en base, jamais dans le cookie : elle tient le step-up. */
+  creeAt: Date;
+  /** SEC-30 : la version de l'utilisateur COPIÉE à l'ouverture de la session. */
+  sessionVersion: number;
+  utilisateurConsole: {
+    id: string;
+    role: ConsoleRole;
+    desactiveAt: Date | null;
+    /** SEC-30 : incrémentée à chaque changement de rôle ou désactivation. */
+    sessionVersion: number;
+    /** SEC-30 (quatre yeux) : nulle sur un admin, l'admin est EN ATTENTE de validation. */
+    valideAt: Date | null;
+  } | null;
 }
 
 export type VerdictDeRole =
@@ -78,9 +103,19 @@ export function jugerAcces(
   const utilisateur = ligne.utilisateurConsole;
   if (utilisateur === null) return refus('hors_console');
   if (utilisateur.desactiveAt !== null) return refus('desactive');
+  if (ligne.sessionVersion !== utilisateur.sessionVersion) return refus('version_perimee');
   if (!vueRecemment(ligne.derniereVueAt, maintenant)) return refus('inactive');
   if (!roleAutorise(droit, utilisateur.role)) return refus('role_refuse');
+  if (utilisateur.role === 'admin' && utilisateur.valideAt === null && !ouvertATousLesRoles(droit))
+    return refus('admin_en_attente');
+  if (exigeLeStepUp(droit) && !ouverteRecemment(ligne.creeAt, maintenant))
+    return refus('releve_requis');
   return { ok: true, utilisateur: { id: utilisateur.id, role: utilisateur.role } };
+}
+
+/** SEC-30 : ouverte il y a MOINS que le délai de relèvement (REQ-SEC-004). */
+function ouverteRecemment(creeAt: Date, maintenant: Date): boolean {
+  return maintenant.getTime() - creeAt.getTime() < DUREES_AUTH.releveMs.valeur;
 }
 
 /** SEC-29 : vue il y a MOINS que l'inactivité de la console. Jamais vue : non. */
@@ -151,7 +186,17 @@ export function depotDeSessionsConsole(prisma: PrismaClient): DepotDeSessionsCon
           expireAt: true,
           revoqueAt: true,
           derniereVueAt: true,
-          utilisateurConsole: { select: { id: true, role: true, desactiveAt: true } },
+          creeAt: true,
+          sessionVersion: true,
+          utilisateurConsole: {
+            select: {
+              id: true,
+              role: true,
+              desactiveAt: true,
+              sessionVersion: true,
+              valideAt: true,
+            },
+          },
         },
       });
     },
