@@ -199,6 +199,12 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
     'contact',
   ],
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee': ['entreprise'],
+  // DM-25 : l'annulation de SON dépôt pour antériorité de la Société (art. 3.3) — SON entreprise, et le
+  // délai de réponse à SA contestation, venu de la SSOT. Aucun critère d'antériorité (règle de SEC-12).
+  'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_annulee_anteriorite': [
+    'entreprise',
+    'delaiReponse',
+  ],
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution': [
     'entreprise',
     'motif',
