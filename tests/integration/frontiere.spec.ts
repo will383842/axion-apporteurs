@@ -62,7 +62,11 @@ function texteDe(id: string): string {
   return e.texte;
 }
 
-/** `{statut: libre|attribuee|cliente, until: 'AAAA-MM'|null, apporteurRef: opaque|null}` */
+/**
+ * `{statut: libre|attribuee|cliente, until: 'AAAA-MM'|null, apporteurRef: opaque|null}`, plus le
+ * champ que l'exigence ajoute après la forme minimale (« plus `nomAffichable` », décision de
+ * Williams du 2026-10-01, INT-T07-P).
+ */
 const CONTRAT = (() => {
   const m = /réponse \*\*minimale\*\* `\{([^}]*)\}`/.exec(texteDe('REQ-INT-014'));
   if (m === null) throw new Error('REQ-INT-014 : la forme de la réponse minimale est illisible');
@@ -72,7 +76,10 @@ const CONTRAT = (() => {
   });
   const statut = champs.find((c) => c.nom === 'statut');
   return {
-    champs: champs.map((c) => c.nom),
+    champs: [
+      ...champs.map((c) => c.nom),
+      ...[...texteDe('REQ-INT-014').matchAll(/— plus `(\w+)`/g)].map((p) => p[1] ?? ''),
+    ],
     statuts: (statut?.valeur ?? '').split('|'),
   };
 })();
@@ -525,17 +532,22 @@ describe('REQ-SEC-012 — le débit : 60 par minute, après l’authentification
 
 describe('REQ-INT-014 — la réponse minimale, et rien d’autre', () => {
   it('REQ-INT-014 — le contrat est lu dans l’exigence, et le code déclare exactement ses champs et ses statuts', () => {
-    expect(CONTRAT.champs).toEqual(['statut', 'until', 'apporteurRef']);
+    expect(CONTRAT.champs).toEqual(['statut', 'until', 'apporteurRef', 'nomAffichable']);
     expect([...CHAMPS_DE_LA_REPONSE].sort()).toEqual([...CONTRAT.champs].sort());
     expect([...STATUTS_D_ATTRIBUTION].sort()).toEqual([...CONTRAT.statuts].sort());
   });
 
   it('REQ-INT-014 — le test de forme refuse un champ en trop et un champ manquant (témoin)', () => {
-    const juste = { statut: 'attribuee', until: '2027-03', apporteurRef: REF };
+    const juste = {
+      statut: 'attribuee',
+      until: '2027-03',
+      apporteurRef: REF,
+      nomAffichable: 'Paul D.',
+    };
     expect(() => formeExacte(juste)).not.toThrow();
     expect(() => formeExacte({ ...juste, nom: 'Martin' })).toThrow(/en trop \[nom\]/);
     expect(() => formeExacte({ statut: 'libre', until: null })).toThrow(
-      /manquants \[apporteurRef\]/
+      /manquants \[apporteurRef, nomAffichable\]/
     );
   });
 
@@ -548,7 +560,7 @@ describe('REQ-INT-014 — la réponse minimale, et rien d’autre', () => {
       frontiere(
         async (siren) =>
           siren === SIREN_ATTRIBUE
-            ? { statut: 'attribuee', until: '2027-03', apporteurRef: REF }
+            ? { statut: 'attribuee', until: '2027-03', apporteurRef: REF, nomAffichable: 'Paul D.' }
             : null,
         ADMIS,
         h,
@@ -560,7 +572,12 @@ describe('REQ-INT-014 — la réponse minimale, et rien d’autre', () => {
     expect(rep.headers.get('content-type')).toMatch(/^application\/json/);
     const corps: unknown = await rep.json();
     formeExacte(corps);
-    expect(corps).toEqual({ statut: 'attribuee', until: '2027-03', apporteurRef: REF });
+    expect(corps).toEqual({
+      statut: 'attribuee',
+      until: '2027-03',
+      apporteurRef: REF,
+      nomAffichable: 'Paul D.',
+    });
     expect(lignes).toHaveLength(1);
     const ligne = JSON.parse(lignes[0] ?? '{}') as Record<string, unknown>;
     expect(Object.keys(ligne).sort()).toEqual(
@@ -591,27 +608,50 @@ describe('REQ-INT-014 — la réponse minimale, et rien d’autre', () => {
       },
       {
         quoi: 'un nom à la place de la référence',
-        lu: { statut: 'attribuee', until: '2027-03', apporteurRef: 'Sophie Martin' },
+        lu: {
+          statut: 'attribuee',
+          until: '2027-03',
+          apporteurRef: 'Sophie Martin',
+          nomAffichable: 'Paul D.',
+        },
       },
       {
         quoi: 'un courriel à la place de la référence',
-        lu: { statut: 'attribuee', until: '2027-03', apporteurRef: 'sophie.martin@example.test' },
+        lu: {
+          statut: 'attribuee',
+          until: '2027-03',
+          apporteurRef: 'sophie.martin@example.test',
+          nomAffichable: 'Paul D.',
+        },
       },
       {
         quoi: 'un nom dans l’échéance',
-        lu: { statut: 'attribuee', until: 'Sophie', apporteurRef: REF },
+        lu: { statut: 'attribuee', until: 'Sophie', apporteurRef: REF, nomAffichable: 'Paul D.' },
       },
       {
         quoi: 'un statut hors du contrat',
-        lu: { statut: 'suivie', until: null, apporteurRef: null },
+        lu: { statut: 'suivie', until: null, apporteurRef: null, nomAffichable: null },
       },
       {
         quoi: 'un « libre » qui porte une référence',
-        lu: { statut: 'libre', until: null, apporteurRef: REF },
+        lu: { statut: 'libre', until: null, apporteurRef: REF, nomAffichable: null },
       },
       {
         quoi: 'un « libre » qui porte une échéance',
-        lu: { statut: 'libre', until: '2027-03', apporteurRef: null },
+        lu: { statut: 'libre', until: '2027-03', apporteurRef: null, nomAffichable: null },
+      },
+      {
+        quoi: 'un « libre » qui porte un nom',
+        lu: { statut: 'libre', until: null, apporteurRef: null, nomAffichable: 'Sophie M.' },
+      },
+      {
+        quoi: 'un courriel dans le nom affichable',
+        lu: {
+          statut: 'attribuee',
+          until: '2027-03',
+          apporteurRef: REF,
+          nomAffichable: 'sophie.martin@example.test',
+        },
       },
     ];
     for (const f of fuites) {
@@ -662,6 +702,7 @@ describe('REQ-INT-014 — la réponse minimale, et rien d’autre', () => {
       statut: 'libre',
       until: null,
       apporteurRef: null,
+      nomAffichable: null,
     });
     expect(inconnu.vu.statut).toBe(200);
     expect(inconnu.vu).toEqual(libre.vu);
@@ -669,6 +710,7 @@ describe('REQ-INT-014 — la réponse minimale, et rien d’autre', () => {
       statut: 'libre',
       until: null,
       apporteurRef: null,
+      nomAffichable: null,
     });
     expect(inconnu.duree).toBe(PLANCHER_LECTURE_MS);
     expect(libre.duree).toBe(PLANCHER_LECTURE_MS);
