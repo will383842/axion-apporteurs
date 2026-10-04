@@ -3,10 +3,12 @@
  * passage du lanceur.
  *
  * Une session de `sessions_espace` (l'espace ou la console, une seule table) dont la FIN — la plus
- * tardive de `expire_at` et de `revoque_at` — précède la limite ou l'atteint
- * (`SESSIONS_CONSERVATION_APRES_FIN_MOIS`, `retention.ts`) est SUPPRIMÉE, et son empreinte d'adresse
- * réseau avec elle : rien ne survit de la ligne. Une session vivante n'est jamais touchée : sa fin
- * est dans le futur, et la limite toujours dans le passé. Aucune table ne pointe vers une session.
+ * TÔT de `expire_at` et de `revoque_at`, une révocation nulle valant l'infini (juriste, #739,
+ * 5985633836) — précède la limite ou l'atteint (`SESSIONS_CONSERVATION_APRES_FIN_MOIS`,
+ * `retention.ts`) est SUPPRIMÉE, et son empreinte d'adresse réseau avec elle : rien ne survit de la
+ * ligne. Une session révoquée prend fin à sa révocation, même si son échéance tombe plus tard. Une
+ * session vivante, ni expirée ni révoquée, n'est jamais touchée : ses deux dates sont dans le futur
+ * ou nulles, et la limite toujours dans le passé. Aucune table ne pointe vers une session.
  * Par lots bornés ; idempotente, puisqu'une ligne supprimée n'est plus relue.
  */
 import type { Prisma, PrismaClient } from '@prisma/client';
@@ -23,11 +25,12 @@ export function limiteDesSessions(maintenant: Date): Date {
 }
 
 /**
- * Les sessions échues : la plus tardive de l'expiration et de la révocation est à la limite ou avant
- * — l'expiration l'est, et la révocation, si elle est posée, l'est aussi.
+ * Les sessions échues : la plus tôt de l'expiration et de la révocation est à la limite ou avant —
+ * l'expiration l'est, OU la révocation l'est. Une révocation nulle ne remplit jamais la seconde
+ * branche.
  */
 export function sessionsEchues(limite: Date): Prisma.SessionEspaceWhereInput {
-  return { expireAt: { lte: limite }, OR: [{ revoqueAt: null }, { revoqueAt: { lte: limite } }] };
+  return { OR: [{ expireAt: { lte: limite } }, { revoqueAt: { lte: limite } }] };
 }
 
 export async function purgerLesSessions(

@@ -73,11 +73,10 @@ describe('REQ-SEC-003 — les sessions finies sont supprimées six mois après l
     expect(limiteDesSessions(MAINTENANT)).toEqual(new Date('2026-04-15T12:00:00.000Z'));
   });
 
-  it('REQ-SEC-003 : TÉMOIN — l’échu est la plus tardive de l’expiration et de la révocation, à la limite ou avant', () => {
+  it('REQ-SEC-003 : TÉMOIN — l’échu est la plus tôt de l’expiration et de la révocation, à la limite ou avant', () => {
     const limite = new Date('2026-04-15T12:00:00.000Z');
     expect(sessionsEchues(limite)).toEqual({
-      expireAt: { lte: limite },
-      OR: [{ revoqueAt: null }, { revoqueAt: { lte: limite } }],
+      OR: [{ expireAt: { lte: limite } }, { revoqueAt: { lte: limite } }],
     });
   });
 

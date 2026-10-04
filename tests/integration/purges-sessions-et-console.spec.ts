@@ -5,8 +5,8 @@
  * fixtures et les lectures restent sous le propriétaire.
  *
  * CE QUE CE FICHIER GARDE : une session finie est supprimée, avec son empreinte d'adresse réseau, à six
- * mois de sa fin — gardée à J−1 ms, supprimée à J —, et sa fin est la plus tardive de l'expiration et
- * de la révocation ; un compte désactivé perd son nom, son adresse et l'empreinte à cinq ans — gardés
+ * mois de sa fin — gardée à J−1 ms, supprimée à J —, et sa fin est la plus tôt de l'expiration et de
+ * la révocation ; un compte désactivé perd son nom, son adresse et l'empreinte à cinq ans — gardés
  * à J−1 ms, vidés à J —, l'identifiant et le rôle restent, le journal des accès et le journal chaîné
  * ne bougent pas, et la même adresse s'invite de nouveau. Deux faces : une session vivante, un compte
  * actif ou désactivé depuis peu ne sont jamais touchés.
@@ -130,24 +130,32 @@ describe('REQ-SEC-003 — une session finie est supprimée six mois après sa fi
     expect(await base.prisma.sessionEspace.count({ where: { id, ipHash: { not: null } } })).toBe(0);
   });
 
-  it('REQ-SEC-003 : TÉMOIN — la fin est la plus tardive de l’expiration et de la révocation', async () => {
+  it('REQ-SEC-003 : TÉMOIN — la fin est la plus tôt de l’expiration et de la révocation : révoquée à J et expirant à J+29, la session part à J + 6 mois', async () => {
     const { id: utilisateur } = await unUtilisateur(null);
-    const expireAt = new Date('2026-03-10T22:00:00.000Z');
-    const revoqueAt = new Date('2026-03-20T22:00:00.000Z');
-    const id = await uneSession(utilisateur, {
+    // Révoquée à J, avant son échéance : elle prend fin à sa révocation (juriste, #739, 5985633836).
+    const J = new Date('2026-03-10T22:00:00.000Z');
+    const revoquee = await uneSession(utilisateur, {
       creeAt: new Date('2026-03-10T10:00:00.000Z'),
-      expireAt,
-      revoqueAt,
+      expireAt: new Date('2026-04-08T22:00:00.000Z'),
+      revoqueAt: J,
+    });
+    // Expirée à E, révoquée dix jours plus tard : elle avait pris fin à son expiration.
+    const E = new Date('2026-03-12T22:00:00.000Z');
+    const expiree = await uneSession(utilisateur, {
+      creeAt: new Date('2026-03-12T10:00:00.000Z'),
+      expireAt: E,
+      revoqueAt: new Date('2026-03-22T22:00:00.000Z'),
     });
 
-    // Six mois après l'expiration, la révocation plus tardive n'a pas encore les siens.
-    await purgerLesSessions(app, sixMoisApres(expireAt));
-    expect(await sessionExiste(id)).toBe(true);
-    await purgerLesSessions(app, MOINS_UNE_MS(sixMoisApres(revoqueAt)));
-    expect(await sessionExiste(id)).toBe(true);
+    await purgerLesSessions(app, MOINS_UNE_MS(sixMoisApres(J)));
+    expect(await sessionExiste(revoquee)).toBe(true);
+    await purgerLesSessions(app, sixMoisApres(J));
+    expect(await sessionExiste(revoquee)).toBe(false);
 
-    await purgerLesSessions(app, sixMoisApres(revoqueAt));
-    expect(await sessionExiste(id)).toBe(false);
+    await purgerLesSessions(app, MOINS_UNE_MS(sixMoisApres(E)));
+    expect(await sessionExiste(expiree)).toBe(true);
+    await purgerLesSessions(app, sixMoisApres(E));
+    expect(await sessionExiste(expiree)).toBe(false);
   });
 
   it('REQ-SEC-003 : TÉMOIN À DEUX FACES — la session finie part, la session vivante n’est jamais touchée', async () => {

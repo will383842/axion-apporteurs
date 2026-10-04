@@ -158,8 +158,8 @@ export const DUREES_DE_RETENTION = {
   },
   /**
    * SEC-65 (REQ-SEC-003) : une session de l'espace ou de la console, expirée ou révoquée, et son
-   * empreinte d'adresse réseau, effacées à ce délai de sa FIN — la plus tardive de `expire_at` et de
-   * `revoque_at`. Une session vivante n'est jamais touchée.
+   * empreinte d'adresse réseau, effacées à ce délai de sa FIN — la plus tôt de `expire_at` et de
+   * `revoque_at` (juriste, #739). Une session vivante n'est jamais touchée.
    */
   SESSIONS_CONSERVATION_APRES_FIN_MOIS: {
     valeur: 6,
