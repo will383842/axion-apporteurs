@@ -51,6 +51,10 @@ import {
   type ObjetAlerte,
 } from '../../src/server/integrations/telegram/alertes';
 import type { Notifieur } from '../../src/lib/notify';
+import {
+  TransfertNonConsigne,
+  exigerLeTransfertConsigne,
+} from '../../src/server/integrations/telegram/transfert';
 
 const SHA_COMPLET = /^[0-9a-f]{40}$/;
 /**
@@ -253,6 +257,17 @@ async function commandeAlerter(): Promise<number> {
   if (manquants.length > 0) {
     console.error(
       `::error title=deploy:alerter::alerte deploiement_non_atterri NON envoyée : ${manquants.join(', ')} absent(s)`
+    );
+    return 1;
+  }
+  // SEC-64 : le canal réel ne se construit qu'avec la décision du transfert consignée ; un refus est
+  // NOMMÉ et rougit le job, il n'envoie rien.
+  try {
+    exigerLeTransfertConsigne(process.env);
+  } catch (e) {
+    if (!(e instanceof TransfertNonConsigne)) throw e;
+    console.error(
+      `::error title=deploy:alerter::alerte deploiement_non_atterri NON envoyée : ${e.message}`
     );
     return 1;
   }

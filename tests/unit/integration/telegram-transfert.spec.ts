@@ -46,7 +46,7 @@ describe('REQ-INT-024 — le transfert vers Telegram attend la décision de Will
     );
   });
 
-  it('REQ-INT-024 : la décision consignée lève le verrou ; sans jeton, ou hors production, rien n’est refusé', () => {
+  it('REQ-INT-024 : la décision consignée lève le verrou ; sans jeton, rien n’est refusé', () => {
     expect(refus(() => exigerLeTransfertConsigne({ ...PRODUCTION, ...JETON }, DECISION))).toBe(
       'aucun refus'
     );
@@ -54,15 +54,24 @@ describe('REQ-INT-024 — le transfert vers Telegram attend la décision de Will
     expect(
       refus(() => exigerLeTransfertConsigne({ ...PRODUCTION, TELEGRAM_BOT_TOKEN: '' }, null))
     ).toBe('aucun refus');
-    // Une préversion n'est pas la production (`productionDeclaree`, QA-T08).
-    expect(
-      refus(() =>
-        exigerLeTransfertConsigne(
-          { NODE_ENV: 'production', PARTNERS_ENV: 'preview', ...JETON },
-          null
-        )
-      )
-    ).toBe('aucun refus');
+  });
+
+  it('REQ-INT-024 : TÉMOIN (sécurité, 5982916235) — le verrou juge le JETON posé, dans TOUT environnement où le canal réel se construirait : préversion, développement, forge', () => {
+    for (const env of [
+      { NODE_ENV: 'production', PARTNERS_ENV: 'preview' },
+      { NODE_ENV: 'development' },
+      {},
+    ]) {
+      expect(
+        refus(() => exigerLeTransfertConsigne({ ...env, ...JETON }, null)),
+        JSON.stringify(env)
+      ).toMatch(/^transfert_telegram_non_consigne/);
+    }
+  });
+
+  it('REQ-INT-024 : le verrou est un module PUR, sans aucune dépendance, importable par les scripts', () => {
+    const source = readFileSync('src/server/integrations/telegram/transfert.ts', 'utf8');
+    expect(source).not.toMatch(/^\s*import\s/m);
   });
 
   it('REQ-INT-024 : TÉMOIN — par défaut, le verrou lit la décision du code : aujourd’hui nulle, donc le démarrage en production avec un jeton est refusé', () => {
@@ -165,5 +174,40 @@ describe('REQ-SEC-033 — aucune alerte ne porte de donnée personnelle, catégo
       });
     }
     expect(sites).toBeGreaterThan(0);
+  });
+});
+
+/** Un fichier LIT le jeton du bot s'il le prend dans un environnement. */
+const LECTURE_DU_JETON = /\b(?:process\.)?env\.TELEGRAM_BOT_TOKEN\b/;
+/** Un lecteur du jeton sans appel du verrou. */
+const lecteurSansVerrou = (source: string): boolean =>
+  LECTURE_DU_JETON.test(source) && !/\bexigerLeTransfertConsigne\(/.test(source);
+
+describe('REQ-INT-024 — tout lecteur du jeton passe par le verrou (sécurité, 5982916235)', () => {
+  it('REQ-INT-024 : TÉMOIN STATIQUE — chaque fichier de src/ et scripts/ qui lit TELEGRAM_BOT_TOKEN appelle exigerLeTransfertConsigne', () => {
+    const lecteurs = [...fichiersDe('src'), ...fichiersDe('scripts')].filter(
+      (f) =>
+        /\.[cm]?[jt]s$/.test(f) &&
+        // Le verrou lui-même lit le jeton pour le juger.
+        f !== 'src/server/integrations/telegram/transfert.ts' &&
+        LECTURE_DU_JETON.test(readFileSync(f, 'utf8'))
+    );
+    expect(lecteurs.sort()).toEqual([
+      'scripts/gates/deploy-verify.ts',
+      'scripts/sauvegarde/cycle.ts',
+      'src/server/taches/inscriptions.ts',
+    ]);
+    for (const f of lecteurs) expect(lecteurSansVerrou(readFileSync(f, 'utf8')), f).toBe(false);
+  });
+
+  it('REQ-INT-024 : contre-témoin — un lecteur du jeton SANS le verrou est vu ; avec lui, non', () => {
+    expect(lecteurSansVerrou('const j = process.env.TELEGRAM_BOT_TOKEN;')).toBe(true);
+    expect(lecteurSansVerrou('const j = env.TELEGRAM_BOT_TOKEN;')).toBe(true);
+    expect(
+      lecteurSansVerrou(
+        'exigerLeTransfertConsigne(process.env);\nconst j = process.env.TELEGRAM_BOT_TOKEN;'
+      )
+    ).toBe(false);
+    expect(lecteurSansVerrou('const autre = env.TELEGRAM_CHAT_ID;')).toBe(false);
   });
 });

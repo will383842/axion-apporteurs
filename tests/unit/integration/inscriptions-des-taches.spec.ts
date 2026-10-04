@@ -393,10 +393,17 @@ describe('REQ-QA-027 — le canal d’alerte du serveur', () => {
     }
   });
 
-  it('REQ-QA-027 : avec un jeton et un salon, un canal qui alerte', () => {
-    const canal = canalDAlerte({ TELEGRAM_BOT_TOKEN: 'jeton', TELEGRAM_CHAT_ID: '42' });
+  it('REQ-QA-027 : avec un jeton, un salon et la décision du transfert consignée (SEC-64), un canal qui alerte', () => {
+    const decision = { pays: 'p', encadrement: 'e', decideLe: '2026-10-04', source: 's' };
+    const canal = canalDAlerte({ TELEGRAM_BOT_TOKEN: 'jeton', TELEGRAM_CHAT_ID: '42' }, decision);
     expect(canal).not.toBeNull();
     expect(typeof canal!.alerter).toBe('function');
+  });
+
+  it('REQ-QA-027 : SEC-64 — un jeton et un salon SANS décision consignée : aucun canal, un refus nommé', () => {
+    expect(() => canalDAlerte({ TELEGRAM_BOT_TOKEN: 'jeton', TELEGRAM_CHAT_ID: '42' })).toThrow(
+      /^transfert_telegram_non_consigne/
+    );
   });
 });
 

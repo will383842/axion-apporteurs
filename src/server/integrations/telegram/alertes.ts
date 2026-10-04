@@ -35,7 +35,7 @@ import { MOTIFS_DE_NON_RENDU } from '../../attribution/notifications';
 import { TypeEvenementRecu } from '@prisma/client';
 import type { Horloge } from '../../../domain/temps/horloge';
 import { MS_PAR_HEURE } from '../../../domain/temps/calendrier-civil';
-import { productionDeclaree, type Notifieur } from '../../../lib/notify';
+import type { Notifieur } from '../../../lib/notify';
 
 /**
  * LES CATÉGORIES D'ALERTE, fermées — la liste, et rien qu'elle.
@@ -366,47 +366,10 @@ export function notifieurTelegram(
 
 // ── le transfert hors de l'Union européenne (SEC-64) ─────────────────────────────────────────────
 
-/** Ce que Williams tranche avant la mise en service des alertes (juriste, #708, 5981327565). */
-export type DecisionDuTransfert = {
-  /** Le pays du service Telegram retenu. */
-  readonly pays: string;
-  /** L'encadrement du transfert (décision d'adéquation, clauses types, ou autre fondement). */
-  readonly encadrement: string;
-  /** Le jour de la décision, AAAA-MM-JJ. */
-  readonly decideLe: string;
-  /** Où la décision est consignée (issue, commentaire, ou décision de Williams). */
-  readonly source: string;
-};
-
-/**
- * SEC-64 (REQ-INT-024, REQ-SEC-033) — LA décision de Williams sur le transfert des alertes vers
- * Telegram, service situé hors de l'Union européenne. NULLE tant qu'elle n'est pas tranchée : elle se
- * consigne ICI et dans la cellule « Transferts hors Union européenne » de TRT-CONSOLE
- * (`docs/rgpd/registre-article-30.md`), et un témoin confronte les deux.
- */
-export const DECISION_TRANSFERT_TELEGRAM: DecisionDuTransfert | null = null;
-
-export class TransfertNonConsigne extends Error {
-  readonly motif = 'transfert_telegram_non_consigne';
-  constructor() {
-    super(
-      'transfert_telegram_non_consigne : TELEGRAM_BOT_TOKEN est posé en production avant que le pays et ' +
-        "l'encadrement du transfert soient tranchés et consignés au registre (SEC-64)"
-    );
-    this.name = 'TransfertNonConsigne';
-  }
-}
-
-/**
- * Le VERROU du démarrage (juriste, #708) : en production déclarée (`productionDeclaree`), un jeton du
- * bot sans décision consignée est REFUSÉ, nommé — le canal ne se construit pas, et le lanceur ne
- * démarre pas. Hors production, ou sans jeton, rien n'est refusé : aucun transfert n'a lieu.
- */
-export function exigerLeTransfertConsigne(
-  env: Readonly<Record<string, string | undefined>>,
-  decision: DecisionDuTransfert | null = DECISION_TRANSFERT_TELEGRAM
-): void {
-  const jeton = env.TELEGRAM_BOT_TOKEN;
-  if (decision !== null || jeton === undefined || jeton === '') return;
-  if (productionDeclaree(env)) throw new TransfertNonConsigne();
-}
+// Le verrou vit dans un module PUR, importable par les scripts de la forge (sécurité, 5982916235).
+export {
+  DECISION_TRANSFERT_TELEGRAM,
+  TransfertNonConsigne,
+  exigerLeTransfertConsigne,
+  type DecisionDuTransfert,
+} from './transfert';
