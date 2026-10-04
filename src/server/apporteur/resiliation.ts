@@ -24,13 +24,16 @@
  * de l'apporteur (`ordinaire_apporteur`, demandée par écrit) est consignée par la console. Jugé AVANT
  * tout verrou : un refus ne prend rien.
  */
+import { randomUUID } from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import { transitionner } from '../../domain/apporteur/matrice';
 import type { MotifResiliation, StatutApporteur } from '../../domain/apporteur/statut';
 import {
+  ARTICLES_MISE_EN_DEMEURE,
   jugerLaResiliationPourManquement,
   type ArticleMiseEnDemeure,
 } from '../../domain/apporteur/resiliation';
+import { versParis } from '../../domain/temps/paris';
 import {
   ETATS_ATTRIBUTION,
   TRANSITIONS_ATTRIBUTION,
@@ -39,6 +42,8 @@ import {
 import { ajouterEvenement, lireLaChargeDUnFait } from '../evenement/journal';
 import { revoquerJetonsALaResiliation } from '../auth/jeton-depot';
 import { transitionnerUneAttribution } from '../attribution/transitionner';
+import { faitsPourLeCourriel } from '../attribution/notifications';
+import { colonnesPii, type ClesPii } from '../securite/pii';
 
 type Tx = Prisma.TransactionClient;
 
@@ -50,7 +55,12 @@ export class ErreurResiliation extends Error {
     | 'acteur_non_humain'
     | 'apporteur_introuvable'
     | 'manquement_incoherent'
-    | 'mise_en_demeure_requise';
+    | 'mise_en_demeure_requise'
+    | 'motif_de_la_decision_incoherent'
+    | 'date_de_reception_requise'
+    | 'faits_refuses'
+    | 'article_hors_liste'
+    | 'statut_sans_contrat';
 
   constructor(code: ErreurResiliation['code'], detail: string) {
     super(`${code} : ${detail}`);
@@ -70,8 +80,132 @@ export interface DemandeDeResiliation {
     readonly article: ArticleMiseEnDemeure;
     readonly inexecutionIrremediable: boolean;
   };
+  /**
+   * Le `{motif}` de la décision motivée : pour `manquement_grave`, et lui seul (A02, 5982202417).
+   * Saisi par une personne, sous les règles de `{faits}` (DM-55) ; CHIFFRÉ dans la décision.
+   */
+  readonly motifDeLaDecision?: string;
+  /** La réception de l'écrit de l'apporteur : exigée pour `ordinaire_apporteur`. */
+  readonly dateReception?: Date;
   readonly acteur: ActeurDeResiliation;
   readonly maintenant: Date;
+}
+
+/** Le modèle des blocs chiffrés d'une décision de contrat (lien du bloc, `pii.ts`). */
+export const MODELE_DECISION_DE_CONTRAT = 'DecisionDeContrat';
+
+/** Les statuts liés par un contrat : seuls eux reçoivent une mise en demeure. */
+const SOUS_CONTRAT: readonly StatutApporteur[] = ['signe', 'suspendu'];
+
+/** Le jour civil de Paris d'un instant, en colonne DATE (minuit UTC de ce jour). */
+function jourDeParis(instant: Date): Date {
+  const { annee, mois, jour } = versParis(instant.getTime());
+  return new Date(Date.UTC(annee, mois - 1, jour));
+}
+
+/** Un texte saisi par une personne, sous les règles de `{faits}` (DM-55) : non vide, borné. */
+function exigerUnTexteAdmis(texte: string): void {
+  if (faitsPourLeCourriel(texte) === null) {
+    throw new ErreurResiliation('faits_refuses', 'texte vide ou au-delà de la borne de DM-55');
+  }
+}
+
+function exigerUnActeurHumain(acteur: { par: string }): void {
+  if (acteur.par !== 'utilisateur_console') {
+    throw new ErreurResiliation(
+      'acteur_non_humain',
+      'une décision de contrat est un acte d’un utilisateur de la console, jamais du système'
+    );
+  }
+}
+
+/**
+ * La décision et sa notification, dans la transaction du geste : le texte CHIFFRÉ dans la décision,
+ * jamais au journal ; la notification porte l'événement ET la décision — le passage enverra le
+ * courriel, dont l'`envoye_at` fait courir le délai.
+ */
+async function deciderEtNotifier(
+  tx: Tx,
+  d: {
+    apporteurId: string;
+    geste: 'mise_en_demeure' | 'resiliation';
+    evenementId: bigint;
+    article?: ArticleMiseEnDemeure;
+    texte?: string;
+    dates?: { reception: Date; effet: Date };
+  },
+  cles: ClesPii
+): Promise<string> {
+  const id = randomUUID();
+  await tx.decisionDeContrat.create({
+    data: {
+      ...(d.texte === undefined
+        ? { id }
+        : colonnesPii({ modele: MODELE_DECISION_DE_CONTRAT, id }, { texte: d.texte }, cles)),
+      apporteurId: d.apporteurId,
+      geste: d.geste,
+      ...(d.article === undefined ? {} : { article: d.article }),
+      ...(d.dates === undefined
+        ? {}
+        : { dateReception: d.dates.reception, dateEffet: d.dates.effet }),
+      evenementId: d.evenementId,
+    },
+  });
+  await tx.notificationEspace.create({
+    data: {
+      apporteurId: d.apporteurId,
+      cle: d.geste,
+      evenementId: d.evenementId,
+      decisionContratId: id,
+    },
+  });
+  return id;
+}
+
+export interface DemandeDeMiseEnDemeure {
+  readonly apporteurId: string;
+  readonly article: ArticleMiseEnDemeure;
+  /** Les `{faits}`, saisis par une personne : sous les règles de DM-55, CHIFFRÉS, jamais au journal. */
+  readonly faits: string;
+  readonly acteur: ActeurDeResiliation;
+  readonly maintenant: Date;
+}
+
+/**
+ * LE GESTE MINIMAL DE MISE EN DEMEURE (juriste, #703, 5980966503 §3 ; forme d'A02) : un acte de la
+ * console, l'article de la liste fermée et les faits ; le fait daté au journal SANS les faits, la
+ * décision chiffrée, la notification `mise_en_demeure`. Un apporteur hors contrat n'en reçoit pas.
+ * Une mise en demeure n'est ni un avertissement ni un antécédent : rien ne les compte (art. 11.2).
+ */
+export async function mettreEnDemeure(
+  tx: Tx,
+  demande: DemandeDeMiseEnDemeure,
+  cles: ClesPii
+): Promise<{ decisionId: string; evenementId: bigint }> {
+  const { apporteurId, article, faits, acteur, maintenant } = demande;
+  exigerUnActeurHumain(acteur);
+  if (!(ARTICLES_MISE_EN_DEMEURE as readonly string[]).includes(article)) {
+    throw new ErreurResiliation('article_hors_liste', "l'article n'est pas visé par l'art. 11.2");
+  }
+  exigerUnTexteAdmis(faits);
+  const statut = await statutVerrouille(tx, apporteurId);
+  if (!SOUS_CONTRAT.includes(statut)) {
+    throw new ErreurResiliation('statut_sans_contrat', `statut ${statut}`);
+  }
+  const inscrit = await ajouterEvenement(tx, {
+    type: 'apporteur_mis_en_demeure',
+    agregat: 'apporteur',
+    agregatId: apporteurId,
+    survenuAt: maintenant,
+    charge: { article, acteur },
+  });
+  const evenementId = BigInt(inscrit.id);
+  const decisionId = await deciderEtNotifier(
+    tx,
+    { apporteurId, geste: 'mise_en_demeure', evenementId, article, texte: faits },
+    cles
+  );
+  return { decisionId, evenementId };
 }
 
 /**
@@ -123,20 +257,29 @@ async function statutVerrouille(tx: Tx, apporteurId: string): Promise<StatutAppo
 /** Résilie un apporteur dans la transaction `tx`. Rend l'état de départ, d'arrivée et les jetons révoqués. */
 export async function resilierUnApporteur(
   tx: Tx,
-  demande: DemandeDeResiliation
+  demande: DemandeDeResiliation,
+  cles: ClesPii
 ): Promise<{ de: StatutApporteur; vers: StatutApporteur; jetonsRevoques: number }> {
-  const { apporteurId, motif, acteur, maintenant } = demande;
-  if ((acteur as { par: string }).par !== 'utilisateur_console') {
-    throw new ErreurResiliation(
-      'acteur_non_humain',
-      'une résiliation est un acte d’un utilisateur de la console, jamais du système'
-    );
-  }
+  const { apporteurId, motif, acteur, maintenant, motifDeLaDecision, dateReception } = demande;
+  exigerUnActeurHumain(acteur);
   const { manquement } = demande;
   if ((motif === 'manquement_grave') !== (manquement !== undefined)) {
     throw new ErreurResiliation(
       'manquement_incoherent',
       "l'article en cause accompagne manquement_grave, et lui seul"
+    );
+  }
+  if ((motif === 'manquement_grave') !== (motifDeLaDecision !== undefined)) {
+    throw new ErreurResiliation(
+      'motif_de_la_decision_incoherent',
+      'la décision motivée accompagne manquement_grave, et lui seul'
+    );
+  }
+  if (motifDeLaDecision !== undefined) exigerUnTexteAdmis(motifDeLaDecision);
+  if (motif === 'ordinaire_apporteur' && dateReception === undefined) {
+    throw new ErreurResiliation(
+      'date_de_reception_requise',
+      "la réception de l'écrit de l'apporteur fait courir le préavis"
     );
   }
   const de = await statutVerrouille(tx, apporteurId);
@@ -164,7 +307,7 @@ export async function resilierUnApporteur(
     where: { id: apporteurId },
     data: { statut: vers, resiliationMotif, sessionVersion: { increment: 1 } },
   });
-  await ajouterEvenement(tx, {
+  const inscrit = await ajouterEvenement(tx, {
     type: 'apporteur_statut_modifie',
     agregat: 'apporteur',
     agregatId: apporteurId,
@@ -177,6 +320,22 @@ export async function resilierUnApporteur(
       acteur,
     },
   });
+  // La décision et la notification de la fin du contrat (juriste et A02, #703). La date d'effet est le
+  // jour du geste : le runbook place le geste à la date d'effet.
+  await deciderEtNotifier(
+    tx,
+    {
+      apporteurId,
+      geste: 'resiliation',
+      evenementId: BigInt(inscrit.id),
+      ...(motifDeLaDecision === undefined ? {} : { texte: motifDeLaDecision }),
+      dates: {
+        reception: jourDeParis(dateReception ?? maintenant),
+        effet: jourDeParis(maintenant),
+      },
+    },
+    cles
+  );
   const attributions = await tx.attribution.findMany({
     where: { apporteurId, statut: { in: [...A_TRAITER] } },
     select: { id: true, statut: true },

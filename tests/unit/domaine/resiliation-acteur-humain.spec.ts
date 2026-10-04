@@ -84,6 +84,7 @@ function txSimule(
 ) {
   let statut = statutInitial;
   const lectures: unknown[] = [];
+  const ecrits: Record<string, unknown>[] = [];
   const ordre: string[] = [];
   const mises: unknown[] = [];
   const revocations: unknown[] = [];
@@ -120,9 +121,21 @@ function txSimule(
         lectures.push(q);
         return monde.misesEnDemeure ?? [];
       },
+      create: async (q: unknown) => {
+        ordre.push('notification');
+        ecrits.push({ notification: q });
+        return { id: 'n-1' };
+      },
+    },
+    decisionDeContrat: {
+      create: async (q: unknown) => {
+        ordre.push('decision');
+        ecrits.push({ decision: q });
+        return {};
+      },
     },
   };
-  return { tx: tx as never, ordre, mises, revocations, lectures };
+  return { tx: tx as never, ordre, mises, revocations, lectures, ecrits };
 }
 
 async function refusDe(p: Promise<unknown>): Promise<{ code: string }> {
@@ -146,12 +159,16 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
   it('REQ-SEC-032 : TÉMOIN — signe → resilie, motif posé, sessionVersion incrémentée, événement écrit, jetons révoqués, dans cet ordre', async () => {
     const { resilierUnApporteur } = await import('../../../src/server/apporteur/resiliation');
     const t = txSimule('signe');
-    const r = await resilierUnApporteur(t.tx, {
-      apporteurId: ID,
-      motif: 'ordinaire_axion',
-      acteur: CONSOLE,
-      maintenant: MAINTENANT,
-    });
+    const r = await resilierUnApporteur(
+      t.tx,
+      {
+        apporteurId: ID,
+        motif: 'ordinaire_axion',
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+      },
+      await clesDeTest()
+    );
     expect(r).toMatchObject({ de: 'signe', vers: 'resilie' });
     expect(t.mises).toStrictEqual([
       {
@@ -186,22 +203,31 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
   it('REQ-SEC-032 : une suspension se résilie aussi ; un statut sans flèche est refusé, et rien n’est écrit', async () => {
     const { resilierUnApporteur } = await import('../../../src/server/apporteur/resiliation');
     const depuisSuspendu = txSimule('suspendu');
-    await resilierUnApporteur(depuisSuspendu.tx, {
-      apporteurId: ID,
-      motif: 'manquement_grave',
-      manquement: { article: '6', inexecutionIrremediable: true },
-      acteur: CONSOLE,
-      maintenant: MAINTENANT,
-    });
+    await resilierUnApporteur(
+      depuisSuspendu.tx,
+      {
+        apporteurId: ID,
+        motif: 'manquement_grave',
+        manquement: { article: '6', inexecutionIrremediable: true },
+        motifDeLaDecision: 'Dépôts fictifs répétés',
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+      },
+      await clesDeTest()
+    );
     expect(depuisSuspendu.mises).toHaveLength(1);
     const deja = txSimule('resilie');
     const e = await refusDe(
-      resilierUnApporteur(deja.tx, {
-        apporteurId: ID,
-        motif: 'ordinaire_axion',
-        acteur: CONSOLE,
-        maintenant: MAINTENANT,
-      })
+      resilierUnApporteur(
+        deja.tx,
+        {
+          apporteurId: ID,
+          motif: 'ordinaire_axion',
+          acteur: CONSOLE,
+          maintenant: MAINTENANT,
+        },
+        await clesDeTest()
+      )
     );
     expect(e.code).toBe('transition_refusee');
     expect(deja.mises).toStrictEqual([]);
@@ -213,12 +239,16 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
     const t = txSimule('signe');
     const SYSTEME = { par: 'systeme' };
     const e = await refusDe(
-      resilierUnApporteur(t.tx, {
-        apporteurId: ID,
-        motif: 'ordinaire_axion',
-        acteur: SYSTEME as never,
-        maintenant: MAINTENANT,
-      })
+      resilierUnApporteur(
+        t.tx,
+        {
+          apporteurId: ID,
+          motif: 'ordinaire_axion',
+          acteur: SYSTEME as never,
+          maintenant: MAINTENANT,
+        },
+        await clesDeTest()
+      )
     );
     expect(e.code).toBe('acteur_non_humain');
     expect(t.ordre).toStrictEqual([]);
@@ -237,12 +267,16 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
       { id: 'a-convertie', statut: 'convertie' },
     ];
     const t = txSimule('signe', { attributions });
-    await resilierUnApporteur(t.tx, {
-      apporteurId: ID,
-      motif: 'ordinaire_axion',
-      acteur: CONSOLE,
-      maintenant: MAINTENANT,
-    });
+    await resilierUnApporteur(
+      t.tx,
+      {
+        apporteurId: ID,
+        motif: 'ordinaire_axion',
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+      },
+      await clesDeTest()
+    );
     expect(t.lectures[0]).toStrictEqual({
       where: {
         apporteurId: ID,
@@ -295,13 +329,18 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
       ],
     });
     const e = await refusDe(
-      resilierUnApporteur(t.tx, {
-        apporteurId: ID,
-        motif: 'manquement_grave',
-        manquement: { article: '6', inexecutionIrremediable: false },
-        acteur: CONSOLE,
-        maintenant: MAINTENANT,
-      })
+      resilierUnApporteur(
+        t.tx,
+        {
+          apporteurId: ID,
+          motif: 'manquement_grave',
+          manquement: { article: '6', inexecutionIrremediable: false },
+          motifDeLaDecision: 'Dépôts fictifs répétés',
+          acteur: CONSOLE,
+          maintenant: MAINTENANT,
+        },
+        await clesDeTest()
+      )
     );
     expect(e.code).toBe('mise_en_demeure_requise');
     expect(t.mises).toStrictEqual([]);
@@ -329,35 +368,48 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
         },
       ],
     });
-    const r = await resilierUnApporteur(t.tx, {
-      apporteurId: ID,
-      motif: 'manquement_grave',
-      manquement: { article: '6', inexecutionIrremediable: false },
-      acteur: CONSOLE,
-      maintenant: MAINTENANT,
-    });
+    const r = await resilierUnApporteur(
+      t.tx,
+      {
+        apporteurId: ID,
+        motif: 'manquement_grave',
+        manquement: { article: '6', inexecutionIrremediable: false },
+        motifDeLaDecision: 'Dépôts fictifs répétés',
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+      },
+      await clesDeTest()
+    );
     expect(r.vers).toBe('resilie');
   });
 
   it('REQ-JUR-006 : le manquement accompagne manquement_grave, et lui seul (manquement_incoherent)', async () => {
     const { resilierUnApporteur } = await import('../../../src/server/apporteur/resiliation');
     const sans = await refusDe(
-      resilierUnApporteur(txSimule('signe').tx, {
-        apporteurId: ID,
-        motif: 'manquement_grave',
-        acteur: CONSOLE,
-        maintenant: MAINTENANT,
-      })
+      resilierUnApporteur(
+        txSimule('signe').tx,
+        {
+          apporteurId: ID,
+          motif: 'manquement_grave',
+          acteur: CONSOLE,
+          maintenant: MAINTENANT,
+        },
+        await clesDeTest()
+      )
     );
     expect(sans.code).toBe('manquement_incoherent');
     const enTrop = await refusDe(
-      resilierUnApporteur(txSimule('signe').tx, {
-        apporteurId: ID,
-        motif: 'ordinaire_axion',
-        manquement: { article: '6', inexecutionIrremediable: true },
-        acteur: CONSOLE,
-        maintenant: MAINTENANT,
-      })
+      resilierUnApporteur(
+        txSimule('signe').tx,
+        {
+          apporteurId: ID,
+          motif: 'ordinaire_axion',
+          manquement: { article: '6', inexecutionIrremediable: true },
+          acteur: CONSOLE,
+          maintenant: MAINTENANT,
+        },
+        await clesDeTest()
+      )
     );
     expect(enTrop.code).toBe('manquement_incoherent');
   });
@@ -712,5 +764,188 @@ describe('REQ-JUR-006 — le rendu de la mise en demeure et de la résiliation',
         'ordinaire_axion' as never
       )
     ).toThrow('cause_en_trop');
+  });
+});
+
+/** Des clés de test, fabriquées à l'exécution (jamais un secret réel). */
+async function clesDeTest() {
+  const { clesPii } = await import('../../../src/server/securite/pii');
+  const { NOMS_DES_SECRETS } = await import('../../../src/lib/env');
+  return clesPii({
+    NODE_ENV: 'test',
+    ...Object.fromEntries(
+      NOMS_DES_SECRETS.map((n) => [n, `temoin-sec-19-${n.toLowerCase()}-`.padEnd(48, '0')])
+    ),
+    PII_ENCRYPTION_KEY: 'e'.repeat(64),
+  });
+}
+
+/**
+ * Les ÉMETTEURS des deux notifications du contrat (A02, #703, 5980982895 et 5982083436) : chaque
+ * geste écrit son fait au journal, sa décision (le texte CHIFFRÉ, jamais au journal) et sa
+ * notification, qui porte l'événement ET la décision — le passage enverra le courriel.
+ */
+describe('REQ-JUR-006 — les émetteurs : la mise en demeure et la décision de résiliation', () => {
+  beforeEach(() => {
+    journalSimule.ajouterEvenement.mockReset();
+    journalSimule.ajouterEvenement.mockResolvedValue({ id: '41', selfHash: 'x' });
+    transitionnerSimule.transitionnerUneAttribution.mockReset();
+    transitionnerSimule.transitionnerUneAttribution.mockResolvedValue({});
+  });
+
+  it('REQ-JUR-006 : TÉMOIN — la mise en demeure écrit son fait {article, acteur}, sa décision chiffrée et sa notification liée aux deux', async () => {
+    const { mettreEnDemeure } = await import('../../../src/server/apporteur/resiliation');
+    const { decryptPii } = await import('../../../src/server/securite/pii');
+    const cles = await clesDeTest();
+    const t = txSimule('signe');
+    const r = await mettreEnDemeure(
+      t.tx,
+      {
+        apporteurId: ID,
+        article: '6',
+        faits: 'Trois dépôts sans échange réel',
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+      },
+      cles
+    );
+    expect(journalSimule.ajouterEvenement.mock.calls[0]![1]).toStrictEqual({
+      type: 'apporteur_mis_en_demeure',
+      agregat: 'apporteur',
+      agregatId: ID,
+      survenuAt: MAINTENANT,
+      charge: { article: '6', acteur: CONSOLE },
+    });
+    const decision = (t.ecrits[0] as { decision: { data: Record<string, unknown> } }).decision.data;
+    expect(decision).toMatchObject({
+      id: r.decisionId,
+      apporteurId: ID,
+      geste: 'mise_en_demeure',
+      article: '6',
+      evenementId: 41n,
+    });
+    expect(decision).not.toHaveProperty('dateEffet');
+    expect(
+      decryptPii(
+        { modele: 'DecisionDeContrat', champ: 'texteChiffre', id: r.decisionId },
+        decision.texteChiffre as Uint8Array,
+        cles
+      )
+    ).toBe('Trois dépôts sans échange réel');
+    expect((t.ecrits[1] as { notification: unknown }).notification).toStrictEqual({
+      data: {
+        apporteurId: ID,
+        cle: 'mise_en_demeure',
+        evenementId: 41n,
+        decisionContratId: r.decisionId,
+      },
+    });
+    expect(t.ordre).toStrictEqual(['verrou', 'decision', 'notification']);
+  });
+
+  it('REQ-JUR-006 : la mise en demeure est refusée, nommée, sans rien écrire : acteur système, article hors liste, faits vides ou trop longs, apporteur sans contrat', async () => {
+    const { mettreEnDemeure } = await import('../../../src/server/apporteur/resiliation');
+    const { FAITS_ANOMALIE_CARACTERES_MAX } = await import('../../../src/domain/seuils/ssot');
+    const cles = await clesDeTest();
+    const base = {
+      apporteurId: ID,
+      article: '6' as const,
+      faits: 'Des faits',
+      acteur: CONSOLE,
+      maintenant: MAINTENANT,
+    };
+    const code = async (statut: string, d: Record<string, unknown>) => {
+      const t = txSimule(statut);
+      const demande: unknown = { ...base, ...d };
+      const e = await refusDe(mettreEnDemeure(t.tx, demande as never, cles));
+      expect(t.ecrits).toStrictEqual([]);
+      return e.code;
+    };
+    expect(await code('signe', { acteur: { par: 'systeme' } })).toBe('acteur_non_humain');
+    expect(await code('signe', { article: '11.2' })).toBe('article_hors_liste');
+    expect(await code('signe', { faits: '   ' })).toBe('faits_refuses');
+    expect(
+      await code('signe', { faits: 'x'.repeat(FAITS_ANOMALIE_CARACTERES_MAX.valeur + 1) })
+    ).toBe('faits_refuses');
+    expect(await code('resilie', {})).toBe('statut_sans_contrat');
+    expect(await code('kyc_en_cours', {})).toBe('statut_sans_contrat');
+    expect(journalSimule.ajouterEvenement).not.toHaveBeenCalled();
+  });
+
+  it('REQ-DM-011 : TÉMOIN — la résiliation écrit sa décision (dates à Paris) et sa notification, liées à l’événement du statut', async () => {
+    const { resilierUnApporteur } = await import('../../../src/server/apporteur/resiliation');
+    const cles = await clesDeTest();
+    const t = txSimule('signe');
+    await resilierUnApporteur(
+      t.tx,
+      {
+        apporteurId: ID,
+        motif: 'ordinaire_apporteur',
+        dateReception: new Date('2027-01-29T23:30:00.000Z'),
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+      },
+      cles
+    );
+    const decision = (
+      t.ecrits.find((e) => 'decision' in e) as { decision: { data: Record<string, unknown> } }
+    ).decision.data;
+    // 29 janvier 23 h 30 UTC = 30 janvier à Paris ; le geste du 1er mars à 10 h, Paris.
+    expect(decision).toMatchObject({
+      apporteurId: ID,
+      geste: 'resiliation',
+      dateReception: new Date('2027-01-30T00:00:00.000Z'),
+      dateEffet: new Date('2027-03-01T00:00:00.000Z'),
+      evenementId: 41n,
+    });
+    expect(decision).not.toHaveProperty('texteChiffre');
+    const notification = (
+      t.ecrits.find((e) => 'notification' in e) as {
+        notification: { data: Record<string, unknown> };
+      }
+    ).notification.data;
+    expect(notification).toStrictEqual({
+      apporteurId: ID,
+      cle: 'resiliation',
+      evenementId: 41n,
+      decisionContratId: decision.id,
+    });
+  });
+
+  it('REQ-JUR-006 : TÉMOIN (A02, 5982202417) — manquement_grave SANS texte est refusé ; les motifs ordinaires et la fin de plein droit passent sans texte, et refusent un texte', async () => {
+    const { resilierUnApporteur } = await import('../../../src/server/apporteur/resiliation');
+    const cles = await clesDeTest();
+    const demande = (motif: string, motifDeLaDecision?: string) => ({
+      apporteurId: ID,
+      motif,
+      ...(motif === 'manquement_grave'
+        ? { manquement: { article: '6', inexecutionIrremediable: true } }
+        : {}),
+      ...(motifDeLaDecision === undefined ? {} : { motifDeLaDecision }),
+      ...(motif === 'ordinaire_apporteur' ? { dateReception: MAINTENANT } : {}),
+      acteur: CONSOLE,
+      maintenant: MAINTENANT,
+    });
+    const sans = txSimule('signe');
+    expect(
+      (await refusDe(resilierUnApporteur(sans.tx, demande('manquement_grave') as never, cles))).code
+    ).toBe('motif_de_la_decision_incoherent');
+    expect(sans.mises).toStrictEqual([]);
+    const avec = txSimule('signe');
+    await resilierUnApporteur(
+      avec.tx,
+      demande('manquement_grave', 'Dépôts fictifs répétés') as never,
+      cles
+    );
+    expect(avec.ecrits.find((e) => 'decision' in e)).toBeDefined();
+    for (const motif of ['ordinaire_apporteur', 'ordinaire_axion', 'fin_de_plein_droit']) {
+      const t = txSimule('signe');
+      await resilierUnApporteur(t.tx, demande(motif) as never, cles);
+      const d = txSimule('signe');
+      expect(
+        (await refusDe(resilierUnApporteur(d.tx, demande(motif, 'Un texte') as never, cles))).code,
+        motif
+      ).toBe('motif_de_la_decision_incoherent');
+    }
   });
 });
