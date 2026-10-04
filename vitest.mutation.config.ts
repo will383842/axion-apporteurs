@@ -36,6 +36,9 @@ import base from './vitest.config';
  * l'instrumentation dans l'arbre de travail — mesuré le 2026-09-25, 220 fichiers suivis réécrits.
  */
 const ECARTES = [
+  // DM-55 : ce témoin LIT le texte de src/server/taches/envoyer-notifications-espace.ts (la forme exacte
+  // du lot, `cle: { in: [...CLES_ENVOYEES_PAR_LE_PASSAGE] }`), que Stryker instrumente dans le bac.
+  'le passage n.envoie aucune autre clé : son lot lit la liste, et elle seule',
   'aucun fichier de src/domain/temps/ ne nomme Date',
   'le module n.écrit aucune durée de dormance en dur',
   'le module n.importe que le domaine',
