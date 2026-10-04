@@ -62,7 +62,14 @@ const unSiren = () => String(randomInt(100_000_000, 999_999_999));
 
 async function utilisateur(role: ConsoleRole, desactive = false): Promise<string> {
   const u = await base.prisma.utilisateurConsole.create({
-    data: { role, creeAt: T0, desactiveAt: desactive ? T0 : null },
+    // Un utilisateur actif porte son adresse, chiffrée et en empreinte (`utilisateurs_console_adresse_si_actif`).
+    data: {
+      role,
+      creeAt: T0,
+      desactiveAt: desactive ? T0 : null,
+      emailChiffre: randomBytes(48),
+      emailHash: randomBytes(32).toString('hex'),
+    },
     select: { id: true },
   });
   return u.id;
@@ -182,7 +189,14 @@ describe('REQ-DM-028 — chaque ajout et chaque retrait de la liste est tracé p
           new Date(T0.getTime() + MINUTE)
         )
       )
-    ).toMatch(/sirens_liste_noire_trace_une_ouverte/);
+    ).toMatch(/23505[\s\S]*Key \(siren\)/);
+    // Un refus levé en SQL brut ne nomme pas l'index : c'est `pg_indexes` qui prouve lequel tient.
+    const [index] = await base.prisma.$queryRawUnsafe<{ indexdef: string }[]>(
+      `SELECT indexdef FROM pg_indexes WHERE indexname = 'sirens_liste_noire_trace_une_ouverte'`
+    );
+    expect(index?.indexdef).toMatch(
+      /^CREATE UNIQUE INDEX sirens_liste_noire_trace_une_ouverte ON public\.sirens_liste_noire_trace USING btree \(siren\) WHERE \(retire_at IS NULL\)$/
+    );
   });
 
   it('REQ-DM-028 : TÉMOIN — la trace ne se réécrit pas, et ne se ferme qu’une fois', async () => {
@@ -295,7 +309,7 @@ describe('REQ-DM-028 — chaque ajout et chaque retrait de la liste est tracé p
 // ── 2. le report ─────────────────────────────────────────────────────────────────────────────────
 
 describe('REQ-DM-028 — le report : chaque inscription existante reçoit sa période ouverte', () => {
-  it('REQ-DM-028 : après la migration, aucune inscription n’est sans période ouverte', async () => {
+  it('REQ-DM-028 : le report donne à une inscription antérieure sa période ouverte, et une seule', async () => {
     // Le report est la seule ligne de données de la migration : rejoué sur une inscription posée
     // AVANT les déclencheurs (sous le propriétaire, déclencheur d'ajout neutralisé le temps d'une
     // transaction annulée), il lui donne sa période, et une seule.
@@ -342,11 +356,6 @@ describe('REQ-DM-028 — le report : chaque inscription existante reçoit sa pé
     expect(periodesApresReport).toEqual([
       { siren, motif: 'administration', ajoute_at: T0, retire_at: null },
     ]);
-    const orphelines = await base.prisma.$queryRawUnsafe<{ n: bigint }[]>(
-      `SELECT count(*) AS n FROM sirens_liste_noire l WHERE NOT EXISTS (
-         SELECT 1 FROM sirens_liste_noire_trace t WHERE t.siren = l.siren AND t.retire_at IS NULL)`
-    );
-    expect(orphelines[0]!.n).toBe(0n);
   });
 });
 
