@@ -30,7 +30,8 @@ import { composerLeCourriel } from '../notifications/envoyer';
 import { CHAMPS_PII, clesPii, decryptPii, type ClesPii } from '../securite/pii';
 import { finDeLaFenetreDeRedeclaration } from '../../domain/attribution/fenetre-redeclaration';
 import { TAILLES_DE_LOT } from '../../domain/seuils/ssot';
-import type { MotifDeNonRendu } from '../attribution/notifications';
+import { MOTIFS_DE_NON_RENDU, type MotifDeNonRendu } from '../attribution/notifications';
+import type { Alerteur } from '../integrations/telegram/alertes';
 import {
   depotDesCourriels,
   emettre,
@@ -63,8 +64,15 @@ export type GestesDeLaTransaction = {
     n: NotificationAEnvoyer,
     envoyeLe: Date
   ): Promise<{ sujet: string; corps: string } | { nonRendue: MotifDeNonRendu }>;
-  /** L'envoi par l'émetteur unique, et sa ligne de courriel, liée à la notification. */
-  envoyer(n: NotificationAEnvoyer, texte: { sujet: string; corps: string }): Promise<IssueDeLEnvoi>;
+  /**
+   * L'envoi par l'émetteur unique, et sa ligne de courriel, liée à la notification. `envoyeLe` est
+   * l'heure DONNÉE au rendu : le courriel la consigne, et la fenêtre en part (juriste).
+   */
+  envoyer(
+    n: NotificationAEnvoyer,
+    texte: { sujet: string; corps: string },
+    envoyeLe: Date
+  ): Promise<IssueDeLEnvoi>;
   /** La fenêtre de redéclaration, posée seulement si elle est encore nulle. */
   poserLaFenetre(attributionId: string, finAt: Date): Promise<void>;
 };
@@ -82,7 +90,7 @@ const CLES_A_FENETRE: ReadonlySet<string> = new Set(['premier_rang_libere']);
  * `nonRendues` : un texte dont un paramètre manque n'envoie rien et se COMPTE — le lanceur rend le
  * bilan, rien n'est tu —, sans bloquer les notifications suivantes du lot.
  */
-type Bilan = {
+export type Bilan = {
   envoyees: number;
   echecs: number;
   retenues: number;
@@ -102,14 +110,16 @@ export async function envoyerLesNotificationsDeLEspace(p: PortsDuPassage): Promi
   for (const n of lot) {
     const issue = await p.dansUneTransaction(async (g) => {
       if (!(await g.verrouiller(n))) return 'sautee' as const;
-      const texte = await g.rendre(n, p.maintenant());
+      // UNE heure par notification, lue une fois : le rendu, l'envoi et la fenêtre la partagent.
+      const envoyeLe = p.maintenant();
+      const texte = await g.rendre(n, envoyeLe);
       if ('nonRendue' in texte) {
         // Un compteur par motif FERMÉ : le battement nomme le motif, jamais la notification.
         const cle = `nonRendue_${texte.nonRendue}` as const;
         bilan[cle] = (bilan[cle] ?? 0) + 1;
         return 'nonRendue' as const;
       }
-      const envoi = await g.envoyer(n, texte);
+      const envoi = await g.envoyer(n, texte, envoyeLe);
       if (envoi.statut !== 'envoye') return envoi.statut === 'echec' ? 'echec' : 'retenue';
       if (CLES_A_FENETRE.has(n.cle) && n.attributionId !== null && envoi.envoyeAt !== null) {
         // La fin, calculée par le domaine : minuit, heure de Paris, après le jour envoi + 15 (exclue).
@@ -150,7 +160,8 @@ export type GestesExternes = {
   envoyer(
     tx: Prisma.TransactionClient,
     n: NotificationAEnvoyer,
-    texte: { sujet: string; corps: string }
+    texte: { sujet: string; corps: string },
+    envoyeLe: Date
   ): Promise<IssueDeLEnvoi>;
 };
 
@@ -200,7 +211,7 @@ export function portsDuPassage(prisma: PrismaClient, externes: GestesExternes): 
             return pris.length === 1;
           },
           rendre: (n, envoyeLe) => externes.rendre(tx, n, envoyeLe),
-          envoyer: (n, texte) => externes.envoyer(tx, n, texte),
+          envoyer: (n, texte, envoyeLe) => externes.envoyer(tx, n, texte, envoyeLe),
           poserLaFenetre: async (attributionId, finAt) => {
             await tx.attribution.updateMany({
               where: { id: attributionId, fenetreRedeclarationFinAt: null },
@@ -219,10 +230,10 @@ export function portsDuPassage(prisma: PrismaClient, externes: GestesExternes): 
  * dans la même transaction ; elle n'est jamais consignée, seule son empreinte l'est.
  */
 export function envoyerParLEmetteur(
-  dependances: Omit<DependancesDeLEmetteur, 'depot'>,
+  dependances: Omit<DependancesDeLEmetteur, 'depot' | 'maintenant'>,
   adresseDe: (tx: Prisma.TransactionClient, n: NotificationAEnvoyer) => Promise<string>
 ): GestesExternes['envoyer'] {
-  return async (tx, n, texte) => {
+  return async (tx, n, texte, envoyeLe) => {
     const ligne = await emettre(
       {
         gabarit: n.cle,
@@ -232,7 +243,9 @@ export function envoyerParLEmetteur(
         apporteurId: n.apporteurId,
         notificationEspaceId: n.id,
       },
-      { ...dependances, depot: depotDesCourriels(tx) }
+      // UNE heure : celle du rendu. La demande et l'envoi consignés la portent, même si le relais
+      // dure au-delà de minuit — le texte et la fenêtre disent alors la même date.
+      { ...dependances, maintenant: () => envoyeLe, depot: depotDesCourriels(tx) }
     );
     return { statut: ligne.statut, envoyeAt: ligne.envoyeAt };
   };
@@ -289,7 +302,7 @@ export function passageDEnvoiDesNotifications(
           }),
         // L'émetteur est construit au PREMIER envoi : une configuration absente fait échouer l'envoi,
         // nommée, jamais un passage qui n'a rien à envoyer.
-        envoyer: (tx, n, texte) => {
+        envoyer: (tx, n, texte, envoyeLe) => {
           envoi ??= envoyerParLEmetteur(
             {
               configuration: configurationDeLEmetteur(env, domaines().envoi),
@@ -298,14 +311,34 @@ export function passageDEnvoiDesNotifications(
                 jeton: env.ZEPTOMAIL_SEND_TOKEN,
               }),
               cles,
-              maintenant,
               nouvelId: randomUUID,
             },
             (t, m) => adresseDuDestinataire(t, m, cles)
           );
-          return envoi(tx, n, texte);
+          return envoi(tx, n, texte, envoyeLe);
         },
       })
     );
   };
+}
+
+/**
+ * Un non-rendu lève, EN PLUS du compteur au battement, une alerte Telegram par motif présent
+ * (arbitrage de la sécurité) : la catégorie `notification_non_rendue`, le motif fermé et son nombre,
+ * rien d'autre. Sans canal configuré, le compteur reste seul.
+ */
+export async function alerterLesNonRendus(
+  bilan: Bilan,
+  alerteur: Pick<Alerteur, 'alerter'> | null
+): Promise<void> {
+  if (alerteur === null) return;
+  for (const motif of MOTIFS_DE_NON_RENDU) {
+    const nombre = bilan[`nonRendue_${motif}`];
+    if (nombre === undefined || nombre === 0) continue;
+    await alerteur.alerter({
+      categorie: 'notification_non_rendue',
+      id: randomUUID(),
+      nonRendu: { motif, nombre },
+    });
+  }
 }

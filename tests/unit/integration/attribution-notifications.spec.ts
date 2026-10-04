@@ -13,7 +13,12 @@
  *     courte que la vraie.
  */
 import { describe, it, expect } from 'vitest';
-import { FUSEAU_DES_DELAIS, SEUILS, TAILLES_DE_LOT } from '../../../src/domain/seuils/ssot';
+import {
+  FAITS_ANOMALIE_CARACTERES_MAX,
+  FUSEAU_DES_DELAIS,
+  SEUILS,
+  TAILLES_DE_LOT,
+} from '../../../src/domain/seuils/ssot';
 import {
   fenetreOuverte,
   finDeLaFenetreDeRedeclaration,
@@ -30,16 +35,21 @@ import {
   motifDeLaDecision,
   parametresDeLaNotification,
   rendreDepuisLaBase,
+  texteDuPremierRangDansLEspace,
   type SourcesDuRendu,
 } from '../../../src/server/attribution/notifications';
 import {
   ENTREPRISE_DE_REPLI,
   FAITS_NON_CONSERVES,
+  MOIS_EN_TOUTES_LETTRES,
   LIBELLES_DES_CATEGORIES,
   MOTIFS_DES_DECISIONS,
   RAISONS_D_ANNULATION,
 } from '../../../src/content/micro-copy/courriels/notifications';
-import { rendreLaNotification } from '../../../src/server/notifications/envoyer';
+import {
+  LONGUEUR_DU_MOTIF_MAX,
+  rendreLaNotification,
+} from '../../../src/server/notifications/envoyer';
 import { LEXIQUE_INTERDIT } from '../../../src/domain/lexique/lexique-interdit';
 import { MotifListeNoire } from '@prisma/client';
 import {
@@ -808,7 +818,7 @@ describe('REQ-UX-016 — le courriel de la notification s’écrit dans la trans
     const r = relais();
     const envoyer = envoyerParLEmetteur(dependances(true, r, c), async () => ADRESSE);
     const n = notif(ID_NOTIF, 'premier_rang_libere', { apporteurId: ID_APPORTEUR });
-    const issue = await envoyer(t.tx, n, { sujet: 'Objet', corps: 'Corps' });
+    const issue = await envoyer(t.tx, n, { sujet: 'Objet', corps: 'Corps' }, INSTANT);
     expect(issue).toEqual({ statut: 'envoye', envoyeAt: INSTANT });
     expect(r.appels).toBe(1);
     expect(t.lignes).toHaveLength(1);
@@ -831,7 +841,8 @@ describe('REQ-UX-016 — le courriel de la notification s’écrit dans la trans
       {
         sujet: 'Objet',
         corps: 'Corps',
-      }
+      },
+      INSTANT
     );
     expect(issue).toEqual({ statut: 'retenu_dmarc_non_verifie', envoyeAt: null });
     expect(r.appels).toBe(0);
@@ -1213,5 +1224,396 @@ describe('REQ-UX-016 — les trois sources du rendu : la charge, les faits, la c
     expect(
       composerLeCourriel('decision_attribution', { titre: 'T', appel: 'A', corps: null }, url)
     ).toEqual({ sujet: 'T', corps: 'A' });
+  });
+});
+
+describe('REQ-DM-004 — UNE heure par notification : le texte et la fenêtre disent la même date (juriste)', () => {
+  // 23 h 59 min 59 s à Paris (heure d'été, UTC+2) : un relais qui dure deux secondes passe minuit.
+  const AVANT_MINUIT = new Date('2027-05-10T21:59:59.000Z');
+  const APRES_MINUIT = new Date('2027-05-10T22:00:01.000Z');
+
+  it('REQ-DM-004 : TÉMOIN — le passage lit l’heure UNE fois par notification, et la donne au rendu ET à l’émetteur', async () => {
+    const heures = [AVANT_MINUIT, APRES_MINUIT];
+    let lues = 0;
+    const vus: { rendu?: string; envoi?: string } = {};
+    const fenetres: Date[] = [];
+    const p: PortsDuPassage = {
+      maintenant: () => heures[Math.min(lues++, heures.length - 1)]!,
+      lireLot: async () => [notif('n1', 'premier_rang_libere')],
+      dansUneTransaction: async (fn) =>
+        fn({
+          verrouiller: async () => true,
+          rendre: async (_n, envoyeLe) => {
+            vus.rendu = envoyeLe.toISOString();
+            return { sujet: 's', corps: 'c' };
+          },
+          envoyer: async (_n, _t, envoyeLe) => {
+            vus.envoi = envoyeLe.toISOString();
+            return { statut: 'envoye', envoyeAt: envoyeLe };
+          },
+          poserLaFenetre: async (_a, finAt) => {
+            fenetres.push(finAt);
+          },
+        }),
+    };
+    await envoyerLesNotificationsDeLEspace(p);
+    expect(lues).toBe(1);
+    expect(vus).toEqual({ rendu: AVANT_MINUIT.toISOString(), envoi: AVANT_MINUIT.toISOString() });
+    // Le jour de la fenêtre est celui que le texte affiche.
+    const jour = jourLimiteDeLaFenetre(fenetres[0]!.getTime());
+    expect(
+      parametresDeLaNotification('premier_rang_libere', { entreprise: 'E', envoyeLe: AVANT_MINUIT })
+        .dateLimite
+    ).toBe(`${jour.jour} ${MOIS_EN_TOUTES_LETTRES[jour.mois - 1]} ${jour.annee}`);
+  });
+
+  it('REQ-DM-004 : TÉMOIN — un relais qui dure au-delà de minuit : le courriel consigné porte l’heure DONNÉE, pas celle d’après le relais', async () => {
+    let horloge = AVANT_MINUIT;
+    const lignes: LigneCourriel[] = [];
+    const tx = {
+      courrielEnvoye: {
+        create: async (q: { data: LigneCourriel }) => {
+          lignes.push(q.data);
+          return q.data;
+        },
+      },
+      suppressionCourriel: { findUnique: async () => null },
+    } as unknown as PrismaClient;
+    const env: Record<string, string> = { NODE_ENV: 'test' };
+    for (const nom of NOMS_DES_SECRETS) env[nom] = randomBytes(32).toString('hex');
+    const envoyer = envoyerParLEmetteur(
+      {
+        configuration: { expediteur: 'camille@envoi.partners.test', dmarcVerifie: true },
+        relais: {
+          async envoyer() {
+            horloge = APRES_MINUIT; // le relais « dure » : l'horloge du monde a passé minuit
+            return { messageId: 'msg-1' };
+          },
+        },
+        cles: clesPii(env),
+        nouvelId: () => '0190f3a0-0000-7000-8000-00000000c0c0',
+      },
+      async () => 'destinataire@envoi.partners.test'
+    );
+    const issue = await envoyer(
+      tx,
+      notif('0190f3a0-0000-7000-8000-00000000b0b0', 'premier_rang_libere', {
+        apporteurId: '0190f3a0-0000-7000-8000-00000000a0a0',
+      }),
+      { sujet: 's', corps: 'c' },
+      AVANT_MINUIT
+    );
+    expect(horloge).toEqual(APRES_MINUIT);
+    expect(issue).toEqual({ statut: 'envoye', envoyeAt: AVANT_MINUIT });
+    expect(lignes[0]).toMatchObject({ demandeAt: AVANT_MINUIT, envoyeAt: AVANT_MINUIT });
+  });
+});
+
+describe('REQ-DM-004 — le texte de l’espace pour premier_rang_libere : la date de la fenêtre POSÉE, ou aucune (juriste)', () => {
+  const ENVOI = new Date('2027-05-10T08:00:00.000Z');
+
+  it('REQ-DM-004 : TÉMOIN (face sans envoi) — fenêtre NULLE : aucun texte daté, aucune date nulle part', () => {
+    expect(texteDuPremierRangDansLEspace('Atelier Dupont', null)).toBeNull();
+  });
+
+  it('REQ-DM-004 : TÉMOIN (face envoyée) — la date affichée est le jour de la fenêtre posée, celle que le courriel a dite', () => {
+    const fin = new Date(finDeLaFenetreDeRedeclaration(ENVOI.getTime()));
+    const texte = texteDuPremierRangDansLEspace('Atelier Dupont', fin);
+    const duCourriel = parametresDeLaNotification('premier_rang_libere', {
+      entreprise: 'Atelier Dupont',
+      envoyeLe: ENVOI,
+    }).dateLimite!;
+    expect(duCourriel).toBe('25 mai 2027');
+    expect(JSON.stringify(texte)).toContain(duCourriel);
+    expect(JSON.stringify(texte)).toContain('Atelier Dupont');
+  });
+
+  it('REQ-DM-004 : la date de l’espace suit la fenêtre POSÉE, pas un recalcul : une fenêtre d’un autre jour donne son jour', () => {
+    const fin = new Date('2027-06-02T22:00:00.000Z'); // minuit à Paris, le 3 juin : jour limite le 2
+    expect(JSON.stringify(texteDuPremierRangDansLEspace('Atelier Dupont', fin))).toContain(
+      '2 juin 2027'
+    );
+  });
+});
+
+describe('REQ-DM-006 — les paramètres du motif, à l’ENVOI, selon l’arbitrage de la sécurité (REQ-SEC-022)', () => {
+  const ATT = '0190f3a0-0000-7000-8000-0000000000a1';
+  const APP = '0190f3a0-0000-7000-8000-0000000000b2';
+  const ANO = '0190f3a0-0000-7000-8000-0000000000d4';
+  const acteur = { par: 'utilisateur_console', id: '0190f3a0-0000-7000-8000-0000000000e5' };
+  const anomalie = {
+    de: 'provisoire',
+    vers: 'invalidee',
+    transition: 'anomalie_confirmee',
+    acteur,
+    lienInteret: 'non_declare',
+  };
+  const banc = (
+    faits: string,
+    attribution = { apporteurId: APP, raisonSociale: 'Atelier Dupont', siren: '123456789' }
+  ) => ({
+    tx: { attribution: { findUnique: async () => attribution } } as unknown as PrismaClient,
+    sources: {
+      chargeDuFait: async () => anomalie,
+      faitsDe: async () => ({ faits }),
+      composer: (_cle: string, t: { titre: string; appel: string; corps: string | null }) => ({
+        sujet: t.titre,
+        corps: [t.corps ?? '', t.appel].join(' | '),
+      }),
+    } satisfies SourcesDuRendu,
+  });
+  const n = {
+    cle: 'decision_attribution',
+    apporteurId: APP,
+    attributionId: ATT,
+    evenementId: '42',
+    anomalieId: ANO,
+  };
+  const ENVOI = new Date('2027-05-10T08:00:00.000Z');
+
+  it('REQ-DM-006 : {raison} est FERMÉ — une raison hors de la liste est refusée', () => {
+    expect(() =>
+      motifDeLaDecision({ transition: 'annulee_par_la_console', raison: 'inventee' as never })
+    ).toThrow(/motif_incoherent/);
+  });
+
+  it('REQ-DM-006 : {categorie} est FERMÉE — une catégorie hors de la liste est refusée, jamais un nom d’organisme', () => {
+    expect(() =>
+      motifDeLaDecision({
+        transition: 'annulee_par_la_console',
+        raison: 'entreprise_relevant_de_l_article_3_3_bis',
+        categorie: 'Le Grand Organisme' as never,
+      })
+    ).toThrow(/motif_incoherent/);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — {numeroEntreprise} a la forme fermée de neuf chiffres, sinon refusé', () => {
+    expect(entrepriseDeLaNotification(null, '123456789')).toContain('123456789');
+    for (const faux of ['12345678', '1234567890', '12345678A', '<b>12345</b>']) {
+      expect(() => entrepriseDeLaNotification(null, faux), faux).toThrow(
+        /numero_entreprise_invalide/
+      );
+    }
+  });
+
+  it('REQ-DM-006 : TÉMOIN — un numéro hors forme, sans raison sociale : le courriel ne part pas, motif NOMMÉ', async () => {
+    const b = banc('deux dépôts le même jour', {
+      apporteurId: APP,
+      raisonSociale: null as never,
+      siren: '12345678',
+    });
+    expect(await rendreDepuisLaBase(b.tx, n, ENVOI, b.sources)).toStrictEqual({
+      nonRendue: 'numero_entreprise_invalide',
+    });
+  });
+
+  it('REQ-DM-006 : TÉMOIN (texte piégé) — balise échappée, caractères de contrôle et retours à la ligne forcés retirés', async () => {
+    const piege = '<b onclick="x()">deux</b> dépôts' + String.fromCharCode(7) + '\r\nle même\tjour';
+    const b = banc(piege);
+    const r = await rendreDepuisLaBase(b.tx, n, ENVOI, b.sources);
+    const texte = JSON.stringify(r);
+    expect(texte).toContain('&lt;b onclick=&quot;x()&quot;&gt;deux&lt;/b&gt; dépôts le même jour');
+    expect(texte).not.toContain('<b');
+    expect(texte).not.toContain(String.fromCharCode(7));
+    expect('sujet' in r && r.corps.includes('\r')).toBe(false);
+  });
+
+  it('REQ-DM-006 : TÉMOIN (texte piégé) — un lien dans les faits : refusé, nommé', async () => {
+    const b = banc('voir https://ailleurs.test/page');
+    expect(await rendreDepuisLaBase(b.tx, n, ENVOI, b.sources)).toStrictEqual({
+      nonRendue: 'faits_refuses',
+    });
+  });
+
+  it('REQ-DM-006 : TÉMOIN — la longueur est revérifiée à l’envoi : la borne passe, un caractère de plus est refusé, jamais tronqué', async () => {
+    const max = FAITS_ANOMALIE_CARACTERES_MAX.valeur;
+    const pile = banc('d'.repeat(max));
+    expect('sujet' in (await rendreDepuisLaBase(pile.tx, n, ENVOI, pile.sources))).toBe(true);
+    const deTrop = banc('d'.repeat(max + 1));
+    expect(await rendreDepuisLaBase(deTrop.tx, n, ENVOI, deTrop.sources)).toStrictEqual({
+      nonRendue: 'faits_refuses',
+    });
+  });
+
+  it('REQ-DM-006 : TÉMOIN — la longueur se compte en points de code : 1 000 émojis (2 000 unités UTF-16) partent entiers', async () => {
+    const max = FAITS_ANOMALIE_CARACTERES_MAX.valeur;
+    const emojis = String.fromCodePoint(0x1f600).repeat(max);
+    expect(emojis.length).toBe(2 * max);
+    const b = banc(emojis);
+    const r = await rendreDepuisLaBase(b.tx, n, ENVOI, b.sources);
+    expect('sujet' in r && r.corps.includes(emojis)).toBe(true);
+  });
+
+  it('REQ-DM-006 : la borne de la SSOT est celle de la juriste : 1 000, comptés en points de code', () => {
+    expect(FAITS_ANOMALIE_CARACTERES_MAX.valeur).toBe(1000);
+    expect(FAITS_ANOMALIE_CARACTERES_MAX.unite).toBe('points_de_code');
+  });
+
+  it('REQ-DM-006 : seul {motif} a la borne des faits : toute autre valeur garde 300 points de code', () => {
+    expect(() =>
+      rendreLaNotification('premier_rang_libere', {
+        entreprise: 'e'.repeat(300),
+        dateLimite: '25 mai 2027',
+      })
+    ).not.toThrow();
+    expect(() =>
+      rendreLaNotification('premier_rang_libere', {
+        entreprise: 'e'.repeat(301),
+        dateLimite: '25 mai 2027',
+      })
+    ).toThrow(/parametre_invalide/);
+  });
+
+  it('REQ-DM-006 : TÉMOIN (texte piégé) — un caractère de FORMAT dans les faits est retiré, le courriel part', async () => {
+    const b = banc('deux' + String.fromCharCode(0x202e) + ' dépôts' + String.fromCharCode(0x200b));
+    const r = await rendreDepuisLaBase(b.tx, n, ENVOI, b.sources);
+    expect('sujet' in r && r.corps.includes('deux dépôts')).toBe(true);
+    expect(JSON.stringify(r)).not.toContain(String.fromCharCode(0x202e));
+  });
+
+  it('REQ-DM-006 : TÉMOIN — la borne de {motif} est CALCULÉE : la borne des faits plus le plus long gabarit de motif', () => {
+    const plusLong = Math.max(...Object.values(MOTIFS_DES_DECISIONS).map((t) => [...t].length));
+    expect(LONGUEUR_DU_MOTIF_MAX).toBe(FAITS_ANOMALIE_CARACTERES_MAX.valeur + plusLong);
+  });
+});
+
+describe('REQ-UX-016 — un non-rendu lève une alerte Telegram fermée (arbitrage de la sécurité)', () => {
+  it('REQ-UX-016 : la catégorie notification_non_rendue est dans la liste fermée des alertes', async () => {
+    const { CATEGORIES_ALERTE } = await import('../../../src/server/integrations/telegram/alertes');
+    expect(CATEGORIES_ALERTE).toContain('notification_non_rendue');
+  });
+
+  it('REQ-UX-016 : TÉMOIN — le message ne porte que le genre, le motif fermé et un nombre : ni identifiant d’objet, ni texte', async () => {
+    const { messageDAlerte } = await import('../../../src/server/integrations/telegram/alertes');
+    const m = messageDAlerte('alerte', {
+      categorie: 'notification_non_rendue',
+      id: '0190f3a0-0000-7000-8000-0000000000aa',
+      nonRendu: { motif: 'faits_refuses', nombre: 2 },
+    });
+    expect(m).toContain('[notification_non_rendue]');
+    expect(m).toContain('non rendu faits_refuses · 2');
+  });
+
+  it('REQ-UX-016 : TÉMOIN — un motif hors de la liste fermée, ou un nombre qui n’est pas un entier, s’écrit « illisible »', async () => {
+    const { messageDAlerte } = await import('../../../src/server/integrations/telegram/alertes');
+    const m = messageDAlerte('alerte', {
+      categorie: 'notification_non_rendue',
+      id: '0190f3a0-0000-7000-8000-0000000000aa',
+      nonRendu: { motif: 'deux dépôts le même jour, Jean Dupont', nombre: 1.5 },
+    });
+    expect(m).not.toContain('Dupont');
+    expect(m).toContain('non rendu illisible · illisible');
+  });
+
+  it('REQ-UX-016 : TÉMOIN — le passage du lanceur alerte UNE fois par motif présent au bilan, avec son nombre, dans l’ordre de la liste fermée', async () => {
+    const { alerterLesNonRendus } =
+      await import('../../../src/server/taches/envoyer-notifications-espace');
+    const alertes: unknown[] = [];
+    await alerterLesNonRendus(
+      {
+        envoyees: 3,
+        echecs: 0,
+        retenues: 0,
+        sautees: 0,
+        nonRendues: 3,
+        nonRendue_faits_refuses: 2,
+        nonRendue_fait_introuvable: 1,
+      },
+      { alerter: async (o) => (alertes.push(o), 'envoyee') }
+    );
+    expect(alertes.map((a) => (a as { nonRendu: unknown }).nonRendu)).toEqual([
+      { motif: 'fait_introuvable', nombre: 1 },
+      { motif: 'faits_refuses', nombre: 2 },
+    ]);
+    expect(
+      alertes.every((a) => (a as { categorie: string }).categorie === 'notification_non_rendue')
+    ).toBe(true);
+  });
+
+  it('REQ-UX-016 : sans non-rendu, aucune alerte ; sans canal, aucune erreur', async () => {
+    const { alerterLesNonRendus } =
+      await import('../../../src/server/taches/envoyer-notifications-espace');
+    const alertes: unknown[] = [];
+    await alerterLesNonRendus(
+      { envoyees: 1, echecs: 0, retenues: 0, sautees: 0, nonRendues: 0 },
+      { alerter: async (o) => (alertes.push(o), 'envoyee') }
+    );
+    expect(alertes).toEqual([]);
+    await expect(
+      alerterLesNonRendus(
+        {
+          envoyees: 0,
+          echecs: 0,
+          retenues: 0,
+          sautees: 0,
+          nonRendues: 1,
+          nonRendue_faits_refuses: 1,
+        },
+        null
+      )
+    ).resolves.toBeUndefined();
+  });
+
+  it('REQ-UX-016 : TÉMOIN (sécurité) — une alerte ne porte JAMAIS que { genre, motif, nombre } : l’id est un uuid frais qui ne désigne rien', async () => {
+    const { alerterLesNonRendus } =
+      await import('../../../src/server/taches/envoyer-notifications-espace');
+    const { messageDAlerte } = await import('../../../src/server/integrations/telegram/alertes');
+    const { MOTIFS_DE_NON_RENDU } = await import('../../../src/server/attribution/notifications');
+    const objets: Record<string, unknown>[] = [];
+    const bilan = {
+      envoyees: 0,
+      echecs: 0,
+      retenues: 0,
+      sautees: 0,
+      nonRendues: 2,
+      nonRendue_faits_refuses: 1,
+      nonRendue_apporteur_different: 1,
+    };
+    await alerterLesNonRendus(bilan, {
+      alerter: async (o) => (objets.push(o as never), 'envoyee'),
+    });
+    await alerterLesNonRendus(bilan, {
+      alerter: async (o) => (objets.push(o as never), 'envoyee'),
+    });
+    for (const o of objets) {
+      expect(Object.keys(o).sort()).toEqual(['categorie', 'id', 'nonRendu']);
+      expect(Object.keys(o['nonRendu'] as object).sort()).toEqual(['motif', 'nombre']);
+      expect(MOTIFS_DE_NON_RENDU).toContain((o['nonRendu'] as { motif: string }).motif);
+      // Le message : la catégorie, l'objet technique, le motif fermé, le nombre — et rien d'autre.
+      const message = messageDAlerte('alerte', o as never);
+      const prefixe = '[notification_non_rendue] objet ';
+      expect(message.startsWith(prefixe)).toBe(true);
+      expect(message.slice(prefixe.length)).toMatch(/^[0-9a-f-]{36} · non rendu [a-z_]+ · [0-9]+$/);
+    }
+    // Un uuid FRAIS par alerte : il ne désigne aucune notification, aucune attribution, et ne se répète pas.
+    const ids = objets.map((o) => o['id']);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('REQ-UX-016 : TÉMOIN (sécurité) — l’id de chaque alerte diffère de tout id de notification et d’attribution du passage', async () => {
+    const { alerterLesNonRendus } =
+      await import('../../../src/server/taches/envoyer-notifications-espace');
+    const lot = Array.from({ length: 5 }, (_, k) =>
+      notif('0190f3a0-0000-7000-8000-00000000000' + k, 'decision_attribution', {
+        attributionId: '0190f3a0-0000-7000-8000-00000000010' + k,
+      })
+    );
+    const p: PortsDuPassage = {
+      maintenant: () => new Date('2027-05-10T08:00:00.000Z'),
+      lireLot: async () => lot,
+      dansUneTransaction: async (fn) =>
+        fn({
+          verrouiller: async () => true,
+          rendre: async () => ({ nonRendue: 'faits_refuses' as const }),
+          envoyer: async () => ({ statut: 'envoye', envoyeAt: null }),
+          poserLaFenetre: async () => undefined,
+        }),
+    };
+    const bilan = await envoyerLesNotificationsDeLEspace(p);
+    const objets: { id: string }[] = [];
+    await alerterLesNonRendus(bilan, { alerter: async (o) => (objets.push(o), 'envoyee') });
+    expect(objets.length).toBeGreaterThan(0);
+    const duPassage = new Set(lot.flatMap((n) => [n.id, n.attributionId]));
+    for (const o of objets) expect(duPassage.has(o.id)).toBe(false);
   });
 });

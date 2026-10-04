@@ -15,7 +15,7 @@
  *     bouge plus ; un courriel retenu ne pose rien ; la purge à douze mois laisse le courriel, preuve
  *     du délai, sans son lien.
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
@@ -32,7 +32,14 @@ import {
 import { finDeLaFenetreDeRedeclaration } from '../../src/domain/attribution/fenetre-redeclaration';
 import { purgerLesNotificationsDeLEspace } from '../../src/server/taches/purger-notifications-espace';
 import { NOMS_DES_SECRETS } from '../../src/lib/env';
-import { clesPii } from '../../src/server/securite/pii';
+import { clesPii, encryptPii } from '../../src/server/securite/pii';
+import { rendreDepuisLaBase } from '../../src/server/attribution/notifications';
+import { lireLaChargeDUnFait } from '../../src/server/evenement/journal';
+import {
+  MODELE_DE_LA_JUSTIFICATION,
+  lireLesFaitsPourLaNotification,
+} from '../../src/server/anomalie/justification';
+import { composerLeCourriel } from '../../src/server/notifications/envoyer';
 import type { Relais } from '../../src/server/integrations/zeptomail/emetteur';
 
 let base: Base;
@@ -153,17 +160,16 @@ const passage = () =>
     portsDuPassage(app, {
       maintenant: () => horloge,
       rendre: async () => ({ sujet: 'Objet', corps: 'Corps' }),
-      envoyer: (tx, n, texte) =>
+      envoyer: (tx, n, texte, envoyeLe) =>
         envoyerParLEmetteur(
           {
             configuration: { expediteur: 'camille@envoi.partners.test', dmarcVerifie },
             relais,
             cles: CLES,
-            maintenant: () => horloge,
             nouvelId: randomUUID,
           },
           async () => 'destinataire@envoi.partners.test'
-        )(tx, n, texte),
+        )(tx, n, texte, envoyeLe),
     })
   );
 
@@ -261,7 +267,7 @@ describe('REQ-DM-006 — la décision écrit sa notification, dans la transactio
     const apporteur = await unApporteur();
     const id = await semer(apporteur, 'provisoire');
     const anomalie = await base.prisma.anomalie.create({
-      data: { type: 'sincerite', apporteurId: apporteur, attributionId: id },
+      data: { type: 'sincerite', score: 40, apporteurId: apporteur, attributionId: id },
     });
     await transition({
       attributionId: id,
@@ -381,6 +387,106 @@ describe('REQ-DM-004 — le premier rang libéré, et la fenêtre qui court de l
     }
     expect((await courrielsDe(n!.id)).map((c) => c.statut)).toEqual(['retenu_dmarc_non_verifie']);
     expect(await fenetreDe(rang1)).toBeNull();
+  });
+});
+
+describe('REQ-DM-006 — les faits ne sortent que vers le courriel : condition (4) de la sécurité', () => {
+  it('REQ-DM-006 : TÉMOIN — un MARQUEUR des faits part au relais, et n’apparaît ni dans courriels_envoyes, ni dans evenements, ni dans le journal applicatif', async () => {
+    const marqueur = `MARQUEUR-${hex(8)}`;
+    const apporteur = await unApporteur();
+    const id = await semer(apporteur, 'provisoire');
+    const [admin] = await base.prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO utilisateurs_console (id, role, email_chiffre, email_hash, cree_at)
+       VALUES ($1::uuid, 'admin'::console_role, '\\x01'::bytea, $2, $3) RETURNING id`,
+      randomUUID(),
+      hex(32),
+      T0
+    );
+    const anomalieId = randomUUID();
+    await base.prisma.$executeRawUnsafe(
+      `INSERT INTO anomalies (id, type, score, apporteur_id, attribution_id, statut, ouverte_at,
+         traite_par_id, traite_at, justification_chiffre)
+       VALUES ($1::uuid, 'sincerite', 40, $2::uuid, $3::uuid, 'confirmee'::statut_anomalie, $4,
+         $5::uuid, $6, $7)`,
+      anomalieId,
+      apporteur,
+      id,
+      new Date(T0.getTime() - 86_400_000),
+      admin!.id,
+      T0,
+      encryptPii(
+        { modele: MODELE_DE_LA_JUSTIFICATION, champ: 'justificationChiffre', id: anomalieId },
+        `deux dépôts le même jour, ${marqueur}`,
+        CLES
+      )
+    );
+    await transition({
+      attributionId: id,
+      transition: 'anomalie_confirmee',
+      acteur: { par: 'utilisateur_console', id: admin!.id },
+      maintenant: T0,
+      anomalieId,
+    });
+
+    // Le journal applicatif : tout ce qui sort du processus pendant le passage.
+    const sorties: string[] = [];
+    const capter = (...a: unknown[]) => {
+      sorties.push(a.map(String).join(' '));
+      return true;
+    };
+    const espions = [
+      vi.spyOn(process.stdout, 'write').mockImplementation(capter as never),
+      vi.spyOn(process.stderr, 'write').mockImplementation(capter as never),
+      vi.spyOn(console, 'log').mockImplementation(capter),
+      vi.spyOn(console, 'info').mockImplementation(capter),
+      vi.spyOn(console, 'warn').mockImplementation(capter),
+      vi.spyOn(console, 'error').mockImplementation(capter),
+    ];
+    const corpsRelayes: string[] = [];
+    try {
+      await envoyerLesNotificationsDeLEspace(
+        portsDuPassage(app, {
+          maintenant: () => T0,
+          rendre: (tx, n, envoyeLe) =>
+            rendreDepuisLaBase(tx, n, envoyeLe, {
+              chargeDuFait: async (t, f) => (await lireLaChargeDUnFait(t, f))?.charge ?? null,
+              faitsDe: (t, q) => lireLesFaitsPourLaNotification(t, q, CLES),
+              composer: (cle, texte) =>
+                composerLeCourriel(cle, texte, new URL('https://espace.partners.test')),
+            }),
+          envoyer: (tx, n, texte, envoyeLe) =>
+            envoyerParLEmetteur(
+              {
+                configuration: { expediteur: 'camille@envoi.partners.test', dmarcVerifie: true },
+                relais: {
+                  async envoyer(m) {
+                    corpsRelayes.push(m.corps);
+                    return { messageId: `msg-${hex(4)}` };
+                  },
+                },
+                cles: CLES,
+                nouvelId: randomUUID,
+              },
+              async () => 'destinataire@envoi.partners.test'
+            )(tx, n, texte, envoyeLe),
+        })
+      );
+    } finally {
+      for (const e of espions) e.mockRestore();
+    }
+
+    // Le chemin a bien porté les faits jusqu'au relais : le témoin ne passe pas à vide.
+    expect(corpsRelayes.some((c) => c.includes(marqueur))).toBe(true);
+    const courriels = await base.prisma.$queryRawUnsafe<{ l: string }[]>(
+      `SELECT to_jsonb(c)::text AS l FROM courriels_envoyes c`
+    );
+    expect(courriels.length).toBeGreaterThan(0);
+    expect(courriels.filter((c) => c.l.includes(marqueur))).toEqual([]);
+    const faits = await base.prisma.$queryRawUnsafe<{ l: string }[]>(
+      `SELECT to_jsonb(e)::text AS l FROM evenements e`
+    );
+    expect(faits.filter((e) => e.l.includes(marqueur))).toEqual([]);
+    expect(sorties.filter((x) => x.includes(marqueur))).toEqual([]);
   });
 });
 

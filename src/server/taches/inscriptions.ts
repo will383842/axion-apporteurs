@@ -56,9 +56,11 @@ import {
 import { passageQuotidien } from '../jobs/reconciliation';
 import { minimiserCandidatures } from './minimiser-candidatures';
 import { purgerLesContacts } from './purger-contacts';
+import { purgerLesEntreprisesConnues } from './purger-entreprises-connues';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
+import { purgerLesAppareils } from './purger-appareils';
 import { purgerLesNotificationsDeLEspace } from './purger-notifications-espace';
-import { passageDEnvoiDesNotifications } from './envoyer-notifications-espace';
+import { alerterLesNonRendus, passageDEnvoiDesNotifications } from './envoyer-notifications-espace';
 import { purgerLesValeursDesDroits } from './purger-valeurs-droits-contact';
 import {
   anonymiserLesAnomalies,
@@ -67,6 +69,10 @@ import {
 } from './purger-contestations-anomalies';
 import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
+import {
+  ouvrirLesAnomaliesDAutoParrainage,
+  precedentDuBattement,
+} from './ouvrir-anomalies-auto-parrainage';
 import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
 import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
 import { clientDuTiers } from '../integrations/recherche-entreprises/tiers';
@@ -205,15 +211,30 @@ export function inscriptions(
     // DM-53 (REQ-DM-043) : le SIREN des dépôts refusés, douze mois après le refus.
     siren_refuses_purger: () =>
       purgerLesSirenRefuses(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-66 (REQ-DM-029) : les projections de l'antériorité, effacées quand elles ne fondent plus de refus.
+    entreprises_connues_purger: () =>
+      purgerLesEntreprisesConnues(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-61 (REQ-UX-016) : les notifications de l'espace, douze mois après leur inscription.
     notifications_espace_purger: () =>
       purgerLesNotificationsDeLEspace(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-55 (REQ-UX-016) : le courriel des notifications de la machine, après le commit de la
     // transition ; la fenêtre de redéclaration court de son envoi effectif.
-    notifications_espace_envoyer: passageDEnvoiDesNotifications(prisma, env),
+    notifications_espace_envoyer: async () => {
+      const bilan = await passageDEnvoiDesNotifications(prisma, env)();
+      // Arbitrage de la sécurité : un non-rendu lève aussi une alerte fermée (motif et nombre).
+      await alerterLesNonRendus(bilan, canalDAlerte(env));
+      return bilan;
+    },
     // DM-59 (REQ-JUR-065) : la valeur d'une rectification, effacée à son échéance même sans traitement.
     droits_contact_purger: () =>
       purgerLesValeursDesDroits(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-18 (REQ-SEC-031) : l'ouverture DIFFÉRÉE des anomalies d'auto-parrainage, depuis le curseur
+    // que son propre battement porte.
+    auto_parrainage_ouvrir: () =>
+      ouvrirLesAnomaliesDAutoParrainage(prisma, {
+        maintenant: () => new Date(horlogeSysteme.maintenant()),
+        precedent: precedentDuBattement(prisma),
+      }),
     // DM-62 (REQ-DM-033, REQ-DM-043) : les anomalies, les contestations et le démenti d'un contact,
     // chacun à son échéance, à l'heure du système. Le passage des anomalies ne rend qu'un NOMBRE de
     // mesures ouvertes : les anomalies en cause ne sont nommées qu'en console.
@@ -222,6 +243,8 @@ export function inscriptions(
     contestations_purger: () =>
       purgerLesContestations(prisma, new Date(horlogeSysteme.maintenant())),
     dementis_purger: () => purgerLesDementis(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-55 (REQ-SEC-003) : l'empreinte d'un appareil, effacée une durée de session après sa vue.
+    appareils_purger: () => purgerLesAppareils(prisma, new Date(horlogeSysteme.maintenant())),
     // SEC-58 : le journal des accès à la console, purgé à son échéance (la purge vide les identifiants).
     journal_acces_console_purger: () =>
       purgerLeJournalDesAccesConsole(prisma, new Date(horlogeSysteme.maintenant())),

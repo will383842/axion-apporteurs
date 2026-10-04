@@ -133,6 +133,32 @@ export const SEUILS = {
     renvois: art('3.3'),
     verifieLe: LE,
   },
+  // SEC-11 : le jeton de dépôt privé expire douze mois après son émission ; aucune colonne ne porte
+  // l'échéance, elle se dérive de `cree_at` (cadrage d'A02 du 2026-09-26, partners/ADR-0022).
+  JETON_DEPOT_DUREE_MOIS: {
+    valeur: 12,
+    unite: 'mois',
+    source: 'REQ-SEC-005 (jeton de dépôt privé, expirant à 12 mois)',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
+  // SEC-18 : la tâche différée qui ouvre les anomalies d'auto-parrainage (forme d'A02, PR 601). Sa
+  // cadence, et la fenêtre qui borne ce qu'elle relit en arrière au premier passage ou après une
+  // panne. Valeurs proposées par l'auteur, à confirmer par la coordination.
+  AUTO_PARRAINAGE_CADENCE_MINUTES: {
+    valeur: 60,
+    unite: 'minutes',
+    source: 'REQ-SEC-031 (contrôle différé, forme d’A02 du 2026-10-03), valeur proposée par A05',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
+  AUTO_PARRAINAGE_FENETRE_JOURS: {
+    valeur: 7,
+    unite: 'jours',
+    source: 'REQ-SEC-031 (contrôle différé, forme d’A02 du 2026-10-03), valeur proposée par A05',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
   ANTERIORITE_DEVIS_MOIS: {
     valeur: 6,
     unite: 'mois',
@@ -551,6 +577,20 @@ export function budgetUx(nom: string): BudgetUx {
     );
   return BUDGETS_UX[nom as NomDeBudgetUx];
 }
+
+/**
+ * DM-55 (arbitrage de la sécurité et de la juriste, 2026-10-04) — la longueur maximale des faits retenus
+ * contre un dépôt (`{faits}` de `anomalie_confirmee`), comptée en POINTS DE CODE après retrait des
+ * caractères de contrôle. Elle se juge à la SAISIE dans la console (tâche à venir) ; à l'ENVOI, elle
+ * n'est qu'un filet : au-delà, aucun courriel, jamais une troncature.
+ */
+export const FAITS_ANOMALIE_CARACTERES_MAX = {
+  valeur: 1000,
+  unite: 'points_de_code',
+  source:
+    'proposée par A05, 1 000 fixé par la juriste (art. 3.7), comptage en points de code par la sécurité, arbitrage DM-55 du 04/10',
+  verifieLe: '2026-10-04',
+} as const;
 
 /**
  * W20 (UX-P1-41, HYP-W20-CONTEXTE) — la longueur maximale du contexte d'un dépôt, seule saisie libre
