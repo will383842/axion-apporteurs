@@ -30,10 +30,12 @@ import { EVENEMENTS_APPORTEUR, MOTIFS_RESILIATION, STATUTS_APPORTEUR } from '../
 import {
   CRITERES_D_ANTERIORITE,
   ETATS_ATTRIBUTION,
+  MOTIFS_ANNULATION_CONSOLE,
+  MOTIFS_LISTE_NOIRE,
   EVENEMENTS_ATTRIBUTION,
   NAISSANCES_ATTRIBUTION,
 } from '../attribution/machine';
-import { STATUTS_PIECE_KYC, TYPES_PIECE_KYC } from '../kyc/pieces';
+import { MOTIFS_REFUS_PIECE, STATUTS_PIECE_KYC, TYPES_PIECE_KYC } from '../kyc/pieces';
 import { ETATS_DEMANDE_CONFIRMATION } from '../confirmation/demande';
 import {
   ETATS_CONTESTATION,
@@ -189,8 +191,14 @@ export const CHARGES_PAR_TYPE = {
         .strict()
         .optional(),
     })
+    .extend({
+      /** DM-55 : le motif fermé d'une annulation par la console, exigé pour elle seule. */
+      motifAnnulation: z.enum(MOTIFS_ANNULATION_CONSOLE).optional(),
+      /** DM-55 : la catégorie de l'article 3.3 bis, exigée avec ce motif et lui seul. */
+      categorieRelation: z.enum(MOTIFS_LISTE_NOIRE).optional(),
+    })
     .strict()
-    .superRefine(({ de, transition, critere, fait }, ctx) => {
+    .superRefine(({ de, transition, critere, fait, motifAnnulation, categorieRelation }, ctx) => {
       if ((de === null) !== NAISSANCES.includes(transition)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -208,6 +216,23 @@ export const CHARGES_PAR_TYPE = {
       // Le fait fondateur accompagne le critère, et sa nature est celle que le critère nomme.
       const natureAttendue =
         critere === undefined ? undefined : critere === 'cliente' ? 'facture' : 'devis';
+      if ((transition === 'annulee_par_la_console') !== (motifAnnulation !== undefined)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['motifAnnulation'],
+          message: 'motif_annulation_incoherent',
+        });
+      }
+      if (
+        (motifAnnulation === 'entreprise_relevant_de_l_article_3_3_bis') !==
+        (categorieRelation !== undefined)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['categorieRelation'],
+          message: 'categorie_incoherente',
+        });
+      }
       if (fait?.nature !== natureAttendue) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -250,15 +275,27 @@ export const CHARGES_PAR_TYPE = {
   /**
    * DM-11 (REQ-DM-027) : un changement de statut d'une pièce du KYC, sur l'agrégat `piece_kyc`.
    * `de` est nul à la naissance de la pièce. Ni fichier, ni IBAN, ni donnée de personne.
+   * CPL-T07 (forme d'A02) : le motif FERMÉ d'un refus, exigé si et seulement si `vers` vaut
+   * `refusee` ; l'espace le relit dans le dernier événement de l'agrégat de la pièce, sans colonne.
    */
   piece_kyc_statut_modifie: z
     .object({
       de: z.enum(STATUTS_PIECE_KYC).nullable(),
       vers: z.enum(STATUTS_PIECE_KYC),
       type: z.enum(TYPES_PIECE_KYC),
+      motifRefus: z.enum(MOTIFS_REFUS_PIECE).optional(),
       acteur: FORMES.acteur(),
     })
-    .strict(),
+    .strict()
+    .superRefine((c, ctx) => {
+      if ((c.vers === 'refusee') !== (c.motifRefus !== undefined)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['motifRefus'],
+          message: 'motif_refus_si_et_seulement_si_refusee',
+        });
+      }
+    }),
   /**
    * DM-40 (REQ-DM-060) : un changement d'état de la demande de confirmation, naissance comprise (`de`
    * nul, `planifiee`). Ni jeton, ni empreinte, ni donnée de personne : l'état seul.

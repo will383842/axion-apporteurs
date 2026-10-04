@@ -113,6 +113,9 @@ model Evenement {
   prevHash  String               @unique @map("prev_hash") @db.Char(64)
   selfHash  String               @unique @map("self_hash") @db.Char(64)
 
+  /// DM-55 : les notifications de l'espace que cet événement a produites.
+  notificationsEspace NotificationEspace[]
+
   @@index([agregat, agregatId])
   @@map("evenements")
 }
@@ -678,23 +681,28 @@ enum MotifSuppressionCourriel {
 /// Chaque demande d'envoi, qu'elle parte ou non (REQ-INT-022, REQ-INT-023, REQ-UX-016). Aucun corps,
 /// aucune adresse : l'empreinte de recherche seule. DM-07 y a ajouté `attribution_id`.
 model CourrielEnvoye {
-  id                   String         @id @default(uuid()) @db.Uuid
+  id                   String              @id @default(uuid()) @db.Uuid
   /// Exception E2 de partners/ADR-0022 (point 9) : clé de `src/server/notifications/table-ssot.ts`.
-  gabarit              String         @db.VarChar(64)
+  gabarit              String              @db.VarChar(64)
   /// Empreinte de l'adresse de destination (`empreinteRecherche('courriel', …)`).
-  emailHash            String         @map("email_hash") @db.Char(64)
-  apporteurId          String?        @map("apporteur_id") @db.Uuid
-  apporteur            Apporteur?     @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  emailHash            String              @map("email_hash") @db.Char(64)
+  apporteurId          String?             @map("apporteur_id") @db.Uuid
+  apporteur            Apporteur?          @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
   statut               StatutCourriel
-  demandeAt            DateTime       @map("demande_at") @db.Timestamptz(3)
+  demandeAt            DateTime            @map("demande_at") @db.Timestamptz(3)
   /// La date qui fait courir un délai (REQ-UX-016) — jamais une date de lecture.
-  envoyeAt             DateTime?      @map("envoye_at") @db.Timestamptz(3)
-  fournisseurMessageId String?        @map("fournisseur_message_id") @db.VarChar(200)
+  envoyeAt             DateTime?           @map("envoye_at") @db.Timestamptz(3)
+  fournisseurMessageId String?             @map("fournisseur_message_id") @db.VarChar(200)
   /// Un code fermé, jamais la réponse du relais.
-  erreur               String?        @db.VarChar(300)
+  erreur               String?             @db.VarChar(300)
   /// L'attribution dont le courriel parle (DM-07), nulle sinon.
-  attributionId        String?        @map("attribution_id") @db.Uuid
-  attribution          Attribution?   @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attributionId        String?             @map("attribution_id") @db.Uuid
+  attribution          Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// DM-55 : la notification de l'espace que le courriel porte. Au plus un courriel non échoué par
+  /// notification : index unique partiel `courriels_envoyes_un_par_notification`, en SQL brut. SET NULL :
+  /// la purge de DM-61 supprime la notification, le courriel (preuve du délai) reste.
+  notificationEspaceId String?             @map("notification_espace_id") @db.Uuid
+  notificationEspace   NotificationEspace? @relation(fields: [notificationEspaceId], references: [id], onDelete: SetNull, onUpdate: Restrict)
 
   @@index([emailHash])
   @@index([apporteurId, gabarit])
@@ -709,16 +717,30 @@ model CourrielEnvoye {
 /// AUCUN calcul de délai : un délai court de `courriels_envoyes.envoye_at` (garde
 /// `notifications-lue-at-inerte`).
 model NotificationEspace {
-  id            String       @id @default(uuid()) @db.Uuid
-  apporteurId   String       @map("apporteur_id") @db.Uuid
-  apporteur     Apporteur    @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  cle           String       @db.VarChar(64)
-  attributionId String?      @map("attribution_id") @db.Uuid
-  attribution   Attribution? @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  id            String           @id @default(uuid()) @db.Uuid
+  apporteurId   String           @map("apporteur_id") @db.Uuid
+  apporteur     Apporteur        @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  cle           String           @db.VarChar(64)
+  attributionId String?          @map("attribution_id") @db.Uuid
+  attribution   Attribution?     @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   /// L'heure d'inscription dans l'espace, PAS un horodatage opposable : aucun délai ne s'y appuie ;
   /// un délai court de `courriels_envoyes.envoye_at` (relecture A02, 2026-10-02).
-  creeAt        DateTime     @default(now()) @map("cree_at") @db.Timestamptz(3)
-  lueAt         DateTime?    @map("lue_at") @db.Timestamptz(3)
+  creeAt        DateTime         @default(now()) @map("cree_at") @db.Timestamptz(3)
+  lueAt         DateTime?        @map("lue_at") @db.Timestamptz(3)
+  /// DM-55 : l'événement du journal qui a produit la notification. L'idempotence tient au fait :
+  /// index unique partiel `notifications_espace_une_par_evenement` (cle, evenement_id), et CHECK
+  /// `notifications_espace_machine_a_son_evenement` (les deux clés de la machine ont leur événement),
+  /// en SQL brut (partners/ADR-0015).
+  evenementId   BigInt?          @map("evenement_id")
+  /// Relation vers le journal chaîné, jamais employée par le code : on écrit `evenementId` (garde de l'écrivain unique).
+  faitDuJournal Evenement?       @relation(fields: [evenementId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// DM-55 : l'anomalie confirmée qui fonde une `decision_attribution`, et elle seule (CHECK
+  /// `notifications_espace_anomalie_decision_seule`, en SQL brut). Ses faits se lisent dans sa ligne au
+  /// rendu ; ils n'entrent jamais dans le journal chaîné (décision (d) de la juriste pour DM-12).
+  anomalieId    String?          @map("anomalie_id") @db.Uuid
+  anomalie      Anomalie?        @relation(fields: [anomalieId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  /// DM-55 : les courriels qui l'ont portée, une tentative par ligne.
+  courriels     CourrielEnvoye[]
 
   @@index([apporteurId, creeAt])
   @@index([attributionId])
@@ -1199,32 +1221,34 @@ model AlerteLiberation {
 /// Une anomalie (REQ-DM-033). Le score n'existe que pour la sincérité ; la clôture pose statut,
 /// date, auteur et justification ensemble, une fois, sans retour (fonction dédiée).
 model Anomalie {
-  id                    String              @id @default(uuid()) @db.Uuid
+  id                    String               @id @default(uuid()) @db.Uuid
   type                  TypeAnomalie
-  score                 Int?                @db.SmallInt
-  apporteurId           String?             @map("apporteur_id") @db.Uuid
-  apporteur             Apporteur?          @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  attributionId         String?             @map("attribution_id") @db.Uuid
-  attribution           Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  statut                StatutAnomalie      @default(ouverte)
-  ouverteAt             DateTime            @default(now()) @map("ouverte_at") @db.Timestamptz(3)
-  traiteParId           String?             @map("traite_par_id") @db.Uuid
-  traitePar             UtilisateurConsole? @relation(fields: [traiteParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  traiteAt              DateTime?           @map("traite_at") @db.Timestamptz(3)
+  score                 Int?                 @db.SmallInt
+  apporteurId           String?              @map("apporteur_id") @db.Uuid
+  apporteur             Apporteur?           @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attributionId         String?              @map("attribution_id") @db.Uuid
+  attribution           Attribution?         @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  statut                StatutAnomalie       @default(ouverte)
+  ouverteAt             DateTime             @default(now()) @map("ouverte_at") @db.Timestamptz(3)
+  traiteParId           String?              @map("traite_par_id") @db.Uuid
+  traitePar             UtilisateurConsole?  @relation(fields: [traiteParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  traiteAt              DateTime?            @map("traite_at") @db.Timestamptz(3)
   /// La justification, CHIFFRÉE (`CHAMPS_PII`) : elle porte un soupçon sur une personne. Posée à la
   /// clôture, vidée par la purge seule.
-  justificationChiffre  Bytes?              @map("justification_chiffre")
-  justificationPurgeeAt DateTime?           @map("justification_purgee_at") @db.Timestamptz(3)
+  justificationChiffre  Bytes?               @map("justification_chiffre")
+  justificationPurgeeAt DateTime?            @map("justification_purgee_at") @db.Timestamptz(3)
   /// L'ANONYMISATION : tout ce qui désigne une personne est vidé ; restent l'id, le type, le statut
   /// et les mois d'ouverture et de traitement (forme d'A02).
-  anonymiseeAt          DateTime?           @map("anonymisee_at") @db.Timestamptz(3)
+  anonymiseeAt          DateTime?            @map("anonymisee_at") @db.Timestamptz(3)
   /// La fin réelle de la mesure fondée sur une anomalie confirmée, posée une fois, jamais avant
   /// `traiteAt` ; elle fait courir l'échéance de l'anonymisation.
-  mesureTermineeAt      DateTime?           @map("mesure_terminee_at") @db.Timestamptz(3)
+  mesureTermineeAt      DateTime?            @map("mesure_terminee_at") @db.Timestamptz(3)
   /// Le gel pour litige : posé une fois avec sa référence (un numéro, jamais un nom), levé une fois.
-  gelLitigeAt           DateTime?           @map("gel_litige_at") @db.Timestamptz(3)
-  gelLitigeLeveAt       DateTime?           @map("gel_litige_leve_at") @db.Timestamptz(3)
-  gelLitigeRef          String?             @map("gel_litige_ref") @db.VarChar(64)
+  gelLitigeAt           DateTime?            @map("gel_litige_at") @db.Timestamptz(3)
+  gelLitigeLeveAt       DateTime?            @map("gel_litige_leve_at") @db.Timestamptz(3)
+  gelLitigeRef          String?              @map("gel_litige_ref") @db.VarChar(64)
+  /// DM-55 : les notifications des décisions qu'elle fonde.
+  notificationsEspace   NotificationEspace[]
 
   @@index([apporteurId])
   @@index([attributionId])
@@ -1361,6 +1385,7 @@ enum NatureAccesConsole {
   connexion
   lecture_coordonnees_apporteur
   lecture_coordonnees_contact
+  lecture_journal_acces
 
   @@map("nature_acces_console")
 }
@@ -1369,8 +1394,10 @@ enum NatureAccesConsole {
 /// l'empreinte tronquée de l'adresse réseau ; aucun contenu. Ajout seul par le gabarit commun
 /// (`refuser_modification_sauf`) : la purge, à l'échéance de la SSOT, vide l'utilisateur, la cible et
 /// l'empreinte et pose `purgeAt`, une fois ; la ligne nue (nature, date) reste. `cibleId` est
-/// polymorphe (un apporteur, ou l'attribution qui porte le contact), sans clé étrangère : le code la
-/// vérifie avant d'écrire. Seule une connexion RÉUSSIE s'inscrit.
+/// polymorphe (un apporteur, l'attribution qui porte le contact, ou, pour une lecture du journal
+/// (SEC-60), l'utilisateur de la console dont les traces sont lues), sans clé étrangère, pour les trois
+/// cibles, cette dernière comprise : le code vérifie chacune avant d'écrire. Seule une connexion
+/// RÉUSSIE s'inscrit.
 model JournalAccesConsole {
   id                   String              @id @db.Uuid
   utilisateurConsoleId String?             @map("utilisateur_console_id") @db.Uuid
