@@ -28,6 +28,8 @@ export const TACHES = {
   siren_refuses_purger: { req: 'REQ-DM-043' },
   /** DM-28 — la reprise des codes NAF nuls d'un dépôt en repli manuel (`completerLesCodesNaf`). */
   naf_completer: { req: 'REQ-DM-046' },
+  /** DM-61 — la suppression des notifications de l'espace douze mois après leur inscription. */
+  notifications_espace_purger: { req: 'REQ-UX-016' },
   /** DM-59 — l'effacement, à échéance, de la valeur d'une rectification demandée par le contact. */
   droits_contact_purger: { req: 'REQ-JUR-065' },
   /** SEC-58 — la purge, à échéance, du journal des accès à la console. */
@@ -37,6 +39,11 @@ export const TACHES = {
    * haute séquence reçue, rejeu des trous (`src/server/jobs/reconciliation.ts`).
    */
   reconciliation_axionia: { req: 'REQ-INT-013' },
+  /**
+   * SEC-18 — l'ouverture DIFFÉRÉE des anomalies d'auto-parrainage, sur les naissances de candidatures
+   * et de pièces RIB lues au journal (`src/server/taches/ouvrir-anomalies-auto-parrainage.ts`).
+   */
+  auto_parrainage_ouvrir: { req: 'REQ-SEC-031' },
   /**
    * DM-62 — l'anonymisation des anomalies à leur échéance, et le NOMBRE des mesures ouvertes au-delà
    * de `MESURE_OUVERTE_ALERTE_JOURS` (`anonymiserLesAnomalies`).

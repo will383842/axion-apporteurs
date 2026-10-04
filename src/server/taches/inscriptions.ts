@@ -57,6 +57,7 @@ import { passageQuotidien } from '../jobs/reconciliation';
 import { minimiserCandidatures } from './minimiser-candidatures';
 import { purgerLesContacts } from './purger-contacts';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
+import { purgerLesNotificationsDeLEspace } from './purger-notifications-espace';
 import { purgerLesValeursDesDroits } from './purger-valeurs-droits-contact';
 import {
   anonymiserLesAnomalies,
@@ -65,6 +66,10 @@ import {
 } from './purger-contestations-anomalies';
 import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
+import {
+  ouvrirLesAnomaliesDAutoParrainage,
+  precedentDuBattement,
+} from './ouvrir-anomalies-auto-parrainage';
 import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
 import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
 import { clientDuTiers } from '../integrations/recherche-entreprises/tiers';
@@ -203,9 +208,19 @@ export function inscriptions(
     // DM-53 (REQ-DM-043) : le SIREN des dépôts refusés, douze mois après le refus.
     siren_refuses_purger: () =>
       purgerLesSirenRefuses(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-61 (REQ-UX-016) : les notifications de l'espace, douze mois après leur inscription.
+    notifications_espace_purger: () =>
+      purgerLesNotificationsDeLEspace(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-59 (REQ-JUR-065) : la valeur d'une rectification, effacée à son échéance même sans traitement.
     droits_contact_purger: () =>
       purgerLesValeursDesDroits(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-18 (REQ-SEC-031) : l'ouverture DIFFÉRÉE des anomalies d'auto-parrainage, depuis le curseur
+    // que son propre battement porte.
+    auto_parrainage_ouvrir: () =>
+      ouvrirLesAnomaliesDAutoParrainage(prisma, {
+        maintenant: () => new Date(horlogeSysteme.maintenant()),
+        precedent: precedentDuBattement(prisma),
+      }),
     // DM-62 (REQ-DM-033, REQ-DM-043) : les anomalies, les contestations et le démenti d'un contact,
     // chacun à son échéance, à l'heure du système. Le passage des anomalies ne rend qu'un NOMBRE de
     // mesures ouvertes : les anomalies en cause ne sont nommées qu'en console.
