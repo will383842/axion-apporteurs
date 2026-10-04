@@ -1234,3 +1234,262 @@ describe('REQ-DM-006 — anteriorite_etablie n’est émise que par le passage d
     );
   });
 });
+
+/**
+ * DM-55 (forme d'A02, conditions de la juriste et de la sécurité) : l'écrivain porte le motif d'une
+ * annulation par la console et sa catégorie, réserve l'erreur de saisie de la Société à la prise en
+ * charge d'un conseiller, vérifie l'anomalie confirmée qui fonde une invalidation, et écrit la
+ * notification de la décision DANS la transaction, avec son événement. Le texte part après le commit.
+ */
+describe('REQ-DM-006 — l’écrivain porte le motif, et écrit la notification de la décision', () => {
+  const ANOMALIE = '0190f0a0-0000-7000-8000-0000000000c3';
+  const AUTRE = '0190f0a0-0000-7000-8000-0000000000d4';
+  const CONSOLE = {
+    par: 'utilisateur_console',
+    id: '0190f0a0-0000-7000-8000-0000000000e5',
+  } as const;
+
+  function txDM55(
+    ligne: LigneSimulee,
+    anomalie: {
+      statut: string;
+      attributionId: string | null;
+      apporteurId: string | null;
+    } | null = null
+  ) {
+    const base = txSimule([ligne]);
+    const notifications: unknown[] = [];
+    const lues: unknown[] = [];
+    const tx = Object.assign(base.tx as object, {
+      notificationEspace: {
+        create: async (arg: unknown) => {
+          notifications.push(arg);
+          return {};
+        },
+      },
+      anomalie: {
+        findUnique: async (arg: unknown) => {
+          lues.push(arg);
+          return anomalie;
+        },
+      },
+    });
+    return { ...base, tx: tx as never, notifications, lues };
+  }
+
+  beforeEach(() => {
+    journalSimule.ajouterEvenement.mockReset();
+    journalSimule.ajouterEvenement.mockResolvedValue({ id: '42', selfHash: 'x' });
+  });
+
+  it('REQ-DM-006 : TÉMOIN — une annulation par la console sans motif est refusée AVANT le verrou, rien n’est écrit', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({}));
+    const e = await refusDe(
+      transitionnerUneAttribution(t.tx, {
+        attributionId: ID,
+        transition: 'annulee_par_la_console',
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+      })
+    );
+    expect(e.code).toBe('motif_incoherent');
+    expect(t.verrous).toStrictEqual([]);
+    expect(evenementsEcrits()).toStrictEqual([]);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — le motif de l’article 3.3 bis sans sa catégorie est refusé ; un motif sur une autre transition aussi', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const sansCategorie = txDM55(ligneDe({}));
+    expect(
+      (
+        await refusDe(
+          transitionnerUneAttribution(sansCategorie.tx, {
+            attributionId: ID,
+            transition: 'annulee_par_la_console',
+            acteur: CONSOLE,
+            maintenant: MAINTENANT,
+            motifAnnulation: 'entreprise_relevant_de_l_article_3_3_bis',
+          })
+        )
+      ).code
+    ).toBe('motif_incoherent');
+    const ailleurs = txDM55(ligneDe({}));
+    expect(
+      (
+        await refusDe(
+          transitionnerUneAttribution(ailleurs.tx, {
+            attributionId: ID,
+            transition: 'non_confirmee',
+            acteur: ACTEUR,
+            maintenant: MAINTENANT,
+            motifAnnulation: 'declaration_en_double',
+          })
+        )
+      ).code
+    ).toBe('motif_incoherent');
+    expect(sansCategorie.verrous).toStrictEqual([]);
+    expect(ailleurs.verrous).toStrictEqual([]);
+  });
+
+  it('REQ-DM-006 : TÉMOIN (face apporteur) — l’erreur de saisie de la Société sur le dépôt d’un apporteur est refusée : ni état, ni événement, ni notification', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({ apporteur_id: APPORTEUR }));
+    const e = await refusDe(
+      transitionnerUneAttribution(t.tx, {
+        attributionId: ID,
+        transition: 'annulee_par_la_console',
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+        motifAnnulation: 'erreur_de_saisie_de_la_societe',
+      })
+    );
+    expect(e.code).toBe('porteur_refuse');
+    expect(t.mises).toStrictEqual([]);
+    expect(evenementsEcrits()).toStrictEqual([]);
+    expect(t.notifications).toStrictEqual([]);
+  });
+
+  it('REQ-DM-006 : TÉMOIN (face conseiller) — l’erreur de saisie sur la prise en charge d’un conseiller passe, sans AUCUNE notification', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({ apporteur_id: null }));
+    const r = await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'annulee_par_la_console',
+      acteur: CONSOLE,
+      maintenant: MAINTENANT,
+      motifAnnulation: 'erreur_de_saisie_de_la_societe',
+    });
+    expect(r).toStrictEqual({ de: 'provisoire', vers: 'annulee' });
+    expect(evenementsEcrits()[0]!.charge).toMatchObject({
+      transition: 'annulee_par_la_console',
+      motifAnnulation: 'erreur_de_saisie_de_la_societe',
+    });
+    expect(t.notifications).toStrictEqual([]);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — une annulation par la console notifie l’apporteur, avec l’événement qui la fonde ; motif et catégorie sont dans la charge', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({}));
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'annulee_par_la_console',
+      acteur: CONSOLE,
+      maintenant: MAINTENANT,
+      motifAnnulation: 'entreprise_relevant_de_l_article_3_3_bis',
+      categorieRelation: 'financeur_public',
+    });
+    expect(evenementsEcrits()[0]!.charge).toMatchObject({
+      motifAnnulation: 'entreprise_relevant_de_l_article_3_3_bis',
+      categorieRelation: 'financeur_public',
+    });
+    expect(t.notifications).toStrictEqual([
+      {
+        data: {
+          apporteurId: APPORTEUR,
+          cle: 'decision_attribution',
+          attributionId: ID,
+          evenementId: BigInt(42),
+        },
+      },
+    ]);
+  });
+
+  it('REQ-DM-006 : une non-confirmation notifie, une confirmation ne notifie pas', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const non = txDM55(ligneDe({}));
+    await transitionnerUneAttribution(non.tx, {
+      attributionId: ID,
+      transition: 'non_confirmee',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(non.notifications).toHaveLength(1);
+    const oui = txDM55(ligneDe({}));
+    await transitionnerUneAttribution(oui.tx, {
+      attributionId: ID,
+      transition: 'confirmee',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(oui.notifications).toStrictEqual([]);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — une anomalie confirmée EXIGE son anomalie, refus avant le verrou', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({}));
+    const e = await refusDe(
+      transitionnerUneAttribution(t.tx, {
+        attributionId: ID,
+        transition: 'anomalie_confirmee',
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+      })
+    );
+    expect(e.code).toBe('anomalie_refusee');
+    expect(t.verrous).toStrictEqual([]);
+  });
+
+  it.each([
+    ['d’un autre apporteur', { statut: 'confirmee', attributionId: ID, apporteurId: AUTRE }],
+    [
+      'd’une autre attribution',
+      { statut: 'confirmee', attributionId: AUTRE, apporteurId: APPORTEUR },
+    ],
+    ['non confirmée', { statut: 'ouverte', attributionId: ID, apporteurId: APPORTEUR }],
+    ['introuvable', null],
+  ])(
+    'REQ-DM-006 : TÉMOIN (face refusée) — une anomalie %s est refusée : ni état, ni événement, ni notification',
+    async (_, anomalie) => {
+      const { transitionnerUneAttribution } = await ecrivain();
+      const t = txDM55(ligneDe({}), anomalie);
+      const e = await refusDe(
+        transitionnerUneAttribution(t.tx, {
+          attributionId: ID,
+          transition: 'anomalie_confirmee',
+          acteur: CONSOLE,
+          maintenant: MAINTENANT,
+          anomalieId: ANOMALIE,
+        })
+      );
+      expect(e.code).toBe('anomalie_refusee');
+      expect(t.mises).toStrictEqual([]);
+      expect(evenementsEcrits()).toStrictEqual([]);
+      expect(t.notifications).toStrictEqual([]);
+    }
+  );
+
+  it('REQ-DM-006 : TÉMOIN (face admise) — l’anomalie confirmée de CETTE attribution et de CET apporteur : la notification la nomme, la charge du journal ne la porte pas', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({}), {
+      statut: 'confirmee',
+      attributionId: ID,
+      apporteurId: APPORTEUR,
+    });
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'anomalie_confirmee',
+      acteur: CONSOLE,
+      maintenant: MAINTENANT,
+      anomalieId: ANOMALIE,
+    });
+    expect(t.lues).toStrictEqual([
+      {
+        where: { id: ANOMALIE },
+        select: { statut: true, attributionId: true, apporteurId: true },
+      },
+    ]);
+    expect(evenementsEcrits()[0]!.charge).not.toHaveProperty('anomalieId');
+    expect(t.notifications).toStrictEqual([
+      {
+        data: {
+          apporteurId: APPORTEUR,
+          cle: 'decision_attribution',
+          attributionId: ID,
+          evenementId: BigInt(42),
+          anomalieId: ANOMALIE,
+        },
+      },
+    ]);
+  });
+});
