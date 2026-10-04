@@ -38,6 +38,7 @@ import {
   desactiver as desactiverParLeServeur,
   ErreurAdministrationConsole,
   inviter,
+  reactiver as reactiverParLeServeur,
 } from '../../src/server/console/utilisateurs/administration';
 import { ajouterEvenement } from '../../src/server/evenement/journal';
 import { createElement } from 'react';
@@ -702,6 +703,39 @@ describe('REQ-SEC-023 — SEC-30 : la création d’un administrateur est notifi
     expect(new Set(creation.map((c) => c.a)).size).toBe(3);
     expect(creation[0]!.corps).toContain('nouvel-admin-sec30@example.org a reçu le rôle');
     expect(creation[0]!.corps).toContain("n'a aucun droit d'administrateur");
+  });
+
+  it('REQ-SEC-023 : TÉMOIN — réactiver un admin : admin_reactive à CHAQUE admin actif, auteur et réactivé compris ; un autre rôle réactivé ne prévient personne', async () => {
+    await viderLaConsole();
+    const premier = await utilisateur('admin');
+    await valider(app, premier, null);
+    const second = await utilisateur('admin');
+    await valider(app, second, premier);
+    const acteur = { id: premier, role: 'admin' as const };
+    await desactiverParLeServeur(app, { acteur, cibleId: second, maintenant: new Date(t0) });
+    const { courriels } = await reactiverParLeServeur(app, {
+      acteur,
+      cibleId: second,
+      maintenant: new Date(t0),
+      cles: CLES,
+    });
+    expect(courriels.map((c) => c.gabarit)).toEqual(['admin_reactive', 'admin_reactive']);
+    expect(new Set(courriels.map((c) => c.a)).size).toBe(2);
+    expect(courriels[0]!.sujet).toBe('Un administrateur de la console a été réactivé');
+    expect(courriels[0]!.corps).toMatch(
+      /^Le compte d'administrateur de .+@example\.org a été réactivé dans la console d'Axion Partners par .+@example\.org, le /
+    );
+    expect(courriels[0]!.corps).toContain("Ce compte n'a aucun droit d'administrateur");
+    // Un autre rôle réactivé : aucun courriel.
+    const comptable = await utilisateur('comptable');
+    await desactiverParLeServeur(app, { acteur, cibleId: comptable, maintenant: new Date(t0) });
+    const autre = await reactiverParLeServeur(app, {
+      acteur,
+      cibleId: comptable,
+      maintenant: new Date(t0),
+      cles: CLES,
+    });
+    expect(autre.courriels).toEqual([]);
   });
 });
 

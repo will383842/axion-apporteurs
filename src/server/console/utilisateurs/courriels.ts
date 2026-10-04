@@ -1,6 +1,6 @@
 /**
- * SEC-30 — les courriels de l'administration des utilisateurs : `invitation_console` et `admin_cree`.
- * Textes de la juriste (rattrapage 96, arbitrés le 2026-10-04), dans `console/utilisateurs.ts`.
+ * SEC-30 — les courriels de l'administration des utilisateurs : `invitation_console`, `admin_cree` et
+ * `admin_reactive`. Textes de la juriste (rattrapages 96 et 98), dans `console/utilisateurs.ts`.
  *
  * CE MODULE CONSTRUIT, IL N'ENVOIE PAS. L'envoi part APRÈS la réponse, par la voie d'envoi du
  * processus (`d.envoi`), confiée à `planifier` par l'action. Les destinataires d'`admin_cree` sont
@@ -24,7 +24,7 @@ export interface CourrielDeLAdministration {
   readonly a: string;
   readonly sujet: string;
   readonly corps: string;
-  readonly gabarit: 'invitation_console' | 'admin_cree';
+  readonly gabarit: 'invitation_console' | 'admin_cree' | 'admin_reactive';
 }
 
 /** L'invitation : le rôle, l'adresse de connexion (sans jeton), l'échéance. */
@@ -89,5 +89,37 @@ export async function courrielsDeCreationDAdministrateur(
     return adresse === null
       ? []
       : [{ a: adresse, sujet: C.adminCree.sujet, corps, gabarit: 'admin_cree' as const }];
+  });
+}
+
+/**
+ * Les courriels `admin_reactive` (rattrapage 98), construits DANS la transaction de la réactivation :
+ * un par administrateur actif à cet instant, auteur compris. Le compte réactivé repart en attente.
+ */
+export async function courrielsDeReactivationDAdministrateur(
+  tx: Prisma.TransactionClient,
+  d: { reactiveId: string; auteurId: string; maintenant: Date; cles: ClesPii }
+): Promise<CourrielDeLAdministration[]> {
+  const choisir = { id: true, nomChiffre: true, emailChiffre: true } as const;
+  const [reactive, auteur, admins] = await Promise.all([
+    tx.utilisateurConsole.findUniqueOrThrow({ where: { id: d.reactiveId }, select: choisir }),
+    tx.utilisateurConsole.findUniqueOrThrow({ where: { id: d.auteurId }, select: choisir }),
+    tx.utilisateurConsole.findMany({
+      where: { role: 'admin', desactiveAt: null },
+      select: choisir,
+    }),
+  ]);
+  const r = clairs(reactive, d.cles);
+  const a = clairs(auteur, d.cles);
+  const corps = C.adminReactive.corps({
+    identiteReactive: identite(r.nom, r.adresse ?? ''),
+    identiteAuteur: identite(a.nom, a.adresse ?? ''),
+    dateHeure: dateEtHeureCompletesDeParis(d.maintenant),
+  });
+  return admins.flatMap((x) => {
+    const adresse = clairs(x, d.cles).adresse;
+    return adresse === null
+      ? []
+      : [{ a: adresse, sujet: C.adminReactive.sujet, corps, gabarit: 'admin_reactive' as const }];
   });
 }

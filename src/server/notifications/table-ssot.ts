@@ -143,6 +143,30 @@ export const GABARITS = {
     routeEnAttente: null,
   },
   /**
+   * SEC-30 : la réactivation d'un administrateur, qui repart en attente, notifiée à TOUS les
+   * administrateurs actifs, auteur compris. Une émission par administrateur. Texte de la juriste (98).
+   */
+  admin_reactive: {
+    destinataire: 'utilisateur_console',
+    req: 'REQ-SEC-023',
+    emetteur: 'SEC-30',
+    fondement:
+      'REQ-SEC-023 et HYP-W19-QUATRE-YEUX — toute réactivation d’un administrateur est notifiée à tous les administrateurs',
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: false,
+    canaux: ['email'],
+    desactivable: false,
+    actions: [
+      {
+        libelle: UTILISATEURS_CONSOLE.courriels.adminReactive.appel,
+        source: 'src/content/micro-copy/console/utilisateurs.ts',
+      },
+    ],
+    route: '/console/utilisateurs',
+    routeEnAttente: null,
+  },
+  /**
    * SEC-30 : l'invitation à la console, SANS lien de connexion : l'adresse de `/console/connexion`.
    * L'échéance FERME l'invitation, elle n'ouvre aucun délai. Textes de la juriste (96).
    */

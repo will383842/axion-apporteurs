@@ -62,6 +62,8 @@ const CONTEXTE = {
       // SEC-30 : l'invitation et la création d'un administrateur, textes de la juriste.
       invitation_console: UTILISATEURS_CONSOLE.courriels.invitation,
       admin_cree: UTILISATEURS_CONSOLE.courriels.adminCree,
+      // SEC-30 : la réactivation d'un administrateur, texte de la juriste (rattrapage 98).
+      admin_reactive: UTILISATEURS_CONSOLE.courriels.adminReactive,
     },
   },
 };
@@ -69,7 +71,7 @@ const table = (): Record<string, LigneDeNotification> =>
   structuredClone(GABARITS) as Record<string, LigneDeNotification>;
 
 describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs règles', () => {
-  it('REQ-UX-016 : la table porte EXACTEMENT les douze clés arrêtées — les neuf de l’apporteur, dont la micro-copie porte les mêmes, et les trois de la console', () => {
+  it('REQ-UX-016 : la table porte EXACTEMENT les treize clés arrêtées — les neuf de l’apporteur, dont la micro-copie porte les mêmes, et les quatre de la console', () => {
     const attendues = [
       'attribution_liberee',
       'decision_attribution',
@@ -83,10 +85,21 @@ describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs rè
     ];
     // SEC-29 : la dixième, destinée à la console ; ses textes vivent avec la console.
     expect(Object.keys(GABARITS).sort()).toEqual(
-      [...attendues, 'lien_magique_console', 'invitation_console', 'admin_cree'].sort()
+      [
+        ...attendues,
+        'lien_magique_console',
+        'invitation_console',
+        'admin_cree',
+        'admin_reactive',
+      ].sort()
     );
     expect(Object.keys(TEXTES_DES_NOTIFICATIONS).sort()).toEqual(attendues);
-    for (const cle of ['lien_magique_console', 'invitation_console', 'admin_cree'] as const)
+    for (const cle of [
+      'lien_magique_console',
+      'invitation_console',
+      'admin_cree',
+      'admin_reactive',
+    ] as const)
       expect(GABARITS[cle].destinataire).toBe('utilisateur_console');
     for (const c of attendues) expect(schemaGabarit.safeParse(c).success).toBe(true);
     expect(schemaGabarit.safeParse('relance_dormance').success).toBe(false);
@@ -119,6 +132,7 @@ describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs rè
       lien_magique_console: 'T/F',
       invitation_console: 'T/F',
       admin_cree: 'T/F',
+      admin_reactive: 'T/F',
       depot_injoignable_j5: 'F/F',
       attribution_liberee: 'T/F',
       decision_attribution: 'T/F',

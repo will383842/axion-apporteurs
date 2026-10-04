@@ -93,7 +93,7 @@ export const UTILISATEURS_CONSOLE = {
   },
   chargement: 'Chargement des utilisateurs…',
   /**
-   * Les deux courriels de SEC-30 : textes de la juriste versés au rattrapage 96, MOT POUR MOT. Les
+   * Les trois courriels de SEC-30 : textes de la juriste versés aux rattrapages 96 et 98, MOT POUR MOT. Les
    * durées vivent dans la SSOT, jamais en clair ; les dates sont à l'heure de Paris.
    */
   courriels: {
@@ -117,6 +117,18 @@ export const UTILISATEURS_CONSOLE = {
           ? " Ce compte n'a aucun droit d'administrateur tant qu'un autre administrateur que son auteur ne l'a pas validé. Si vous n'attendiez pas ce compte, ne le validez pas, et désactivez-le depuis la console (Utilisateurs)."
           : '') +
         " Si vous ne reconnaissez pas cette création, prévenez aussitôt la direction d'Axion-IA : un administrateur a accès aux données des apporteurs et des contacts.",
+      appel: 'Utilisateurs',
+    },
+    /**
+     * `admin_reactive` — texte de la juriste versé au rattrapage 98, MOT POUR MOT. À TOUS les
+     * administrateurs actifs, auteur compris : un administrateur réactivé repart en attente.
+     * {identiteReactive} et {identiteAuteur} valent « Prénom Nom (adresse) », ou l'adresse seule à
+     * défaut de nom ; la date est à l'heure de Paris. Aucune autre donnée.
+     */
+    adminReactive: {
+      sujet: 'Un administrateur de la console a été réactivé',
+      corps: (d: { identiteReactive: string; identiteAuteur: string; dateHeure: string }) =>
+        `Le compte d'administrateur de ${d.identiteReactive} a été réactivé dans la console d'Axion Partners par ${d.identiteAuteur}, le ${d.dateHeure}. Ce compte n'a aucun droit d'administrateur tant qu'un autre administrateur que son auteur ne l'a pas validé. Si vous n'attendiez pas cette réactivation, ne la validez pas, et désactivez de nouveau le compte depuis la console (Utilisateurs). Si vous ne reconnaissez pas ce geste, prévenez aussitôt la direction d'Axion-IA : un administrateur a accès aux données des apporteurs et des contacts.`,
       appel: 'Utilisateurs',
     },
     /**
