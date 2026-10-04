@@ -4,7 +4,7 @@
  * (`rapprocherLesAnteriorites`) sur une entreprise connue de la Société et des faits reçus d'axion-ia.
  *
  * Ce que le banc unitaire ne pouvait pas voir, puisqu'il simule l'écrivain : la transition
- * `anteriorite_etablie` passe par le VRAI écrivain (DM-67), qui exige le critère ET le fait fondateur
+ * `anteriorite_etablie` passe par le VRAI écrivain des transitions, qui exige le critère ET le fait fondateur
  * (condition (c) de la sécurité). L'événement porte la référence du fait (voie (a) d'A02, #731), et la
  * notification de l'apporteur est écrite avec son événement, pour le passage d'envoi.
  *
