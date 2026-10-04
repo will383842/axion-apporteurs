@@ -876,6 +876,12 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/etats-attribution.ts › LIBELLES_DES_ETATS › expiree › phrase : Ce dépôt a pris fin le {dateFin} : sa durée est écoulée, ou votre contrat a pris fin.
       espace/etats-attribution.ts › LIBELLES_DES_ETATS › annulee › libelle : Annulée
       espace/etats-attribution.ts › LIBELLES_DES_ETATS › annulee › phrase : Ce dépôt est annulé. Le motif vous a été indiqué par notification.
+      espace/notifications.ts › NOTIFICATIONS › titre : Notifications
+      espace/notifications.ts › NOTIFICATIONS › aucunDelai : Les avis qui font courir un délai vous sont toujours envoyés par e-mail ; cette liste n’en fait courir aucun.
+      espace/notifications.ts › NOTIFICATIONS › chargement : Chargement…
+      espace/notifications.ts › NOTIFICATIONS › erreur › titre : Les notifications n’ont pas pu être chargées
+      espace/notifications.ts › NOTIFICATIONS › erreur › phrase : Rien n’est perdu : elles s’afficheront au prochain essai.
+      espace/notifications.ts › NOTIFICATIONS › erreur › action : Réessayer
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › titre : Votre lien de connexion à votre espace
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › appel : Ouvrir mon espace
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › titre : {entreprise} : la confirmation de l'échange est en cours

@@ -1,0 +1,54 @@
+/*
+ * Les notifications de l'espace (UX-P1-54) : mobile d'abord, une colonne, des cartes faciles à toucher.
+ * Une FEUILLE servie par la même origine, et non des styles en ligne : `style-src 'self'` l'admet sans
+ * nonce, là où un attribut `style` serait refusé par la politique de contenu (garde `csp:inline`).
+ */
+.page {
+  font-size: 1.125rem;
+  line-height: 1.5;
+  max-width: 40rem;
+  padding: 1rem;
+}
+
+.liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+/* Une carte est une cible de 48 px au moins (3 rem). */
+.carte {
+  display: block;
+  min-height: 3rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid currentColor;
+  border-radius: 0.5rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.titre {
+  font-weight: 600;
+  margin: 0;
+}
+
+.doux {
+  opacity: 0.85;
+}
+
+.bouton {
+  min-height: 3rem;
+  min-width: 3rem;
+  font-size: 1.125rem;
+}
+
+/* La hauteur réservée du chargement : la page ne saute pas quand la liste arrive. */
+.squelette {
+  height: 4.5rem;
+  margin-top: 0.75rem;
+  border-radius: 0.5rem;
+  background: currentColor;
+  opacity: 0.08;
+}
