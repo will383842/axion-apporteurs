@@ -24,6 +24,12 @@ import { randomUUID } from 'node:crypto';
 import Redis, { type RedisOptions } from 'ioredis';
 import { SEUILS } from '../../domain/seuils/ssot';
 
+/**
+ * La conversion d'une fenêtre lue en minutes dans la SSOT : une constante nommée, jamais un nombre
+ * tapé dans la déclaration d'un compteur (critère 2 de la sécurité pour la garde `rate-famille`).
+ */
+const SECONDES_PAR_MINUTE = 60;
+
 // ── Le vocabulaire fermé ────────────────────────────────────────────────────────────────────────
 
 /** Les cinq familles de REQ-SEC-016. Un sixième préfixe passe par l'exigence, pas par ce fichier. */
@@ -148,7 +154,7 @@ export const COMPTEURS = {
   'depot:ip': {
     prefixe: 'depot:',
     limite: SEUILS.DEPOT_PAR_IP_PAR_FENETRE.valeur,
-    fenetreSecondes: SEUILS.DEPOT_FENETRE_MINUTES.valeur * 60,
+    fenetreSecondes: SEUILS.DEPOT_FENETRE_MINUTES.valeur * SECONDES_PAR_MINUTE,
     surPanne: 'refuser',
     source: 'REQ-SEC-016',
     ancre: "compteur d'IP (hash IP)",
@@ -157,7 +163,7 @@ export const COMPTEURS = {
   'depot:session': {
     prefixe: 'depot:',
     limite: SEUILS.DEPOT_PAR_SESSION_PAR_FENETRE.valeur,
-    fenetreSecondes: SEUILS.DEPOT_FENETRE_MINUTES.valeur * 60,
+    fenetreSecondes: SEUILS.DEPOT_FENETRE_MINUTES.valeur * SECONDES_PAR_MINUTE,
     surPanne: 'refuser',
     source: 'REQ-SEC-016',
     ancre: 'compteur de SESSION',
