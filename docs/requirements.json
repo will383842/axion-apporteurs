@@ -935,8 +935,8 @@
     {
       "id": "REQ-SEC-016",
       "domaine": "anti-abus-securite",
-      "texte": "Le dépôt est en outre limité à 20 / 10 min par hash IP (`surPanne: laisser-passer`) ; le compteur par identité déclare `surPanne: refuser` ; tout compteur sous préfixe `magic:`, `depot:`, `verif:`, `webhook:`, `auth:` déclare sa conduite sur panne.",
-      "source": "nouvelle (patron `rate-limit.spec.ts` garde de famille)",
+      "texte": "Le dépôt est limité par DEUX compteurs : un compteur de SESSION, OBLIGATOIRE (clé : l'empreinte de la session ou du jetonDepotId, jamais l'apporteurId), et un compteur d'IP (hash IP) ; la fenêtre et les plafonds sont lus en SSOT, avec leur source ; `surPanne: refuser` ; tout compteur sous préfixe `magic:`, `depot:`, `verif:`, `webhook:`, `auth:` déclare sa conduite sur panne. [Amendée au rattrapage 108, arbitrage de la coordination du 2026-10-04 (sécurité, juriste) : remplace « limité à 20 / 10 min par hash IP (`surPanne: laisser-passer`) ; le compteur par identité déclare `surPanne: refuser` ».]",
+      "source": "nouvelle (patron `rate-limit.spec.ts` garde de famille) ; rattrapage 108 (arbitrage de la coordination du 2026-10-04, sécurité et juriste)",
       "statut": "active",
       "remplaceePar": null,
       "module": 9,
@@ -4140,9 +4140,7 @@
       "taches": [
         "GOV-008",
         "GOV-059",
-        "GOV-096",
-        "GOV-146",
-        "GOV-147"
+        "GOV-096"
       ]
     },
     {
@@ -6511,6 +6509,21 @@
       "phase": -1,
       "taches": [
         "GOV-029"
+      ]
+    },
+    {
+      "id": "REQ-GOV-034",
+      "domaine": "gouvernance-agents",
+      "texte": "Porte de mise en service : aucune mise en production tant qu'une tâche marquée « BLOQUANTE AVANT LA MISE EN SERVICE » n'est pas fusionnée. La porte (GOV-146) tient ces tâches en dépendances ; une garde de `gov:tasks` (GOV-147) rougit si une tâche OUVERTE porte le marqueur sans figurer dans ses dépendances.",
+      "source": "rattrapage 108 (coordination, par délégation de Williams, 2026-10-04 ; refus de la lentille exactitude sur #701)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "GOV-146",
+        "GOV-147"
       ]
     }
   ]
