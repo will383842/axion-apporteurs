@@ -35,12 +35,15 @@ import {
 /** Le nom du modèle dans la donnée authentifiée des blocs chiffrés d'un apporteur. */
 export const MODELE_APPORTEUR = 'Apporteur';
 
+/** Le client d'une transaction, en alias : la forme que la règle semgrep du SQL brut admet. */
+type Tx = Prisma.TransactionClient;
+
 /**
  * SEC-19 : les droits d'un résilié courent tant qu'au moins une attribution reste `figee_resiliation`
  * (A02, #703) ; une lecture, jamais mise en cache.
  */
 async function droitsEnCoursDans(
-  client: Pick<Prisma.TransactionClient, 'attribution'>,
+  client: Pick<Tx, 'attribution'>,
   apporteurId: string
 ): Promise<boolean> {
   const figee = await client.attribution.findFirst({
