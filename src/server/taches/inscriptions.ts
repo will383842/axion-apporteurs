@@ -53,6 +53,10 @@ import {
   portsDeBase as portsDeReconciliation,
   reconcilier,
 } from '../integrations/axionia/reconciliation';
+import {
+  passageDesSommes,
+  portsDesSommesEnBase,
+} from '../integrations/axionia/reconciliation-sommes';
 import { passageQuotidien } from '../jobs/reconciliation';
 import { minimiserCandidatures } from './minimiser-candidatures';
 import { purgerLesContacts } from './purger-contacts';
@@ -257,7 +261,7 @@ export function passageDeReconciliation(
   const passage = passageQuotidien({
     ...battementDeLaReconciliation(prisma),
     maintenant: () => new Date(horlogeSysteme.maintenant()),
-    reconcilier: () => {
+    reconcilier: async () => {
       const lu = lireEnvironnement(env);
       if (!lu.ok) throw new Error('environnement_refuse');
       const rotation = lireTrousseaux(env, horlogeSysteme.maintenant());
@@ -269,21 +273,47 @@ export function passageDeReconciliation(
         appeler: fetch,
         maintenantMs: () => horlogeSysteme.maintenant(),
       };
-      return reconcilier({
+      // Un signal ne porte qu'un genre, un motif fermé ou un NOMBRE : jamais un identifiant.
+      const signaler = async (
+        s: { genre: string; motif: string } | { genre: string; nombre: number }
+      ) => {
+        await alerteur?.alerter({
+          categorie: 'reconciliation',
+          id: randomUUID(),
+          reconciliation: {
+            genre: s.genre,
+            ...('motif' in s ? { motif: s.motif } : { nombre: s.nombre }),
+          },
+        });
+      };
+      const sequences = await reconcilier({
         ...portsDeReconciliation(prisma),
         lire: clientRelecture(canal),
         rejouer: clientRejeu(canal),
-        signaler: async (s) => {
-          await alerteur?.alerter({
-            categorie: 'reconciliation',
-            id: randomUUID(),
-            reconciliation: {
-              genre: s.genre,
-              ...('motif' in s ? { motif: s.motif } : { nombre: s.nombre }),
-            },
-          });
-        },
+        signaler,
       });
+      // INT-T73-P (REQ-INT-013) : la réconciliation des SOMMES, dans le même passage quotidien. Son
+      // échec est signalé et compté, sans faire échouer la réconciliation des séquences, déjà faite :
+      // un passage rejoué à la minute suivante redemanderait des rejeux pour rien. Les SIREN en écart
+      // restent au battement, dans Partners ; vers l'extérieur, seul leur nombre part.
+      try {
+        const r = await passageDesSommes(
+          portsDesSommesEnBase(prisma, {
+            maintenant: () => new Date(horlogeSysteme.maintenant()),
+            lire: clientRelecture(canal),
+            signaler,
+          })
+        );
+        return {
+          ...sequences,
+          sommesPages: r.pages,
+          sommesRelus: r.relus,
+          ecartsDeSommes: r.nombreDEcarts,
+          sirensEnEcart: [...new Set(r.ecartsParSiren.map((e) => e.siren))],
+        };
+      } catch {
+        return { ...sequences, sommesEchec: 1 };
+      }
     },
   });
   return passage as unknown as Passage;
