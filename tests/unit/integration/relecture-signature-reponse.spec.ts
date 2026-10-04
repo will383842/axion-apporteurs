@@ -53,9 +53,14 @@ const hmac = (chaine: string) =>
   createHmac('sha256', FICHIER.secret).update(chaine, 'utf8').digest('hex');
 
 describe('REQ-INT-012 — la chaîne canonique de la réponse de relecture (INT-T74-P)', () => {
-  it('REQ-INT-012 : le fichier porte au moins trois vecteurs (page pleine, page vide, dernière page) et la commande openssl qui les a calculés', () => {
+  it('REQ-INT-012 : le fichier porte au moins quatre vecteurs (page pleine, page vide, dernière page, au-delà de MAX_SAFE_INTEGER) et la commande openssl qui les a calculés', () => {
     expect(FICHIER.vecteurs.map((v) => v.nom)).toEqual(
-      expect.arrayContaining(['page pleine', 'page vide', 'dernière page'])
+      expect.arrayContaining([
+        'page pleine',
+        'page vide',
+        'dernière page',
+        'au-delà de MAX_SAFE_INTEGER',
+      ])
     );
     expect(FICHIER.commande).toMatch(/^printf '%s' .* \| openssl dgst -sha256 -hmac /);
   });
@@ -114,6 +119,23 @@ describe('REQ-INT-012 — la chaîne canonique de la réponse de relecture (INT-
         NombreNonCanonique
       );
     }
+  });
+
+  it('REQ-INT-012 : TÉMOIN au-delà de MAX_SAFE_INTEGER — la chaîne porte la séquence EXACTE ; sa forme bigint la rend, sa forme number est refusée', () => {
+    const v = FICHIER.vecteurs.find((x) => x.nom === 'au-delà de MAX_SAFE_INTEGER')!;
+    expect(v.entrees.afterSequence).toBe('9007199254740993');
+    expect(BigInt(v.entrees.afterSequence) > BigInt(Number.MAX_SAFE_INTEGER)).toBe(true);
+    expect(
+      chaineCanoniqueDeRelecture({
+        ...v.entrees,
+        afterSequence: 9007199254740993n,
+        derniereSequence: 9007199254740993n,
+      })
+    ).toBe(v.chaine);
+    // Le même nombre en `number` s'arrondit à 9007199254740992 : il signerait une AUTRE lecture.
+    expect(() =>
+      chaineCanoniqueDeRelecture({ ...v.entrees, afterSequence: Number('9007199254740993') })
+    ).toThrow(NombreNonCanonique);
   });
 
   it('REQ-INT-012 : la suite ne vaut que 0 ou 1', () => {
@@ -230,6 +252,17 @@ describe('REQ-INT-012 — le client de relecture vérifie la chaîne CANONIQUE (
     });
     // L'autre face : la même page, servie à SA lecture, passe.
     expect((await clientRelecture(canal({ ...autre, signee: undefined }))(10n)).ok).toBe(true);
+  });
+
+  it('REQ-INT-012 : TÉMOIN au-delà de MAX_SAFE_INTEGER — la page vide au curseur 9007199254740993 est rendue sans arrondi ; signée pour le curseur arrondi, refusée', async () => {
+    const vide: Page = { corps: '', derniere: '9007199254740993', suite: '0' };
+    const r = await clientRelecture(canal(vide))(9007199254740993n);
+    expect(r.ok && [r.lignes, r.derniereSequence, r.suite]).toEqual([[], 9007199254740993n, false]);
+    expect(
+      await clientRelecture(canal({ ...vide, signee: { afterSequence: '9007199254740992' } }))(
+        9007199254740993n
+      )
+    ).toEqual({ ok: false, motif: 'signature_refusee' });
   });
 
   it('REQ-INT-012 : une page authentique signée pour une autre `limit` est refusée', async () => {
