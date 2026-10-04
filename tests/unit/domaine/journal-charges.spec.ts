@@ -1,5 +1,6 @@
 // @req REQ-DM-024
 // @req REQ-DM-031
+// @req REQ-SEC-058
 /**
  * `journal-charges.spec.ts` — les charges FERMÉES du journal (`src/domain/evenement/charges.ts`),
  * jugées valeur par valeur : la forme d'une empreinte, les constructeurs de formes, la charge de
@@ -50,6 +51,7 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
       'attribution_porteur_reaffecte',
       'contestation_modifiee',
       'demande_confirmation_etat_modifie',
+      'journal_acces_console_resume',
       'journal_ouvert',
       'piece_kyc_statut_modifie',
       'rattachement_manuel_modifie',
@@ -202,5 +204,51 @@ describe('REQ-DM-033 REQ-DM-043 — le gel pour litige au journal : le geste, ja
         expect(cle, type).not.toMatch(/ref|litige/i);
       }
     }
+  });
+});
+
+describe('REQ-SEC-058 — SEC-59 : le résumé du journal des accès à la console, des comptes et des empreintes seulement', () => {
+  const r = CHARGES_PAR_TYPE.journal_acces_console_resume;
+  const resume = {
+    acteur: { par: 'systeme' },
+    jour: '2027-01-10T00:00:00.000Z',
+    lignesNombre: 2,
+    empreinteComplete: HEX,
+    empreinteSurvivante: 'b'.repeat(64),
+  };
+
+  it('REQ-SEC-058 : le résumé de la tâche passe', () => {
+    expect(r.safeParse(resume).success).toBe(true);
+    expect(r.safeParse({ ...resume, lignesNombre: 0 }).success).toBe(true);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — un acteur autre que le système, ou portant un identifiant, est refusé', () => {
+    expect(r.safeParse({ ...resume, acteur: { par: 'utilisateur_console', id: ID } }).success).toBe(
+      false
+    );
+    expect(r.safeParse({ ...resume, acteur: { par: 'systeme', id: ID } }).success).toBe(false);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — la charge est fermée : aucun identifiant d’employé, de cible ni d’adresse n’y entre', () => {
+    for (const cle of ['utilisateurConsoleId', 'cibleId', 'ipHash', 'utilisateurs']) {
+      expect(r.safeParse({ ...resume, [cle]: ID }).success).toBe(false);
+    }
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — le nombre de lignes est un entier positif ou nul, et chaque champ est exigé', () => {
+    expect(r.safeParse({ ...resume, lignesNombre: 1.5 }).success).toBe(false);
+    expect(r.safeParse({ ...resume, lignesNombre: -1 }).success).toBe(false);
+    for (const cle of Object.keys(resume)) {
+      const sans: Record<string, unknown> = { ...resume };
+      delete sans[cle];
+      expect(r.safeParse(sans).success).toBe(false);
+    }
+  });
+
+  it('REQ-SEC-058 : la forme compte juge un entier positif ou nul', () => {
+    expect(FORMES.compte().safeParse(0).success).toBe(true);
+    expect(FORMES.compte().safeParse(12).success).toBe(true);
+    expect(FORMES.compte().safeParse(-1).success).toBe(false);
+    expect(FORMES.compte().safeParse(2.5).success).toBe(false);
   });
 });

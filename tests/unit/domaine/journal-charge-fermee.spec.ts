@@ -1,5 +1,6 @@
 // @req REQ-DM-041
 // @req REQ-INT-012
+// @req REQ-SEC-058
 /**
  * La charge d'un événement est un schéma Zod FERMÉ par type, sans donnée personnelle — DM-01
  * (gate `journal:sans-pii`, partners/ADR-0015 décision 4).
@@ -217,6 +218,28 @@ describe('REQ-DM-041 — la garde `journal:sans-pii` refuse toute feuille hors d
     );
     expect(verdict.fautes).toEqual([]);
     expect(verdict.champs).toBe(12);
+  });
+});
+
+describe('REQ-SEC-058 — SEC-59 : un compte entre dans une charge sur un champ suffixé Nombre, et là seulement', () => {
+  it('REQ-SEC-058 : CONTRE-TÉMOIN — un entier sur un champ …Nombre passe, par FORMES.compte()', () => {
+    const verdict = controler(
+      conforme({ bac: z.object({ lignesNombre: FORMES.compte() }).strict() })
+    );
+    expect(verdict.fautes).toEqual([]);
+    expect(verdict.champs).toBe(1);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — un entier hors du suffixe Nombre ou Cents rougit', () => {
+    expect(ou(conforme({ bac: z.object({ lignes: FORMES.compte() }).strict() }))).toEqual([
+      'feuille_hors_liste bac.lignes',
+    ]);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — un nombre non entier sur un champ …Nombre rougit', () => {
+    expect(ou(conforme({ bac: z.object({ lignesNombre: z.number() }).strict() }))).toEqual([
+      'feuille_hors_liste bac.lignesNombre',
+    ]);
   });
 });
 
