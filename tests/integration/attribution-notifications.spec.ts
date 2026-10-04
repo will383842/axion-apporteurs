@@ -428,15 +428,13 @@ describe('REQ-DM-006 — les faits ne sortent que vers le courriel : condition (
       anomalieId,
     });
 
-    // Le journal applicatif : tout ce qui sort du processus pendant le passage.
+    // Le journal applicatif : le passage n'écrit aucun journal ; toute sortie par la console est captée.
     const sorties: string[] = [];
     const capter = (...a: unknown[]) => {
       sorties.push(a.map(String).join(' '));
       return true;
     };
     const espions = [
-      vi.spyOn(process.stdout, 'write').mockImplementation(capter as never),
-      vi.spyOn(process.stderr, 'write').mockImplementation(capter as never),
       vi.spyOn(console, 'log').mockImplementation(capter),
       vi.spyOn(console, 'info').mockImplementation(capter),
       vi.spyOn(console, 'warn').mockImplementation(capter),

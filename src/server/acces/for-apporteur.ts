@@ -156,7 +156,15 @@ export const CLES_REFUSEES = {
     'repondueParId',
     'reponduePar',
   ],
-  courrielEnvoye: ['id', 'apporteurId', 'apporteur', 'attribution'],
+  // DM-55 (sécurité) : la notification qu'un courriel porte est HORS DE L'ESPACE, jamais écrite d'ici.
+  courrielEnvoye: [
+    'id',
+    'apporteurId',
+    'apporteur',
+    'attribution',
+    'notificationEspaceId',
+    'notificationEspace',
+  ],
   // CPL-T06 : une décision naît de la console, jamais de l'espace — son auteur est une clé refusée,
   // et la base l'exige : aucune création n'aboutit par cette couche.
   decisionCandidature: ['id', 'apporteurId', 'apporteur', 'auteurId', 'auteur'],
@@ -184,7 +192,19 @@ export const CLES_REFUSEES = {
   pieceKyc: ['id', 'apporteurId', 'apporteur', 'identitesFacturation'],
   // UX-P1-10 : l'attribution d'une notification est une référence vérifiée ; la clé d'une
   // préférence s'écrit, et Zod la juge contre la table des notifications avant la couche.
-  notificationEspace: ['id', 'apporteurId', 'apporteur', 'attribution'],
+  // DM-55 (sécurité) : l'événement, l'anomalie et les courriels d'une notification sont HORS DE L'ESPACE :
+  // jamais écrits d'ici, et aucun chemin de lecture de l'espace ne les suit.
+  notificationEspace: [
+    'id',
+    'apporteurId',
+    'apporteur',
+    'attribution',
+    'evenementId',
+    'evenement',
+    'anomalieId',
+    'anomalie',
+    'courriels',
+  ],
   preferenceNotification: ['id', 'apporteurId', 'apporteur'],
   // DM-12 : le porteur console ne s'écrit jamais de l'espace.
   verification: ['id', 'apporteurId', 'apporteur', 'utilisateurConsoleId', 'utilisateurConsole'],
@@ -243,7 +263,7 @@ export const RELATIONS = {
   alerteLiberation: ['apporteur'],
   changementCourriel: ['apporteur'],
   contestation: ['apporteur', 'depotRefuse', 'attribution', 'reponduePar'],
-  courrielEnvoye: ['apporteur', 'attribution'],
+  courrielEnvoye: ['apporteur', 'attribution', 'notificationEspace'],
   decisionCandidature: ['apporteur', 'auteur'],
   depotRefuse: ['apporteur', 'contestations'],
   identiteFacturation: ['apporteur', 'pieceKyc'],
@@ -252,7 +272,7 @@ export const RELATIONS = {
   personneDeclaree: ['apporteur', 'attributions'],
   pieceKyc: ['apporteur', 'identitesFacturation'],
   sessionEspace: ['apporteur', 'utilisateurConsole', 'lienMagique'],
-  notificationEspace: ['apporteur', 'attribution'],
+  notificationEspace: ['apporteur', 'attribution', 'evenement', 'anomalie', 'courriels'],
   preferenceNotification: ['apporteur'],
   verification: ['apporteur', 'utilisateurConsole'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
@@ -426,7 +446,15 @@ export const CHAMPS_TUS = {
     'jetonDroitsHash',
   ],
   changementCourriel: ['apporteurId', 'emailChiffre', 'emailHash', 'tokenHash', 'kid'],
-  courrielEnvoye: ['apporteurId', 'emailHash', 'fournisseurMessageId', 'erreur', 'attributionId'],
+  courrielEnvoye: [
+    'apporteurId',
+    'emailHash',
+    'fournisseurMessageId',
+    'erreur',
+    'attributionId',
+    // DM-55 : le lien vers la notification, hors de l'espace.
+    'notificationEspaceId',
+  ],
   // CPL-T06 : le motif chiffré (interne, purgé à l'échéance) et sa purge, la sortie du lien à
   // l'apporteur, l'auteur de la console, et la présence au webinaire, déclarative et lue par rien
   // (REQ-JUR-013).
@@ -455,7 +483,8 @@ export const CHAMPS_TUS = {
     'ipHash',
   ],
   // UX-P1-10 : le propriétaire, et l'attribution dont la notification parle (comme un courriel).
-  notificationEspace: ['apporteurId', 'attributionId'],
+  // DM-55 (sécurité) : l'événement et l'anomalie ne se rendent jamais ; l'espace ne lit que le texte rendu.
+  notificationEspace: ['apporteurId', 'attributionId', 'evenementId', 'anomalieId'],
   preferenceNotification: ['apporteurId'],
   // SEC-47 : les secrets, le jugement de la candidature (seuil, score, parts, réponses, barème),
   // les traces d'acquisition et de parrainage, le marqueur de test, la version de session.
