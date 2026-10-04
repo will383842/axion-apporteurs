@@ -14,21 +14,18 @@
  *   3. UN RÔLE NOMMÉ : ajouter et retirer sont réservés au rôle que la matrice nomme ; tout autre
  *      rôle, et un utilisateur désactivé, sont refusés sans rien écrire ; le retrait par le code
  *      ferme la période (auteur, date) puis supprime la ligne, dans une transaction ;
- *   4. LA PROJECTION SOUS VERROU : deux projections simultanées ne se croisent pas — la seconde
- *      attend que la première ait rendu son verrou.
+ *   4. CE QUE LA PROJECTION EN LIT : inscrit, un SIREN est connu sous sa catégorie ; retiré, il
+ *      redevient déclarable.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomInt, randomUUID } from 'node:crypto';
-import { PrismaClient, TypeEvenementRecu, type ConsoleRole } from '@prisma/client';
+import { PrismaClient, type ConsoleRole } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
 import {
   ROLE_D_EXECUTION,
   provisionnerRoleDExecution,
 } from '../../src/server/deploiement/role-d-execution';
-import {
-  CLE_DU_VERROU_DE_PROJECTION,
-  projeterEvenement,
-} from '../../src/server/entreprise-connue/projection';
+import { anterioriteDe } from '../../src/server/entreprise-connue/projection';
 import {
   DROIT_DE_TENIR_LA_LISTE,
   ErreurListeNoire,
@@ -481,67 +478,21 @@ describe('REQ-DM-028 — ajouter et retirer sont réservés au rôle que la matr
   });
 });
 
-// ── 4. la projection sous verrou ─────────────────────────────────────────────────────────────────
+// ── 4. ce que la projection locale en lit ────────────────────────────────────────────────────────
 
-describe('REQ-DM-029 — deux projections simultanées ne se croisent pas', () => {
-  it('REQ-DM-029 : une projection attend que le verrou de projection soit rendu', async () => {
-    const charge = {
-      devisId: `D-${randomUUID()}`,
-      numero: 'D-1',
-      siren: unSiren(),
-      emisLe: T0.toISOString(),
-    };
-    await base.prisma.evenementRecu.create({
-      data: {
-        source: 'axionia',
-        sequence: BigInt(randomInt(10_000_000, 99_999_999)),
-        eventId: randomUUID(),
-        eventType: TypeEvenementRecu.devis_emis,
-        schemaVersion: 3,
-        charge,
-        payloadHash: randomBytes(32).toString('hex'),
-        statut: 'recu',
-        receivedAt: T0,
-        survenuAt: T0,
-      },
+describe('REQ-DM-029 — la projection locale lit la liste : un SIREN retiré redevient déclarable', () => {
+  it('REQ-DM-029 : inscrit, le SIREN est connu sous sa catégorie ; retiré, il ne l’est plus', async () => {
+    const siren = unSiren();
+    const admin = await utilisateur('admin');
+    const maintenant = new Date(Date.now() + MINUTE);
+    await ajouterALaListe(app, { siren, motif: 'financeur_paritaire', auteurId: admin });
+    expect(await anterioriteDe(app, siren, maintenant)).toEqual({
+      connue: true,
+      origine: 'financeur',
+      depuis: null,
+      categorie: 'financeur_paritaire',
     });
-
-    let liberer!: () => void;
-    const tenu = new Promise<void>((r) => (liberer = r));
-    let pris!: () => void;
-    const verrouPris = new Promise<void>((r) => (pris = r));
-    const detenteur = app.$transaction(
-      async (tx) => {
-        await tx.$executeRawUnsafe(
-          `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
-          CLE_DU_VERROU_DE_PROJECTION
-        );
-        pris();
-        await tenu;
-      },
-      { timeout: 30_000 }
-    );
-    await verrouPris;
-
-    let finie = false;
-    const projection = projeterEvenement(app, {
-      eventType: TypeEvenementRecu.devis_emis,
-      charge,
-    }).then(() => {
-      finie = true;
-    });
-    await new Promise((r) => setTimeout(r, 500));
-    expect(finie).toBe(false);
-    expect(await app.devisConnu.count({ where: { devisRef: charge.devisId } })).toBe(0);
-
-    liberer();
-    await detenteur;
-    await projection;
-    expect(finie).toBe(true);
-    expect(await app.devisConnu.count({ where: { devisRef: charge.devisId } })).toBe(1);
-  }, 30_000);
-
-  it('REQ-DM-029 : la clé du verrou de projection ne porte aucun préfixe de compteur', () => {
-    expect(CLE_DU_VERROU_DE_PROJECTION).not.toMatch(/^[a-z]+:/);
+    await retirerDeLaListe(app, { siren, auteurId: admin, maintenant });
+    expect((await anterioriteDe(app, siren, maintenant)).connue).toBe(false);
   });
 });

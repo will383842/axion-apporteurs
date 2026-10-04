@@ -366,21 +366,12 @@ async function touches(
   return { devis, sirens };
 }
 
-/**
- * La clé du verrou consultatif de la projection (DM-65) : deux projections simultanées ne se croisent
- * pas, la seconde attend que la première ait rendu le verrou, à la fin de sa transaction. Un seul
- * verrou pour toute la projection : les SIREN qu'un événement touche ne se savent qu'en lisant, sous
- * le verrou. La clé ne porte aucun préfixe de compteur du registre des débits.
- */
-export const CLE_DU_VERROU_DE_PROJECTION = 'verrou-de-la-projection.anteriorite';
-
 /** Projette un événement : recalcule les devis qu'il touche, puis leurs entreprises, ensemble. */
 export async function projeterEvenement(
   prisma: PrismaClient,
   recu: Pick<EvenementATraiter, 'eventType' | 'charge'>
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${CLE_DU_VERROU_DE_PROJECTION}, 0))`;
     const { devis, sirens } = await touches(tx, recu);
     // 1. Tout CALCULER d'abord, en lecture : les SIREN d'avant (un devis qui change d'entreprise
     //    quitte l'ancienne) et ceux d'après.
