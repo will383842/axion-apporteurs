@@ -47,7 +47,7 @@ export const LECTURES_DE_LA_PORTE_A = [
   ],
   ['issue', 'list', '--state', 'open', '--json', 'number,title,labels', '--limit', '200'],
   // `gov:trace`
-  ['pr', 'list', '--state', 'merged', '--limit', '200', '--json', 'number,body'],
+  ['pr', 'list', '--state', 'merged', '--limit', '200', '--json', 'number,body,mergeCommit'],
 ] as const;
 
 export type Lire = (args: readonly string[]) => string;
