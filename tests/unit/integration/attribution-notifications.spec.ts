@@ -26,10 +26,14 @@ import type { PrismaClient } from '@prisma/client';
 import { GABARITS } from '../../../src/server/notifications/table-ssot';
 import {
   dateEnClair,
+  entrepriseDeLaNotification,
   motifDeLaDecision,
   parametresDeLaNotification,
 } from '../../../src/server/attribution/notifications';
-import { MOTIFS_DES_DECISIONS } from '../../../src/content/micro-copy/courriels/notifications';
+import {
+  ENTREPRISE_DE_REPLI,
+  MOTIFS_DES_DECISIONS,
+} from '../../../src/content/micro-copy/courriels/notifications';
 import {
   CLES_ENVOYEES_PAR_LE_PASSAGE,
   envoyerLesNotificationsDeLEspace,
@@ -533,4 +537,18 @@ describe('REQ-DM-004 — la fenêtre finit à MINUIT, heure de Paris, après le 
   it('REQ-DM-004 : le fuseau des délais est nommé dans la SSOT, à côté de la durée', () => {
     expect(FUSEAU_DES_DELAIS).toBe('Europe/Paris');
   });
+});
+
+describe('REQ-UX-016 — l’entreprise nommée dans la notification', () => {
+  it('REQ-UX-016 : la raison sociale de l’attribution, telle quelle', () => {
+    expect(entrepriseDeLaNotification('Société Fictive')).toBe('Société Fictive');
+  });
+
+  it.each([null, '', '   '])(
+    'REQ-UX-016 : TÉMOIN — sans raison sociale (%j), le repli de la micro-copie : la notification part quand même',
+    (raisonSociale) => {
+      expect(entrepriseDeLaNotification(raisonSociale)).toBe(ENTREPRISE_DE_REPLI);
+      expect(ENTREPRISE_DE_REPLI).toBe('l’entreprise déclarée');
+    }
+  );
 });
