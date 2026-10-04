@@ -62,6 +62,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { basename, posix } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { instantaneEnVigueur, lireDansLInstantane } from './forge-instantane';
+import { classerLaFusion, executerGit, type ExecuterGit } from '../lib/classer-la-fusion';
 import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
 import { DEPOT_LOCAL } from '../lot/attestation';
 import {
@@ -210,6 +211,13 @@ export type Resultats =
 export type PullRequest = { numero: number; gabarit: boolean; couvre: string[] };
 
 /**
+ * GOV-144 — une PR fusionnée que ce clone ne permet pas de JUGER, nommée et comptée. `horsArbre` :
+ * son commit de fusion est lisible et n'est pas un ancêtre de HEAD (une autre ligne d'histoire) ;
+ * `introuvables` : son commit est absent, ou le clone est superficiel — jamais une exemption.
+ */
+export type PrPlacee = { numero: number; oid: string };
+
+/**
  * Le PLANCHER de couverture (GOV-043) : une valeur, une source, une date — RM-10. Aucun littéral
  * ici : la valeur est LUE dans le champ `verifie` de l'entrée de `docs/gates.json` dont le
  * `script` est ce fichier, où elle s'écrit par `reecrire-champ` (registre en `deny`, geste
@@ -224,6 +232,10 @@ export type Univers = {
   /** `null` = source PR indisponible. Jamais `[]` : la liste vide voudrait dire « aucune PR ». */
   pr: PullRequest[] | null;
   prIndisponible: string | null;
+  /** GOV-144 : les PR fusionnées hors de l'arbre testé — nommées, comptées, jamais jugées. */
+  prHorsArbre: PrPlacee[];
+  /** GOV-144 : celles dont le commit de fusion est illisible ici — échec fermé, une faute chacune. */
+  prIntrouvables: PrPlacee[];
   plancher: Plancher | null;
   resultats: Resultats;
 };
@@ -243,6 +255,7 @@ export const FAMILLES = [
   'resultats_illisibles',
   'pr_sans_couvre',
   'pr_couvre_req_inconnue',
+  'pr_fusion_introuvable',
   'vue_divergente',
   'plancher_non_declare',
   'couverture_sous_plancher',
@@ -699,6 +712,19 @@ function juger(u: Univers): Jugement {
         }
       }
     }
+  }
+
+  // GOV-144 — une fusion que ce clone ne situe pas n'est JAMAIS tenue pour hors de l'arbre : la
+  // confronter au registre du disque jugerait une PR contre un état qui n'est pas le sien, et
+  // l'ignorer en silence rendrait le maillon PR muet sur ce qu'il n'a pas lu. Échec fermé, nommé.
+  for (const p of u.prIntrouvables) {
+    ajouter(
+      'pr_fusion_introuvable',
+      `Le commit de fusion \`${p.oid}\` (PR ${p.numero}) ne se situe pas dans ce clone : ni ancêtre ` +
+        `de HEAD, ni hors de l'arbre testé (objet absent, ou clone superficiel). Le maillon ` +
+        `PR → exigence ne peut pas être jugé pour elle. Pose \`fetch-depth: 0\` sur actions/checkout ` +
+        `(localement : \`git fetch --unshallow\`).`
+    );
   }
 
   // ── le plancher de couverture (GOV-043) ───────────────────────────────────
@@ -1278,56 +1304,120 @@ function chargerResultats(): Resultats {
   );
 }
 
-/** Les corps de PR fusionnées. Source FACULTATIVE : son absence est dite, jamais tue. */
-function lirePr(): { pr: PullRequest[] | null; indisponible: string | null } {
-  if (process.env.GOV_TRACE_SANS_PR === '1' || process.argv.includes('--sans-pr')) {
-    return { pr: null, indisponible: 'coupée par GOV_TRACE_SANS_PR / --sans-pr' };
-  }
-  const lecture = ['pr', 'list', '--state', 'merged', '--limit', '200', '--json', 'number,body'];
-  // QA-T64 : l'instantané de la forge, posé par la porte A (`GOV_FORGE`) ou par le run de tests
-  // (`GOV_ETAT_FORGE`), fait foi. Absent, illisible ou sans cette lecture, il LÈVE, nommé : la
-  // source reste facultative quand on la coupe, jamais quand un instantané dit l'avoir lue.
-  const instantane = instantaneEnVigueur(process.env);
-  let sortie: string;
-  if (instantane !== undefined) {
-    sortie = lireDansLInstantane(instantane, lecture, process.env);
-  } else {
-    const r = spawnSync('gh', lecture, {
-      encoding: 'utf8',
-      shell: true,
-      maxBuffer: 64 * 1024 * 1024,
-      timeout: 120_000,
-    });
-    if (r.error || r.status !== 0) {
-      const raison =
-        (r.stderr ?? '').trim().split('\n')[0] ?? String(r.error ?? `code ${r.status}`);
-      return { pr: null, indisponible: `\`gh\` n'a rien rendu (${raison || 'sans message'})` };
+/**
+ * GOV-144 — place chaque PR lue sur le GRAPHE de ce clone, par son commit de fusion : seules les
+ * fusions ANCÊTRES de HEAD sont JUGÉES ; celles d'une autre ligne d'histoire (code 1) sont nommées
+ * et comptées, jamais jugées ; un commit illisible (absent, clone superficiel) est un échec fermé.
+ * Le classement est celui de GOV-141 (`classerLaFusion`), partagé avec `gov:etat`. Une PR sans
+ * commit de fusion lisible sur la forge reste JUGÉE : la forge ne permet aucune place, mais rien
+ * n'autorise à l'exempter (défaut fermé vers le jugement).
+ */
+export function placerLesPr(
+  pr: readonly PullRequest[],
+  fusions: ReadonlyMap<number, string | null>,
+  git: ExecuterGit = executerGit()
+): { jugees: PullRequest[]; horsArbre: PrPlacee[]; introuvables: PrPlacee[] } {
+  const jugees: PullRequest[] = [];
+  const horsArbre: PrPlacee[] = [];
+  const introuvables: PrPlacee[] = [];
+  for (const p of pr) {
+    const oid = fusions.get(p.numero) ?? null;
+    if (oid === null) {
+      jugees.push(p); // aucun commit lisible : la forge ne situe pas, on juge (défaut fermé)
+      continue;
     }
-    sortie = r.stdout ?? '[]';
+    const classe = classerLaFusion(oid, git);
+    if (classe === 'ancetre') jugees.push(p);
+    else if (classe === 'hors_arbre') horsArbre.push({ numero: p.numero, oid });
+    else introuvables.push({ numero: p.numero, oid });
   }
+  return { jugees, horsArbre, introuvables };
+}
+
+/**
+ * Une lecture de la forge : l'instantané (porte A / run de tests) fait foi s'il est posé ; sinon
+ * `gh`. Rend la sortie, ou un motif d'indisponibilité. QA-T64 : un instantané qui dit avoir fait
+ * la lecture mais ne la porte pas LÈVE (dans `lireDansLInstantane`), il n'est jamais tu.
+ */
+function lireForge(lecture: string[]): { sortie: string } | { indisponible: string } {
+  const instantane = instantaneEnVigueur(process.env);
+  if (instantane !== undefined)
+    return { sortie: lireDansLInstantane(instantane, lecture, process.env) };
+  const r = spawnSync('gh', lecture, {
+    encoding: 'utf8',
+    shell: true,
+    maxBuffer: 64 * 1024 * 1024,
+    timeout: 120_000,
+  });
+  if (r.error || r.status !== 0) {
+    const raison = (r.stderr ?? '').trim().split('\n')[0] ?? String(r.error ?? `code ${r.status}`);
+    return { indisponible: `\`gh\` n'a rien rendu (${raison || 'sans message'})` };
+  }
+  return { sortie: r.stdout ?? '[]' };
+}
+
+/**
+ * Les corps de PR fusionnées, et la PLACE de chaque fusion sur le graphe (GOV-144). Source
+ * FACULTATIVE : son absence est dite, jamais tue.
+ *
+ * UNE lecture, enrichie de `mergeCommit` : le corps (maillon exigence → PR) ET l'oid de fusion,
+ * par lequel GOV-144 situe la PR dans l'arbre testé. C'est la lecture que `forge-instantane.ts`
+ * fige pour `gov:trace` : sa clé y porte `mergeCommit`, donc rien à reposer côté porte A. Une PR
+ * sans oid lisible reste JUGÉE (défaut fermé).
+ */
+function lirePr(): {
+  pr: PullRequest[] | null;
+  indisponible: string | null;
+  horsArbre: PrPlacee[];
+  introuvables: PrPlacee[];
+} {
+  const vide = { horsArbre: [], introuvables: [] };
+  if (process.env.GOV_TRACE_SANS_PR === '1' || process.argv.includes('--sans-pr')) {
+    return { pr: null, indisponible: 'coupée par GOV_TRACE_SANS_PR / --sans-pr', ...vide };
+  }
+  const lu = lireForge([
+    'pr',
+    'list',
+    '--state',
+    'merged',
+    '--limit',
+    '200',
+    '--json',
+    'number,body,mergeCommit',
+  ]);
+  if ('indisponible' in lu) return { pr: null, indisponible: lu.indisponible, ...vide };
   try {
-    const brut = JSON.parse(sortie) as { number: number; body: string | null }[];
-    return {
-      pr: brut.map((p) => {
-        const corps = p.body ?? '';
-        return {
-          numero: p.number,
-          // Le gabarit se reconnaît à ses marqueurs, pas à son titre : `gov:pr` les pose lui-même.
-          gabarit: corps.includes('<!-- dod:debut -->') || corps.includes('## Identité'),
-          couvre: [
-            ...new Set(
-              corps
-                .split('\n')
-                .filter((x) => /^\s*Couvre\s*:/i.test(x))
-                .flatMap((x) => x.match(MOTIF_REQ) ?? [])
-            ),
-          ],
-        };
-      }),
-      indisponible: null,
-    };
+    const brut = JSON.parse(lu.sortie) as {
+      number: number;
+      body: string | null;
+      mergeCommit: { oid: string } | null;
+    }[];
+    const fusions = new Map(brut.map((p) => [p.number, p.mergeCommit?.oid ?? null]));
+    const toutes = brut.map((p) => {
+      const corps = p.body ?? '';
+      return {
+        numero: p.number,
+        // Le gabarit se reconnaît à ses marqueurs, pas à son titre : `gov:pr` les pose lui-même.
+        gabarit: corps.includes('<!-- dod:debut -->') || corps.includes('## Identité'),
+        couvre: [
+          ...new Set(
+            corps
+              .split('\n')
+              .filter((x) => /^\s*Couvre\s*:/i.test(x))
+              .flatMap((x) => x.match(MOTIF_REQ) ?? [])
+          ),
+        ],
+      };
+    });
+    // GOV-144 : la place de chaque fusion se lit sur le graphe de ce clone, jamais sur la forge.
+    const { jugees, horsArbre, introuvables } = placerLesPr(toutes, fusions);
+    return { pr: jugees, indisponible: null, horsArbre, introuvables };
   } catch (e) {
-    return { pr: null, indisponible: `sortie de \`gh\` illisible (${(e as Error).message})` };
+    return {
+      pr: null,
+      indisponible: `sortie de \`gh\` illisible (${(e as Error).message})`,
+      ...vide,
+    };
   }
 }
 
@@ -1433,7 +1523,9 @@ export function chargerUnivers(
     }
   }
 
-  const { pr, indisponible } = avecPr ? lirePr() : { pr: null, indisponible: PR_NON_CONSULTEE };
+  const { pr, indisponible, horsArbre, introuvables } = avecPr
+    ? lirePr()
+    : { pr: null, indisponible: PR_NON_CONSULTEE, horsArbre: [], introuvables: [] };
   const plancher = lirePlancher(
     existsSync(CHEMIN_GATES) ? readFileSync(CHEMIN_GATES, 'utf8') : null
   );
@@ -1443,6 +1535,8 @@ export function chargerUnivers(
     fichiers,
     pr,
     prIndisponible: indisponible,
+    prHorsArbre: horsArbre,
+    prIntrouvables: introuvables,
     plancher,
     resultats: chargerResultats(),
   };
@@ -1489,6 +1583,13 @@ function direLesSources(u: Univers): void {
   } else {
     console.log(
       `   sources — PR fusionnées : lues ✓ (${u.pr.length}, dont ${u.pr.filter((p) => p.gabarit).length} au gabarit)`
+    );
+  }
+  // GOV-144 : les PR que la forge rend mais que ce clone ne juge pas — nommées, jamais tues.
+  if (u.prHorsArbre.length > 0) {
+    console.log(
+      `   ⚠️  ${u.prHorsArbre.length} PR fusionnée(s) HORS de l'arbre testé (${u.prHorsArbre.map((p) => p.numero).join(', ')}) : ` +
+        `leur commit de fusion n'est pas un ancêtre de HEAD. Nommées, jamais jugées (GOV-144).`
     );
   }
 }
@@ -1636,6 +1737,8 @@ export function universFixture(): Univers {
       { numero: 2, gabarit: false, couvre: [] },
     ],
     prIndisponible: null,
+    prHorsArbre: [],
+    prIntrouvables: [],
     // Zéro, et c'est délibéré : les contre-témoins qui sortent T-LIVREE du périmètre (autre dépôt)
     // ne jugent pas le plancher. Les deux cas qui le jugent le POSENT eux-mêmes à la couverture
     // de la base, puis la font descendre — ou monter.
@@ -1779,6 +1882,15 @@ if (LANCE_EN_SCRIPT && process.argv.includes('--prove')) {
       defaut: () => {
         const u = copie(base);
         u.pr![0]!.couvre = ['REQ-ZZZ-998'];
+        return controler(u);
+      },
+    },
+    {
+      // GOV-144 : une fusion que le clone ne situe pas (objet absent, clone superficiel) rougit.
+      famille: 'pr_fusion_introuvable',
+      defaut: () => {
+        const u = copie(base);
+        u.prIntrouvables = [{ numero: 99, oid: 'f'.repeat(40) }];
         return controler(u);
       },
     },
