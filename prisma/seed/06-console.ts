@@ -29,6 +29,12 @@ export interface UtilisateurASemer {
   nom: string | null;
   creeAt: Date;
   cles: ClesPii;
+  /**
+   * SEC-30 (quatre yeux) : la validation d'un administrateur PREMIER, sans validateur. Absente, un
+   * admin semé est EN ATTENTE ; le déclencheur `utilisateurs_console_quatre_yeux` n'admet cette date
+   * que si aucun autre administrateur actif et validé n'existe.
+   */
+  valideAt?: Date;
 }
 
 export async function semerUtilisateurConsole(
@@ -53,6 +59,7 @@ export async function semerUtilisateurConsole(
       // (`activee_at = cree_at`) ; jamais au défaut `clock_timestamp()`, qui rendrait le semeur non
       // déterministe d'un passage à l'autre.
       activeeAt: u.creeAt,
+      ...(u.valideAt === undefined ? {} : { valideAt: u.valideAt, valideParId: null }),
     },
     select: { id: true },
   });
@@ -123,5 +130,8 @@ export default async function semerParDefaut(
     nom: 'Administrateur de preview',
     creeAt: ctx.maintenant,
     cles: ctx.cles,
+    // SEC-30 (règle du rattrapage 97) : l'administrateur de preview est VALIDÉ, premier
+    // administrateur sans validateur ; en attente, il n'aurait aucun droit d'administrateur.
+    valideAt: ctx.maintenant,
   });
 }

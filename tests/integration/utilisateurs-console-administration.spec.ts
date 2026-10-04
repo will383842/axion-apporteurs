@@ -29,7 +29,10 @@ import { DUREES_AUTH } from '../../src/server/auth/durees';
 import { empreinteDeSessionConsole, tirerJeton } from '../../src/server/auth/lien-magique';
 import { transactionDeConsommationConsole } from '../../src/server/auth/lien-magique-depot';
 import { depotDeSessionsConsole, requireRole } from '../../src/server/roles/require-role';
-import { semerSessionConsole, semerUtilisateurConsole } from '../../prisma/seed/06-console';
+import semerParDefaut, {
+  semerSessionConsole,
+  semerUtilisateurConsole,
+} from '../../prisma/seed/06-console';
 import {
   changerLeRole,
   desactiver as desactiverParLeServeur,
@@ -699,5 +702,24 @@ describe('REQ-SEC-023 — SEC-30 : la création d’un administrateur est notifi
     expect(new Set(creation.map((c) => c.a)).size).toBe(3);
     expect(creation[0]!.corps).toContain('nouvel-admin-sec30@example.org a reçu le rôle');
     expect(creation[0]!.corps).toContain("n'a aucun droit d'administrateur");
+  });
+});
+
+describe('REQ-SEC-023 — SEC-30 : l’administrateur de preview semé est VALIDÉ', () => {
+  it('REQ-SEC-023 : TÉMOIN — après le semeur, UN administrateur validé, qui en valide un second', async () => {
+    await viderLaConsole();
+    await semerParDefaut(base.prisma, { maintenant, uuid: () => randomUUID(), cles: CLES });
+    const valides = await base.prisma.utilisateurConsole.findMany({
+      where: { role: 'admin', valideAt: { not: null } },
+      select: { id: true, valideParId: true },
+    });
+    expect(valides).toHaveLength(1);
+    const preview = valides[0]!;
+    expect(preview.valideParId).toBeNull();
+    expect(await verdict(preview.id)).toBe('admin');
+    const second = await utilisateur('admin');
+    expect(await verdict(second)).toBe('admin_en_attente');
+    await valider(app, second, preview.id);
+    expect(await verdict(second)).toBe('admin');
   });
 });
