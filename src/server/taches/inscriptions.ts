@@ -57,12 +57,15 @@ import { passageQuotidien } from '../jobs/reconciliation';
 import { minimiserCandidatures } from './minimiser-candidatures';
 import { purgerLesContacts } from './purger-contacts';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
+import { purgerLesNotificationsDeLEspace } from './purger-notifications-espace';
+import { passageDEnvoiDesNotifications } from './envoyer-notifications-espace';
 import { purgerLesValeursDesDroits } from './purger-valeurs-droits-contact';
 import {
   anonymiserLesAnomalies,
   purgerLesContestations,
   purgerLesDementis,
 } from './purger-contestations-anomalies';
+import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
 import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
@@ -202,6 +205,12 @@ export function inscriptions(
     // DM-53 (REQ-DM-043) : le SIREN des dépôts refusés, douze mois après le refus.
     siren_refuses_purger: () =>
       purgerLesSirenRefuses(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-61 (REQ-UX-016) : les notifications de l'espace, douze mois après leur inscription.
+    notifications_espace_purger: () =>
+      purgerLesNotificationsDeLEspace(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-55 (REQ-UX-016) : le courriel des notifications de la machine, après le commit de la
+    // transition ; la fenêtre de redéclaration court de son envoi effectif.
+    notifications_espace_envoyer: passageDEnvoiDesNotifications(prisma, env),
     // DM-59 (REQ-JUR-065) : la valeur d'une rectification, effacée à son échéance même sans traitement.
     droits_contact_purger: () =>
       purgerLesValeursDesDroits(prisma, new Date(horlogeSysteme.maintenant())),
@@ -213,6 +222,9 @@ export function inscriptions(
     contestations_purger: () =>
       purgerLesContestations(prisma, new Date(horlogeSysteme.maintenant())),
     dementis_purger: () => purgerLesDementis(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-58 : le journal des accès à la console, purgé à son échéance (la purge vide les identifiants).
+    journal_acces_console_purger: () =>
+      purgerLeJournalDesAccesConsole(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>

@@ -28,6 +28,9 @@ const m = vi.hoisted(() => ({
   purgerLesContacts: vi.fn(),
   purgerLesSirenRefuses: vi.fn(),
   purgerLesValeursDesDroits: vi.fn(),
+  purgerLesNotificationsDeLEspace: vi.fn(),
+  passageDEnvoiDesNotifications: vi.fn(),
+  purgerLeJournalDesAccesConsole: vi.fn(),
   anonymiserLesAnomalies: vi.fn(),
   purgerLesContestations: vi.fn(),
   purgerLesDementis: vi.fn(),
@@ -68,6 +71,18 @@ vi.mock('../../../src/server/taches/purger-siren-refuses', () => ({
 vi.mock('../../../src/server/taches/purger-valeurs-droits-contact', () => ({
   purgerLesValeursDesDroits: m.purgerLesValeursDesDroits,
 }));
+vi.mock('../../../src/server/taches/purger-notifications-espace', async (original) => ({
+  ...(await original<object>()),
+  purgerLesNotificationsDeLEspace: m.purgerLesNotificationsDeLEspace,
+}));
+vi.mock('../../../src/server/taches/envoyer-notifications-espace', async (original) => ({
+  ...(await original<object>()),
+  passageDEnvoiDesNotifications: m.passageDEnvoiDesNotifications,
+}));
+vi.mock('../../../src/server/taches/purger-journal-acces-console', async (original) => ({
+  ...(await original<object>()),
+  purgerLeJournalDesAccesConsole: m.purgerLeJournalDesAccesConsole,
+}));
 vi.mock('../../../src/server/taches/purger-contestations-anomalies', () => ({
   anonymiserLesAnomalies: m.anonymiserLesAnomalies,
   purgerLesContestations: m.purgerLesContestations,
@@ -95,6 +110,7 @@ import {
   traitantsDeReception,
 } from '../../../src/server/taches/inscriptions';
 import { PARAMETRES } from '../../../src/server/integrations/recherche-entreprises/parametres';
+import { TACHES } from '../../../src/server/taches/registre';
 
 const PRISMA = { nom: 'client-de-test' } as unknown as PrismaClient;
 const RECU = {
@@ -238,9 +254,11 @@ describe('REQ-QA-027 — les passages planifiés reçoivent le client et l’heu
     ['contacts_purger', 'purgerLesContacts'],
     ['siren_refuses_purger', 'purgerLesSirenRefuses'],
     ['droits_contact_purger', 'purgerLesValeursDesDroits'],
+    ['notifications_espace_purger', 'purgerLesNotificationsDeLEspace'],
     ['anomalies_anonymiser', 'anonymiserLesAnomalies'],
     ['contestations_purger', 'purgerLesContestations'],
     ['dementis_purger', 'purgerLesDementis'],
+    ['journal_acces_console_purger', 'purgerLeJournalDesAccesConsole'],
   ] as const;
 
   for (const [cle, purge] of PURGES) {
@@ -350,5 +368,28 @@ describe('REQ-QA-027 — l’alerte des attentes, en fin de passage', () => {
     lire.mockClear();
     await passageDesEvenementsRecus(PRISMA, depot as never, null)();
     expect(lire).not.toHaveBeenCalled();
+  });
+});
+
+describe('REQ-UX-016 — le passage d’envoi des notifications de l’espace est inscrit (DM-55)', () => {
+  it('REQ-UX-016 : TÉMOIN — `notifications_espace_envoyer` joue le passage du processus, sur le client et l’environnement, et rend son bilan', async () => {
+    const bilan = {
+      envoyees: 1,
+      echecs: 0,
+      retenues: 0,
+      sautees: 0,
+      nonRendues: 0,
+    };
+    const passage = vi.fn(async () => bilan);
+    m.passageDEnvoiDesNotifications.mockReturnValue(passage);
+    const env = { NODE_ENV: 'test' };
+    const i = inscriptions(PRISMA, env);
+    expect(m.passageDEnvoiDesNotifications).toHaveBeenCalledWith(PRISMA, env);
+    expect(await i.notifications_espace_envoyer!()).toBe(bilan);
+    expect(passage).toHaveBeenCalledTimes(1);
+  });
+
+  it('REQ-UX-016 : la clé est au registre des tâches, sous REQ-UX-016', () => {
+    expect(TACHES.notifications_espace_envoyer).toEqual({ req: 'REQ-UX-016' });
   });
 });

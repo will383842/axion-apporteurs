@@ -18,6 +18,7 @@
  *   5. la charge du journal `attribution_etat_modifie` lit `EVENEMENTS_ATTRIBUTION`.
  */
 import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { readdirSync, readFileSync } from 'node:fs';
 import { EtatAttribution } from '@prisma/client';
 import {
   ETATS_ATTRIBUTION,
@@ -214,9 +215,9 @@ describe('REQ-DM-006 — un couple absent lève une erreur typée qui le nomme, 
   });
 });
 
-describe('REQ-JUR-007 — l’antériorité établie après coup annule, depuis chaque état occupant', () => {
+describe('REQ-DM-006 — l’antériorité établie après coup annule, depuis chaque état occupant', () => {
   it.each(ETATS_OCCUPANTS)(
-    'REQ-JUR-007 : TÉMOIN — %s × anteriorite_etablie → annulee, pour un apporteur comme pour un conseiller',
+    'REQ-DM-006 : TÉMOIN — %s × anteriorite_etablie → annulee, pour un apporteur comme pour un conseiller',
     (de) => {
       for (const porteur of PORTEURS) {
         expect(transitionnerAttribution({ de, transition: 'anteriorite_etablie', porteur })).toBe(
@@ -226,7 +227,7 @@ describe('REQ-JUR-007 — l’antériorité établie après coup annule, depuis 
     }
   );
 
-  it('REQ-JUR-007 : un état qui n’occupe plus ne s’annule pas pour antériorité', () => {
+  it('REQ-DM-006 : un état qui n’occupe plus ne s’annule pas pour antériorité', () => {
     for (const de of ETATS_ATTRIBUTION.filter(
       (e) => !(ETATS_OCCUPANTS as readonly string[]).includes(e)
     )) {
@@ -355,6 +356,10 @@ describe('REQ-DM-007 — les effets recalculés à chaque transition', () => {
   });
 });
 
+/** La référence d'un fait fondateur : l'EMPREINTE de l'identifiant d'axion-ia, et sa date. */
+const FACTURE = { nature: 'facture', ref: 'a'.repeat(64), le: '2026-12-01T10:00:00.000Z' } as const;
+const DEVIS = { nature: 'devis', ref: 'b'.repeat(64), le: '2026-11-15T10:00:00.000Z' } as const;
+
 describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
   const charge = CHARGES_PAR_TYPE.attribution_etat_modifie;
   const acteur = { par: 'systeme' } as const;
@@ -362,7 +367,12 @@ describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
   it('REQ-DM-006 : chaque code de la matrice est admis, un code inconnu refusé', () => {
     for (const transition of EVENEMENTS_ATTRIBUTION) {
       const de = transition in NAISSANCES_ATTRIBUTION ? null : 'active';
-      const critere = transition === 'anteriorite_etablie' ? { critere: 'cliente' } : {};
+      const critere =
+        transition === 'anteriorite_etablie'
+          ? { critere: 'cliente', fait: FACTURE }
+          : transition === 'annulee_par_la_console'
+            ? { motifAnnulation: 'declaration_en_double' }
+            : {};
       expect(
         charge.safeParse({ de, vers: 'active', transition, acteur, ...critere }).success,
         transition
@@ -380,13 +390,14 @@ describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
     expect(charge.safeParse({ ...base, siren: '552100554' }).success).toBe(false);
   });
 
-  it('REQ-JUR-007 : TÉMOIN — anteriorite_etablie porte son critère, en enum fermé ; aucune autre transition n’en porte', () => {
+  it('REQ-DM-006 : TÉMOIN — anteriorite_etablie porte son critère, en enum fermé ; aucune autre transition n’en porte', () => {
     const base = { de: 'signee', vers: 'annulee', transition: 'anteriorite_etablie', acteur };
-    for (const critere of ['cliente', 'devis', 'devis_signe']) {
-      expect(charge.safeParse({ ...base, critere }).success, critere).toBe(true);
+    expect(charge.safeParse({ ...base, critere: 'cliente', fait: FACTURE }).success).toBe(true);
+    for (const critere of ['devis', 'devis_signe']) {
+      expect(charge.safeParse({ ...base, critere, fait: DEVIS }).success, critere).toBe(true);
     }
     expect(charge.safeParse(base).success).toBe(false);
-    expect(charge.safeParse({ ...base, critere: 'financeur' }).success).toBe(false);
+    expect(charge.safeParse({ ...base, critere: 'financeur', fait: FACTURE }).success).toBe(false);
     expect(
       charge.safeParse({
         de: 'active',
@@ -395,6 +406,41 @@ describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
         acteur,
         critere: 'cliente',
       }).success
+    ).toBe(false);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — la RÉFÉRENCE du fait fondateur : nature, référence opaque, date ; exigée, et accordée au critère', () => {
+    const base = { de: 'active', vers: 'annulee', transition: 'anteriorite_etablie', acteur };
+    // sans fait, ou avec un fait sur une autre transition : refusé
+    expect(charge.safeParse({ ...base, critere: 'cliente' }).success).toBe(false);
+    expect(
+      charge.safeParse({
+        de: 'active',
+        vers: 'perdue',
+        transition: 'perdue',
+        acteur,
+        fait: FACTURE,
+      }).success
+    ).toBe(false);
+    // le critère dit la nature du fait : cliente ↔ facture, devis et devis_signe ↔ devis
+    expect(charge.safeParse({ ...base, critere: 'cliente', fait: DEVIS }).success).toBe(false);
+    expect(charge.safeParse({ ...base, critere: 'devis_signe', fait: FACTURE }).success).toBe(
+      false
+    );
+    // aucune donnée de personne : une référence opaque, une date ISO, rien d'autre
+    // l'identifiant en clair, un nom, une adresse, une empreinte mal formée : refusés
+    for (const ref of ['', 'fac_7Hk2-9', 'Jean Dupont', 'a@b.fr', 'A'.repeat(64), 'a'.repeat(63)]) {
+      expect(
+        charge.safeParse({ ...base, critere: 'cliente', fait: { ...FACTURE, ref } }).success,
+        ref
+      ).toBe(false);
+    }
+    expect(
+      charge.safeParse({ ...base, critere: 'cliente', fait: { ...FACTURE, le: 'hier' } }).success
+    ).toBe(false);
+    expect(
+      charge.safeParse({ ...base, critere: 'cliente', fait: { ...FACTURE, siren: '552100554' } })
+        .success
     ).toBe(false);
   });
 
@@ -724,6 +770,8 @@ function txSimule(lignes: LigneSimulee[]) {
         mises.push(arg);
         return {};
       },
+      // DM-55 : la libération de l'occupation lit le SIREN ; sans ligne, aucun rang n'est notifié.
+      findUnique: async () => null,
     },
   };
   return { tx: tx as never, verrous, mises };
@@ -756,6 +804,7 @@ async function refusDe(p: Promise<unknown>) {
 describe('REQ-DM-006 — l’écrivain des transitions, en processus (client simulé)', () => {
   beforeEach(() => {
     journalSimule.ajouterEvenement.mockReset();
+    journalSimule.ajouterEvenement.mockResolvedValue({ id: '1', selfHash: 'x' });
   });
 
   it('REQ-DM-006 : TÉMOIN — la confirmation verrouille la ligne, écrit l’état et la fenêtre, puis l’événement, à la valeur près', async () => {
@@ -824,14 +873,15 @@ describe('REQ-DM-006 — l’écrivain des transitions, en processus (client sim
     expect(evenementsEcrits()[0]!.charge.lienInteret).toBe('declare');
   });
 
-  it('REQ-JUR-007 : TÉMOIN — anteriorite_etablie écrit son critère dans l’événement, et l’état annulee', async () => {
+  it('REQ-DM-006 : TÉMOIN — anteriorite_etablie, par le SYSTÈME : annulee, et l’événement porte le critère et le fait fondateur', async () => {
     const { transitionnerUneAttribution } = await ecrivain();
     const { tx, mises } = txSimule([ligneDe({ statut: 'signee' })]);
     const r = await transitionnerUneAttribution(tx, {
       attributionId: ID,
       transition: 'anteriorite_etablie',
       critere: 'devis_signe',
-      acteur: ACTEUR,
+      fait: DEVIS,
+      acteur: { par: 'systeme' },
       maintenant: MAINTENANT,
     });
     expect(r).toStrictEqual({ de: 'signee', vers: 'annulee' });
@@ -841,32 +891,58 @@ describe('REQ-DM-006 — l’écrivain des transitions, en processus (client sim
       vers: 'annulee',
       transition: 'anteriorite_etablie',
       critere: 'devis_signe',
+      fait: DEVIS,
+      acteur: { par: 'systeme' },
     });
   });
 
   it.each([
-    ['anteriorite_etablie sans critère', 'anteriorite_etablie', undefined],
-    ['un critère sur une autre transition', 'perdue', 'cliente'],
+    [
+      'un utilisateur de la console',
+      { par: 'utilisateur_console', id: '0190a5c0-0000-7000-8000-0000000000c1' },
+    ],
+    ['un apporteur', { par: 'apporteur', id: '0190a5c0-0000-7000-8000-0000000000a1' }],
   ] as const)(
-    'REQ-JUR-007 : TÉMOIN — %s : refusé, nommé, et RIEN n’est écrit',
-    async (_, transition, critere) => {
+    'REQ-DM-006 : TÉMOIN (sécurité) — anteriorite_etablie par %s : refusée, nommée, et RIEN n’est écrit',
+    async (_, acteur) => {
       const { transitionnerUneAttribution } = await ecrivain();
       const { tx, mises } = txSimule([ligneDe({ statut: 'active' })]);
-      let levee: unknown = null;
-      try {
-        await transitionnerUneAttribution(tx, {
-          attributionId: ID,
-          transition,
-          ...(critere ? { critere } : {}),
-          acteur: ACTEUR,
-          maintenant: MAINTENANT,
-        });
-      } catch (e) {
-        levee = e;
-      }
-      // L'écrivain est rechargé : sa classe d'erreur n'est pas celle importée ici, on lit son nom.
-      expect((levee as Error).name).toBe('ErreurTransitionAttribution');
-      expect((levee as ErreurTransitionAttribution).code).toBe('critere_incoherent');
+      const e = await transitionnerUneAttribution(tx, {
+        attributionId: ID,
+        transition: 'anteriorite_etablie',
+        critere: 'cliente',
+        fait: FACTURE,
+        acteur,
+        maintenant: MAINTENANT,
+      }).catch((x: unknown) => x);
+      expect((e as Error).name).toBe('ErreurTransitionAttribution');
+      expect((e as { code: string }).code).toBe('acteur_refuse');
+      expect(mises).toStrictEqual([]);
+      expect(evenementsEcrits()).toStrictEqual([]);
+    }
+  );
+
+  it.each([
+    ['sans critère', 'anteriorite_etablie', { fait: FACTURE }],
+    ['sans fait fondateur', 'anteriorite_etablie', { critere: 'cliente' }],
+    ['un critère sur une autre transition', 'perdue', { critere: 'cliente' }],
+    ['un fait sur une autre transition', 'perdue', { fait: FACTURE }],
+  ] as const)(
+    'REQ-DM-006 : TÉMOIN — %s : refusé avant tout verrou, nommé, et RIEN n’est écrit',
+    async (_, transition, extra) => {
+      const { transitionnerUneAttribution } = await ecrivain();
+      const { tx, mises, verrous } = txSimule([ligneDe({ statut: 'active' })]);
+      const demande: Parameters<typeof transitionnerUneAttribution>[1] = {
+        attributionId: ID,
+        transition,
+        ...extra,
+        acteur: { par: 'systeme' },
+        maintenant: MAINTENANT,
+      };
+      const e = await transitionnerUneAttribution(tx, demande).catch((x: unknown) => x);
+      expect((e as Error).name).toBe('ErreurTransitionAttribution');
+      expect((e as { code: string }).code).toBe('critere_incoherent');
+      expect(verrous).toStrictEqual([]);
       expect(mises).toStrictEqual([]);
       expect(evenementsEcrits()).toStrictEqual([]);
     }
@@ -1126,5 +1202,386 @@ describe('REQ-DM-007 — les confirmations et la charge d’apporteur, rechargé
         intrus: 1,
       }).success
     ).toBe(false);
+  });
+});
+
+describe('REQ-DM-006 — anteriorite_etablie n’est émise que par le passage de l’antériorité', () => {
+  /**
+   * Les seuls fichiers de src/ qui peuvent écrire le littéral : la machine et la charge qui le
+   * déclarent, l'écrivain qui le juge, et le passage quotidien qui l'émet sur les faits projetés.
+   * Aucune action libre de la console ne l'émet (lentille sécurité).
+   */
+  const PERMIS = [
+    'src/domain/attribution/machine.ts',
+    'src/domain/evenement/charges.ts',
+    'src/server/attribution/transitionner.ts',
+    'src/server/jobs/anteriorite-retroactive.ts',
+  ];
+  const sources = (dossier: string): string[] =>
+    readdirSync(dossier, { withFileTypes: true }).flatMap((e) => {
+      const chemin = `${dossier}/${e.name}`;
+      if (e.isDirectory()) return sources(chemin);
+      return /\.(ts|tsx)$/.test(e.name) ? [chemin] : [];
+    });
+
+  it('REQ-DM-006 : TÉMOIN — aucun autre fichier de src/ n’écrit « anteriorite_etablie »', () => {
+    const fautifs = sources('src').filter(
+      (f) => !PERMIS.includes(f) && /['"`]anteriorite_etablie['"`]/.test(readFileSync(f, 'utf8'))
+    );
+    expect(fautifs).toEqual([]);
+  });
+
+  it('REQ-DM-006 : contre-témoin — le motif lit bien la machine, qui le déclare', () => {
+    expect(readFileSync('src/domain/attribution/machine.ts', 'utf8')).toMatch(
+      /'anteriorite_etablie'/
+    );
+  });
+});
+
+/**
+ * DM-55 (forme d'A02, conditions de la juriste et de la sécurité) : l'écrivain porte le motif d'une
+ * annulation par la console et sa catégorie, réserve l'erreur de saisie de la Société à la prise en
+ * charge d'un conseiller, vérifie l'anomalie confirmée qui fonde une invalidation, et écrit la
+ * notification de la décision DANS la transaction, avec son événement. Le texte part après le commit.
+ */
+describe('REQ-DM-006 — l’écrivain porte le motif, et écrit la notification de la décision', () => {
+  const ANOMALIE = '0190f0a0-0000-7000-8000-0000000000c3';
+  const SIREN = '123456789';
+  const RANG1 = '0190f0a0-0000-7000-8000-0000000000f6';
+  const APPORTEUR_RANG1 = '0190f0a0-0000-7000-8000-0000000000f7';
+  const AUTRE = '0190f0a0-0000-7000-8000-0000000000d4';
+  const CONSOLE = {
+    par: 'utilisateur_console',
+    id: '0190f0a0-0000-7000-8000-0000000000e5',
+  } as const;
+
+  function txDM55(
+    ligne: LigneSimulee,
+    anomalie: {
+      statut: string;
+      attributionId: string | null;
+      apporteurId: string | null;
+    } | null = null,
+    rang1: { id: string; apporteurId: string | null } | null = null
+  ) {
+    const base = txSimule([ligne]);
+    const notifications: unknown[] = [];
+    const lues: unknown[] = [];
+    const filesLues: unknown[] = [];
+    const attribution = (base.tx as { attribution: object }).attribution;
+    const tx = Object.assign(base.tx as object, {
+      attribution: {
+        ...attribution,
+        findUnique: async () => ({ siren: SIREN }),
+        findFirst: async (arg: unknown) => {
+          filesLues.push(arg);
+          return rang1;
+        },
+      },
+      notificationEspace: {
+        create: async (arg: unknown) => {
+          notifications.push(arg);
+          return {};
+        },
+      },
+      anomalie: {
+        findUnique: async (arg: unknown) => {
+          lues.push(arg);
+          return anomalie;
+        },
+      },
+    });
+    return { ...base, tx: tx as never, notifications, lues, filesLues };
+  }
+
+  beforeEach(() => {
+    journalSimule.ajouterEvenement.mockReset();
+    journalSimule.ajouterEvenement.mockResolvedValue({ id: '42', selfHash: 'x' });
+  });
+
+  it('REQ-DM-006 : TÉMOIN — une annulation par la console sans motif est refusée AVANT le verrou, rien n’est écrit', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({}));
+    const e = await refusDe(
+      transitionnerUneAttribution(t.tx, {
+        attributionId: ID,
+        transition: 'annulee_par_la_console',
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+      })
+    );
+    expect(e.code).toBe('motif_incoherent');
+    expect(t.verrous).toStrictEqual([]);
+    expect(evenementsEcrits()).toStrictEqual([]);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — le motif de l’article 3.3 bis sans sa catégorie est refusé ; un motif sur une autre transition aussi', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const sansCategorie = txDM55(ligneDe({}));
+    expect(
+      (
+        await refusDe(
+          transitionnerUneAttribution(sansCategorie.tx, {
+            attributionId: ID,
+            transition: 'annulee_par_la_console',
+            acteur: CONSOLE,
+            maintenant: MAINTENANT,
+            motifAnnulation: 'entreprise_relevant_de_l_article_3_3_bis',
+          })
+        )
+      ).code
+    ).toBe('motif_incoherent');
+    const ailleurs = txDM55(ligneDe({}));
+    expect(
+      (
+        await refusDe(
+          transitionnerUneAttribution(ailleurs.tx, {
+            attributionId: ID,
+            transition: 'non_confirmee',
+            acteur: ACTEUR,
+            maintenant: MAINTENANT,
+            motifAnnulation: 'declaration_en_double',
+          })
+        )
+      ).code
+    ).toBe('motif_incoherent');
+    expect(sansCategorie.verrous).toStrictEqual([]);
+    expect(ailleurs.verrous).toStrictEqual([]);
+  });
+
+  it('REQ-DM-006 : TÉMOIN (face apporteur) — l’erreur de saisie de la Société sur le dépôt d’un apporteur est refusée : ni état, ni événement, ni notification', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({ apporteur_id: APPORTEUR }));
+    const e = await refusDe(
+      transitionnerUneAttribution(t.tx, {
+        attributionId: ID,
+        transition: 'annulee_par_la_console',
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+        motifAnnulation: 'erreur_de_saisie_de_la_societe',
+      })
+    );
+    expect(e.code).toBe('porteur_refuse');
+    expect(t.mises).toStrictEqual([]);
+    expect(evenementsEcrits()).toStrictEqual([]);
+    expect(t.notifications).toStrictEqual([]);
+  });
+
+  it('REQ-DM-006 : TÉMOIN (face conseiller) — l’erreur de saisie sur la prise en charge d’un conseiller passe, sans AUCUNE notification', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({ apporteur_id: null }));
+    const r = await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'annulee_par_la_console',
+      acteur: CONSOLE,
+      maintenant: MAINTENANT,
+      motifAnnulation: 'erreur_de_saisie_de_la_societe',
+    });
+    expect(r).toStrictEqual({ de: 'provisoire', vers: 'annulee' });
+    expect(evenementsEcrits()[0]!.charge).toMatchObject({
+      transition: 'annulee_par_la_console',
+      motifAnnulation: 'erreur_de_saisie_de_la_societe',
+    });
+    expect(t.notifications).toStrictEqual([]);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — une annulation par la console notifie l’apporteur, avec l’événement qui la fonde ; motif et catégorie sont dans la charge', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({}));
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'annulee_par_la_console',
+      acteur: CONSOLE,
+      maintenant: MAINTENANT,
+      motifAnnulation: 'entreprise_relevant_de_l_article_3_3_bis',
+      categorieRelation: 'financeur_public',
+    });
+    expect(evenementsEcrits()[0]!.charge).toMatchObject({
+      motifAnnulation: 'entreprise_relevant_de_l_article_3_3_bis',
+      categorieRelation: 'financeur_public',
+    });
+    expect(t.notifications).toStrictEqual([
+      {
+        data: {
+          apporteurId: APPORTEUR,
+          cle: 'decision_attribution',
+          attributionId: ID,
+          evenementId: BigInt(42),
+        },
+      },
+    ]);
+  });
+
+  it('REQ-DM-006 : une non-confirmation notifie, une confirmation ne notifie pas', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const non = txDM55(ligneDe({}));
+    await transitionnerUneAttribution(non.tx, {
+      attributionId: ID,
+      transition: 'non_confirmee',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(non.notifications).toHaveLength(1);
+    const oui = txDM55(ligneDe({}));
+    await transitionnerUneAttribution(oui.tx, {
+      attributionId: ID,
+      transition: 'confirmee',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(oui.notifications).toStrictEqual([]);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — une anomalie confirmée EXIGE son anomalie, refus avant le verrou', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({}));
+    const e = await refusDe(
+      transitionnerUneAttribution(t.tx, {
+        attributionId: ID,
+        transition: 'anomalie_confirmee',
+        acteur: CONSOLE,
+        maintenant: MAINTENANT,
+      })
+    );
+    expect(e.code).toBe('anomalie_refusee');
+    expect(t.verrous).toStrictEqual([]);
+  });
+
+  it.each([
+    ['d’un autre apporteur', { statut: 'confirmee', attributionId: ID, apporteurId: AUTRE }],
+    [
+      'd’une autre attribution',
+      { statut: 'confirmee', attributionId: AUTRE, apporteurId: APPORTEUR },
+    ],
+    ['non confirmée', { statut: 'ouverte', attributionId: ID, apporteurId: APPORTEUR }],
+    ['introuvable', null],
+  ])(
+    'REQ-DM-006 : TÉMOIN (face refusée) — une anomalie %s est refusée : ni état, ni événement, ni notification',
+    async (_, anomalie) => {
+      const { transitionnerUneAttribution } = await ecrivain();
+      const t = txDM55(ligneDe({}), anomalie);
+      const e = await refusDe(
+        transitionnerUneAttribution(t.tx, {
+          attributionId: ID,
+          transition: 'anomalie_confirmee',
+          acteur: CONSOLE,
+          maintenant: MAINTENANT,
+          anomalieId: ANOMALIE,
+        })
+      );
+      expect(e.code).toBe('anomalie_refusee');
+      expect(t.mises).toStrictEqual([]);
+      expect(evenementsEcrits()).toStrictEqual([]);
+      expect(t.notifications).toStrictEqual([]);
+    }
+  );
+
+  it('REQ-DM-006 : TÉMOIN (face admise) — l’anomalie confirmée de CETTE attribution et de CET apporteur : la notification la nomme, la charge du journal ne la porte pas', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({}), {
+      statut: 'confirmee',
+      attributionId: ID,
+      apporteurId: APPORTEUR,
+    });
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'anomalie_confirmee',
+      acteur: CONSOLE,
+      maintenant: MAINTENANT,
+      anomalieId: ANOMALIE,
+    });
+    expect(t.lues).toStrictEqual([
+      {
+        where: { id: ANOMALIE },
+        select: { statut: true, attributionId: true, apporteurId: true },
+      },
+    ]);
+    expect(evenementsEcrits()[0]!.charge).not.toHaveProperty('anomalieId');
+    expect(t.notifications).toStrictEqual([
+      {
+        data: {
+          apporteurId: APPORTEUR,
+          cle: 'decision_attribution',
+          attributionId: ID,
+          evenementId: BigInt(42),
+          anomalieId: ANOMALIE,
+        },
+      },
+    ]);
+  });
+
+  it('REQ-DM-004 : TÉMOIN — l’attribution qui QUITTE l’occupation libère le premier rang : son apporteur est notifié, sur SA ligne, avec l’événement de la libération', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({ statut: 'active' }), null, {
+      id: RANG1,
+      apporteurId: APPORTEUR_RANG1,
+    });
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'perimee',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(t.filesLues).toStrictEqual([
+      {
+        where: { siren: SIREN, statut: 'en_attente', rangAttente: 1 },
+        select: { id: true, apporteurId: true },
+      },
+    ]);
+    expect(t.notifications).toStrictEqual([
+      {
+        data: {
+          apporteurId: APPORTEUR_RANG1,
+          cle: 'premier_rang_libere',
+          attributionId: RANG1,
+          evenementId: BigInt(42),
+        },
+      },
+    ]);
+  });
+
+  it('REQ-DM-004 : une transition qui RESTE dans l’occupation ne libère rien, et ne lit pas la file', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({ statut: 'active' }), null, {
+      id: RANG1,
+      apporteurId: APPORTEUR_RANG1,
+    });
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'rdv_pris',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(t.filesLues).toStrictEqual([]);
+    expect(t.notifications).toStrictEqual([]);
+  });
+
+  it('REQ-DM-004 : une libération sans rang 1 en attente ne notifie personne', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({ statut: 'active' }));
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'perimee',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(t.notifications).toStrictEqual([]);
+  });
+
+  it('REQ-DM-004 : TÉMOIN — une décision qui libère notifie les DEUX : la décision à son apporteur, le premier rang au sien', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({}), null, { id: RANG1, apporteurId: APPORTEUR_RANG1 });
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'non_confirmee',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(
+      t.notifications.map((n) => (n as { data: { cle: string; apporteurId: string } }).data)
+    ).toMatchObject([
+      { cle: 'decision_attribution', apporteurId: APPORTEUR },
+      { cle: 'premier_rang_libere', apporteurId: APPORTEUR_RANG1 },
+    ]);
   });
 });

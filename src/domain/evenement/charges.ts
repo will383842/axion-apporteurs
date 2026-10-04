@@ -30,6 +30,8 @@ import { EVENEMENTS_APPORTEUR, MOTIFS_RESILIATION, STATUTS_APPORTEUR } from '../
 import {
   CRITERES_D_ANTERIORITE,
   ETATS_ATTRIBUTION,
+  MOTIFS_ANNULATION_CONSOLE,
+  MOTIFS_LISTE_NOIRE,
   EVENEMENTS_ATTRIBUTION,
   NAISSANCES_ATTRIBUTION,
 } from '../attribution/machine';
@@ -168,13 +170,33 @@ export const CHARGES_PAR_TYPE = {
       acteur: FORMES.acteur(),
       lienInteret: z.enum(['declare', 'non_declare']).optional(),
       /**
-       * DM-67 (REQ-JUR-007) : le critère de l'antériorité établie après coup, en enum INTERNE, porté
+       * DM-67 (REQ-DM-006) : le critère de l'antériorité établie après coup, en enum INTERNE, porté
        * par `anteriorite_etablie` et par elle seule ; aucune donnée de personne.
        */
       critere: z.enum(CRITERES_D_ANTERIORITE).optional(),
+      /**
+       * Lentille sécurité (rattrapage 99) : la RÉFÉRENCE du fait fondateur — la facture ou le devis
+       * d'axion-ia, et sa date. Son identifiant est une chaîne libre au contrat : il entre par son
+       * EMPREINTE (SHA-256), qui se retrouve en hachant l'identifiant connu, sans rien laisser passer
+       * d'autre. Aucune donnée de personne, la charge est fermée.
+       */
+      fait: z
+        .object({
+          nature: z.enum(['facture', 'devis']),
+          ref: FORMES.empreinte(),
+          le: FORMES.horodatage(),
+        })
+        .strict()
+        .optional(),
+    })
+    .extend({
+      /** DM-55 : le motif fermé d'une annulation par la console, exigé pour elle seule. */
+      motifAnnulation: z.enum(MOTIFS_ANNULATION_CONSOLE).optional(),
+      /** DM-55 : la catégorie de l'article 3.3 bis, exigée avec ce motif et lui seul. */
+      categorieRelation: z.enum(MOTIFS_LISTE_NOIRE).optional(),
     })
     .strict()
-    .superRefine(({ de, transition, critere }, ctx) => {
+    .superRefine(({ de, transition, critere, fait, motifAnnulation, categorieRelation }, ctx) => {
       if ((de === null) !== NAISSANCES.includes(transition)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -187,6 +209,33 @@ export const CHARGES_PAR_TYPE = {
           code: z.ZodIssueCode.custom,
           path: ['critere'],
           message: 'critere_incoherent',
+        });
+      }
+      // Le fait fondateur accompagne le critère, et sa nature est celle que le critère nomme.
+      const natureAttendue =
+        critere === undefined ? undefined : critere === 'cliente' ? 'facture' : 'devis';
+      if ((transition === 'annulee_par_la_console') !== (motifAnnulation !== undefined)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['motifAnnulation'],
+          message: 'motif_annulation_incoherent',
+        });
+      }
+      if (
+        (motifAnnulation === 'entreprise_relevant_de_l_article_3_3_bis') !==
+        (categorieRelation !== undefined)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['categorieRelation'],
+          message: 'categorie_incoherente',
+        });
+      }
+      if (fait?.nature !== natureAttendue) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['fait'],
+          message: 'fait_incoherent',
         });
       }
     }),

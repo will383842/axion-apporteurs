@@ -415,6 +415,14 @@ export const PARAMETRES_HORS_DEPOT_CONFIRMATION = {
 export type NomDeSeuil = keyof typeof SEUILS;
 
 /**
+ * Le fuseau dans lequel les délais du contrat se comptent en jours civils — notamment la fenêtre de
+ * redéclaration (`FILE_FENETRE_REDECLARATION_JOURS`, DM-55 : fin à minuit, heure de Paris, du jour qui
+ * suit envoi + la durée). Le domaine le tient par `src/domain/temps/paris.ts`, qui n'en connaît pas
+ * d'autre ; la valeur est nommée ici, à côté des durées (forme d'A02).
+ */
+export const FUSEAU_DES_DELAIS = 'Europe/Paris' as const;
+
+/**
  * Les PARAMÈTRES du calcul qui ne sont ni un délai ni un montant — sourcés et datés comme les seuils
  * (RM-10), mais hors de `SEUILS` : la garde des seuils ne connaît que les durées et les montants, et
  * un ratio n'est ni l'un ni l'autre. L'étendre aux ratios est une suite, pas un détour.
@@ -436,6 +444,28 @@ export const PARAMETRES = {
     verifieLe: '2026-09-29',
   },
 } as const satisfies Record<string, Parametre>;
+
+/**
+ * Les TAILLES DE LOT des passages planifiés — ni un délai, ni un montant : la borne d'un travail par
+ * lots, sourcée et datée comme les seuils (RM-10), hors de `SEUILS` pour la même raison que les
+ * paramètres.
+ */
+export type TailleDeLot = {
+  readonly valeur: number;
+  readonly unite: 'notifications';
+  readonly source: string;
+  readonly verifieLe: string;
+};
+
+export const TAILLES_DE_LOT = {
+  // DM-55 : le passage d'envoi des notifications de l'espace prend ses notifications par lots bornés.
+  NOTIFICATIONS_ENVOI_LOT: {
+    valeur: 100,
+    unite: 'notifications',
+    source: "DM-55, forme d'A02 (rattrapage 98) : le passage d'envoi, en lots bornés par la SSOT",
+    verifieLe: '2026-10-04',
+  },
+} as const satisfies Record<string, TailleDeLot>;
 
 /**
  * Les BUDGETS D'EXPÉRIENCE de REQ-UX-047 (QA-T58, sorti du point 4 de GOV-113) — une seule source,

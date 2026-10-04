@@ -29,7 +29,8 @@ import {
   GABARITS,
   schemaGabarit,
   schemaPreferenceNotification,
-  type Gabarit,
+  estGabaritDeLApporteur,
+  type GabaritDeLApporteur,
   type LigneDeNotification,
 } from './table-ssot';
 
@@ -63,9 +64,11 @@ const PARAMETRE = /\{([a-zA-Z]+)\}/g;
  */
 const VALEUR = /^[^\p{Cc}\p{Cf}]{1,300}$/u;
 
-function cleDeLaTable(cle: string): Gabarit {
+function cleDeLaTable(cle: string): GabaritDeLApporteur {
   const lue = schemaGabarit.safeParse(cle);
-  if (!lue.success) throw new NotificationRefusee('cle_inconnue', cle);
+  // SEC-29 : la clé du courriel de la console n'est pas une notification de l'apporteur.
+  if (!lue.success || !estGabaritDeLApporteur(lue.data))
+    throw new NotificationRefusee('cle_inconnue', cle);
   return lue.data;
 }
 
@@ -81,7 +84,7 @@ export const PARAMETRES_DE_LA_SSOT: Readonly<Record<string, string>> = {
  * Le corps d'une clé. Celui d'`attribution_liberee` dépend de la CAUSE de la fin (A07, 2026-10-02) :
  * l'émettrice la donne, faute de quoi la notification est refusée. Aucune autre clé n'en reçoit.
  */
-function corpsDe(cle: Gabarit, cause: string | undefined): string | null {
+function corpsDe(cle: GabaritDeLApporteur, cause: string | undefined): string | null {
   if (cle !== 'attribution_liberee') {
     if (cause !== undefined) throw new NotificationRefusee('cause_en_trop', cause);
     return TEXTES_DES_NOTIFICATIONS[cle].corps;
@@ -92,7 +95,7 @@ function corpsDe(cle: Gabarit, cause: string | undefined): string | null {
 }
 
 /** Les paramètres que l'ÉMETTEUR fournit pour une clé, triés : ceux des textes, hors SSOT. */
-export function parametresDe(cle: Gabarit, cause?: CauseDeLiberation): string[] {
+export function parametresDe(cle: GabaritDeLApporteur, cause?: CauseDeLiberation): string[] {
   const t = TEXTES_DES_NOTIFICATIONS[cle];
   const noms = [t.titre, t.appel, corpsDe(cle, cause) ?? ''].flatMap((x) =>
     [...x.matchAll(PARAMETRE)].map((m) => m[1]!)
@@ -158,6 +161,24 @@ export interface DemandeDeNotification {
   cause?: CauseDeLiberation;
 }
 
+/**
+ * La composition d'un courriel de notification, UNE fois pour tous ses émetteurs (`notifier()` et
+ * le passage d'envoi de DM-55) : le titre en sujet ; le corps, puis l'appel à l'action suivi du lien
+ * de sa route quand elle existe.
+ */
+export function composerLeCourriel(
+  cle: string,
+  texte: TexteRendu,
+  urlDeLEspace: URL
+): { sujet: string; corps: string } {
+  const route = GABARITS[cleDeLaTable(cle)].route;
+  const lien = route === null ? null : new URL(route, urlDeLEspace).href;
+  const corps = [texte.corps, lien === null ? texte.appel : `${texte.appel} : ${lien}`]
+    .filter((x): x is string => x !== null)
+    .join('\n\n');
+  return { sujet: texte.titre, corps };
+}
+
 export async function notifier(
   demande: DemandeDeNotification,
   d: DependancesDeLaNotification
@@ -184,14 +205,11 @@ export async function notifier(
     if (preference?.active === false)
       return { notificationId, courriel: 'desactive_par_preference' };
   }
-  const lien = ligne.route === null ? null : new URL(ligne.route, d.urlDeLEspace).href;
-  const corps = [texte.corps, lien === null ? texte.appel : `${texte.appel} : ${lien}`]
-    .filter((x): x is string => x !== null)
-    .join('\n\n');
+  const { sujet, corps } = composerLeCourriel(cle, texte, d.urlDeLEspace);
   const courriel = await d.envoyerCourriel({
     gabarit: cle,
     a: demande.a,
-    sujet: texte.titre,
+    sujet,
     corps,
     apporteurId: d.acces.apporteurId,
   });

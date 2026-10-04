@@ -71,7 +71,7 @@ export const EVENEMENTS_ATTRIBUTION = [
   'paiement_recu',
   'commande_caduque',
   'commande_caduque_hors_fenetre',
-  // DM-67 (REQ-JUR-007, art. 3.3) : l'antériorité de la Société établie après l'enregistrement, par
+  // DM-67 (REQ-DM-006, art. 3.3) : l'antériorité de la Société établie après l'enregistrement, par
   // des faits datés avant le dépôt. Depuis tout état OCCUPANT ; les commissions acquises restent.
   'anteriorite_etablie',
 ] as const;
@@ -163,10 +163,37 @@ export const REFUSEES_AU_CONSEILLER = [
 const REFUSEES_A_L_APPORTEUR: readonly TransitionAttribution[] = ['prise_en_charge'];
 
 /**
- * DM-67 (REQ-JUR-007) : le critère de l'antériorité établie après coup, en enum INTERNE de l'événement
+ * DM-67 (REQ-DM-006) : le critère de l'antériorité établie après coup, en enum INTERNE de l'événement
  * `anteriorite_etablie` ; il n'apparaît jamais dans une notification.
  */
 export const CRITERES_D_ANTERIORITE = ['cliente', 'devis', 'devis_signe'] as const;
+
+/**
+ * DM-55 (forme d'A02, valeurs de la juriste, rattrapage 98) : le motif FERMÉ d'une annulation par la
+ * console, sans « autre ». Il ne vaut que depuis `provisoire` (seule flèche de la matrice) ;
+ * `erreur_de_saisie_de_la_societe` est réservé à la prise en charge d'un conseiller, et ne notifie rien.
+ * Pas de colonne : l'événement est la trace, le motif est dans sa charge.
+ */
+export const MOTIFS_ANNULATION_CONSOLE = [
+  'demande_de_l_apporteur',
+  'declaration_en_double',
+  'entreprise_relevant_de_l_article_3_3_bis',
+  'erreur_de_saisie_de_la_societe',
+] as const;
+export type MotifAnnulationConsole = (typeof MOTIFS_ANNULATION_CONSOLE)[number];
+
+/**
+ * DM-55 (forme d'A02) : la catégorie d'une entreprise relevant de l'article 3.3 bis — le MÊME
+ * vocabulaire que l'enum `MotifListeNoire` de la base, confronté à elle par un témoin. Elle accompagne
+ * le motif `entreprise_relevant_de_l_article_3_3_bis`, et lui seul.
+ */
+export const MOTIFS_LISTE_NOIRE = [
+  'administration',
+  'financeur_public',
+  'financeur_paritaire',
+  'organisme_de_formation_partenaire',
+] as const;
+export type MotifListeNoire = (typeof MOTIFS_LISTE_NOIRE)[number];
 export type CritereDAnteriorite = (typeof CRITERES_D_ANTERIORITE)[number];
 
 export type CodeTransitionAttribution =
@@ -177,7 +204,11 @@ export type CodeTransitionAttribution =
   | 'transition_refusee'
   | 'refusee_au_porteur'
   | 'autre_commande_valable'
-  | 'critere_incoherent';
+  | 'critere_incoherent'
+  | 'acteur_refuse'
+  | 'motif_incoherent'
+  | 'porteur_refuse'
+  | 'anomalie_refusee';
 
 export class ErreurTransitionAttribution extends Error {
   readonly code: CodeTransitionAttribution;

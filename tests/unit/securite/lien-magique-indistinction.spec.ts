@@ -108,6 +108,9 @@ function correspond(ligne: LigneLien, condition: ConditionDeConsommation): boole
     const date = valeur instanceof Date ? valeur.getTime() : NaN;
     const operateurs = Object.entries(attendu as Record<string, Date>);
     return operateurs.every(([op, borne]) => {
+      // SEC-29 : la population est jugée dans la condition (`apporteurId: { not: null }`).
+      if (op === 'not' && (borne as Date | null) === null)
+        return valeur !== null && valeur !== undefined;
       if (op === 'gt') return date > borne.getTime();
       if (op === 'gte') return date >= borne.getTime();
       throw new Error(`opérateur non simulé : ${op}`);
@@ -872,6 +875,7 @@ describe('REQ-SEC-001 — chaque refus de la demande et de la consommation, isol
           consommeAt: null,
           annuleAt: null,
           expireAt: { gt: T },
+          apporteurId: { not: null },
         },
         donnees: { consommeAt: T },
       },

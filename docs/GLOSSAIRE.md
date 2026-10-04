@@ -41,7 +41,7 @@
 | `perdue`              | Qualification `perdue` avec `motifPerte`                                                | non        |
 | `perimee`             | 90 j sans suite après qualification (`peremptionAt`, REQ-DM-007)                        | non        |
 | `expiree`             | `fenetreFinAt` atteinte (12 mois après `confirmeeAt`)                                   | non        |
-| `annulee`             | Retirée par l'apporteur ou par la console avant qualification                           | non        |
+| `annulee`             | Retirée par l'apporteur ou par la console avant qualification, ou annulée pour antériorité établie après coup (anteriorite_etablie, DM-67), depuis tout état occupant | non        |
 
 **`ETATS_OCCUPANTS` = {provisoire, active, rdv_pris, proposition, signee, convertie, figee_resiliation}** (7 états,
 REQ-DM-003). Constante unique `src/domain/attribution/etats.ts`, projetée dans l'index partiel
@@ -130,6 +130,7 @@ ordinaire **reste `prevue`** (l'attribution passe `figee_resiliation`) ; `conser
 | `QualiteExercice`      | `commercant`, `societe_commerciale`, `artisan`, `profession_liberale` — liste fermée d'A07 ; les deux premières rendent applicable la clause attributive de juridiction (art. 48 CPC) ; « micro-entrepreneur » est un régime, pas une qualité | REQ-JUR-022 |
 | `ProfessionReglementee` | `expertise_comptable`, `auxiliaire_services_financiers`, `intermediaire_assurance` — une valeur par code NAF (69.20Z, 66.19B, 66.22Z), HYP-JUR-PROF-REGLEMENTEES | REQ-JUR-022 |
 | `MotifResiliation`     | `ordinaire_apporteur`, `ordinaire_axion`, `manquement_grave`, `fin_de_plein_droit` — colonne `resiliationMotif` ; `fin_de_plein_droit` : « Fin de plein droit : décès de l'apporteur personne physique, cessation de son activité ou radiation de son immatriculation (contrat art. 12.5) ; sans préavis, ni décision de la Société » ; une procédure collective n’en est pas une | REQ-DM-011 |
+| `NatureAccesConsole`   | `connexion`, `lecture_coordonnees_apporteur`, `lecture_coordonnees_contact` — colonne `nature` du journal des accès à la console ; une connexion n'a pas de cible, une lecture en a toujours une | SEC-58 |
 | `RegimeTva`            | `assujetti`, `franchise_293b` — historique daté, figé sur chaque autofacture | REQ-ARG-033 |
 | `CanalCandidature`     | `site`, `linkedin`, `jobboard`, `saisie_console`, `autre` — dérivé par EXT-T03 de `sourceCanal`, chaîne transportée figée ; chemin inconnu → `autre`, journalisé | REQ-DM-035, REQ-EXT-008 |
 | `StatutTache`          | `a_faire`, `en_cours`, `en_revue`, `fusionnee`, `deployee`, `verifiee`, `bloquee`, `attente_externe`, `proposee` — **neuf valeurs**, celles de `scripts/lot/tasks.schema.json` ; `proposee` manquait ici depuis GOV-017a et rien ne l'attrapait | REQ-GOV-021 |
@@ -181,7 +182,7 @@ qui nomme un événement pointé — `attribution.confirmee_tacitement` (REQ-DM-
 
 | Valeur | Agrégat | Créateur | Charge fermée |
 | --- | --- | --- | --- |
-| `attribution_etat_modifie` | `attribution` | DM-08 | `{de, vers, transition, acteur, lienInteret?}` ; `de` : `EtatAttribution` ou nul ; `transition` : `z.enum(EVENEMENTS_ATTRIBUTION)` ; `lienInteret` : `declare` ou `non_declare` |
+| `attribution_etat_modifie` | `attribution` | DM-08 | `{de, vers, transition, acteur, lienInteret?, critere?, fait?, motifAnnulation?, categorieRelation?}` ; `de` : `EtatAttribution` ou nul ; `transition` : `z.enum(EVENEMENTS_ATTRIBUTION)` ; `lienInteret` : `declare` ou `non_declare` ; `critere` (`cliente`, `devis`, `devis_signe`) et `fait` (nature, empreinte, date) : exigés pour `anteriorite_etablie` et pour elle seule (DM-67) ; `motifAnnulation` (`MotifAnnulationConsole` : `demande_de_l_apporteur`, `declaration_en_double`, `entreprise_relevant_de_l_article_3_3_bis`, `erreur_de_saisie_de_la_societe`) : exigé pour `annulee_par_la_console` et pour elle seule (DM-55) ; `categorieRelation` (`MOTIFS_LISTE_NOIRE`, le vocabulaire de l'enum `MotifListeNoire` : `administration`, `financeur_public`, `financeur_paritaire`, `organisme_de_formation_partenaire`) : exigée avec le motif `entreprise_relevant_de_l_article_3_3_bis` et lui seul (DM-55) ; l'anomalie qui fonde `anomalie_confirmee` n'entre JAMAIS dans la charge (décision (d) de la juriste pour DM-12) : elle est nommée par `notifications_espace.anomalie_id` |
 | `attribution_peremption_suspendue` | `attribution` | DM-08 | `{acteur, suspendueAt}` |
 | `attribution_porteur_reaffecte` | `attribution` | DM-08 | `{de, vers, acteur}` ; `de` et `vers` : un porteur `{type, id}`, `type` valant `utilisateur_console` (W19 (5), refus `porteur_non_conseiller`) ; `de` ≠ `vers` ; aucune donnée de personne ni date |
 | `attribution_contact_purge` | `attribution` | DM-07 | `{purgeAt, acteur}` ; `acteur` : `FORMES.acteur()` restreint au système, la purge est celle du cron |

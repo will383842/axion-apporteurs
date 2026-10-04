@@ -655,8 +655,8 @@
       "alias": [
         "GATE-JUR-VERIFIER-BINAIRE"
       ],
-      "verifie": "DTO a 4 etats {libre, suivie_place_disponible, suivie_file_complete, non_disponible} (REQ-UX-007) ; libelles sans jour, sans nom et sans UUID ; client existant et attribution active -> DTO byte-identique ; cles exactes (etendue par UX-P1-01)",
-      "fixtureRouge": "rendre un DTO different entre 'cliente' et 'suivie'",
+      "verifie": "DTO a 4 etats {libre, suivie_place_disponible, suivie_file_complete, non_disponible} (REQ-UX-007) ; libelles sans jour, sans nom et sans UUID ; deux causes du MÊME état rendent une réponse octet-identique (cliente → non_disponible ; toute occupation → suivie_*) ; cles exactes (etendue par UX-P1-01)",
+      "fixtureRouge": "rendre deux réponses différentes pour deux causes du MÊME état (une cliente et une entreprise fermée, toutes deux non_disponible ; deux occupations, toutes deux suivie_*)",
       "preuveRouge": null
     },
     {
