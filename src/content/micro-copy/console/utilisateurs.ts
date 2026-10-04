@@ -138,10 +138,15 @@ export const UTILISATEURS_CONSOLE = {
      */
     invitation: {
       sujet: "Votre accès à la console d'Axion Partners",
-      // Arbitrage de la juriste (2026-10-04, au 97) : la phrase de la politique est RETIRÉE tant
-      // qu'aucune page ne décrit le traitement de la console ; elle reviendra avec la page.
-      corps: (d: { libelleRole: string; adresseConnexion: string; dateExpiration: string }) =>
-        `Axion-IA vous a ouvert un accès à la console d'Axion Partners, avec le rôle ${d.libelleRole}. Pour vous connecter, ouvrez ${d.adresseConnexion} et saisissez cette adresse e-mail : vous recevrez un lien et un code de connexion. Cette invitation expire le ${d.dateExpiration} ; passé ce délai, demandez une nouvelle invitation. Si vous n'attendiez pas ce message, ignorez-le.`,
+      // JUR-T62 (textes finaux de la juriste, 4b731fb) : la page « Vos données dans la console » est
+      // publiée ; la phrase revient, MOT POUR MOT, information individuelle préalable (art. L.1222-4).
+      corps: (d: {
+        libelleRole: string;
+        adresseConnexion: string;
+        dateExpiration: string;
+        adressePolitique: string;
+      }) =>
+        `Axion-IA vous a ouvert un accès à la console d'Axion Partners, avec le rôle ${d.libelleRole}. Pour vous connecter, ouvrez ${d.adresseConnexion} et saisissez cette adresse e-mail : vous recevrez un lien et un code de connexion. Cette invitation expire le ${d.dateExpiration} ; passé ce délai, demandez une nouvelle invitation. Si vous n'attendiez pas ce message, ignorez-le. La façon dont Axion-IA traite vos données de connexion, dont le journal de vos accès, est décrite dans ${d.adressePolitique}.`,
       appel: 'Se connecter',
     },
   },
