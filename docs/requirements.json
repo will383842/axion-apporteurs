@@ -461,6 +461,7 @@
       "taches": [
         "DM-10-P",
         "DM-65",
+        "DM-66",
         "INT-T46-A",
         "INT-T46-P",
         "JUR-T42"
@@ -479,6 +480,7 @@
       "taches": [
         "DM-10-P",
         "DM-65",
+        "DM-66",
         "INT-T75-A",
         "INT-T75-P"
       ]
@@ -1008,8 +1010,8 @@
     {
       "id": "REQ-SEC-021",
       "domaine": "anti-abus-securite",
-      "texte": "« Vérifier une entreprise » n'est accessible qu'en session authentifiée, limité par identité et par hash IP selon la configuration, journalisé (`verification_events` [REMPLACÉ au rattrapage 95 : la table s'appelle `verifications`, livrée par DM-12]) ; aucun rythme de dépôt ne pose de signal d'anomalie (REQ-SEC-017, REQ-JUR-031 : `TypeAnomalie` n'a pas de valeur de rythme) ; la date de libération est arrondie au mois ; l'identité de l'autre apporteur n'est jamais révélée.",
-      "source": "audit-outil §1.3 D5 (précisé) ; nom de la table aligné sur `verifications` (DM-12), rattrapage 95",
+      "texte": "« Vérifier une entreprise » n'est accessible qu'en session authentifiée, limité par identité et par hash IP selon la configuration, journalisé (`verification_events` [REMPLACÉ au rattrapage 95 : la table s'appelle `verifications`, livrée par DM-12]) ; aucun rythme de dépôt ne pose de signal d'anomalie (REQ-SEC-017, REQ-JUR-031 : `TypeAnomalie` n'a pas de valeur de rythme) ; la date de libération est arrondie au mois [SUSPENDU au rattrapage 96, remarque de la juriste : aucune date n'est rendue, dans aucun état, tant que Williams n'a pas tranché (juriste : non ; sécurité : oui ; décision W19), voir SEC-16] ; l'identité de l'autre apporteur n'est jamais révélée.",
+      "source": "audit-outil §1.3 D5 (précisé) ; nom de la table aligné sur `verifications` (DM-12), rattrapage 95 ; date suspendue jusqu'à la décision de Williams, rattrapage 96",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -3904,6 +3906,7 @@
         "INT-T49",
         "QA-T40",
         "QA-T56",
+        "QA-T73",
         "T-ARG-015"
       ]
     },
@@ -6409,6 +6412,20 @@
       "phase": 1,
       "taches": [
         "INT-T12"
+      ]
+    },
+    {
+      "id": "REQ-JUR-068",
+      "domaine": "juridique",
+      "texte": "Les utilisateurs de la console sont informés du traitement de leurs données (RGPD art. 13) par une page publique, accessible depuis la connexion de la console, tirée du traitement TRT-CONSOLE du registre ; elle dit en clair que leurs connexions et leurs consultations de coordonnées sont journalisées, la durée du journal et sa finalité (code du travail art. L.1222-4), et elle est livrée avant le premier utilisateur réel.",
+      "source": "nouvelle (juriste, rattrapage 97, pour JUR-T61) ; RGPD art. 13 ; code du travail art. L.1222-4",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 11,
+      "etape": 10,
+      "phase": 1,
+      "taches": [
+        "JUR-T61"
       ]
     },
     {
