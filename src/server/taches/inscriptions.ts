@@ -64,6 +64,7 @@ import { purgerLesEntreprisesConnues } from './purger-entreprises-connues';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
 import { purgerLesAppareils } from './purger-appareils';
 import { purgerLesNotificationsDeLEspace } from './purger-notifications-espace';
+import { alerterLesNonRendus, passageDEnvoiDesNotifications } from './envoyer-notifications-espace';
 import { purgerLesValeursDesDroits } from './purger-valeurs-droits-contact';
 import { anonymiserLesTracesDesDroits } from './anonymiser-traces-droits-contact';
 import {
@@ -221,6 +222,14 @@ export function inscriptions(
     // DM-61 (REQ-UX-016) : les notifications de l'espace, douze mois après leur inscription.
     notifications_espace_purger: () =>
       purgerLesNotificationsDeLEspace(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-55 (REQ-UX-016) : le courriel des notifications de la machine, après le commit de la
+    // transition ; la fenêtre de redéclaration court de son envoi effectif.
+    notifications_espace_envoyer: async () => {
+      const bilan = await passageDEnvoiDesNotifications(prisma, env)();
+      // Arbitrage de la sécurité : un non-rendu lève aussi une alerte fermée (motif et nombre).
+      await alerterLesNonRendus(bilan, canalDAlerte(env));
+      return bilan;
+    },
     // DM-59 (REQ-JUR-065) : la valeur d'une rectification, effacée à son échéance même sans traitement.
     droits_contact_purger: () =>
       purgerLesValeursDesDroits(prisma, new Date(horlogeSysteme.maintenant())),

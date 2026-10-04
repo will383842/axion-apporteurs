@@ -99,6 +99,11 @@ export async function mesuresOuvertesAuDela(
  * `anonymisee_at` est posée.
  * Restent l'id, le type et le statut. Le passage rend aussi le NOMBRE des mesures ouvertes au-delà
  * de la durée d'alerte, et rien d'autre.
+ *
+ * DM-55 (condition de la juriste) : dans la MÊME instruction — donc la même transaction —, les
+ * notifications de l'espace qui nommaient une anomalie anonymisée sont DÉLIÉES (`anomalie_id` vidé).
+ * Après l'anonymisation, plus aucune ne pointe vers elle ; la notification reste, et se rend avec la
+ * phrase fermée de la juriste.
  */
 export async function anonymiserLesAnomalies(
   prisma: PrismaClient,
@@ -106,8 +111,8 @@ export async function anonymiserLesAnomalies(
 ): Promise<{ anonymisees: number; mesuresOuvertes: number }> {
   const limites = limitesDePurge(maintenant);
   const t = maintenant.toISOString();
-  const anonymisees = await prisma.$executeRaw`
-    UPDATE "anomalies" SET
+  const [r] = await prisma.$queryRaw<{ anonymisees: number }[]>`
+    WITH "anonymisees" AS (UPDATE "anomalies" SET
       "anonymisee_at" = ${t}::timestamptz,
       "score" = NULL,
       "apporteur_id" = NULL,
@@ -126,7 +131,12 @@ export async function anonymiserLesAnomalies(
       AND (("statut" = 'levee'
              AND "traite_at" <= ${limites.anomalieLevee.toISOString()}::timestamptz)
         OR ("statut" = 'confirmee'
-             AND "mesure_terminee_at" <= ${limites.anomalieConfirmee.toISOString()}::timestamptz))`;
+             AND "mesure_terminee_at" <= ${limites.anomalieConfirmee.toISOString()}::timestamptz))
+      RETURNING "id"),
+    "deliees" AS (UPDATE "notifications_espace" SET "anomalie_id" = NULL
+      WHERE "anomalie_id" IN (SELECT "id" FROM "anonymisees") RETURNING 1)
+    SELECT (SELECT count(*) FROM "anonymisees")::int AS "anonymisees"`;
+  const anonymisees = r?.anonymisees ?? 0;
   const ouvertes = await prisma.anomalie.count({ where: mesuresOuvertes(maintenant) });
   return { anonymisees, mesuresOuvertes: ouvertes };
 }
