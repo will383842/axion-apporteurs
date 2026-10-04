@@ -49,6 +49,10 @@ export async function semerUtilisateurConsole(
       emailHash,
       nomChiffre: nomChiffre ? Buffer.from(nomChiffre) : null,
       creeAt: u.creeAt,
+      // SEC-30 : un compte semé est ACTIVÉ à sa création, comme le report de la migration
+      // (`activee_at = cree_at`) ; jamais au défaut `clock_timestamp()`, qui rendrait le semeur non
+      // déterministe d'un passage à l'autre.
+      activeeAt: u.creeAt,
     },
     select: { id: true },
   });
