@@ -88,9 +88,7 @@ type Bilan = {
   retenues: number;
   sautees: number;
   nonRendues: number;
-  /** Le motif fermé de chaque non-rendu, dans l'ordre du lot : sans contenu, il se lit au battement. */
-  motifsNonRendus: MotifDeNonRendu[];
-};
+} & Partial<Record<`nonRendue_${MotifDeNonRendu}`, number>>;
 
 export async function envoyerLesNotificationsDeLEspace(p: PortsDuPassage): Promise<Bilan> {
   const bilan: Bilan = {
@@ -99,7 +97,6 @@ export async function envoyerLesNotificationsDeLEspace(p: PortsDuPassage): Promi
     retenues: 0,
     sautees: 0,
     nonRendues: 0,
-    motifsNonRendus: [],
   };
   const lot = await p.lireLot(TAILLES_DE_LOT.NOTIFICATIONS_ENVOI_LOT.valeur);
   for (const n of lot) {
@@ -107,7 +104,9 @@ export async function envoyerLesNotificationsDeLEspace(p: PortsDuPassage): Promi
       if (!(await g.verrouiller(n))) return 'sautee' as const;
       const texte = await g.rendre(n, p.maintenant());
       if ('nonRendue' in texte) {
-        bilan.motifsNonRendus.push(texte.nonRendue);
+        // Un compteur par motif FERMÉ : le battement nomme le motif, jamais la notification.
+        const cle = `nonRendue_${texte.nonRendue}` as const;
+        bilan[cle] = (bilan[cle] ?? 0) + 1;
         return 'nonRendue' as const;
       }
       const envoi = await g.envoyer(n, texte);

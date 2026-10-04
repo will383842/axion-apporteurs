@@ -142,7 +142,6 @@ describe('REQ-UX-016 — le passage envoie chaque notification une fois, sous ve
       retenues: 0,
       sautees: 0,
       nonRendues: 0,
-      motifsNonRendus: [],
     });
     expect(t.trace).toEqual([`lot:${TAILLES_DE_LOT.NOTIFICATIONS_ENVOI_LOT.valeur}`, 'tx', 'tx']);
     expect(t.envoyes).toEqual(['n1', 'n2']);
@@ -156,7 +155,6 @@ describe('REQ-UX-016 — le passage envoie chaque notification une fois, sous ve
       retenues: 0,
       sautees: 1,
       nonRendues: 0,
-      motifsNonRendus: [],
     });
     expect(t.envoyes).toEqual([]);
   });
@@ -171,7 +169,7 @@ describe('REQ-UX-016 — le passage envoie chaque notification une fois, sous ve
       retenues: 0,
       sautees: 0,
       nonRendues: 1,
-      motifsNonRendus: ['parametre_refuse'],
+      nonRendue_parametre_refuse: 1,
     });
     expect(t.envoyes).toEqual(['n2']);
   });
@@ -1052,7 +1050,7 @@ describe('REQ-UX-016 — le texte rendu depuis la base, à l’heure de l’envo
     };
     expect(await envoyerLesNotificationsDeLEspace(p)).toMatchObject({
       nonRendues: 1,
-      motifsNonRendus: ['faits_non_conserves'],
+      nonRendue_faits_non_conserves: 1,
     });
   });
 });

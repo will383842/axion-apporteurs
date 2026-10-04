@@ -379,7 +379,6 @@ describe('REQ-UX-016 — le passage d’envoi des notifications de l’espace es
       retenues: 0,
       sautees: 0,
       nonRendues: 0,
-      motifsNonRendus: [],
     };
     const passage = vi.fn(async () => bilan);
     m.passageDEnvoiDesNotifications.mockReturnValue(passage);
