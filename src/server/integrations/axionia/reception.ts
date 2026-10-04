@@ -25,6 +25,16 @@
  * `schema_version` INCONNUE. Une enveloppe bien formée, d'un type connu, mais d'une autre version
  * est inscrite `held` et alertée — jamais rejetée, jamais traitée (REQ-ARG-003). Un type INCONNU,
  * lui, ne peut pas s'inscrire (la colonne est un enum) : 422, et c'est l'outbox qui le garde.
+ *
+ * LA BASCULE DE LA v3 À LA v4 (INT-T76-P ; forme d'A02, #737). Une enveloppe v3 reste TRAITÉE, jugée
+ * contre les `$defs` de la v3, tant que la fenêtre ouverte par le PREMIER événement v4 reçu n'est pas
+ * refermée (`v3EncoreTraitee`, `BASCULE_CONTRAT_V3_V4_JOURS`) ; au-delà, elle s'inscrit `held`,
+ * rejouable, jamais refusée. Avant toute v4, la v3 est la norme.
+ *
+ * `financement.etape` (v4) : sa clé de fait est `financement.etape:<dossierId>:<etape>`, une fois par
+ * étape et par dossier, et un rejeu est un doublon. Une SECONDE ISSUE pour le même dossier (un
+ * `accord` après un `refus`, ou l'inverse) est refusée, nommée `issue_contradictoire` (422 et une
+ * alerte), jugée dans la transaction de l'inscription, sous un verrou du dossier.
  */
 import { createHash, createHmac } from 'node:crypto';
 import Ajv, { type ValidateFunction } from 'ajv';
@@ -44,8 +54,10 @@ import {
 import { enveloppeEvenement } from '../../../../packages/contracts/events.zod';
 import contratV2 from '../../../../packages/contracts/contracts.v2.json';
 import contratV3 from '../../../../packages/contracts/contracts.v3.json';
+import contratV4 from '../../../../packages/contracts/contracts.v4.json';
 import { ENTETE_KID_AXIONIA } from '../../../../packages/contracts/api';
 import { cleDuKid, lireTrousseaux, type MotifDeCle, type Trousseau } from '../../../lib/env';
+import { v3EncoreTraitee } from '../../../domain/contrat/bascule-v3-v4';
 import {
   TOLERANCE_SIGNATURE_S,
   egalATempsConstant,
@@ -179,7 +191,14 @@ type ContratPublie = { $defs: Record<string, Record<string, unknown>> };
 const CONTRATS_PUBLIES: Readonly<Record<number, ContratPublie>> = {
   2: contratV2 as ContratPublie,
   3: contratV3 as ContratPublie,
+  4: contratV4 as ContratPublie,
 };
+
+/**
+ * INT-T76-P — la version que la bascule garde TRAITÉE derrière la courante, le temps de la fenêtre.
+ * Toute autre version que ces deux-là est `held`, comme avant.
+ */
+export const VERSION_EN_BASCULE = 3;
 
 /**
  * Le `$defs` publié de la charge d'un type, dans une version, jamais un schéma retapé ici ; `null`
@@ -187,7 +206,11 @@ const CONTRATS_PUBLIES: Readonly<Record<number, ContratPublie>> = {
  */
 function defsPublie(type: TypeEvenement, version: number): Record<string, unknown> | null {
   const contrat = Object.hasOwn(CONTRATS_PUBLIES, version) ? CONTRATS_PUBLIES[version] : undefined;
-  return contrat?.$defs[`payload_${type.replace('.', '_')}`] ?? null;
+  const d = contrat?.$defs[`payload_${type.replace('.', '_')}`];
+  if (contrat === undefined || d === undefined) return null;
+  // Version 4 : une charge référence la définition PARTAGÉE des OPCO (`#/$defs/opco_id`). Compilée
+  // seule, elle emporte les `$defs` de SA version, jamais ceux d'une autre.
+  return { ...d, $defs: contrat.$defs };
 }
 
 /** Le `$defs` de la version COURANTE : il existe pour chaque type, sinon le contrat a divergé. */
@@ -225,9 +248,19 @@ function valideur(cle: string, schema: () => Record<string, unknown>): ValidateF
   return v;
 }
 
-/** Le payload REÇU d'un type, jugé contre le `$defs` publié de ce type. */
-export function payloadConforme(type: TypeEvenement, payload: unknown): boolean {
-  return valideur(`recu:${type}`, () => defsDuPayload(type))(payload);
+/**
+ * Le payload REÇU d'un type, jugé contre le `$defs` publié de ce type dans SA version : la courante
+ * par défaut, ou la v3 tant que la bascule la traite. Une version sans contrat publié, ou qui ne
+ * connaît pas le type, n'est jamais conforme.
+ */
+export function payloadConforme(
+  type: TypeEvenement,
+  payload: unknown,
+  version: number = SCHEMA_VERSION
+): boolean {
+  const d = version === SCHEMA_VERSION ? defsDuPayload(type) : defsPublie(type, version);
+  if (d === null) return false;
+  return valideur(`recu:v${version}:${type}`, () => d)(payload);
 }
 
 /**
@@ -275,8 +308,16 @@ export interface EvenementAInscrire {
 }
 
 export interface DepotDeReception {
-  /** Inscrit, ou dit `doublon` quand la BASE refuse la seconde ligne. */
-  inscrire(e: EvenementAInscrire): Promise<'inscrit' | 'doublon'>;
+  /**
+   * Inscrit, ou dit `doublon` quand la BASE refuse la seconde ligne, ou `issue_contradictoire`
+   * quand un `financement.etape` porte la seconde issue d'un dossier (INT-T76-P).
+   */
+  inscrire(e: EvenementAInscrire): Promise<'inscrit' | 'doublon' | 'issue_contradictoire'>;
+  /**
+   * INT-T76-P — la réception du PREMIER événement de la version courante, ou `null` s'il n'y en a
+   * encore aucun : le point de départ de la fenêtre de bascule, un fait lu en base.
+   */
+  premiereReceptionDeLaVersionCourante(): Promise<Date | null>;
 }
 
 export interface DependancesDeReception {
@@ -346,10 +387,29 @@ export async function recevoirEvenementAxionia(
     }
     cleMetier = paymentId;
   }
-  const held = e.schema_version !== SCHEMA_VERSION;
-  // INT-T45 : la charge de la version courante est jugée contre le `$defs` FERMÉ de son type ;
-  // celle d'une autre version, inscrite `held`, le sera à son rejeu (`chargeConforme`).
-  if (!held && !payloadConforme(e.event_type, e.payload)) return horsSchema();
+  // INT-T76-P : la courante est toujours traitée ; la v3 l'est tant que la fenêtre de bascule n'est
+  // pas refermée ; toute autre version est `held`.
+  let traitee = e.schema_version === SCHEMA_VERSION;
+  if (e.schema_version === VERSION_EN_BASCULE) {
+    let premiere: Date | null;
+    try {
+      premiere = await d.depot.premiereReceptionDeLaVersionCourante();
+    } catch {
+      return texte(503, 'inscription_indisponible');
+    }
+    traitee = v3EncoreTraitee(premiere === null ? null : premiere.getTime(), d.maintenantMs);
+  }
+  const held = !traitee;
+  // INT-T45 : la charge d'une version traitée est jugée contre le `$defs` FERMÉ de son type, dans SA
+  // version ; celle d'une version `held` le sera à son rejeu (`chargeConforme`).
+  if (!held && !payloadConforme(e.event_type, e.payload, e.schema_version)) return horsSchema();
+  // INT-T76-P : la clé de fait d'une étape de financement, une fois par étape et par dossier. Sa forme
+  // est tenue par le `$defs` qu'on vient de juger.
+  if (!held && eventType === TypeEvenementRecu.financement_etape) {
+    const cle = `${e.event_type}:${String(e.payload.dossierId)}:${String(e.payload.etape)}`;
+    if (cle.length > CLE_METIER_MAX) return horsSchema();
+    cleMetier = cle;
+  }
 
   const inscription: EvenementAInscrire = {
     source: SourceEvenementRecu.axionia,
@@ -366,13 +426,17 @@ export async function recevoirEvenementAxionia(
     survenuAt: new Date(e.occurred_at),
   };
 
-  let resultat: 'inscrit' | 'doublon';
+  let resultat: 'inscrit' | 'doublon' | 'issue_contradictoire';
   try {
     resultat = await d.depot.inscrire(inscription);
   } catch {
     return texte(503, 'inscription_indisponible');
   }
   if (resultat === 'doublon') return Response.json({ duplicate: true });
+  if (resultat === 'issue_contradictoire') {
+    d.alerteur.signaler({ porte: PORTE_CONTENU, motif: 'issue_contradictoire' });
+    return texte(422, 'issue_contradictoire');
+  }
 
   if (held) {
     d.alerteur.signaler({ porte: PORTE_CONTENU, motif: 'schema_version_inconnue' });
@@ -389,21 +453,55 @@ export async function recevoirEvenementAxionia(
 
 // ── L'adaptateur Prisma ─────────────────────────────────────────────────────────────────────────
 
-/** La base dit `doublon` : violation d'unicité, (source, eventId) ou l'index du paiement. */
+/** Les deux issues d'un dossier de financement : l'une exclut l'autre. */
+const ISSUE_CONTRAIRE: Readonly<Record<string, string>> = { accord: 'refus', refus: 'accord' };
+
+/** Le domaine du verrou d'un dossier de financement, à la réception. */
+const DOMAINE_DU_VERROU_DE_FINANCEMENT = 'reception.financement.etape';
+
+/**
+ * La base dit `doublon` : violation d'unicité, (source, eventId) ou l'index de la clé métier. Une
+ * ISSUE de financement s'inscrit dans une transaction, sous le verrou de son dossier : la seconde issue
+ * d'un même dossier y est vue, et refusée, avant toute écriture.
+ */
 export function depotDeReception(prisma: PrismaClient): DepotDeReception {
   return {
     async inscrire(e) {
+      const data = { ...e, charge: e.charge as Prisma.InputJsonObject };
+      const contraire =
+        e.eventType === TypeEvenementRecu.financement_etape
+          ? ISSUE_CONTRAIRE[String(e.charge.etape)]
+          : undefined;
       try {
-        await prisma.evenementRecu.create({
-          data: { ...e, charge: e.charge as Prisma.InputJsonObject },
+        if (contraire === undefined) {
+          await prisma.evenementRecu.create({ data });
+          return 'inscrit';
+        }
+        const dossierId = String(e.charge.dossierId);
+        return await prisma.$transaction(async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${DOMAINE_DU_VERROU_DE_FINANCEMENT}), hashtext(${dossierId}))`;
+          const deja = await tx.$queryRaw<{ n: bigint }[]>`
+            SELECT count(*) AS n FROM "evenements_recus"
+            WHERE "event_type" = 'financement_etape'
+              AND "charge"->>'dossierId' = ${dossierId} AND "charge"->>'etape' = ${contraire}`;
+          if (Number(deja[0]?.n ?? 0) > 0) return 'issue_contradictoire' as const;
+          await tx.evenementRecu.create({ data });
+          return 'inscrit' as const;
         });
-        return 'inscrit';
       } catch (erreur) {
         if (erreur instanceof Prisma.PrismaClientKnownRequestError && erreur.code === 'P2002') {
           return 'doublon';
         }
         throw erreur;
       }
+    },
+    async premiereReceptionDeLaVersionCourante() {
+      const premiere = await prisma.evenementRecu.findFirst({
+        where: { source: SourceEvenementRecu.axionia, schemaVersion: SCHEMA_VERSION },
+        orderBy: [{ receivedAt: 'asc' }, { id: 'asc' }],
+        select: { receivedAt: true },
+      });
+      return premiere?.receivedAt ?? null;
     },
   };
 }
