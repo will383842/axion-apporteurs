@@ -13,6 +13,8 @@
  *   — `premier_rang_libere` : par `texteDuPremierRangDansLEspace`, la date limite étant le jour de la
  *     fenêtre POSÉE. Tant que la fenêtre est NULLE, la notification N'APPARAÎT PAS (juriste, option
  *     (a)) : aucun délai ne court avant l'envoi du courriel, et un texte sans date tromperait.
+ *   — `decision_attribution` n'est PAS affichée (coordination, option (c)) : son motif porterait les
+ *     faits d'une anomalie dans l'espace, ce qui demande sa propre relecture ;
  *   — toute autre clé est écartée, sans lever : aucune n'a encore de rendu dans l'espace.
  *
  * AUCUN ÉTAT DE LECTURE : la date de lecture n'est ni lue ni écrite ici (REQ-JUR-039).

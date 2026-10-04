@@ -220,6 +220,17 @@ describe('REQ-UX-016 — le lecteur dédié : l’apporteur de la session, et de
     expect(apres[0]!.titre).toContain('25 mai 2027');
   });
 
+  it('REQ-UX-016 : `decision_attribution` n’apparaît pas dans la liste (option (c) de la coordination) — ni demandée, ni rendue', async () => {
+    const decision = { ...ligneDe('2', MOI, FIN), cle: 'decision_attribution' };
+    const { c, requetes } = client([ligneDe('1', MOI, FIN), decision]);
+    const rendues = await notificationsDeLEspace(c, MOI);
+    expect(rendues.map((n) => n.id)).toEqual(['1']);
+    const r = requetes[0] as { where: { cle: { in: string[] } } };
+    expect(r.where.cle.in).not.toContain('decision_attribution');
+    expect(entreeDeLEspace({ ...decision, attribution: decision.attribution })).toBeNull();
+    expect(liste(rendues)).not.toContain('une décision concerne votre dépôt');
+  });
+
   it('REQ-UX-016 : l’écran ne reçoit que des textes — aucun identifiant d’attribution ni numéro d’entreprise', async () => {
     const rendues = await notificationsDeLEspace(client([ligneDe('1', MOI, FIN)]).c, MOI);
     expect(Object.keys(rendues[0]!).sort()).toEqual(
