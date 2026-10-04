@@ -358,3 +358,50 @@ describe('REQ-SEC-032 — la session d’un résilié ne peut plus écrire', () 
     });
   });
 });
+
+/**
+ * La sécurité (#703, 5981521068) : la résiliation RÉVOQUE toutes les sessions — la base incrémente la
+ * version de session au passage à `resilie` (migration `sessions_revocables`). Une session ouverte
+ * AVANT est refusée à la requête suivante, quels que soient les droits en cours.
+ */
+describe('REQ-SEC-032 — la résiliation révoque les sessions ouvertes', () => {
+  it('REQ-SEC-032 : TÉMOIN — une session ouverte avant la résiliation est refusée à la requête suivante (version_perimee), même avec des droits en cours', async () => {
+    const { jugerSession } = await import('../../../src/server/auth/session');
+    const maintenant = new Date('2026-10-04T10:00:00Z');
+    const ouverteAvant = {
+      id: 'session-1',
+      apporteurId: 'apporteur-1',
+      kid: 'k1',
+      expireAt: new Date('2026-10-05T10:00:00Z'),
+      revoqueAt: null,
+      sessionVersion: 2,
+      lienMagique: { consommeAt: maintenant },
+    };
+    expect(
+      jugerSession(
+        { ...ouverteAvant, apporteur: { statut: 'signe', sessionVersion: 2 } },
+        maintenant,
+        'k1'
+      ).ok
+    ).toBe(true);
+    // après le geste : la base a porté la version de l'apporteur à 3
+    expect(
+      jugerSession(
+        {
+          ...ouverteAvant,
+          apporteur: { statut: 'resilie', sessionVersion: 3, droitsEnCours: true },
+        },
+        maintenant,
+        'k1'
+      )
+    ).toEqual({ ok: false, motif: 'version_perimee' });
+  });
+
+  it('REQ-SEC-032 : TÉMOIN — le geste porte la version de session d’un cran, en plus du déclencheur', async () => {
+    const source = (await import('node:fs')).readFileSync(
+      'src/server/apporteur/resiliation.ts',
+      'utf8'
+    );
+    expect(source).toContain('sessionVersion: { increment: 1 }');
+  });
+});
