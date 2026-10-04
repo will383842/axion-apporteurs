@@ -8,8 +8,10 @@
  *   (1) l'empreinte est minimale — un HMAC tronqué sous une clé dédiée, jamais l'adresse réseau ni
  *       l'identifiant en clair — et gardée au plus la durée des sessions ;
  *   (2) le SEUL effet est une confirmation renforcée avant l'action sensible, et un avis à l'adresse
- *       vérifiée ; la confirmation a lieu À LA CONSOMMATION du lien ou du code, dans sa transaction,
- *       sur l'appareil qui consomme — la garde ne confirme jamais, et une session fraîche présentée
+ *       vérifiée ; la confirmation a lieu À LA CONSOMMATION du lien ou du code, sur l'appareil qui
+ *       consomme, dans l'ordre de la voie (b) de la lentille sécurité — la consommation se valide,
+ *       l'avis part hors de toute transaction, puis une transaction courte rejuge la session et
+ *       confirme —, la garde ne confirme jamais, et une session fraîche présentée
  *       depuis un autre appareil est refusée (note de la lentille sécurité sur 4913c6a3 : un cookie
  *       de session volé ne doit faire connaître aucun appareil) ;
  *       L'action de connexion (`src/app/(espace)/connexion/actions.ts`) lit le cookie de l'appareil,

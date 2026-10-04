@@ -6,9 +6,10 @@
  *
  * CE QU'IL PROUVE (cadrage de la lentille sécurité, point 5, et sa note sur 4913c6a3) :
  *   1. nouvel appareil → refusé, même sur une session fraîche ; il se confirme à la CONSOMMATION
- *      d'un lien sur lui, dans la transaction de la connexion : l'avis part, puis l'appareil est
- *      connu, et passe ensuite sans avis ; un cookie de session volé, présenté depuis un autre
- *      appareil, ne fait connaître aucun appareil ;
+ *      d'un lien sur lui : la consommation se valide, l'avis part hors de toute transaction, puis
+ *      une transaction courte rejuge la session et le confirme ; il passe ensuite sans avis ; un
+ *      cookie de session volé, présenté depuis un autre appareil, ne fait connaître aucun appareil ;
+ *      en production (SEC-62), l'avis part par `notifier()`, et seul un courriel envoyé confirme ;
  *   2. aucune trace ailleurs : ni anomalie, ni statut, ni version de session, ni dépôt, ni événement ;
  *   3. un appareil est connu pour UN compte ;
  *   4. au-delà d'une durée de session sans être vu, il redevient inconnu ;
