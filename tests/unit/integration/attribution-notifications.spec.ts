@@ -127,6 +127,7 @@ describe('REQ-UX-016 — le passage envoie chaque notification une fois, sous ve
       echecs: 0,
       retenues: 0,
       sautees: 0,
+      nonRendues: 0,
     });
     expect(t.trace).toEqual([`lot:${TAILLES_DE_LOT.NOTIFICATIONS_ENVOI_LOT.valeur}`, 'tx', 'tx']);
     expect(t.envoyes).toEqual(['n1', 'n2']);
@@ -139,14 +140,23 @@ describe('REQ-UX-016 — le passage envoie chaque notification une fois, sous ve
       echecs: 0,
       retenues: 0,
       sautees: 1,
+      nonRendues: 0,
     });
     expect(t.envoyes).toEqual([]);
   });
 
-  it('REQ-UX-016 : un texte qui ne se rend pas (paramètre manquant) lève : rien n’est tu', async () => {
-    const t = ports([notif('n1', 'decision_attribution')], { sansTexte: ['n1'] });
-    await expect(envoyerLesNotificationsDeLEspace(t.p)).rejects.toThrow(/texte_introuvable/);
-    expect(t.envoyes).toEqual([]);
+  it('REQ-UX-016 : TÉMOIN — un texte qui ne se rend pas n’envoie rien, se COMPTE au bilan, et ne bloque pas les suivantes', async () => {
+    const t = ports([notif('n1', 'decision_attribution'), notif('n2', 'decision_attribution')], {
+      sansTexte: ['n1'],
+    });
+    expect(await envoyerLesNotificationsDeLEspace(t.p)).toEqual({
+      envoyees: 1,
+      echecs: 0,
+      retenues: 0,
+      sautees: 0,
+      nonRendues: 1,
+    });
+    expect(t.envoyes).toEqual(['n2']);
   });
 });
 
