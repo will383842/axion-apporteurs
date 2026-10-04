@@ -15,6 +15,7 @@
 
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { CHAMPS_PII, decryptPii, type ClesPii } from '../securite/pii';
+import { depotDAppareils } from './appareil';
 import {
   ESSAIS_DU_CODE_MAX,
   type PortsDEmission,
@@ -77,6 +78,8 @@ export function ecrituresDeLien(prisma: PrismaClient): EcrituresDeLien {
 
 function consommationSur(tx: Prisma.TransactionClient): TransactionDeConsommation {
   return {
+    // SEC-55 : l'appareil qui consomme se confirme dans CETTE transaction.
+    appareils: depotDAppareils(tx),
     async consommer(condition, donnees) {
       const { count } = await tx.lienMagique.updateMany({ where: condition, data: donnees });
       return count;
@@ -120,10 +123,11 @@ export function transactionDeConsommation(
  * dépassent jamais cinq, et la base le double (CHECK et déclencheur `liens_magiques_code_fige`).
  */
 function codeSur(tx: Prisma.TransactionClient): TransactionDuCode {
-  const { statutApporteur, ouvrirSession } = consommationSur(tx);
+  const { statutApporteur, ouvrirSession, appareils } = consommationSur(tx);
   return {
     statutApporteur,
     ouvrirSession,
+    appareils,
     async lienActifDe(emailHash, maintenant) {
       const lien = await tx.lienMagique.findFirst({
         where: {
