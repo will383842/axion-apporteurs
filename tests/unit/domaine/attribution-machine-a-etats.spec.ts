@@ -1667,3 +1667,30 @@ describe('REQ-DM-011 — la fin du contrat de l’apporteur porteur', () => {
     ).toThrow('refusee_au_porteur : active × fin_de_contrat × conseiller');
   });
 });
+
+/**
+ * La juriste (#703, 5981011150) : AUCUNE commande signée après la fin n'est commissionnée. Une
+ * attribution `figee_resiliation` ne reçoit plus de nouvelle commande : la machine refuse
+ * `devis_envoye`, `devis_signe` et `rdv_pris`. L'encaissement d'une commande signée AVANT la fin ouvre
+ * droit sans changer l'état figé : c'est une ligne de commission (phase 2), pas une flèche.
+ */
+describe('REQ-DM-011 — une attribution figée par la résiliation ne reçoit plus de commande', () => {
+  it('REQ-DM-011 : TÉMOIN — figee_resiliation refuse devis_envoye, devis_signe et rdv_pris ; elle ne sort que par expiree ou anteriorite_etablie', () => {
+    for (const transition of [
+      'devis_envoye',
+      'devis_signe',
+      'rdv_pris',
+      'paiement_recu',
+    ] as const) {
+      expect(
+        () =>
+          transitionnerAttribution({ de: 'figee_resiliation', transition, porteur: 'apporteur' }),
+        transition
+      ).toThrow(`transition_refusee : figee_resiliation × ${transition}`);
+    }
+    expect(Object.keys(TRANSITIONS_ATTRIBUTION.figee_resiliation).sort()).toEqual([
+      'anteriorite_etablie',
+      'expiree',
+    ]);
+  });
+});
