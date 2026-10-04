@@ -192,7 +192,7 @@ export const CLES_REFUSEES = {
   pieceKyc: ['id', 'apporteurId', 'apporteur', 'identitesFacturation'],
   // UX-P1-10 : l'attribution d'une notification est une référence vérifiée ; la clé d'une
   // préférence s'écrit, et Zod la juge contre la table des notifications avant la couche.
-  // DM-55 (sécurité) : l'événement, l'anomalie et les courriels d'une notification sont HORS DE L'ESPACE :
+  // DM-55 (sécurité) : le fait du journal, l'anomalie et les courriels d'une notification sont HORS DE L'ESPACE :
   // jamais écrits d'ici, et aucun chemin de lecture de l'espace ne les suit.
   notificationEspace: [
     'id',
@@ -200,7 +200,7 @@ export const CLES_REFUSEES = {
     'apporteur',
     'attribution',
     'evenementId',
-    'evenement',
+    'faitDuJournal',
     'anomalieId',
     'anomalie',
     'courriels',
@@ -216,7 +216,9 @@ export const REFERENCES_CLOISONNEES: Partial<
 > = {
   sessionEspace: { lienMagiqueId: 'lienMagique' },
   attribution: { jetonDepotId: 'jetonDepot', personneDeclareeId: 'personneDeclaree' },
-  courrielEnvoye: { attributionId: 'attribution' },
+  // DM-55 (sécurité, option i) : la notification d'un courriel est une référence DÉCLARÉE, mais sa clé est
+  // aussi REFUSÉE — verifier() refuse les clés interdites d'abord : aucune écriture de l'espace ne la pose.
+  courrielEnvoye: { attributionId: 'attribution', notificationEspaceId: 'notificationEspace' },
   // DM-11 : la pièce rib d'une identité de facturation est une pièce de la session.
   identiteFacturation: { pieceKycId: 'pieceKyc' },
   notificationEspace: { attributionId: 'attribution' },
@@ -272,7 +274,7 @@ export const RELATIONS = {
   personneDeclaree: ['apporteur', 'attributions'],
   pieceKyc: ['apporteur', 'identitesFacturation'],
   sessionEspace: ['apporteur', 'utilisateurConsole', 'lienMagique'],
-  notificationEspace: ['apporteur', 'attribution', 'evenement', 'anomalie', 'courriels'],
+  notificationEspace: ['apporteur', 'attribution', 'faitDuJournal', 'anomalie', 'courriels'],
   preferenceNotification: ['apporteur'],
   verification: ['apporteur', 'utilisateurConsole'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
