@@ -51,6 +51,7 @@ import {
   type LimiteurDeLaFrontiere,
   type RouteDeLaFrontiere,
 } from '../../../src/server/integrations/axionia/api-entrante';
+import { lecteurDeProduction } from '../../../src/server/integrations/axionia/attributions-dto';
 
 // ── Les fixtures : chaque dimension variée est EXPLICITE ────────────────────────────────────────
 
@@ -689,7 +690,7 @@ describe('REQ-SEC-012 — la frontière de PRODUCTION', () => {
     expect(fini).toBe(true);
   });
 
-  it('son débit est le compteur `auth:axionia-ip` du registre (SEC-44) : sans cache, il REFUSE en panne ; sa lecture n’est pas branchée', async () => {
+  it('son débit est le compteur `auth:axionia-ip` du registre (SEC-44) : sans cache, il REFUSE en panne ; sa lecture est celle d’INT-T07-P, qui lève sans ses clés', async () => {
     const f = frontiereDeProduction();
     expect(f.debit).not.toBe(limiteNonDeclaree);
     vi.stubEnv('REDIS_URL', '');
@@ -699,7 +700,9 @@ describe('REQ-SEC-012 — la frontière de PRODUCTION', () => {
     expect(ecrit.map((e) => JSON.parse(e) as Record<string, unknown>)).toEqual([
       { signal: 'rate_limit_panne', prefixe: 'auth:', motif: 'cache_indisponible' },
     ]);
-    await expect(f.lire(SIREN)).rejects.toThrow(/^lecteur_non_branche : /);
+    expect(f.lire).toBe(lecteurDeProduction);
+    // Sans ses clés, la lecture LÈVE (la frontière rend 503) : jamais « libre » par défaut.
+    await expect(f.lire(SIREN)).rejects.toThrow();
   });
 
   it('REQ-SEC-016 : TÉMOIN — son débit appelle EXACTEMENT le compteur `auth:axionia-ip`, avec le sujet et l’instant reçus', async () => {

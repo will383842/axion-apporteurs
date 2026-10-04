@@ -17,8 +17,8 @@
  *
  * ÉCHEC FERMÉ PARTOUT. Le débit de production est le compteur `auth:axionia-ip` du registre de
  * SEC-10 (SEC-44 : 60 / 1 min par empreinte d'adresse, `surPanne: refuser`) : une panne du cache
- * rend 503, jamais un passage. La lecture par défaut n'est pas branchée (503) : la correspondance des états d'attribution vers
- * `libre | attribuee | cliente` appartient à INT-T07-P. Jamais « libre » par défaut : ce serait
+ * rend 503, jamais un passage. La lecture de production est celle d'INT-T07-P
+ * (`attributions-dto.ts`) : une lecture qui lève rend 503. Jamais « libre » par défaut : ce serait
  * échouer ouvert contre l'apporteur.
  *
  * CE QUI N'EST PAS DANS LA RÉPONSE NE PEUT PAS FUIR. Le corps est RECONSTRUIT champ par champ depuis
@@ -40,6 +40,7 @@ import { z } from 'zod';
 import { API_ATTRIBUTIONS, ENTETE_KID_AXIONIA } from '../../../../packages/contracts/api';
 import { cleDuKid, lireEnvironnement, lireTrousseaux, type Trousseau } from '../../../lib/env';
 import { horlogeSysteme } from '../../../lib/horloge';
+import { lecteurDeProduction } from './attributions-dto';
 import { SAUTS_DE_CONFIANCE, adresseDuClient } from '../../securite/adresse-du-client';
 import { executerAuPlancher, type HorlogeDePlancher } from '../../securite/pot-de-miel';
 import { egalATempsConstant } from '../../securite/primitives-de-porte';
@@ -171,10 +172,6 @@ export interface Frontiere {
   readonly puits: PuitsDAppels;
 }
 
-const lecteurNonBranche: LecteurDAttribution = async () => {
-  throw new Error('lecteur_non_branche : la lecture des attributions est livrée par INT-T07-P');
-};
-
 /** Lue À CHAQUE APPEL : l'environnement n'est jamais figé à l'import. */
 export function frontiereDeProduction(): Frontiere {
   return {
@@ -185,7 +182,8 @@ export function frontiereDeProduction(): Frontiere {
     },
     // SEC-44 : le compteur du registre, appelé à nom LITTÉRAL — la forme que `rate-famille` lit.
     debit: (sujet, maintenantMs) => limiter('auth:axionia-ip', sujet, maintenantMs),
-    lire: lecteurNonBranche,
+    // INT-T07-P : la lecture des attributions, sur la base (`attributions-dto.ts`).
+    lire: lecteurDeProduction,
     puits: (ligne) => {
       process.stderr.write(`${ligne}\n`);
     },
