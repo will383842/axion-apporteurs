@@ -13,11 +13,14 @@
 -- restaurer l'ancien corps de sessions_espace_version_console() (il rendait 0) ; DROP CONSTRAINT ×6
 -- (dont utilisateurs_console_invitee_ou_activee et utilisateurs_console_activee_apres_invitation) ;
 -- DROP COLUMN ×5 (le report et la validation du premier administrateur disparaissent avec leurs
--- colonnes). La valeur ajoutée à l'enum `agregat_journal` ne se retire pas (Postgres) : elle
--- reste inerte.
+-- colonnes). Valeurs d'enum inertes, ×2 : celles d'`agregat_journal` et de `type_evenement_journal`
+-- ne se retirent pas (Postgres), elles restent sans emploi.
 
 -- ── 1. le journal nomme l'agrégat ────────────────────────────────────────────────────────────────
 ALTER TYPE "agregat_journal" ADD VALUE IF NOT EXISTS 'utilisateur_console';
+-- L'événement de tout changement d'un utilisateur de la console, dans la même transaction que lui.
+-- Ni l'un ni l'autre n'est employé dans cette migration (partners/ADR-0022 §13).
+ALTER TYPE "type_evenement_journal" ADD VALUE IF NOT EXISTS 'utilisateur_console_modifie';
 
 -- ── 2. la version de session de l'utilisateur ────────────────────────────────────────────────────
 ALTER TABLE "utilisateurs_console" ADD COLUMN "session_version" INTEGER NOT NULL DEFAULT 0;

@@ -42,6 +42,8 @@ import {
 } from '../../../src/server/auth/lien-magique';
 import { jugerSession, type LigneDeSession } from '../../../src/server/auth/session';
 import { MATRICE_DES_ROLES, ROLES_CONSOLE, roleAutorise } from '../../../src/server/roles/matrice';
+import { ROLES_CONSOLE as ROLES_DU_DOMAINE } from '../../../src/domain/console/roles';
+import { CHARGES_PAR_TYPE } from '../../../src/domain/evenement/charges';
 import {
   MOTIFS_DE_REFUS_CONSOLE,
   depotDeSessionsConsole,
@@ -1608,5 +1610,55 @@ describe('REQ-DM-024 — SEC-30 : une invitation expire si le compte n’est pas
   it('REQ-DM-024 : le délai d’invitation vient des durées de l’authentification, 72 h, validées par Williams', () => {
     expect(DUREES_AUTH.invitationConsoleMs.valeur).toBe(72 * 60 * 60 * 1000);
     expect(DUREES_AUTH.invitationConsoleMs.source).toMatch(/SEC-30/);
+  });
+});
+
+// Forme d'A02 : le domaine porte sa liste des rôles, confrontée à l'enum du schéma ; et l'événement
+// de l'administration des utilisateurs ne porte un rôle que là où le geste en touche un.
+describe('REQ-SEC-023 — SEC-30 : la liste des rôles du domaine, et l’événement de l’administration', () => {
+  it('REQ-SEC-023 : TÉMOIN — la liste du domaine est l’enum ConsoleRole du schéma, en ordre et en contenu', () => {
+    expect([...ROLES_DU_DOMAINE]).toEqual(Object.values(ConsoleRole));
+  });
+
+  const acteur = {
+    par: 'utilisateur_console' as const,
+    id: '00000000-0000-4000-8000-000000000001',
+  };
+  const charge = CHARGES_PAR_TYPE.utilisateur_console_modifie;
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — changer_role exige deux rôles différents ; inviter, un rôle d’arrivée ; tout autre geste, aucun', () => {
+    expect(
+      charge.safeParse({ geste: 'changer_role', de: 'lecteur', vers: 'comptable', acteur }).success
+    ).toBe(true);
+    expect(
+      charge.safeParse({ geste: 'changer_role', de: 'lecteur', vers: 'lecteur', acteur }).success
+    ).toBe(false);
+    expect(
+      charge.safeParse({ geste: 'changer_role', de: null, vers: 'lecteur', acteur }).success
+    ).toBe(false);
+    expect(
+      charge.safeParse({ geste: 'inviter', de: null, vers: 'qualifieur', acteur }).success
+    ).toBe(true);
+    expect(
+      charge.safeParse({ geste: 'inviter', de: 'admin', vers: 'qualifieur', acteur }).success
+    ).toBe(false);
+    expect(charge.safeParse({ geste: 'desactiver', de: null, vers: null, acteur }).success).toBe(
+      true
+    );
+    expect(charge.safeParse({ geste: 'valider', de: null, vers: 'admin', acteur }).success).toBe(
+      false
+    );
+  });
+
+  it('REQ-SEC-023 : la charge est fermée : un champ de plus (une adresse) est refusé', () => {
+    expect(
+      charge.safeParse({
+        geste: 'desactiver',
+        de: null,
+        vers: null,
+        acteur,
+        email: 'x@example.org',
+      }).success
+    ).toBe(false);
   });
 });
