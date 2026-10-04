@@ -9,9 +9,10 @@
  */
 import type { Segment } from '../../../../domain/rgpd/politique';
 import {
-  pageDeLaConsolePubliable,
-  type PageDeLaConsole,
+  estPubliableConsole,
+  type PolitiqueConsole,
 } from '../../../../domain/rgpd/politique-console';
+import { entiteContractante, estSentinelle } from '../../../../config/entite';
 import { VOS_DONNEES_CONSOLE as T } from '../../../../content/micro-copy/console/vos-donnees';
 
 /** La route de cette page, publique : lue avant toute connexion. */
@@ -34,16 +35,17 @@ function Contenu({ segments }: { segments: readonly Segment[] }) {
 }
 
 /** L'identité du responsable, lue dans le registre de l'entité ; `null` tant qu'elle n'y est pas. */
-export type Responsable = { readonly denomination: string; readonly siege: string } | null;
+type Responsable = { readonly denomination: string; readonly siege: string } | null;
 
-export function EcranVosDonneesConsole({
-  page,
-  responsable,
-}: {
-  page: PageDeLaConsole;
-  responsable: Responsable;
-}) {
-  const publiable = pageDeLaConsolePubliable(page) && responsable !== null;
+/** Le responsable du traitement, lu dans `config/entite.json` (RM-01) ; `null` sur une sentinelle. */
+function responsableDuTraitement(): Responsable {
+  const { denomination, siege } = entiteContractante();
+  return estSentinelle(denomination) || estSentinelle(siege) ? null : { denomination, siege };
+}
+
+export function EcranVosDonneesConsole({ politique }: { politique: PolitiqueConsole }) {
+  const responsable = responsableDuTraitement();
+  const publiable = estPubliableConsole(politique) && responsable !== null;
   return (
     <main>
       <h1>{T.titre}</h1>
@@ -62,7 +64,7 @@ export function EcranVosDonneesConsole({
           </>
         )}
       </section>
-      {page.rubriques.map((r) => (
+      {politique.rubriques.map((r) => (
         <section key={r.cle}>
           <h2>{T.rubriques[r.cle]}</h2>
           <Contenu segments={r.contenu} />

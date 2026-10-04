@@ -18,8 +18,13 @@ import { lireUnTraitement, type Filtre, type Segment } from './politique';
 
 export const TRAITEMENT_CONSOLE = 'TRT-CONSOLE';
 
-/** Les rubriques de TRT-CONSOLE rendues à la personne, et leur nom exact dans le registre. */
-export const RUBRIQUES_DE_LA_CONSOLE = {
+/**
+ * Les rubriques de TRT-CONSOLE rendues à la personne, et leur nom exact dans le registre. Arbitrage
+ * de la juriste : ni « Information des personnes » (elle décrit la page elle-même), ni « Mesures de
+ * sécurité » (l'art. 13 ne l'exige pas, et la rendre exposerait des détails de défense), ni
+ * « Personnes concernées » (la page s'adresse à elles).
+ */
+export const RUBRIQUES_CONSOLE = {
   finalite: 'Finalité',
   baseLegale: 'Base légale',
   donnees: 'Catégories de données',
@@ -29,7 +34,7 @@ export const RUBRIQUES_DE_LA_CONSOLE = {
   transferts: 'Transferts hors Union européenne',
   droits: "Droits et modalités d'exercice",
 } as const;
-export type CleDeLaConsole = keyof typeof RUBRIQUES_DE_LA_CONSOLE;
+export type CleDeLaConsole = keyof typeof RUBRIQUES_CONSOLE;
 
 /** L'ordre d'affichage : pourquoi, sur quelle base, quoi, d'où, combien de temps, qui, où, vos droits. */
 const ORDRE: readonly CleDeLaConsole[] = [
@@ -48,33 +53,34 @@ export type RubriqueDeLaConsole = {
   readonly contenu: readonly Segment[];
 };
 
-export type PageDeLaConsole = {
+export type PolitiqueConsole = {
   readonly rubriques: readonly RubriqueDeLaConsole[];
   /** Empreinte stable du contenu rendu : elle change dès qu'une valeur affichée change. */
   readonly version: string;
 };
 
-export type LectureDeLaConsole =
-  | { readonly ok: true; readonly page: PageDeLaConsole; readonly filtres: readonly Filtre[] }
+export type LecturePolitiqueConsole =
+  | { readonly ok: true; readonly politique: PolitiqueConsole; readonly filtres: readonly Filtre[] }
   | { readonly ok: false; readonly refus: string };
 
 /** La page extraite du bloc TRT-CONSOLE, ou le refus nommé qui l'empêche. */
-export function extrairePageDeLaConsole(registre: string): LectureDeLaConsole {
-  const lu = lireUnTraitement(registre, TRAITEMENT_CONSOLE, RUBRIQUES_DE_LA_CONSOLE, ORDRE);
+export function extrairePolitiqueConsole(registre: string): LecturePolitiqueConsole {
+  const lu = lireUnTraitement(registre, TRAITEMENT_CONSOLE, RUBRIQUES_CONSOLE, ORDRE);
   if (!lu.ok) return lu;
   const version = createHash('sha256')
     .update(JSON.stringify(lu.rubriques))
     .digest('hex')
     .slice(0, 32);
-  return { ok: true, page: { rubriques: lu.rubriques, version }, filtres: lu.filtres };
+  return { ok: true, politique: { rubriques: lu.rubriques, version }, filtres: lu.filtres };
 }
 
 /** Les segments « en cours de rédaction » de la page rendue. */
-export function segmentsEnCoursDeLaConsole(page: Pick<PageDeLaConsole, 'rubriques'>): number {
-  return page.rubriques.flatMap((r) => r.contenu).filter((s) => s.type === 'a_completer').length;
+export function segmentsEnCoursConsole(politique: Pick<PolitiqueConsole, 'rubriques'>): number {
+  return politique.rubriques.flatMap((r) => r.contenu).filter((s) => s.type === 'a_completer')
+    .length;
 }
 
 /** Publiable : aucun segment en cours de rédaction. Avant, la page n'est pas liée depuis la connexion. */
-export function pageDeLaConsolePubliable(page: Pick<PageDeLaConsole, 'rubriques'>): boolean {
-  return segmentsEnCoursDeLaConsole(page) === 0;
+export function estPubliableConsole(politique: Pick<PolitiqueConsole, 'rubriques'>): boolean {
+  return segmentsEnCoursConsole(politique) === 0;
 }
