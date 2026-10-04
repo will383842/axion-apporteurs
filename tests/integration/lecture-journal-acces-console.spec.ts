@@ -2,7 +2,7 @@
 // @req REQ-SEC-023
 /**
  * SEC-60 — la lecture du journal des accès à la console, en base RÉELLE : « réservée à un rôle nommé,
- * côté serveur, et se journalise elle-même » (condition de la sécurité sur SEC-58, mot pour mot).
+ * côté serveur, et se journalise elle-même » (condition de la sécurité sur le journal des accès, mot pour mot).
  *
  * Le rôle est nommé dans la matrice (`action:lire_journal_des_acces`, l'admin seul) ; le défaut est le
  * refus. Le lecteur unique relit le rôle du lecteur EN BASE, dans la transaction de la lecture : un rôle
@@ -62,7 +62,7 @@ afterAll(async () => {
 });
 
 /**
- * Quatre yeux (SEC-30) : un administrateur semé sans validation est EN ATTENTE. Le premier se
+ * Quatre yeux : un administrateur semé sans validation est EN ATTENTE. Le premier se
  * valide lui-même (premier administrateur, sans validateur) ; chaque admin suivant est validé par lui.
  */
 let fondateur: string | null = null;
