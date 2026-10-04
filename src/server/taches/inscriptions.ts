@@ -58,6 +58,7 @@ import { minimiserCandidatures } from './minimiser-candidatures';
 import { purgerLesContacts } from './purger-contacts';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
 import { purgerLesNotificationsDeLEspace } from './purger-notifications-espace';
+import { passageDEnvoiDesNotifications } from './envoyer-notifications-espace';
 import { purgerLesValeursDesDroits } from './purger-valeurs-droits-contact';
 import {
   anonymiserLesAnomalies,
@@ -207,6 +208,9 @@ export function inscriptions(
     // DM-61 (REQ-UX-016) : les notifications de l'espace, douze mois après leur inscription.
     notifications_espace_purger: () =>
       purgerLesNotificationsDeLEspace(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-55 (REQ-UX-016) : le courriel des notifications de la machine, après le commit de la
+    // transition ; la fenêtre de redéclaration court de son envoi effectif.
+    notifications_espace_envoyer: passageDEnvoiDesNotifications(prisma, env),
     // DM-59 (REQ-JUR-065) : la valeur d'une rectification, effacée à son échéance même sans traitement.
     droits_contact_purger: () =>
       purgerLesValeursDesDroits(prisma, new Date(horlogeSysteme.maintenant())),

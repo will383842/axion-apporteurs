@@ -30,6 +30,11 @@ export const TACHES = {
   naf_completer: { req: 'REQ-DM-046' },
   /** DM-61 — la suppression des notifications de l'espace douze mois après leur inscription. */
   notifications_espace_purger: { req: 'REQ-UX-016' },
+  /**
+   * DM-55 — l'envoi, APRÈS le commit de la transition, du courriel des notifications de la machine
+   * (`decision_attribution`, `premier_rang_libere`) ; la fenêtre de redéclaration court de l'envoi.
+   */
+  notifications_espace_envoyer: { req: 'REQ-UX-016' },
   /** DM-59 — l'effacement, à échéance, de la valeur d'une rectification demandée par le contact. */
   droits_contact_purger: { req: 'REQ-JUR-065' },
   /** SEC-58 — la purge, à échéance, du journal des accès à la console. */
