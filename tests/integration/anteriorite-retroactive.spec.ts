@@ -129,7 +129,9 @@ async function uneFacture(siren: string, emiseLe: Date): Promise<string> {
       sequence,
       charge,
       payloadHash: createHash('sha256').update(JSON.stringify(charge)).digest('hex'),
+      // Traité, donc daté de son traitement : la base l'exige (contrainte « traité si et seulement si daté »).
       statut: 'traite',
+      processedAt: emiseLe,
       receivedAt: emiseLe,
       survenuAt: emiseLe,
     },
