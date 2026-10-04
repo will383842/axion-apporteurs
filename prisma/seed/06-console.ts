@@ -7,7 +7,7 @@
  * ici ; mêmes entrées, mêmes lignes. Le courriel et le nom passent par `colonnesPii`, liés à la
  * ligne (modèle `UtilisateurConsole`) ; les empreintes des jetons viennent des producteurs réels
  * (`empreinteDuJeton`, `empreinteDeSessionConsole`, RM-03). Aucun clair ni aucun jeton n'est écrit. La
- * version de la session n'est pas écrite : la base la pose à 0 pour une session de la console.
+ * version de la session n'est pas écrite : la base y copie la version de son utilisateur (SEC-30).
  */
 
 import {
@@ -29,6 +29,12 @@ export interface UtilisateurASemer {
   nom: string | null;
   creeAt: Date;
   cles: ClesPii;
+  /**
+   * SEC-30 (quatre yeux) : la validation d'un administrateur PREMIER, sans validateur. Absente, un
+   * admin semé est EN ATTENTE ; le déclencheur `utilisateurs_console_quatre_yeux` n'admet cette date
+   * que si aucun autre administrateur actif et validé n'existe.
+   */
+  valideAt?: Date;
 }
 
 export async function semerUtilisateurConsole(
@@ -49,6 +55,11 @@ export async function semerUtilisateurConsole(
       emailHash,
       nomChiffre: nomChiffre ? Buffer.from(nomChiffre) : null,
       creeAt: u.creeAt,
+      // SEC-30 : un compte semé est ACTIVÉ à sa création, comme le report de la migration
+      // (`activee_at = cree_at`) ; jamais au défaut `clock_timestamp()`, qui rendrait le semeur non
+      // déterministe d'un passage à l'autre.
+      activeeAt: u.creeAt,
+      ...(u.valideAt === undefined ? {} : { valideAt: u.valideAt, valideParId: null }),
     },
     select: { id: true },
   });
@@ -119,5 +130,8 @@ export default async function semerParDefaut(
     nom: 'Administrateur de preview',
     creeAt: ctx.maintenant,
     cles: ctx.cles,
+    // SEC-30 (règle du rattrapage 97) : l'administrateur de preview est VALIDÉ, premier
+    // administrateur sans validateur ; en attente, il n'aurait aucun droit d'administrateur.
+    valideAt: ctx.maintenant,
   });
 }

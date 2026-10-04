@@ -36,6 +36,9 @@ import base from './vitest.config';
  * l'instrumentation dans l'arbre de travail — mesuré le 2026-09-25, 220 fichiers suivis réécrits.
  */
 const ECARTES = [
+  // DM-55 : ce témoin LIT le texte de src/server/taches/envoyer-notifications-espace.ts (la forme exacte
+  // du lot, `cle: { in: [...CLES_ENVOYEES_PAR_LE_PASSAGE] }`), que Stryker instrumente dans le bac.
+  'le passage n.envoie aucune autre clé : son lot lit la liste, et elle seule',
   'aucun fichier de src/domain/temps/ ne nomme Date',
   'le module n.écrit aucune durée de dormance en dur',
   'le module n.importe que le domaine',
@@ -73,6 +76,10 @@ const ECARTES = [
   'REQ-JUR-035 : le binaire sur le dépôt sort en 0 et imprime les noms confrontés',
   'REQ-JUR-037 : le binaire `jur:lexique-social` sur le dépôt sort en 0 et imprime les fichiers lus',
   'REQ-SEC-029 : le dépôt réel — aucune faute, et un plancher de fichiers et d.attributs confrontés',
+  // SEC-30 : ce témoin LIT le texte des sources de la console (src/server/console, src/app/(console)) ;
+  // dans le bac, ce texte porte l'instrumentation de Stryker (vu rougir au run initial de la PR 667).
+  // Joué par pnpm test, sur le vrai texte.
+  'TÉMOIN STATIQUE — aucun code de la console ne pose valide_at à une création',
 ];
 
 export default defineConfig({

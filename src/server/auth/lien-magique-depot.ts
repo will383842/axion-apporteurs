@@ -15,6 +15,8 @@
 
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { CHAMPS_PII, decryptPii, type ClesPii } from '../securite/pii';
+import { ajouterEvenement } from '../evenement/journal';
+import { invitationOuverte } from '../console/utilisateurs/regles';
 import { depotDAppareils } from './appareil';
 import {
   ESSAIS_DU_CODE_MAX,
@@ -183,6 +185,26 @@ export function transactionDuCode(prisma: PrismaClient): PortsDuCode['transactio
 /** Le nom du modèle dans la donnée authentifiée des blocs chiffrés d'un utilisateur de la console. */
 export const MODELE_UTILISATEUR_CONSOLE = 'UtilisateurConsole';
 
+/**
+ * SEC-30 — l'identité d'un utilisateur de la CONSOLE (son nom et son adresse), déchiffrée ICI, dans le
+ * module qui déchiffre déjà l'adresse du courriel de connexion : jamais sous la console, où seul le
+ * lecteur unique des coordonnées d'apporteurs et de contacts déchiffre (SEC-58). Lue pour l'écran
+ * des utilisateurs (admin seul) et pour les courriels de l'administration. Un bloc absent rend `null`.
+ */
+export function identiteDeLUtilisateurConsole(
+  ligne: { id: string; nomChiffre: Uint8Array | null; emailChiffre: Uint8Array | null },
+  cles: ClesPii
+): { nom: string | null; adresse: string | null } {
+  const lire = (champ: string, bloc: Uint8Array | null) =>
+    bloc === null
+      ? null
+      : decryptPii({ modele: MODELE_UTILISATEUR_CONSOLE, champ, id: ligne.id }, bloc, cles);
+  return {
+    nom: lire(CHAMPS_PII.nom.chiffre, ligne.nomChiffre),
+    adresse: lire(CHAMPS_PII.email.chiffre, ligne.emailChiffre),
+  };
+}
+
 export type LectureDuCompteConsole = Pick<
   PortsDEmissionConsole,
   'trouverUtilisateurConsole' | 'adresseStockee'
@@ -255,15 +277,56 @@ function consommationConsoleSur(tx: Prisma.TransactionClient): TransactionDeCons
       });
       return n === 1;
     },
-    async utilisateurActif(utilisateurConsoleId) {
+    async utilisateurActif(utilisateurConsoleId, maintenant) {
       const u = await tx.utilisateurConsole.findUnique({
         where: { id: utilisateurConsoleId },
-        select: { desactiveAt: true },
+        select: { desactiveAt: true, inviteeAt: true, activeeAt: true },
       });
-      return u !== null && u.desactiveAt === null;
+      if (u === null || u.desactiveAt !== null) return false;
+      // SEC-30 (forme d'A02) : une invitation non activée à son échéance répond comme un compte
+      // désactivé ; l'égalité est refusée, à la milliseconde. Un compte activé ne vieillit plus.
+      if (u.activeeAt == null && u.inviteeAt != null)
+        return invitationOuverte({ inviteeAt: u.inviteeAt, activeeAt: null }, maintenant);
+      return true;
     },
     async ouvrirSessionConsole(session) {
-      await tx.sessionEspace.create({ data: session });
+      const neuve = await tx.sessionEspace.create({ data: session, select: { id: true } });
+      if (session.utilisateurConsoleId == null) return;
+      // L'ordre (relecture de la sécurité) : `utilisateurActif` a déjà jugé, avant cette écriture ;
+      // puis l'activation ; puis seulement la révocation des autres sessions. Un compte refusé
+      // (désactivé, invitation échue) n'arrive jamais ici et ne révoque rien.
+      //
+      // SEC-30 : la première connexion ACTIVE le compte invité, une seule fois, dans la transaction
+      // qui ouvre la session ; le geste est journalisé, l'utilisateur étant son propre acteur.
+      const { count } = await tx.utilisateurConsole.updateMany({
+        where: { id: session.utilisateurConsoleId, activeeAt: null },
+        data: { activeeAt: session.creeAt },
+      });
+      if (count === 1)
+        await ajouterEvenement(tx, {
+          type: 'utilisateur_console_modifie',
+          agregat: 'utilisateur_console',
+          agregatId: session.utilisateurConsoleId,
+          survenuAt: session.creeAt,
+          charge: {
+            geste: 'activer',
+            de: null,
+            vers: null,
+            acteur: { par: 'utilisateur_console', id: session.utilisateurConsoleId },
+          },
+        });
+      // SEC-30 (option (a) de la sécurité) : UNE session de console vivante par personne. Dans la
+      // transaction d'ouverture, les AUTRES sessions ouvertes du même utilisateur sont révoquées ;
+      // le filtre porte sur l'utilisateur de la console, jamais une session de l'espace n'est
+      // touchée. Le relèvement (step-up) en hérite : sa session neuve révoque l'ancienne.
+      await tx.sessionEspace.updateMany({
+        where: {
+          utilisateurConsoleId: session.utilisateurConsoleId,
+          revoqueAt: null,
+          id: { not: neuve.id },
+        },
+        data: { revoqueAt: session.creeAt },
+      });
     },
   };
 }

@@ -28,9 +28,9 @@ const ALERTE = new Date('2031-03-23T15:02:03.004Z');
 function unDouble() {
   const appels: { sql: string; valeurs: unknown[] }[] = [];
   const d = {
-    $executeRaw: vi.fn(async (morceaux: TemplateStringsArray, ...valeurs: unknown[]) => {
+    $queryRaw: vi.fn(async (morceaux: TemplateStringsArray, ...valeurs: unknown[]) => {
       appels.push({ sql: morceaux.join('?').replace(/\s+/g, ' ').trim(), valeurs });
-      return 3;
+      return [{ anonymisees: 3 }];
     }),
     anomalie: {
       count: vi.fn(async () => 2),
@@ -95,12 +95,12 @@ describe('REQ-DM-033 et REQ-DM-043 — les limites d’un passage', () => {
 });
 
 describe('REQ-DM-033 — l’anonymisation des anomalies, telle que la base la reçoit', () => {
-  it('REQ-DM-033 : UNE instruction, qui vide tout ce qui désigne une personne et tronque les mois en UTC', async () => {
+  it('REQ-DM-033 : UNE instruction, qui vide tout ce qui désigne une personne, tronque les mois en UTC, et DÉLIE les notifications de l’espace (juriste, DM-55)', async () => {
     const { appels, prisma } = unDouble();
     await anonymiserLesAnomalies(prisma, MAINTENANT);
     expect(appels).toHaveLength(1);
     expect(appels[0]!.sql).toBe(
-      'UPDATE "anomalies" SET "anonymisee_at" = ?::timestamptz, "score" = NULL, ' +
+      'WITH "anonymisees" AS (UPDATE "anomalies" SET "anonymisee_at" = ?::timestamptz, "score" = NULL, ' +
         '"apporteur_id" = NULL, "attribution_id" = NULL, "traite_par_id" = NULL, ' +
         '"justification_chiffre" = NULL, "justification_purgee_at" = NULL, ' +
         '"mesure_terminee_at" = NULL, "gel_litige_at" = NULL, "gel_litige_leve_at" = NULL, ' +
@@ -110,7 +110,11 @@ describe('REQ-DM-033 — l’anonymisation des anomalies, telle que la base la r
         'WHERE "anonymisee_at" IS NULL ' +
         'AND ("gel_litige_at" IS NULL OR "gel_litige_leve_at" <= ?::timestamptz) ' +
         'AND (("statut" = \'levee\' AND "traite_at" <= ?::timestamptz) ' +
-        'OR ("statut" = \'confirmee\' AND "mesure_terminee_at" <= ?::timestamptz))'
+        'OR ("statut" = \'confirmee\' AND "mesure_terminee_at" <= ?::timestamptz)) ' +
+        'RETURNING "id"), ' +
+        '"deliees" AS (UPDATE "notifications_espace" SET "anomalie_id" = NULL ' +
+        'WHERE "anomalie_id" IN (SELECT "id" FROM "anonymisees") RETURNING 1) ' +
+        'SELECT (SELECT count(*) FROM "anonymisees")::int AS "anonymisees"'
     );
     // L'instant du passage, puis les deux limites, toutes en ISO.
     expect(appels[0]!.valeurs).toEqual([T, T, LEVEE.toISOString(), CINQ_ANS.toISOString()]);
