@@ -1476,3 +1476,144 @@ describe('REQ-DM-006 — les paramètres du motif, à l’ENVOI, selon l’arbit
     expect(LONGUEUR_DU_MOTIF_MAX).toBe(FAITS_ANOMALIE_CARACTERES_MAX.valeur + plusLong);
   });
 });
+
+describe('REQ-UX-016 — un non-rendu lève une alerte Telegram fermée (arbitrage de la sécurité)', () => {
+  it('REQ-UX-016 : la catégorie notification_non_rendue est dans la liste fermée des alertes', async () => {
+    const { CATEGORIES_ALERTE } = await import('../../../src/server/integrations/telegram/alertes');
+    expect(CATEGORIES_ALERTE).toContain('notification_non_rendue');
+  });
+
+  it('REQ-UX-016 : TÉMOIN — le message ne porte que le genre, le motif fermé et un nombre : ni identifiant d’objet, ni texte', async () => {
+    const { messageDAlerte } = await import('../../../src/server/integrations/telegram/alertes');
+    const m = messageDAlerte('alerte', {
+      categorie: 'notification_non_rendue',
+      id: '0190f3a0-0000-7000-8000-0000000000aa',
+      nonRendu: { motif: 'faits_refuses', nombre: 2 },
+    });
+    expect(m).toContain('[notification_non_rendue]');
+    expect(m).toContain('non rendu faits_refuses · 2');
+  });
+
+  it('REQ-UX-016 : TÉMOIN — un motif hors de la liste fermée, ou un nombre qui n’est pas un entier, s’écrit « illisible »', async () => {
+    const { messageDAlerte } = await import('../../../src/server/integrations/telegram/alertes');
+    const m = messageDAlerte('alerte', {
+      categorie: 'notification_non_rendue',
+      id: '0190f3a0-0000-7000-8000-0000000000aa',
+      nonRendu: { motif: 'deux dépôts le même jour, Jean Dupont', nombre: 1.5 },
+    });
+    expect(m).not.toContain('Dupont');
+    expect(m).toContain('non rendu illisible · illisible');
+  });
+
+  it('REQ-UX-016 : TÉMOIN — le passage du lanceur alerte UNE fois par motif présent au bilan, avec son nombre, dans l’ordre de la liste fermée', async () => {
+    const { alerterLesNonRendus } =
+      await import('../../../src/server/taches/envoyer-notifications-espace');
+    const alertes: unknown[] = [];
+    await alerterLesNonRendus(
+      {
+        envoyees: 3,
+        echecs: 0,
+        retenues: 0,
+        sautees: 0,
+        nonRendues: 3,
+        nonRendue_faits_refuses: 2,
+        nonRendue_fait_introuvable: 1,
+      },
+      { alerter: async (o) => (alertes.push(o), 'envoyee') }
+    );
+    expect(alertes.map((a) => (a as { nonRendu: unknown }).nonRendu)).toEqual([
+      { motif: 'fait_introuvable', nombre: 1 },
+      { motif: 'faits_refuses', nombre: 2 },
+    ]);
+    expect(
+      alertes.every((a) => (a as { categorie: string }).categorie === 'notification_non_rendue')
+    ).toBe(true);
+  });
+
+  it('REQ-UX-016 : sans non-rendu, aucune alerte ; sans canal, aucune erreur', async () => {
+    const { alerterLesNonRendus } =
+      await import('../../../src/server/taches/envoyer-notifications-espace');
+    const alertes: unknown[] = [];
+    await alerterLesNonRendus(
+      { envoyees: 1, echecs: 0, retenues: 0, sautees: 0, nonRendues: 0 },
+      { alerter: async (o) => (alertes.push(o), 'envoyee') }
+    );
+    expect(alertes).toEqual([]);
+    await expect(
+      alerterLesNonRendus(
+        {
+          envoyees: 0,
+          echecs: 0,
+          retenues: 0,
+          sautees: 0,
+          nonRendues: 1,
+          nonRendue_faits_refuses: 1,
+        },
+        null
+      )
+    ).resolves.toBeUndefined();
+  });
+
+  it('REQ-UX-016 : TÉMOIN (sécurité) — une alerte ne porte JAMAIS que { genre, motif, nombre } : l’id est un uuid frais qui ne désigne rien', async () => {
+    const { alerterLesNonRendus } =
+      await import('../../../src/server/taches/envoyer-notifications-espace');
+    const { messageDAlerte } = await import('../../../src/server/integrations/telegram/alertes');
+    const { MOTIFS_DE_NON_RENDU } = await import('../../../src/server/attribution/notifications');
+    const objets: Record<string, unknown>[] = [];
+    const bilan = {
+      envoyees: 0,
+      echecs: 0,
+      retenues: 0,
+      sautees: 0,
+      nonRendues: 2,
+      nonRendue_faits_refuses: 1,
+      nonRendue_apporteur_different: 1,
+    };
+    await alerterLesNonRendus(bilan, {
+      alerter: async (o) => (objets.push(o as never), 'envoyee'),
+    });
+    await alerterLesNonRendus(bilan, {
+      alerter: async (o) => (objets.push(o as never), 'envoyee'),
+    });
+    for (const o of objets) {
+      expect(Object.keys(o).sort()).toEqual(['categorie', 'id', 'nonRendu']);
+      expect(Object.keys(o['nonRendu'] as object).sort()).toEqual(['motif', 'nombre']);
+      expect(MOTIFS_DE_NON_RENDU).toContain((o['nonRendu'] as { motif: string }).motif);
+      // Le message : la catégorie, l'objet technique, le motif fermé, le nombre — et rien d'autre.
+      const message = messageDAlerte('alerte', o as never);
+      const prefixe = '[notification_non_rendue] objet ';
+      expect(message.startsWith(prefixe)).toBe(true);
+      expect(message.slice(prefixe.length)).toMatch(/^[0-9a-f-]{36} · non rendu [a-z_]+ · [0-9]+$/);
+    }
+    // Un uuid FRAIS par alerte : il ne désigne aucune notification, aucune attribution, et ne se répète pas.
+    const ids = objets.map((o) => o['id']);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('REQ-UX-016 : TÉMOIN (sécurité) — l’id de chaque alerte diffère de tout id de notification et d’attribution du passage', async () => {
+    const { alerterLesNonRendus } =
+      await import('../../../src/server/taches/envoyer-notifications-espace');
+    const lot = Array.from({ length: 5 }, (_, k) =>
+      notif('0190f3a0-0000-7000-8000-00000000000' + k, 'decision_attribution', {
+        attributionId: '0190f3a0-0000-7000-8000-00000000010' + k,
+      })
+    );
+    const p: PortsDuPassage = {
+      maintenant: () => new Date('2027-05-10T08:00:00.000Z'),
+      lireLot: async () => lot,
+      dansUneTransaction: async (fn) =>
+        fn({
+          verrouiller: async () => true,
+          rendre: async () => ({ nonRendue: 'faits_refuses' as const }),
+          envoyer: async () => ({ statut: 'envoye', envoyeAt: null }),
+          poserLaFenetre: async () => undefined,
+        }),
+    };
+    const bilan = await envoyerLesNotificationsDeLEspace(p);
+    const objets: { id: string }[] = [];
+    await alerterLesNonRendus(bilan, { alerter: async (o) => (objets.push(o), 'envoyee') });
+    expect(objets.length).toBeGreaterThan(0);
+    const duPassage = new Set(lot.flatMap((n) => [n.id, n.attributionId]));
+    for (const o of objets) expect(duPassage.has(o.id)).toBe(false);
+  });
+});
