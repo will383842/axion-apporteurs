@@ -139,11 +139,13 @@ export async function leverUnGel(
     const exclus = [gel.poseParId, gel.utilisateurViseId].filter((x): x is string => x !== null);
     if (exclus.includes(d.acteur.id)) {
       // Personne d'autre ne pourrait-il lever ? Alors le gel reste posé, et l'écran le dit.
-      const autre = await tx.utilisateurConsole.findFirst({
-        where: { role: 'admin', desactiveAt: null, valideAt: { not: null }, id: { notIn: exclus } },
-        select: { id: true },
+      // Les autres administrateurs actifs, et leur validation LUE (un en attente ne lève pas).
+      const autres = await tx.utilisateurConsole.findMany({
+        where: { role: 'admin', desactiveAt: null, id: { notIn: exclus } },
+        select: { id: true, valideAt: true },
       });
-      throw new ErreurGelJournal(autre === null ? 'aucun_autre_administrateur' : 'leveur_interdit');
+      const personne = !autres.some((a) => a.valideAt !== null);
+      throw new ErreurGelJournal(personne ? 'aucun_autre_administrateur' : 'leveur_interdit');
     }
     const { count } = await tx.journalAccesConsoleGel.updateMany({
       where: { id: gel.id, leveAt: null },

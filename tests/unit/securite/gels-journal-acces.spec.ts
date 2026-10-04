@@ -54,7 +54,7 @@ function univers(
     acteur?: Lu;
     vise?: boolean;
     gel?: Gel | null;
-    autreAdmin?: boolean;
+    autreAdmin?: boolean | 'en_attente';
     leves?: number;
   } = {}
 ) {
@@ -68,9 +68,10 @@ function univers(
         if (a.where.id === ADMIN.id) return acteurLu;
         return o.vise === false ? null : { id: a.where.id };
       },
-      findFirst: async (a: unknown) => {
-        appels.push({ quoi: 'utilisateurConsole.findFirst', args: a });
-        return o.autreAdmin ? { id: AUTRE } : null;
+      findMany: async (a: unknown) => {
+        appels.push({ quoi: 'utilisateurConsole.findMany', args: a });
+        if (o.autreAdmin === 'en_attente') return [{ id: AUTRE, valideAt: null }];
+        return o.autreAdmin ? [{ id: AUTRE, valideAt: DEPUIS }] : [];
       },
     },
     journalAccesConsoleGel: {
@@ -277,19 +278,20 @@ describe('REQ-SEC-058 — lever un gel', () => {
   it('REQ-SEC-058 : TÉMOIN — l’auteur ou la personne visée ne lève pas ; sans autre administrateur validé, échec fermé', async () => {
     const auteur = univers({ gel: gelOuvert({ poseParId: ADMIN.id }), autreAdmin: true });
     expect(await motif(lever(auteur))).toBe('leveur_interdit');
-    expect(auteur.appels.find((a) => a.quoi === 'utilisateurConsole.findFirst')!.args).toEqual({
-      where: {
-        role: 'admin',
-        desactiveAt: null,
-        valideAt: { not: null },
-        id: { notIn: [ADMIN.id, VISE] },
-      },
-      select: { id: true },
+    expect(auteur.appels.find((a) => a.quoi === 'utilisateurConsole.findMany')!.args).toEqual({
+      where: { role: 'admin', desactiveAt: null, id: { notIn: [ADMIN.id, VISE] } },
+      select: { id: true, valideAt: true },
     });
     const vise = univers({ gel: gelOuvert({ utilisateurViseId: ADMIN.id }), autreAdmin: true });
     expect(await motif(lever(vise))).toBe('leveur_interdit');
     const seul = univers({ gel: gelOuvert({ poseParId: ADMIN.id }), autreAdmin: false });
     expect(await motif(lever(seul))).toBe('aucun_autre_administrateur');
+    // Un autre administrateur EN ATTENTE ne compte pas : personne ne peut lever.
+    const enAttente = univers({
+      gel: gelOuvert({ poseParId: ADMIN.id }),
+      autreAdmin: 'en_attente',
+    });
+    expect(await motif(lever(enAttente))).toBe('aucun_autre_administrateur');
     for (const u of [auteur, vise, seul])
       expect(u.appels.map((a) => a.quoi)).not.toContain('gel.updateMany');
     expect(evenement()).not.toHaveBeenCalled();
