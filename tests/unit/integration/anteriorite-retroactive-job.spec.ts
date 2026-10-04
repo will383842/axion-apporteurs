@@ -318,6 +318,40 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
     });
   });
 
+  it('REQ-JUR-007 : TÉMOIN — un devis lu par son SIREN ET par son client ne compte qu’une fois (copies de la base)', async () => {
+    const vieux = avant(900 * JOUR);
+    const emis = { devisId: 'd-1', emisLe: iso(vieux), siren: SIREN, clientId: 'cli-1' };
+    const signe = {
+      devisId: 'd-1',
+      signeLe: iso(vieux),
+      montantTotalHtCents: 1000,
+      clientId: 'cli-1',
+    };
+    const recus = [
+      lu(T.client_cree, { clientId: 'cli-1', siren: SIREN }, vieux),
+      lu(T.devis_emis, emis, vieux),
+      lu(T.devis_signe, signe, vieux),
+      // la facture du devis, hors fenêtre cliente : 600 sur 1000, le devis signé reste ouvert
+      facture('f-1', 600, avant(800 * JOUR), { devisId: 'd-1', clientId: 'cli-1' }),
+    ];
+    const prisma = base({
+      connues: [{ siren: SIREN, origine: 'devis', connueDepuisAt: vieux }],
+      attributions: [{ id: 'a-1', siren: SIREN, statut: 'active', deposeeAt: DEPOT }],
+      recus,
+    });
+    // la base rend des COPIES à chaque lecture : l'identité d'objet ne dédoublonne rien.
+    const lire = prisma.evenementRecu.findMany.bind(prisma.evenementRecu);
+    (prisma.evenementRecu as unknown as { findMany: unknown }).findMany = async (q: never) =>
+      (await lire(q)).map((r) => structuredClone(r));
+    expect(await rapprocherLesAnteriorites(prisma, MAINTENANT)).toEqual({
+      examinees: 1,
+      annulees: 1,
+    });
+    expect(transitionner.transitionnerUneAttribution.mock.calls[0]![1]).toMatchObject({
+      critere: 'devis_signe',
+    });
+  });
+
   it('REQ-JUR-007 : une autre levée de l’écrivain fait échouer le passage — rien n’est tu', async () => {
     transitionner.transitionnerUneAttribution.mockRejectedValueOnce(new Error('base indisponible'));
     const prisma = base({
