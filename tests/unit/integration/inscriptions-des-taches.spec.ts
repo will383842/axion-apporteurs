@@ -49,6 +49,9 @@ const m = vi.hoisted(() => ({
   // SEC-18 : l'ouverture différée des anomalies d'auto-parrainage, simulée pour juger son inscription.
   ouvrirLesAnomaliesDAutoParrainage: vi.fn(),
   precedentDuBattement: vi.fn(),
+  // INT-T73-P : la réconciliation des sommes, simulée pour juger son branchement dans le passage.
+  passageDesSommes: vi.fn(),
+  portsDesSommesEnBase: vi.fn(),
 }));
 
 vi.mock('../../../src/server/queue/workers/evenement-recu', async (original) => ({
@@ -126,6 +129,10 @@ vi.mock('../../../src/server/taches/ouvrir-anomalies-auto-parrainage', async (or
   ...(await original<object>()),
   ouvrirLesAnomaliesDAutoParrainage: m.ouvrirLesAnomaliesDAutoParrainage,
   precedentDuBattement: m.precedentDuBattement,
+}));
+vi.mock('../../../src/server/integrations/axionia/reconciliation-sommes', () => ({
+  passageDesSommes: m.passageDesSommes,
+  portsDesSommesEnBase: m.portsDesSommesEnBase,
 }));
 
 import {
@@ -503,14 +510,14 @@ describe('REQ-QA-027 — le passage `reconciliation_axionia` relit ses secrets �
     expect(m.reconcilier).not.toHaveBeenCalled();
   });
 
-  it('REQ-QA-027 : environnement admis — la réconciliation reçoit ses ports, la relecture et le rejeu sur le canal d’axion-ia, et son bilan est celui du passage', async () => {
+  it('REQ-QA-027 : environnement admis — la réconciliation reçoit ses ports, la relecture et le rejeu sur le canal d’axion-ia', async () => {
     environnementAdmis();
     const prisma = prismaAvec(null);
     m.portsDeReconciliation.mockReturnValue({ lireCurseur: 'curseur' });
     m.clientRelecture.mockReturnValue('lire');
     m.clientRejeu.mockReturnValue('rejouer');
     m.reconcilier.mockResolvedValue({ relus: 3 });
-    expect(await passageDeReconciliation(prisma, ENV, null)()).toEqual({ relus: 3 });
+    await passageDeReconciliation(prisma, ENV, null)();
     expect(m.portsDeReconciliation).toHaveBeenCalledWith(prisma);
     for (const client of [m.clientRelecture, m.clientRejeu]) {
       const canal = client.mock.calls[0]![0] as { maintenantMs: () => number };
@@ -528,6 +535,46 @@ describe('REQ-QA-027 — le passage `reconciliation_axionia` relit ses secrets �
       lire: 'lire',
       rejouer: 'rejouer',
       signaler: expect.any(Function),
+    });
+  });
+
+  it('REQ-QA-027 : la réconciliation des sommes suit celle des séquences, sur la même relecture et le même signal — son bilan s’ajoute, les SIREN en écart une fois chacun', async () => {
+    environnementAdmis();
+    const prisma = prismaAvec(null);
+    m.clientRelecture.mockReturnValue('lire');
+    m.reconcilier.mockResolvedValue({ relus: 3 });
+    m.portsDesSommesEnBase.mockReturnValue('ports-des-sommes');
+    m.passageDesSommes.mockResolvedValue({
+      pages: 1,
+      relus: 2,
+      nombreDEcarts: 3,
+      ecartsParSiren: [{ siren: '111' }, { siren: '222' }, { siren: '111' }],
+    });
+    expect(await passageDeReconciliation(prisma, ENV, null)()).toEqual({
+      relus: 3,
+      sommesPages: 1,
+      sommesRelus: 2,
+      ecartsDeSommes: 3,
+      sirensEnEcart: ['111', '222'],
+    });
+    expect(m.passageDesSommes).toHaveBeenCalledWith('ports-des-sommes');
+    const [base, d] = m.portsDesSommesEnBase.mock.calls[0]! as [
+      unknown,
+      { maintenant: () => Date; lire: unknown; signaler: unknown },
+    ];
+    expect([base, d.lire]).toEqual([prisma, 'lire']);
+    expect(d.maintenant()).toEqual(INSTANT);
+    const { signaler } = m.reconcilier.mock.calls[0]![0] as { signaler: unknown };
+    expect(d.signaler).toBe(signaler);
+  });
+
+  it('REQ-QA-027 : un échec des sommes est compté sans faire échouer le passage — les séquences, déjà réconciliées, restent au bilan', async () => {
+    environnementAdmis();
+    m.reconcilier.mockResolvedValue({ relus: 3 });
+    m.passageDesSommes.mockRejectedValue(new Error('relecture_echouee : signature'));
+    expect(await passageDeReconciliation(prismaAvec(null), ENV, null)()).toEqual({
+      relus: 3,
+      sommesEchec: 1,
     });
   });
 
