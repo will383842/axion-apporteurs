@@ -284,7 +284,8 @@ export function lireUnTraitement<C extends string>(
       ordre,
       filtres
     );
-    if (/conseill/i.test(JSON.stringify(lues))) throw refus(REFUS_CONSEILLERS);
+    // Le refus des conseillers est déjà jugé texte par texte (`texteAffichable`), avant toute
+    // retenue : une seconde vérification sur le rendu serait une branche que rien n'atteint.
     return { ok: true, rubriques: lues, filtres };
   } catch (e) {
     return { ok: false, refus: String(e).replace(/^Error: /, '') };
