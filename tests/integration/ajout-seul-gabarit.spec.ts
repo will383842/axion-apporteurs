@@ -1,5 +1,6 @@
 // @req REQ-DM-031
 // @req REQ-DM-043
+// @req REQ-SEC-058
 /**
  * DM-07, en base RÉELLE — le gabarit « ajout seul, sauf purge » (HYP-A02-GABARIT-AJOUT-SEUL) : UNE
  * fonction générique, `refuser_modification_sauf()`, sans `EXECUTE`, que chaque table en ajout seul
@@ -287,6 +288,25 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
       }
     }
     expect(absentes).toEqual([]);
+  });
+
+  it('REQ-SEC-058 : les gels du journal des accès ont une GARDE DÉDIÉE, hors du gabarit : la levée s’écrit une fois, et un gel épuisé s’efface', async () => {
+    // SEC-61 (forme d'A02) : `journal_acces_console_gels` n'est pas en ajout seul — la levée est une
+    // écriture, et un gel levé dont les lignes sont purgées est supprimé. Sa garde est la sienne.
+    const declencheurs = await base.prisma.$queryRaw<{ nom: string; fonction: string }[]>`
+      SELECT t.tgname AS nom, p.proname AS fonction
+      FROM pg_trigger t
+      JOIN pg_class c ON c.oid = t.tgrelid
+      JOIN pg_proc p ON p.oid = t.tgfoid
+      WHERE c.relname = 'journal_acces_console_gels' AND NOT t.tgisinternal
+      ORDER BY t.tgname`;
+    expect(declencheurs).toEqual([
+      { nom: 'journal_acces_console_gels_garde', fonction: 'journal_acces_console_gels_garde' },
+      {
+        nom: 'journal_acces_console_gels_troncature',
+        fonction: 'journal_acces_console_gels_garde',
+      },
+    ]);
   });
 
   it('REQ-DM-031 : TÉMOIN — une nature d’argument inconnue lève à l’appel, nommée', async () => {
