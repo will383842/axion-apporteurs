@@ -136,8 +136,94 @@ export const API_COORDONNEES_CANDIDATURE: ApiDuContrat = {
   },
 };
 
+/** Une séquence de la file d'axion-ia, écrite en chiffres dans un en-tête. */
+const MOTIF_SEQUENCE = '^[0-9]{1,18}$';
+
+/**
+ * La borne d'une page de relecture, nommée : celle du serveur d'axion-ia (`LIMITE_MAX` de sa route),
+ * qui refuse au-delà. Le client de Partners lit en dessous.
+ */
+const LIMITE_MAX_RELECTURE = 500;
+
+/**
+ * La relecture de la file de sortie d'axion-ia, `GET` au chemin ci-dessous, paramètres
+ * `after_sequence` et `limit` (REQ-INT-012), DÉCLARÉE au contrat en AMENDEMENT de la version 3 tant qu'axion-ia ne
+ * l'a pas adoptée (rattrapage 66, forme de l'architecte) : elle tournait sans y être.
+ *
+ * Réponse 200 : les corps stockés, octet pour octet, un par ligne (NDJSON) — chacun une enveloppe
+ * DÉJÀ au contrat, dans l'ordre strict des séquences —, la séquence de la dernière ligne rendue et
+ * l'indication qu'il en reste. Une page se lit entière ou pas du tout.
+ */
+export const API_RELECTURE: ApiDuContrat = {
+  methode: 'GET',
+  chemin: '/api/partners/evenements',
+  prefixeDefs: 'api_relecture',
+  defs: {
+    api_relecture_parametres: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['after_sequence', 'limit'],
+      properties: {
+        after_sequence: { type: 'integer', minimum: 0 },
+        limit: { type: 'integer', minimum: 1, maximum: LIMITE_MAX_RELECTURE },
+      },
+      $comment:
+        "Les paramètres de requête, en chiffres sur le fil : `after_sequence`, la dernière séquence " +
+        'déjà lue (0 au départ) ; `limit`, le nombre de lignes au plus, sous la borne nommée du ' +
+        'serveur. Au-delà de la borne, ou un paramètre illisible : refus, jamais une page tronquée.',
+    },
+    api_relecture_requete_entetes: entetesSignes(
+      'x-partners-timestamp',
+      'x-partners-signature',
+      'Requête Partners → axionia, même authentification que la route des coordonnées : ' +
+        'HMAC-SHA-256, sous le secret dédié à la relecture, de `<horodatage>.<cible exacte>`, la ' +
+        "cible comprenant la requête (`after_sequence` et `limit`) ; tolérance de 300 s, " +
+        "comparaison à temps constant, liste d'autorisation d'adresses réseau."
+    ),
+    api_relecture_reponse_entetes: {
+      ...entetesSignes(
+        'x-axionia-timestamp',
+        'x-axionia-signature',
+        "Réponse axionia → Partners, signée sous le secret d'émission ; `x-axionia-kid`, " +
+          'facultatif, désigne le secret employé. La signature couvre, dans cet ordre CANONIQUE, ' +
+          "joints par un point : `<horodatage>.<after_sequence>.<limit>.<x-axionia-derniere-sequence>." +
+          '<x-axionia-suite>.<corps exact>` — le corps, les deux en-têtes de la page, et les deux ' +
+          "paramètres demandés, qui lient la réponse à SA requête : une page authentique d'une autre " +
+          'lecture ne se rejoue pas sur celle-ci. Les paramètres y sont écrits en chiffres, sans zéro ' +
+          'de tête.',
+        ENTETE_KID_AXIONIA
+      ),
+      required: [
+        'x-axionia-timestamp',
+        'x-axionia-signature',
+        'x-axionia-derniere-sequence',
+        'x-axionia-suite',
+      ],
+      properties: {
+        'x-axionia-timestamp': { type: 'string', pattern: MOTIF_HORODATAGE },
+        'x-axionia-signature': { type: 'string', pattern: MOTIF_SIGNATURE },
+        [ENTETE_KID_AXIONIA]: { type: 'string', pattern: MOTIF_KID },
+        'x-axionia-derniere-sequence': { type: 'string', pattern: MOTIF_SEQUENCE },
+        'x-axionia-suite': { type: 'string', enum: ['0', '1'] },
+      },
+    },
+    api_relecture_reponse: {
+      type: 'array',
+      items: { $ref: '#' },
+      maxItems: LIMITE_MAX_RELECTURE,
+      $comment:
+        'Réponse 200 : une enveloppe du contrat par ligne (NDJSON), le corps stocké octet pour ' +
+        'octet, séquences strictement croissantes au-delà de `after_sequence` ; ' +
+        '`x-axionia-derniere-sequence` est celle de la dernière ligne rendue, ou `after_sequence` ' +
+        "si rien n'est rendu ; `x-axionia-suite` vaut `1` s'il en reste. Rien n'est mis en cache. " +
+        "Chaque appel est journalisé côté axionia sans aucune donnée de personne : l'adresse " +
+        'appelante en empreinte, les deux paramètres, le nombre de lignes rendues.',
+    },
+  },
+};
+
 /** Les API dont ce paquet porte le schéma. */
-export const API_DU_CONTRAT: readonly ApiDuContrat[] = [API_COORDONNEES_CANDIDATURE];
+export const API_DU_CONTRAT: readonly ApiDuContrat[] = [API_COORDONNEES_CANDIDATURE, API_RELECTURE];
 
 /** Les `$defs` de toutes les API, à fusionner dans le JSON Schema publié. */
 export function defsApi(): Record<string, FragmentSchema> {
