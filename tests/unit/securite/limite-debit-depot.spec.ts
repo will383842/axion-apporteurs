@@ -1,5 +1,6 @@
 // @req REQ-DM-009
 // @req REQ-DM-010
+// @req REQ-SEC-016
 /**
  * SEC-12 — la limite de débit du dépôt : TECHNIQUE, identique pour tous, sans compte par apporteur
  * (REQ-DM-009, texte de la juriste du rattrapage 84).
@@ -16,9 +17,15 @@
  *      est OBLIGATOIRE : un dépôt sans session ni jeton est refusé, jamais jugé sur la seule adresse ;
  *   4. LE CAPTCHA (REQ-DM-010) se décide sur un signal TECHNIQUE : le port ne reçoit que l'empreinte
  *      réseau et la réponse au défi, jamais l'apporteur ; présenté, il ne laisse aucune trace ; résolu,
- *      il ne refuse rien.
+ *      il ne refuse rien ;
+ *   5. REQ-SEC-016 : les deux compteurs du dépôt sont confrontés au TEXTE EN VIGUEUR de l'exigence,
+ *      jamais à une note [REMPLACÉ …] qui cite l'ancien texte (dette nommée par la sécurité) : la
+ *      lecture de la garde `rate-famille` est la même, notes retirées.
  */
 import { describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { exigenceDuCompteur, SENTINELLES_FERMEES } from '../../../scripts/gates/rate-famille';
 import type { PrismaClient } from '@prisma/client';
 import {
   COMPTEURS,
@@ -353,5 +360,58 @@ describe('REQ-DM-010 — le captcha, sur un signal technique seulement', () => {
       ports
     );
     expect(appels).toEqual([[EMPREINTE, 'reponse-du-defi']]);
+  });
+});
+
+/** Le texte d'une exigence, lu dans le registre — jamais recopié ici. */
+function texteDe(id: string): string {
+  const registre = JSON.parse(
+    readFileSync(join(__dirname, '../../../docs/requirements.json'), 'utf8')
+  ) as { exigences: { id: string; texte: string }[] };
+  const req = registre.exigences.find((r) => r.id === id);
+  if (req === undefined) throw new Error(`${id} introuvable dans docs/requirements.json`);
+  return req.texte;
+}
+
+/** Le texte en vigueur : chaque note entre crochets (le texte REMPLACÉ qu'elle cite) retirée. */
+const sansNotes = (texte: string): string => texte.replace(/\[[^\]]*\]/g, '');
+
+/**
+ * Vrai si la garde lit le compteur dans le texte EN VIGUEUR : l'ancre s'y trouve, et la lecture de
+ * `exigenceDuCompteur` est la même, notes retirées. Une ancre qui ne vit que dans une note, ou dont la
+ * conduite n'est trouvée que dans la note, rend faux.
+ */
+function luHorsDesNotes(texte: string, ancre: string): boolean {
+  const lue = exigenceDuCompteur(texte, ancre);
+  const enVigueur = exigenceDuCompteur(sansNotes(texte), ancre);
+  return enVigueur !== null && JSON.stringify(lue) === JSON.stringify(enVigueur);
+}
+
+describe('REQ-SEC-016 — les compteurs du dépôt sont lus dans le texte en vigueur, jamais dans une note [REMPLACÉ …]', () => {
+  const compteursDuDepot = Object.entries(COMPTEURS).filter(
+    ([nom, c]) =>
+      c.prefixe === 'depot:' &&
+      c.source === 'REQ-SEC-016' &&
+      !(SENTINELLES_FERMEES as readonly string[]).includes(nom)
+  );
+
+  it('REQ-SEC-016 : les deux compteurs du dépôt, `depot:ip` et `depot:session`, sont confrontés à REQ-SEC-016', () => {
+    expect(compteursDuDepot.map(([nom]) => nom).sort()).toEqual(['depot:ip', 'depot:session']);
+  });
+
+  it('REQ-SEC-016 : TÉMOIN — chaque ancre du dépôt est lue dans le texte en vigueur, la même lecture que notes retirées', () => {
+    const texte = texteDe('REQ-SEC-016');
+    for (const [nom, c] of compteursDuDepot) {
+      expect(luHorsDesNotes(texte, c.ancre), `${nom} (ancre « ${c.ancre} »)`).toBe(true);
+    }
+  });
+
+  it('REQ-SEC-016 : FACE ROUGE — une ancre qui ne vit que dans une note [REMPLACÉ …] n’est pas lue hors des notes', () => {
+    const texte =
+      'Le dépôt est limité par un compteur de SESSION (`surPanne: refuser`). ' +
+      '[Amendée : remplace « limité à 20 / 10 min par hash IP (`surPanne: laisser-passer`) ».]';
+    expect(exigenceDuCompteur(texte, 'par hash IP')).not.toBeNull();
+    expect(luHorsDesNotes(texte, 'par hash IP')).toBe(false);
+    expect(luHorsDesNotes(texte, 'compteur de SESSION')).toBe(true);
   });
 });
