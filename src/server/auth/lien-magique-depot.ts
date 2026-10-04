@@ -168,7 +168,16 @@ export function transactionDeConfirmation(prisma: PrismaClient): PortsDesApparei
           });
           if (ligne === null) return null;
           const { lienMagiqueId, ...session } = ligne;
-          return { ligne: session, lienMagiqueId };
+          if (session.apporteur === null || session.apporteurId === null) {
+            return { ligne: session, lienMagiqueId };
+          }
+          // SEC-19 (A09, #563 5983094689) : les droits en cours, relus dans la MÊME transaction,
+          // comme le fait le dépôt des sessions. Le juge voit la session telle qu'elle est.
+          const droitsEnCours = await droitsEnCoursDans(tx, session.apporteurId);
+          return {
+            ligne: { ...session, apporteur: { ...session.apporteur, droitsEnCours } },
+            lienMagiqueId,
+          };
         },
         appareils: depotDAppareils(tx),
       })
