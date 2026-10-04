@@ -26,6 +26,11 @@ export const TACHES = {
   contacts_purger: { req: 'REQ-DM-031' },
   /** DM-53 — la purge du SIREN des dépôts refusés, douze mois après le refus. */
   siren_refuses_purger: { req: 'REQ-DM-043' },
+  /**
+   * DM-66 — l'effacement des projections de l'antériorité (`devis_connus`, `entreprises_connues`)
+   * quand elles ne fondent plus aucun refus (`purgerLesEntreprisesConnues`).
+   */
+  entreprises_connues_purger: { req: 'REQ-DM-029' },
   /** DM-28 — la reprise des codes NAF nuls d'un dépôt en repli manuel (`completerLesCodesNaf`). */
   naf_completer: { req: 'REQ-DM-046' },
   /** DM-61 — la suppression des notifications de l'espace douze mois après leur inscription. */

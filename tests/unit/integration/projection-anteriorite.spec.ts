@@ -14,6 +14,7 @@ import { describe, it, expect } from 'vitest';
 import { TypeEvenementRecu, type PrismaClient } from '@prisma/client';
 import {
   ChargeIncomplete,
+  DOMAINE_DU_VERROU,
   TYPES_DE_L_ANTERIORITE,
   anterioriteDe,
   montantRequis,
@@ -21,6 +22,7 @@ import {
   recalculerDevis,
   recalculerEntreprise,
   traitantsDeLAnteriorite,
+  verrouillerLesSirens,
 } from '../../../src/server/entreprise-connue/projection';
 import type { EvenementATraiter } from '../../../src/server/queue/workers/evenement-recu';
 
@@ -63,6 +65,7 @@ function choisir(l: Ligne, select: Record<string, boolean> | undefined): Ligne {
 
 /** Le faux client, et ses tables, ouvertes à la lecture du témoin. */
 function base(recus: Recu[] = []) {
+  const ordre: string[] = [];
   const devisConnus: Ligne[] = [];
   const entreprises: Ligne[] = [];
   const liste: Ligne[] = [];
@@ -89,6 +92,7 @@ function base(recus: Recu[] = []) {
     },
     devisConnu: {
       upsert: async (q: { where: { devisRef: string }; create: Ligne; update: Ligne }) => {
+        ordre.push(`devis:${q.where.devisRef}`);
         const l = devisConnus.find((d) => d.devisRef === q.where.devisRef);
         if (l) Object.assign(l, q.update);
         else devisConnus.push({ ...q.create });
@@ -125,8 +129,21 @@ function base(recus: Recu[] = []) {
       },
     },
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(db),
+    // Le verrou par SIREN : la forme à deux clés, noté dans l'ordre des appels.
+    $executeRaw: async (_sql: TemplateStringsArray, ...valeurs: unknown[]) => {
+      ordre.push(`verrou:${valeurs.join('|')}`);
+      return 1;
+    },
   };
-  return { db, prisma: db as unknown as PrismaClient, recus, devisConnus, entreprises, liste };
+  return {
+    db,
+    prisma: db as unknown as PrismaClient,
+    recus,
+    devisConnus,
+    entreprises,
+    liste,
+    ordre,
+  };
 }
 
 /**
@@ -1159,5 +1176,67 @@ describe('REQ-DM-029 REQ-DM-028 — anterioriteDe : sur les seules projections l
       depuis: date('2027-05-01T00:00:00Z'),
     });
     expect(await anterioriteDe(b.db as never, SIREN_A, MAINTENANT)).toEqual({ connue: false });
+  });
+});
+
+describe('REQ-DM-029 — la projection verrouille ses SIREN avant d’écrire (lentille sécurité, DM-66)', () => {
+  it('REQ-DM-029 : TÉMOIN — le SIREN d’un devis est verrouillé AVANT l’écriture de sa ligne', async () => {
+    const r = recu(
+      T.devis_emis,
+      emis('devis-v', '2027-01-01T00:00:00Z', { siren: SIREN_A }),
+      '2027-01-01T00:00:01Z'
+    );
+    const b = base([r]);
+    await projeterEvenement(b.prisma, aTraiter(r.eventType, r.charge));
+    expect(b.ordre).toEqual([`verrou:${DOMAINE_DU_VERROU}|${SIREN_A}`, 'devis:devis-v']);
+  });
+
+  it('REQ-DM-029 : TÉMOIN — un devis qui CHANGE de SIREN verrouille l’ancien et le nouveau, dans l’ordre CROISSANT', async () => {
+    const b = base([
+      recu(T.client_cree, { clientId: 'cli-v', siren: SIREN_B }, '2027-01-01T00:00:01Z'),
+      recu(
+        T.devis_emis,
+        emis('devis-v', '2027-02-01T00:00:00Z', { clientId: 'cli-v' }),
+        '2027-02-01T00:00:01Z'
+      ),
+    ]);
+    // la ligne est aujourd'hui sous SIREN_B ; le client passe à SIREN_A (plus petit)
+    b.devisConnus.push({
+      devisRef: 'devis-v',
+      siren: SIREN_B,
+      emisAt: new Date('2027-02-01T00:00:00Z'),
+      signeAt: null,
+    });
+    const r = recu(
+      T.client_mis_a_jour,
+      { clientId: 'cli-v', siren: SIREN_A },
+      '2027-03-01T00:00:01Z'
+    );
+    b.recus.push(r);
+    await projeterEvenement(b.prisma, aTraiter(r.eventType, r.charge));
+    const verrous = b.ordre.filter((o) => o.startsWith('verrou:'));
+    expect(verrous).toEqual([
+      `verrou:${DOMAINE_DU_VERROU}|${SIREN_A}`,
+      `verrou:${DOMAINE_DU_VERROU}|${SIREN_B}`,
+    ]);
+    expect(b.ordre.indexOf('devis:devis-v')).toBeGreaterThan(b.ordre.lastIndexOf(verrous.at(-1)!));
+  });
+
+  it('REQ-DM-029 : verrouillerLesSirens — dédoublonnés, ordre croissant, forme à deux clés du domaine propre', async () => {
+    const vus: unknown[][] = [];
+    const tx = {
+      $executeRaw: async (sql: TemplateStringsArray, ...valeurs: unknown[]) => {
+        vus.push([sql.join('?'), ...valeurs]);
+        return 1;
+      },
+    };
+    await verrouillerLesSirens(tx as never, [SIREN_C, SIREN_A, SIREN_C, SIREN_B]);
+    expect(vus.map((v) => v.slice(1))).toEqual([
+      [DOMAINE_DU_VERROU, SIREN_A],
+      [DOMAINE_DU_VERROU, SIREN_B],
+      [DOMAINE_DU_VERROU, SIREN_C],
+    ]);
+    expect(String(vus[0]![0])).toMatch(/pg_advisory_xact_lock\(hashtext\(\?\), hashtext\(\?\)\)/);
+    expect(DOMAINE_DU_VERROU).toBe('partners.entreprise_connue');
   });
 });
