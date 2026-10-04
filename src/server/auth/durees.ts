@@ -40,11 +40,11 @@ export const DUREES_AUTH = {
   toucheVueConsoleMs: { valeur: 60 * 1000, source: 'SEC-29', verifieLe: '2026-10-03' },
   /**
    * SEC-30 : une invitation à la console non activée dans ce délai est expirée ; l'échéance se
-   * dérive de `invitee_at`. PROPOSÉE par la tâche ; Williams la valide en séance groupée.
+   * dérive de `invitee_at`. Validée par Williams le 2026-10-03 (22h05 UTC).
    */
   invitationConsoleMs: {
     valeur: 72 * 60 * 60 * 1000,
-    source: 'SEC-30 (proposition, validation de Williams)',
-    verifieLe: '2026-10-04',
+    source: 'SEC-30 (validée par Williams le 2026-10-03)',
+    verifieLe: '2026-10-03',
   },
 } as const satisfies Record<string, Duree>;

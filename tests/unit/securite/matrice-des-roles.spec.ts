@@ -1596,7 +1596,7 @@ describe('REQ-DM-024 — SEC-30 : une invitation expire si le compte n’est pas
     activeeAt,
   });
   // Le nom tranché par la coordination (rattrapage 96) : `invitationConsoleMs`, dans `durees.ts`, à
-  // côté de `releveMs` ; 72 h exprimées en millisecondes, à valider par Williams.
+  // côté de `releveMs` ; 72 h exprimées en millisecondes, validées par Williams le 2026-10-03.
   const delai = DUREES_AUTH.invitationConsoleMs.valeur;
 
   it('REQ-DM-024 : TÉMOIN À DEUX FACES — non activée à l’échéance, l’invitation est expirée ; un instant avant, elle vaut encore ; activée, elle ne vieillit plus', () => {
@@ -1605,7 +1605,7 @@ describe('REQ-DM-024 — SEC-30 : une invitation expire si le compte n’est pas
     expect(invitationOuverte(invite(delai * 10, new Date(T0.getTime() - delai)), T0)).toBe(true);
   });
 
-  it('REQ-DM-024 : le délai d’invitation vient des durées de l’authentification, 72 h, à valider par Williams', () => {
+  it('REQ-DM-024 : le délai d’invitation vient des durées de l’authentification, 72 h, validées par Williams', () => {
     expect(DUREES_AUTH.invitationConsoleMs.valeur).toBe(72 * 60 * 60 * 1000);
     expect(DUREES_AUTH.invitationConsoleMs.source).toMatch(/SEC-30/);
   });
