@@ -18,6 +18,7 @@
  */
 import { TYPES_EVENEMENT, type TypeEvenement } from '../../../../packages/contracts/events';
 import type { PrismaClient } from '@prisma/client';
+import { MS_PAR_JOUR } from '../../../domain/temps/calendrier-civil';
 import { identifiantDuType, payloadConforme } from './reception';
 import { RECOUVREMENT_SEQUENCES } from './reconciliation';
 import type { LirePage, MotifDeRelecture } from './relecture';
@@ -89,7 +90,7 @@ export interface Fenetre {
 /** Les sept jours glissants qui finissent maintenant. */
 export function fenetreDe(maintenant: Date): Fenetre {
   return {
-    debut: new Date(maintenant.getTime() - FENETRE_JOURS * 24 * 60 * 60 * 1000),
+    debut: new Date(maintenant.getTime() - FENETRE_JOURS * MS_PAR_JOUR),
     fin: maintenant,
   };
 }
