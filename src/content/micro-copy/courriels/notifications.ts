@@ -120,10 +120,24 @@ export const RAISONS_D_ANNULATION = {
 } as const;
 
 /**
- * DM-55 — le nom de l'entreprise quand l'attribution n'a pas de raison sociale (saisie de repli) :
- * texte d'attente de la coordination, à confirmer par la juriste.
+ * DM-55 — le nom de l'entreprise quand le dépôt n'a pas de raison sociale (juriste, MOT POUR
+ * MOT) : le numéro que l'apporteur a lui-même saisi au dépôt, pour qu'il sache quel dépôt est visé.
  */
-export const ENTREPRISE_DE_REPLI = 'l’entreprise déclarée';
+export const ENTREPRISE_DE_REPLI = 'Entreprise n° {numeroEntreprise}';
+
+/**
+ * DM-55 — le libellé de `{categorie}` (raison « article 3.3 bis »), par catégorie de la liste de la
+ * Société (juriste, MOT POUR MOT). Ici la catégorie EST dite : la règle de SEC-22 ne vaut que pour
+ * une vérification.
+ */
+export const LIBELLES_DES_CATEGORIES = {
+  administration: "l'entreprise est une administration avec laquelle Axion-IA est en relation",
+  financeur_public: "l'entreprise est un financeur public avec lequel Axion-IA est en relation",
+  financeur_paritaire:
+    "l'entreprise est un financeur paritaire avec lequel Axion-IA est en relation",
+  organisme_de_formation_partenaire:
+    "l'entreprise est un organisme de formation avec lequel Axion-IA est en relation",
+} as const;
 
 /** Les mois en toutes lettres, pour une date en clair (« 25 mai 2027 »). */
 export const MOIS_EN_TOUTES_LETTRES = [

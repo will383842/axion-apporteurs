@@ -12,6 +12,7 @@
  */
 import {
   ENTREPRISE_DE_REPLI,
+  LIBELLES_DES_CATEGORIES,
   MOIS_EN_TOUTES_LETTRES,
   MOTIFS_DES_DECISIONS,
   RAISONS_D_ANNULATION,
@@ -31,7 +32,7 @@ export type Decision = {
   transition: string;
   faits?: string;
   raison?: RaisonDAnnulation;
-  categorie?: string;
+  categorie?: keyof typeof LIBELLES_DES_CATEGORIES;
 };
 
 const LIEN = /https?:\/\/|www\.|\b[\w-]+\.(?:fr|com|net|org|io|test|eu)\b/i;
@@ -74,16 +75,26 @@ export function motifDeLaDecision(d: Decision): string | null {
   const libelle =
     raison === undefined
       ? ''
-      : RAISONS_D_ANNULATION[raison].replace('{categorie}', () => categorie ?? '');
+      : RAISONS_D_ANNULATION[raison].replace('{categorie}', () =>
+          categorie === undefined ? '' : LIBELLES_DES_CATEGORIES[categorie]
+        );
   return MOTIFS_DES_DECISIONS[transition]
     .replace('{faits}', () => faits ?? '')
     .replace('{raison}', () => libelle);
 }
 
-/** Le nom de l'entreprise : sa raison sociale, ou le repli de la micro-copie s'il n'y en a pas. */
-export function entrepriseDeLaNotification(raisonSociale: string | null): string {
+/**
+ * Le nom de l'entreprise : sa raison sociale, ou, SEULEMENT si elle est absente, le repli de la
+ * juriste avec le numéro saisi au dépôt.
+ */
+export function entrepriseDeLaNotification(
+  raisonSociale: string | null,
+  numeroEntreprise: string
+): string {
   const nom = raisonSociale?.trim() ?? '';
-  return nom === '' ? ENTREPRISE_DE_REPLI : nom;
+  return nom === ''
+    ? ENTREPRISE_DE_REPLI.replace('{numeroEntreprise}', () => numeroEntreprise)
+    : nom;
 }
 
 /** Une date en clair, au jour civil de Paris : « 25 mai 2027 ». */
