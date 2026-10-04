@@ -19,7 +19,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, type StatutCourriel } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
 import { NOMS_DES_SECRETS, kidDe } from '../../src/lib/env';
 import { clesPii, colonnesPii } from '../../src/server/securite/pii';
@@ -36,6 +36,12 @@ import {
   tirerJeton,
 } from '../../src/server/auth/lien-magique';
 import { DUREES_AUTH } from '../../src/server/auth/durees';
+import {
+  configurationDuLien,
+  portsDeConsommation,
+} from '../../src/server/auth/lien-magique-production';
+import { horlogeFigee } from '../../src/domain/temps/horloge';
+import type { DemandeDEnvoi } from '../../src/server/integrations/zeptomail/emetteur';
 import { depotDeSessions } from '../../src/server/auth/session';
 import {
   cleDesAppareils,
@@ -78,13 +84,15 @@ const CONFIGURATION = {
 };
 const CLE = cleDesAppareils(secretSession);
 const CLE_HEX = Array.from({ length: 32 }, (_, i) => i.toString(16).padStart(2, '0')).join('');
-const CLES = clesPii({
+/** L'environnement du processus : ses secrets factices, tirés pour ce fichier. */
+const ENV_DU_PROCESSUS: Record<string, string> = {
   NODE_ENV: 'test',
   ...Object.fromEntries(
     NOMS_DES_SECRETS.map((n) => [n, `temoin-sec55-base-${n.toLowerCase()}-`.padEnd(48, '0')])
   ),
   PII_ENCRYPTION_KEY: CLE_HEX,
-});
+};
+const CLES = clesPii(ENV_DU_PROCESSUS);
 
 const d = (iso: string) => new Date(iso);
 const MS = 1;
@@ -520,6 +528,107 @@ describe('REQ-SEC-003 — voie (b) de la lentille sécurité, en base réelle : 
         derniereVueAt: avant,
       },
     ]);
+  });
+});
+
+// ── le BRANCHEMENT en production (SEC-62), en base réelle ───────────────────────────────────────
+
+/**
+ * La connexion RÉELLE par les ports de la PRODUCTION (`portsDeConsommation`) : le lien est émis sous
+ * la configuration du processus, consommé dans sa transaction en base, puis l'avis part par
+ * `notifier()` à un émetteur simulé, qui rend le statut donné.
+ */
+async function connecterEnProduction(
+  apporteurId: string,
+  identifiantAppareil: unknown,
+  maintenant: Date,
+  statut: StatutCourriel
+) {
+  const configuration = configurationDuLien(ENV_DU_PROCESSUS);
+  const jeton = tirerJeton();
+  await ecrituresDeLien(app).insererLien({
+    apporteurId,
+    tokenHash: empreinteDuJeton(jeton, configuration.secret),
+    codeHash: empreinteDuCode('042137', configuration.secret),
+    kid: configuration.kid,
+    creeAt: maintenant,
+    expireAt: new Date(maintenant.getTime() + DUREES_AUTH.lienMagiqueMs.valeur),
+  });
+  const envoyerCourriel = vi.fn(async (_demande: DemandeDEnvoi) => statut);
+  const resultat = await consommerLien(
+    { jeton, ipHash: null, identifiantAppareil },
+    portsDeConsommation({
+      env: ENV_DU_PROCESSUS,
+      prisma: app,
+      horloge: horlogeFigee(maintenant.getTime()),
+      envoyerCourriel,
+    })
+  );
+  return { resultat, envoyerCourriel, cle: cleDesAppareils(configuration.session.secret) };
+}
+
+describe('REQ-SEC-003 — le BRANCHEMENT en production (SEC-62), en base réelle : le clic avise par `notifier()`, et l’appareil n’est connu que si le courriel est envoyé', () => {
+  it('REQ-SEC-003 : courriel envoyé — l’avis part UNE fois, à l’adresse stockée, sous `nouvel_appareil` ; l’appareil est confirmé ; la connexion suivante le reconnaît, sans avis', async () => {
+    const a = await apporteur();
+    const identifiant = tirerIdentifiantDAppareil();
+    const t = d('2026-10-04T12:20:00.000Z');
+    const premiere = await connecterEnProduction(a, identifiant, t, 'envoye');
+    expect(premiere.resultat).toMatchObject({
+      etat: 'ouverte',
+      appareil: { identifiant, issue: 'confirme' },
+    });
+    expect(premiere.envoyerCourriel).toHaveBeenCalledTimes(1);
+    const demande = premiere.envoyerCourriel.mock.calls[0]?.[0];
+    expect(demande).toMatchObject({
+      gabarit: 'nouvel_appareil',
+      sujet: 'Connexion à votre espace depuis un nouvel appareil',
+      apporteurId: a,
+    });
+    expect(demande?.a).toMatch(/^appareil-\d+@example\.org$/);
+    expect(demande?.corps).toContain('le 4 octobre 2026 à 14 h 20 (heure de Paris)');
+    expect(JSON.stringify(demande)).not.toContain(identifiant);
+    expect(await appareilsDe(a)).toEqual([
+      {
+        empreinte: empreinteDAppareil(identifiant, premiere.cle.secret),
+        kid: premiere.cle.kid,
+        confirmeAt: t,
+        derniereVueAt: t,
+      },
+    ]);
+
+    const seconde = await connecterEnProduction(
+      a,
+      identifiant,
+      d('2026-10-04T12:30:00.000Z'),
+      'envoye'
+    );
+    expect(seconde.resultat).toMatchObject({
+      etat: 'ouverte',
+      appareil: { identifiant, issue: 'connu' },
+    });
+    expect(seconde.envoyerCourriel).not.toHaveBeenCalled();
+  });
+
+  it('REQ-SEC-003 : (3) échec fermé — un courriel en échec ou retenu : `avis_echoue`, la session ouverte, AUCUN appareil écrit', async () => {
+    for (const statut of [
+      'echec',
+      'retenu_dmarc_non_verifie',
+      'retenu_adresse_supprimee',
+    ] as const) {
+      const a = await apporteur();
+      const r = await connecterEnProduction(
+        a,
+        tirerIdentifiantDAppareil(),
+        d('2026-10-04T13:00:00.000Z'),
+        statut
+      );
+      expect(r.resultat, statut).toMatchObject({
+        etat: 'ouverte',
+        appareil: { issue: 'avis_echoue' },
+      });
+      expect(await appareilsDe(a)).toEqual([]);
+      expect(await sessionsDe(a)).toHaveLength(1);
+    }
   });
 });
 

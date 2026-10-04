@@ -22,8 +22,17 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createHmac, hkdfSync } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { extrairePolitique } from '../../../src/domain/rgpd/politique';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient, StatutCourriel } from '@prisma/client';
 import { NOMS_DES_SECRETS, kidDe } from '../../../src/lib/env';
+import { domaines } from '../../../src/config/entite';
+import { horlogeFigee } from '../../../src/domain/temps/horloge';
+import { clesPii, colonnesPii } from '../../../src/server/securite/pii';
+import { TEXTES_DES_NOTIFICATIONS } from '../../../src/content/micro-copy/courriels/notifications';
+import type {
+  DemandeDEnvoi,
+  DependancesDeLEmetteur,
+  LigneCourriel,
+} from '../../../src/server/integrations/zeptomail/emetteur';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
 import {
   consommerLien,
@@ -54,7 +63,15 @@ import {
   type DepotDAppareils,
   type PortsDAppareil,
 } from '../../../src/server/auth/appareil';
-import { COOKIE_DATTENTE } from '../../../src/server/auth/lien-magique-production';
+import {
+  COOKIE_DATTENTE,
+  MODELE_APPORTEUR,
+  dependancesDuProcessus,
+  envoiDesNotifications,
+  portsDeConsommation,
+  portsDuCode,
+  portsDuCodeConsole,
+} from '../../../src/server/auth/lien-magique-production';
 import { purgerLesAppareils } from '../../../src/server/taches/purger-appareils';
 import { inscriptions } from '../../../src/server/taches/inscriptions';
 import { TACHES } from '../../../src/server/taches/registre';
@@ -775,6 +792,179 @@ describe('REQ-SEC-003 — l’appareil à la CONSOMMATION, voie (b) de la lentil
     const appareil = r.etat === 'ouverte' ? r.appareil : undefined;
     expect(appareil).toEqual({ identifiant: IDENTIFIANT, issue: 'confirme' });
     expect(JSON.stringify(r)).not.toContain(EMPREINTE);
+  });
+});
+
+// ── le BRANCHEMENT en production : l'avis « nouvel appareil » par `notifier()` (SEC-62) ─────────
+// Le port des appareils du clic et du code : l'avis part à l'adresse STOCKÉE, sous la clé de la
+// juriste, par la composition unique de `notifier()` ; seul un courriel `envoye` le laisse aboutir —
+// tout autre statut, ou un émetteur qui lève, le fait lever, et rien n'est confirmé (`avis_echoue`).
+
+const CLE_HEX = Array.from({ length: 32 }, (_, i) => i.toString(16).padStart(2, '0')).join('');
+const ENV: Record<string, string> = {
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-sec62-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: CLE_HEX,
+};
+const PRODUCTION = { ...ENV, NODE_ENV: 'production', PARTNERS_ENV: 'production' };
+const COURRIEL = 'marie@example.org';
+const SUJET_DE_L_AVIS = 'Connexion à votre espace depuis un nouvel appareil';
+/** 12:20 UTC le 4 octobre 2026 : 14 h 20 à Paris, en heure d'été. */
+const CONSOMME_ETE = new Date('2026-10-04T12:20:00.000Z');
+
+/** Les dépendances du lien en production, sur une base simulée qui ne rend que l'adresse stockée. */
+function dependancesDeProduction(statut: StatutCourriel | Error = 'envoye') {
+  const { emailChiffre } = colonnesPii(
+    { modele: MODELE_APPORTEUR, id: APPORTEUR },
+    { email: COURRIEL },
+    clesPii(ENV)
+  );
+  const findUnique = vi.fn(async () => ({ emailChiffre }));
+  const envoyerCourriel = vi.fn(async (_demande: DemandeDEnvoi): Promise<StatutCourriel> => {
+    if (statut instanceof Error) throw statut;
+    return statut;
+  });
+  const d = {
+    env: ENV,
+    prisma: { apporteur: { findUnique } } as unknown as PrismaClient,
+    horloge: horlogeFigee(T.getTime()),
+    journal: { warn: vi.fn() },
+    envoyerCourriel,
+  };
+  return { d, findUnique, envoyerCourriel };
+}
+
+describe('REQ-SEC-003 — le BRANCHEMENT en production (SEC-62) : l’avis « nouvel appareil » part par `notifier()`, et seul un courriel envoyé laisse confirmer', () => {
+  it('REQ-SEC-003 : le clic et le code de l’espace portent le port des appareils — l’avis, l’horloge, la transaction courte ; la console jamais', () => {
+    const { d } = dependancesDeProduction();
+    for (const p of [portsDeConsommation(d), portsDuCode(d)]) {
+      expect(Object.keys(p.appareils ?? {}).sort()).toEqual([
+        'aviser',
+        'maintenant',
+        'transaction',
+      ]);
+      expect(p.appareils?.maintenant()).toEqual(T);
+    }
+    expect('appareils' in portsDuCodeConsole(d)).toBe(false);
+  });
+
+  it('REQ-SEC-003 : sans émetteur des notifications, aucun port des appareils — la consommation est celle d’avant', () => {
+    const { d } = dependancesDeProduction();
+    const sans = { env: d.env, prisma: d.prisma, horloge: d.horloge, journal: d.journal };
+    expect('appareils' in portsDeConsommation(sans)).toBe(false);
+    expect('appareils' in portsDuCode(sans)).toBe(false);
+  });
+
+  it('REQ-SEC-003 : l’avis part à l’adresse STOCKÉE, sous la clé `nouvel_appareil`, au texte de la juriste ; il ne dit que l’instant, rien de l’appareil', async () => {
+    const { d, findUnique, envoyerCourriel } = dependancesDeProduction();
+    await portsDeConsommation(d).appareils?.aviser({
+      apporteurId: APPORTEUR,
+      confirmeAt: CONSOMME_ETE,
+    });
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: APPORTEUR },
+      select: { emailChiffre: true },
+    });
+    expect(envoyerCourriel).toHaveBeenCalledTimes(1);
+    const demande = envoyerCourriel.mock.calls[0]?.[0];
+    expect(demande).toEqual({
+      gabarit: 'nouvel_appareil',
+      a: COURRIEL,
+      sujet: SUJET_DE_L_AVIS,
+      corps: [
+        TEXTES_DES_NOTIFICATIONS.nouvel_appareil.corps.replace(
+          '{dateHeure}',
+          '4 octobre 2026 à 14 h 20 (heure de Paris)'
+        ),
+        `Demander un nouveau lien de connexion : https://${domaines().servi}/connexion`,
+      ].join('\n\n'),
+      apporteurId: APPORTEUR,
+    });
+    for (const secret of [IDENTIFIANT, EMPREINTE, CLE.secret]) {
+      expect(JSON.stringify(demande)).not.toContain(secret);
+    }
+  });
+
+  it('REQ-SEC-003 : l’heure dite est l’heure LÉGALE de Paris, à la minute — été, hiver, premier du mois, passage de minuit', async () => {
+    const cas: Array<[string, string]> = [
+      ['2026-10-04T12:20:00.000Z', 'le 4 octobre 2026 à 14 h 20 (heure de Paris) sur'],
+      ['2026-12-01T08:05:00.000Z', 'le 1er décembre 2026 à 9 h 05 (heure de Paris) sur'],
+      ['2026-10-04T22:30:59.999Z', 'le 5 octobre 2026 à 0 h 30 (heure de Paris) sur'],
+      ['2027-03-28T00:59:00.000Z', 'le 28 mars 2027 à 1 h 59 (heure de Paris) sur'],
+      ['2027-03-28T01:00:00.000Z', 'le 28 mars 2027 à 3 h 00 (heure de Paris) sur'],
+    ];
+    for (const [iso, attendu] of cas) {
+      const { d, envoyerCourriel } = dependancesDeProduction();
+      await portsDeConsommation(d).appareils?.aviser({
+        apporteurId: APPORTEUR,
+        confirmeAt: new Date(iso),
+      });
+      expect(envoyerCourriel.mock.calls[0]?.[0].corps, iso).toContain(attendu);
+    }
+  });
+
+  it('REQ-SEC-003 : (3) échec fermé — un courriel qui n’est pas `envoye` (en échec, retenu), ou un émetteur qui lève, fait LEVER l’avis : rien ne sera confirmé', async () => {
+    const statuts: Array<StatutCourriel | Error> = [
+      'echec',
+      'retenu_dmarc_non_verifie',
+      'retenu_adresse_supprimee',
+      new Error('delai_depasse'),
+    ];
+    for (const statut of statuts) {
+      const { d } = dependancesDeProduction(statut);
+      await expect(
+        portsDeConsommation(d).appareils?.aviser({
+          apporteurId: APPORTEUR,
+          confirmeAt: CONSOMME_ETE,
+        }),
+        String(statut)
+      ).rejects.toThrow();
+    }
+  });
+
+  it('REQ-SEC-003 : l’émetteur des notifications du processus — en production, celui des courriels, dont le statut remonte TEL QUEL ; hors production, le puits, qui ne reçoit que le sujet et le corps', async () => {
+    const relais = vi.fn(async () => ({ messageId: 'id-relais-sec62' }));
+    const lignes: LigneCourriel[] = [];
+    const emetteur = (): DependancesDeLEmetteur => ({
+      configuration: { expediteur: `contact@${domaines().envoi}`, dmarcVerifie: false },
+      relais: { envoyer: relais },
+      depot: { estSupprimee: async () => false, consigner: async (l) => void lignes.push(l) },
+      cles: clesPii(ENV),
+      maintenant: () => T,
+      nouvelId: () => '00000000-0000-4000-8000-000000000062',
+    });
+    const notifier = vi.fn(async () => undefined);
+    const fabriques = { emetteur, notifieur: () => ({ notifier }) };
+    const demande: DemandeDEnvoi = {
+      gabarit: 'nouvel_appareil',
+      a: COURRIEL,
+      sujet: SUJET_DE_L_AVIS,
+      corps: 'le corps rendu',
+      apporteurId: APPORTEUR,
+    };
+    // Production, drapeau DMARC fermé : la ligne est consignée, retenue, le relais n'est pas appelé.
+    expect(await envoiDesNotifications(PRODUCTION, fabriques)(demande)).toBe(
+      'retenu_dmarc_non_verifie'
+    );
+    expect(lignes).toHaveLength(1);
+    expect(relais).not.toHaveBeenCalled();
+    expect(notifier).not.toHaveBeenCalled();
+    // Hors production : le puits seul.
+    expect(await envoiDesNotifications(ENV, fabriques)(demande)).toBe('envoye');
+    expect(notifier).toHaveBeenCalledWith({ sujet: SUJET_DE_L_AVIS, corps: 'le corps rendu' });
+    expect(lignes).toHaveLength(1);
+  });
+
+  it('REQ-SEC-003 : les dépendances du processus portent l’émetteur des notifications : le clic et le code de l’action de connexion avisent', () => {
+    const d = dependancesDuProcessus({
+      apres: () => undefined,
+      env: { ...ENV, NOTIFY_SINK: 'true' },
+    });
+    expect(typeof d.envoyerCourriel).toBe('function');
+    expect(portsDeConsommation(d).appareils).toBeDefined();
+    expect(portsDuCode(d).appareils).toBeDefined();
   });
 });
 
