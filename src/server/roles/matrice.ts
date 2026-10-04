@@ -55,6 +55,10 @@ export const MATRICE_DES_ROLES = {
   // DM-12 (REQ-DM-033, cadrage de la sécurité) : déchiffrer la justification d'une anomalie, par le
   // lecteur unique ; jamais au comptable ni au lecteur.
   'action:lire_justification_anomalie': { roles: ['admin', 'qualifieur'], stepUp: false },
+  // SEC-60 (REQ-SEC-058, condition de la sécurité sur SEC-58) : lire le journal des accès à la console,
+  // à l'admin SEUL, jamais en attente ; la lecture se journalise elle-même
+  // (`src/server/console/journal-des-acces.ts`).
+  'action:lire_journal_des_acces': { roles: ['admin'], stepUp: false },
   // SEC-29 : l'écran `/console` minimal (le repli de la redirection, avant l'accueil du rôle
   // d'UX-P1-16) et la déconnexion, ouverts aux quatre rôles : chacun doit pouvoir arriver et partir.
   'ecran:accueil': { roles: ['admin', 'qualifieur', 'comptable', 'lecteur'], stepUp: false },
@@ -77,6 +81,17 @@ export const MATRICE_DES_ROLES = {
   // écran sans (le lire n'engage rien).
   'ecran:utilisateurs_console': { roles: ['admin'], stepUp: false },
   'action:gerer_utilisateur_console': { roles: ['admin'], stepUp: true },
+  // CPL-T07 : le dossier de conformité. Vérifier une pièce (jamais un RIB, vérifié à quatre yeux
+  // ailleurs) à l'admin et au qualifieur ; ouvrir et valider le dossier à l'admin seul — la
+  // validation mène à la signature, sous step-up (condition de la sécurité).
+  'ecran:conformite_apporteur': { roles: ['admin', 'qualifieur'], stepUp: false },
+  'action:verifier_piece': { roles: ['admin', 'qualifieur'], stepUp: false },
+  'action:ouvrir_kyc': { roles: ['admin'], stepUp: false },
+  'action:valider_kyc': { roles: ['admin'], stepUp: true },
+  // SEC-61 (conditions de la sécurité) : poser et lever un gel du journal des accès, à un admin
+  // VALIDÉ, sous step-up ; la levée par un AUTRE que l'auteur et que la personne visée (CHECK).
+  'action:poser_gel_journal_acces': { roles: ['admin'], stepUp: true },
+  'action:lever_gel_journal_acces': { roles: ['admin'], stepUp: true },
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, EntreeDeLaMatrice>>;
 
 /**

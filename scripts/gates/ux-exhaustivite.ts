@@ -71,6 +71,7 @@ import * as NOTIFICATIONS_DE_L_APPORTEUR from '../../src/content/micro-copy/cour
 import * as CONFIRMATION_DU_DEPOT from '../../src/content/micro-copy/espace/confirmation-du-depot';
 import * as INFORMATION_DES_TIERS from '../../src/content/micro-copy/espace/information-tiers';
 import * as ETATS_DES_DEPOTS from '../../src/content/micro-copy/espace/etats-attribution';
+import * as NOTIFICATIONS_DE_L_ESPACE from '../../src/content/micro-copy/espace/notifications';
 import { ETATS_VIDES_CONSOLE } from '../../src/content/micro-copy/console/etats-vides';
 import { GABARITS } from '../../src/server/notifications/table-ssot';
 import type { ActionEcran, EtatVide, TexteIssue } from '../../src/content/micro-copy/types';
@@ -104,6 +105,8 @@ const MICRO_COPIE_DE_L_ESPACE: Readonly<Record<string, unknown>> = {
   // SEC-12 (REQ-JUR-008) : la case que l'apporteur coche au dépôt.
   'espace/information-tiers.ts': INFORMATION_DES_TIERS,
   'espace/etats-attribution.ts': ETATS_DES_DEPOTS,
+  // UX-P1-54 : l'écran des notifications de l'espace.
+  'espace/notifications.ts': NOTIFICATIONS_DE_L_ESPACE,
   // Hors d'`espace/`, mais importé par chaque module de l'espace : parcouru comme eux.
   'types.ts': TYPES_DE_LA_MICRO_COPIE,
   // UX-P1-10 : les notifications de l'apporteur (e-mail et espace), lues par lui : parcourues aussi.
@@ -130,6 +133,10 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
   // SEC-30 : l'écran des utilisateurs de la console et ses courriels, lus par ses utilisateurs seuls.
   'console/utilisateurs.ts':
     'administration des utilisateurs de la console et ses courriels, lus par ses utilisateurs seuls (portée dépôt, REQ-GOV-017)',
+  // CPL-T07 : le dossier de conformité, lu par Axion-IA seul ; les phrases des motifs que l'apporteur
+  // lira y sont celles de la juriste, mot pour mot, et repassent par l'espace quand il les affichera.
+  'console/conformite.ts':
+    'dossier de conformité, lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
   // JUR-T61 : la page publique des données de la console, lue par ses utilisateurs avant connexion.
   'console/vos-donnees.ts':
     'page « Vos données dans la console », lue par ses utilisateurs seuls : couverte par le témoin vos-donnees-console',

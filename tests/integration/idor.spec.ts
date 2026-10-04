@@ -125,6 +125,12 @@ const IDOR_CASES: readonly Cas[] = [
       'politique tirée du registre, la même pour tous ; l’état d’accord lu est celui de la session',
   },
   {
+    surface: 'page /notifications',
+    cloisonnement: 'sans_ressource',
+    motif:
+      'ne reçoit aucun identifiant ; ne lit que les notifications de l’apporteur de la session, et écarte celle dont l’attribution n’est pas la sienne',
+  },
+  {
     surface: 'action accepterLaPolitiqueDeConfidentialite',
     cloisonnement: 'sans_ressource',
     motif: 'ne reçoit que la version affichée ; n’écrit que l’accord de l’apporteur de la session',
@@ -254,7 +260,7 @@ describe('REQ-QA-010 → REQ-SEC-009 — garde statique : une surface neuve de l
   it('REQ-QA-010 → REQ-SEC-009 : TÉMOIN À DEUX FACES — le dépôt réel sort en 0 avec le compte des routes et des actions confrontées', () => {
     const { code, sortie } = confronter(deriverSurfaces(RACINE), IDOR_CASES);
     console.log(sortie);
-    expect(sortie).toBe('idor:check — ✓ 3 routes et 5 actions confrontées');
+    expect(sortie).toBe('idor:check — ✓ 4 routes et 5 actions confrontées');
     expect(code).toBe(0);
   });
 

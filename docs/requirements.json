@@ -752,6 +752,7 @@
         "SEC-45",
         "SEC-55",
         "SEC-62",
+        "SEC-65",
         "UX-P1-04"
       ]
     },
@@ -946,6 +947,7 @@
       "phase": 0,
       "taches": [
         "DM-31",
+        "GOV-149",
         "QA-T68",
         "SEC-03",
         "SEC-10",
@@ -1145,7 +1147,8 @@
       "etape": 5,
       "phase": 0,
       "taches": [
-        "SEC-01"
+        "SEC-01",
+        "SEC-63"
       ]
     },
     {
@@ -1196,8 +1199,8 @@
     {
       "id": "REQ-SEC-032",
       "domaine": "anti-abus-securite",
-      "texte": "🔴 **La coupure est réservée à la RÉSILIATION ; la suspension n'en produit AUCUN effet** (réécrite le 2026-09-03, A-3 (e) : cette exigence faisait exécuter suspension **et** résiliation dans la même transaction, ce qui révoquait les jetons, coupait l'accès à l'espace et annulait des attributions ayant une valeur pécuniaire pour une simple mesure de vérification — la spécification se contredisait d'ailleurs elle-même, l'arbitrage l. 416 et REQ-SEC-019 disant que ces attributions **restent `provisoire`**). **Résiliation** : une transaction unique révoque les jetons de dépôt, incrémente `sessionVersion`, annule `provisoire`/`en_attente`, libère `active` non converties et laisse `convertie` intactes. **Suspension** : aucun de ces effets — cf. REQ-SEC-019. 🔴 **Après résiliation, une session en LECTURE SEULE survit** (contrat art. 12.3, A-4) : l'apporteur conserve l'accès en lecture à son espace — relevés, factures, motif de tout blocage, journal de ses propres déclarations — **jusqu'à l'extinction de ses droits**, ou les reçoit par courrier électronique à sa dernière adresse déclarée (REQ-UX-016). Sans cette réserve, la Société pourrait notifier valablement dans un espace fermé et devrait payer des commissions que l'apporteur ne peut plus lire. La session résiliée n'ouvre **aucune** écriture : aucun dépôt, aucune modification de profil, aucun jeton. La Server Action de dépôt relit le statut de l'apporteur dans sa transaction. Tests : après suspension → jeton valide, session vivante, attributions inchangées (**vu rougir**) ; après résiliation → dépôt refusé, écriture refusée, **lecture des relevés et factures accessible**, `/deposer` en 404 ; extinction des droits → accès clos, notifications par e-mail.",
-      "source": "audit-outil §5 étape 12 ; audit-anti-abus §4 « Effets de la résiliation » ; contrat art. 3.7 al. 3 et 12.3 ; synthèse du 2026-09-03, A-3 (e) et A-4",
+      "texte": "🔴 **La coupure est réservée à la RÉSILIATION ; la suspension n'en produit AUCUN effet** (réécrite le 2026-09-03, A-3 (e) : cette exigence faisait exécuter suspension **et** résiliation dans la même transaction, ce qui révoquait les jetons, coupait l'accès à l'espace et annulait des attributions ayant une valeur pécuniaire pour une simple mesure de vérification — la spécification se contredisait d'ailleurs elle-même, l'arbitrage l. 416 et REQ-SEC-019 disant que ces attributions **restent `provisoire`**). **Résiliation** : une transaction unique révoque les jetons de dépôt, incrémente `sessionVersion`, annule `provisoire`/`en_attente`, fait prendre fin à `active`, `rdv_pris` et `proposition` (`expiree`, SIREN libéré, art. 12.1) et fait passer `signee` et `convertie` en `figee_resiliation` (art. 12.3) [REMPLACÉ au rattrapage 110 : « libère `active` non converties et laisse `convertie` intactes » ; juriste #703, 5980974823 (active, rdv_pris, proposition) et 5981011150 (signee, convertie, d'accord avec A02 5980982895)]. **Suspension** : aucun de ces effets — cf. REQ-SEC-019. 🔴 **Après résiliation, une session en LECTURE SEULE survit** (contrat art. 12.3, A-4) : l'apporteur conserve l'accès en lecture à son espace — relevés, factures, motif de tout blocage, journal de ses propres déclarations — **jusqu'à l'extinction de ses droits**, ou les reçoit par courrier électronique à sa dernière adresse déclarée (REQ-UX-016). Sans cette réserve, la Société pourrait notifier valablement dans un espace fermé et devrait payer des commissions que l'apporteur ne peut plus lire. La session résiliée n'ouvre **aucune** écriture : aucun dépôt, aucune modification de profil, aucun jeton. La Server Action de dépôt relit le statut de l'apporteur dans sa transaction. Tests : après suspension → jeton valide, session vivante, attributions inchangées (**vu rougir**) ; après résiliation → dépôt refusé, écriture refusée, **lecture des relevés et factures accessible**, `/deposer` en 404 ; extinction des droits → accès clos, notifications par e-mail.",
+      "source": "audit-outil §5 étape 12 ; audit-anti-abus §4 « Effets de la résiliation » ; contrat art. 3.7 al. 3 et 12.3 ; synthèse du 2026-09-03, A-3 (e) et A-4 ; rattrapage 110 (#703 : juriste 5980974823 et 5981011150, A02 5980982895)",
       "statut": "active",
       "remplaceePar": null,
       "module": 21,
@@ -1222,6 +1225,7 @@
       "phase": 1,
       "taches": [
         "SEC-26",
+        "SEC-64",
         "UX-P1-03"
       ]
     },
@@ -1809,15 +1813,16 @@
     {
       "id": "REQ-ARG-026",
       "domaine": "argent",
-      "texte": "Sortie : à `resilie`, **quel que soit le motif** : les lignes `acquise` sont portées au dernier relevé, produit au lot suivant **sans le seuil de versement minimal** (HYP-E1-17) ; les lignes `prevue` restent `prevue` et deviennent `acquise` si l'encaissement survient dans les conditions du contrat art. 12.3 ; un solde ≤ 0 devient une `creance_apporteur` exportée en compta, sans virement. Les attributions `signee` et `convertie` gardent leur état ; la commande signée avant la fin du contrat continue d'ouvrir droit à commission au fur et à mesure de ses encaissements, quelle qu'en soit la date (contrat art. 12.3). Aucune ligne `dechue` n'existe (REQ-DM-020, REQ-JUR-007).",
-      "source": "audit-outil §5 étape 12, D11 ; anti-abus §4 ; ARG-15, ARG-25 ; réécrite le 2026-09-03 — déchéance retirée du produit ; amendée le 2026-10-03, texte de la juriste (oubli de `signee`, et « jusqu'à leur expiration » contredisait l'art. 12.3), rattrapage 88",
+      "texte": "Sortie : à `resilie`, **quel que soit le motif** : les lignes `acquise` sont portées au dernier relevé, produit au lot suivant **sans le seuil de versement minimal** (HYP-E1-17) ; les lignes `prevue` restent `prevue` et deviennent `acquise` si l'encaissement survient dans les conditions du contrat art. 12.3 ; un solde ≤ 0 devient une `creance_apporteur` exportée en compta, sans virement. Les attributions `signee` et `convertie` passent en `figee_resiliation` ; la commande signée avant la fin du contrat continue d'ouvrir droit à commission au fur et à mesure de ses encaissements, quelle qu'en soit la date (contrat art. 12.3) ; aucune commande signée après n'en ouvre. [REMPLACÉ au rattrapage 110, juriste #703, 5981011150 : « gardent leur état »] Aucune ligne `dechue` n'existe (REQ-DM-020, REQ-JUR-007).",
+      "source": "audit-outil §5 étape 12, D11 ; anti-abus §4 ; ARG-15, ARG-25 ; réécrite le 2026-09-03 — déchéance retirée du produit ; amendée le 2026-10-03, texte de la juriste (oubli de `signee`, et « jusqu'à leur expiration » contredisait l'art. 12.3), rattrapage 88 ; rattrapage 110 (#703, juriste 5981011150) ; phase 2 → 1 au rattrapage 112 (gouvernance : SEC-19 et SEC-66, en phase 1, la mettent en œuvre)",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
       "etape": 11,
-      "phase": 2,
+      "phase": 1,
       "taches": [
         "DM-18",
+        "SEC-66",
         "T-ARG-033",
         "T-ARG-038"
       ]
@@ -2218,7 +2223,8 @@
       "taches": [
         "INT-T08-A",
         "INT-T08-P",
-        "INT-T73-P"
+        "INT-T73-P",
+        "INT-T74-P"
       ]
     },
     {
@@ -2386,7 +2392,8 @@
       "etape": null,
       "phase": 0,
       "taches": [
-        "INT-T14"
+        "INT-T14",
+        "SEC-64"
       ]
     },
     {
@@ -2585,7 +2592,10 @@
       "phase": 1,
       "taches": [
         "JUR-T28",
-        "SEC-15"
+        "SEC-15",
+        "SEC-19",
+        "UX-P1-57",
+        "UX-P1-59"
       ]
     },
     {
@@ -2720,7 +2730,8 @@
       "phase": 0,
       "taches": [
         "GOV-129",
-        "JUR-T02"
+        "JUR-T02",
+        "SEC-66"
       ]
     },
     {
@@ -2919,9 +2930,11 @@
       "etape": 11,
       "phase": 0,
       "taches": [
+        "DM-70",
         "INT-T44",
         "INT-T56",
         "JUR-T02",
+        "JUR-T64",
         "T-ARG-033"
       ]
     },
@@ -3194,6 +3207,8 @@
         "UX-P1-10",
         "UX-P1-11",
         "UX-P1-54",
+        "UX-P1-58",
+        "UX-P1-59",
         "UX-P3-01",
         "UX-P3-06"
       ]
@@ -5068,6 +5083,9 @@
         "INT-T62-A",
         "INT-T64-A",
         "INT-T67-A",
+        "INT-T78-A",
+        "INT-T79-A",
+        "INT-T80-A",
         "UX-P2-17"
       ]
     },
@@ -5315,6 +5333,8 @@
         "EXT-T10",
         "EXT-T11",
         "GOV-113",
+        "INT-T78-A",
+        "INT-T79-A",
         "JUR-T32",
         "JUR-T36",
         "JUR-T57",
@@ -5350,6 +5370,9 @@
         "UX-P1-54",
         "UX-P1-55",
         "UX-P1-56",
+        "UX-P1-57",
+        "UX-P1-58",
+        "UX-P1-59",
         "UX-P2-01",
         "UX-P2-02",
         "UX-P2-03",
@@ -6345,6 +6368,8 @@
         "INT-T66-A",
         "INT-T76-A",
         "INT-T76-P",
+        "INT-T77-A",
+        "INT-T81-A",
         "JUR-T47"
       ]
     },
@@ -6450,7 +6475,9 @@
       "phase": 1,
       "taches": [
         "JUR-T61",
-        "JUR-T62"
+        "JUR-T62",
+        "JUR-T63",
+        "SEC-65"
       ]
     },
     {

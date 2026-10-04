@@ -23,7 +23,7 @@
 | Fiche d'une entreprise (frise, échanges) | `mes-entreprises-fiche.html` | EXT-T01 | 2026-10-03 | Will |
 | Personnes qui agissent pour l'apporteur | `personnes.html` | UX-P1-15 | 2026-10-03 | Will |
 | Dépôt par lien privé | `depot-lien-prive.html` | UX-P1-03 | 2026-10-03 | Will |
-| Notifications | `notifications.html` | UX-P1-08 | 2026-10-03 | Will |
+| Notifications | `notifications.html` | UX-P1-08 · UX-P1-54 | 2026-10-03 | Will |
 
 ### Séance de validation W20 (confirmation par e-mail)
 

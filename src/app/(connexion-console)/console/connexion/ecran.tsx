@@ -14,6 +14,7 @@
 import type { EtatVide } from '../../../../content/micro-copy/types';
 import { ETATS_VIDES_CONSOLE } from '../../../../content/micro-copy/console/etats-vides';
 import { CONNEXION_CONSOLE } from '../../../../content/micro-copy/console/connexion';
+import { VOS_DONNEES_CONSOLE } from '../../../../content/micro-copy/console/vos-donnees';
 import type {
   EtatDeConsommation,
   EtatDeDemande,
@@ -71,6 +72,7 @@ export function EcranConnexionConsole({
         <button type="submit">{ecran.action.libelle}</button>
         <p>{CONNEXION_CONSOLE.aideDemande}</p>
       </form>
+      <a href="/console/vos-donnees">{VOS_DONNEES_CONSOLE.titre}</a>
     </main>
   );
 }

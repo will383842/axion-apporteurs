@@ -1,5 +1,6 @@
 // @req REQ-SEC-023
 // @req REQ-UX-024 → REQ-SEC-023
+// @req REQ-SEC-058
 /**
  * `matrice-des-roles.spec.ts` — les rôles de la console (SEC-17) : la matrice droits × rôles en UN
  * fichier, `requireRole` relu en base à chaque requête, et la garde qui confronte le disque à la
@@ -115,6 +116,13 @@ describe('REQ-SEC-023 — les quatre rôles et la matrice unique', () => {
     expect(roleAutorise('action:rattacher_manuellement', 'admin')).toBe(true);
     expect(roleAutorise('action:rattacher_manuellement', 'comptable')).toBe(false);
     expect(roleAutorise('action:rattacher_manuellement', 'lecteur')).toBe(false);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — la lecture du journal des accès est à l’admin seul, refusée à tout rôle non nommé', () => {
+    expect(Object.hasOwn(MATRICE_DES_ROLES, 'action:lire_journal_des_acces')).toBe(true);
+    expect(roleAutorise('action:lire_journal_des_acces', 'admin')).toBe(true);
+    for (const role of ROLES_CONSOLE.filter((r) => r !== 'admin'))
+      expect(roleAutorise('action:lire_journal_des_acces', role)).toBe(false);
   });
 
   it('REQ-SEC-023 : le `comptable` voit l’IBAN, approuve le lot et produit le pain.001 — rien de plus', () => {
@@ -1716,5 +1724,54 @@ describe('REQ-SEC-023 — SEC-30 : la console ne crée jamais un administrateur 
       expect(autour).not.toContain('.create(');
     }
     for (const s of console_) expect(s).not.toMatch(/create\(\{[^}]*valideAt/s);
+  });
+});
+
+// CPL-T07 : le dossier de conformité. Vérifier une pièce à l'admin et au qualifieur ; ouvrir et
+// valider le dossier à l'admin seul ; la validation, qui mène à la signature, sous step-up
+// (condition de la sécurité).
+describe('REQ-SEC-023 — CPL-T07 : les droits du dossier de conformité', () => {
+  const sessionAdmin = (ms: number) => ({
+    ...valide(),
+    creeAt: new Date(T0.getTime() - ms),
+    utilisateurConsole: {
+      id: 'u-admin',
+      role: 'admin' as const,
+      desactiveAt: null,
+      sessionVersion: 0,
+      valideAt: T0,
+    },
+  });
+  const releve = DUREES_AUTH.releveMs.valeur;
+
+  it('REQ-SEC-023 : TÉMOIN — vérifier une pièce : admin et qualifieur ; ouvrir et valider le dossier : admin seul', () => {
+    expect(MATRICE_DES_ROLES['ecran:conformite_apporteur']).toEqual({
+      roles: ['admin', 'qualifieur'],
+      stepUp: false,
+    });
+    expect(MATRICE_DES_ROLES['action:verifier_piece']).toEqual({
+      roles: ['admin', 'qualifieur'],
+      stepUp: false,
+    });
+    expect(MATRICE_DES_ROLES['action:ouvrir_kyc']).toEqual({ roles: ['admin'], stepUp: false });
+    expect(MATRICE_DES_ROLES['action:valider_kyc']).toEqual({ roles: ['admin'], stepUp: true });
+    for (const role of ['comptable', 'lecteur'] as const)
+      for (const droit of [
+        'action:verifier_piece',
+        'action:ouvrir_kyc',
+        'action:valider_kyc',
+        'ecran:conformite_apporteur',
+      ])
+        expect(roleAutorise(droit, role), `${droit} × ${role}`).toBe(false);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — valider le dossier, session ouverte il y a le délai de relèvement : « releve_requis » ; un instant avant, elle passe', () => {
+    expect(jugerAcces('action:valider_kyc', sessionAdmin(releve), T0, KID)).toEqual({
+      ok: false,
+      motif: 'releve_requis',
+    });
+    expect(jugerAcces('action:valider_kyc', sessionAdmin(releve - 1), T0, KID).ok).toBe(true);
+    // Ouvrir le dossier ne regarde pas l'âge de la session.
+    expect(jugerAcces('action:ouvrir_kyc', sessionAdmin(releve * 10), T0, KID).ok).toBe(true);
   });
 });

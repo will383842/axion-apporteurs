@@ -81,6 +81,7 @@ enum TypeEvenementJournal {
   rattachement_manuel_modifie
   anomalie_gel_modifie
   utilisateur_console_modifie
+  journal_acces_gel_modifie
 
   @@map("type_evenement_journal")
 }
@@ -96,6 +97,7 @@ enum AgregatJournal {
   demande_confirmation
   anomalie
   utilisateur_console
+  journal_acces_gel
 
   @@map("agregat_journal")
 }
@@ -450,14 +452,18 @@ model UtilisateurConsole {
 
   liensMagiques           LienMagique[]
   sessionsEspace          SessionEspace[]
-  attributions            Attribution[]         @relation("AttributionsDuConseiller")
-  suspensionsDePeremption Attribution[]         @relation("SuspensionsDePeremption")
+  attributions            Attribution[]            @relation("AttributionsDuConseiller")
+  suspensionsDePeremption Attribution[]            @relation("SuspensionsDePeremption")
   verifications           Verification[]
   anomaliesTraitees       Anomalie[]
   rattachementsDecides    RattachementManuel[]
   contestationsRepondues  Contestation[]
   qualificationsSaisies   Qualification[]
   accesJournalises        JournalAccesConsole[]
+  /// SEC-61 : les gels du journal des accès qui visent l'utilisateur, ceux qu'il a posés, levés.
+  gelsJournalVises        JournalAccesConsoleGel[] @relation("GelsJournalVises")
+  gelsJournalPoses        JournalAccesConsoleGel[] @relation("GelsJournalPoses")
+  gelsJournalLeves        JournalAccesConsoleGel[] @relation("GelsJournalLeves")
   sirensListeNoireAjoutes SirenListeNoire[]
   /// CPL-T06 : les décisions de candidature dont l'utilisateur est l'auteur.
   decisionsCandidature    DecisionCandidature[]
@@ -1385,6 +1391,7 @@ enum NatureAccesConsole {
   connexion
   lecture_coordonnees_apporteur
   lecture_coordonnees_contact
+  lecture_journal_acces
 
   @@map("nature_acces_console")
 }
@@ -1393,8 +1400,10 @@ enum NatureAccesConsole {
 /// l'empreinte tronquée de l'adresse réseau ; aucun contenu. Ajout seul par le gabarit commun
 /// (`refuser_modification_sauf`) : la purge, à l'échéance de la SSOT, vide l'utilisateur, la cible et
 /// l'empreinte et pose `purgeAt`, une fois ; la ligne nue (nature, date) reste. `cibleId` est
-/// polymorphe (un apporteur, ou l'attribution qui porte le contact), sans clé étrangère : le code la
-/// vérifie avant d'écrire. Seule une connexion RÉUSSIE s'inscrit.
+/// polymorphe (un apporteur, l'attribution qui porte le contact, ou, pour une lecture du journal
+/// (SEC-60), l'utilisateur de la console dont les traces sont lues), sans clé étrangère, pour les trois
+/// cibles, cette dernière comprise : le code vérifie chacune avant d'écrire. Seule une connexion
+/// RÉUSSIE s'inscrit.
 model JournalAccesConsole {
   id                   String              @id @db.Uuid
   utilisateurConsoleId String?             @map("utilisateur_console_id") @db.Uuid
@@ -1408,6 +1417,43 @@ model JournalAccesConsole {
   @@index([survenuAt])
   @@index([utilisateurConsoleId, survenuAt], map: "journal_acces_console_utilisateur_survenu_idx")
   @@map("journal_acces_console")
+}
+
+/// Le motif d'un gel du journal des accès à la console (SEC-61) : les valeurs du glossaire.
+enum MotifGelJournal {
+  incident
+  litige
+
+  @@map("motif_gel_journal")
+}
+
+/// Un gel du journal des accès à la console (SEC-61, forme d'A02 accordée avec la sécurité). Il vise
+/// UNE portée, un utilisateur de la console OU une cible (CHECK `journal_acces_console_gels_une_portee`),
+/// et protège de la purge les lignes de cette portée survenues depuis `depuis`, futures comprises si
+/// `jusquA` est nul, tant qu'il est OUVERT ; `jusquA` posé BORNE le gel, inclus, et ne se modifie pas. La référence
+/// est opaque (CHECK `journal_acces_console_gels_reference_forme`). Personne ne gèle ses propres traces
+/// (CHECK `journal_acces_console_gels_pas_sur_soi`) ; la levée est faite par un autre que l'auteur et
+/// que la personne visée (CHECK `journal_acces_console_gels_levee_quatre_yeux`). Garde dédiée en SQL
+/// brut (`journal_acces_console_gels_garde`) : un gel naît ouvert, seule la levée s'écrit, une fois ;
+/// il ne s'efface que levé et ses lignes purgées ; TRUNCATE refusé. Filet de la base sur le journal
+/// (`journal_acces_console_gel_respecte`). Deux index partiels sur les gels ouverts.
+model JournalAccesConsoleGel {
+  id                String              @id @db.Uuid
+  motif             MotifGelJournal
+  reference         String              @db.VarChar(40)
+  utilisateurViseId String?             @map("utilisateur_vise_id") @db.Uuid
+  utilisateurVise   UtilisateurConsole? @relation("GelsJournalVises", fields: [utilisateurViseId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "journal_acces_console_gels_utilisateur_vise_fkey")
+  cibleId           String?             @map("cible_id") @db.Uuid
+  depuis            DateTime            @db.Timestamptz(3)
+  jusquA            DateTime?           @map("jusqu_a") @db.Timestamptz(3)
+  poseParId         String              @map("pose_par_id") @db.Uuid
+  posePar           UtilisateurConsole  @relation("GelsJournalPoses", fields: [poseParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  poseAt            DateTime            @default(dbgenerated("clock_timestamp()")) @map("pose_at") @db.Timestamptz(3)
+  leveParId         String?             @map("leve_par_id") @db.Uuid
+  levePar           UtilisateurConsole? @relation("GelsJournalLeves", fields: [leveParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  leveAt            DateTime?           @map("leve_at") @db.Timestamptz(3)
+
+  @@map("journal_acces_console_gels")
 }
 
 /// L'origine d'une entreprise connue de la Société (REQ-DM-029) : les valeurs du glossaire.
