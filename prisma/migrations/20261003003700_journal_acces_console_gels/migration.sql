@@ -50,8 +50,12 @@ CREATE INDEX "journal_acces_console_gels_ouverts_utilisateur_idx" ON "journal_ac
 CREATE INDEX "journal_acces_console_gels_ouverts_cible_idx" ON "journal_acces_console_gels" ("cible_id", "depuis")
   WHERE "leve_at" IS NULL AND "cible_id" IS NOT NULL;
 
--- (1) La garde du gel : un gel naît OUVERT ; la levée s'écrit une fois ; rien d'autre ne bouge ; un gel ne s'efface
---     que LEVÉ et quand AUCUNE ligne qu'il couvre n'est encore à purger ; TRUNCATE refusé.
+-- « COUVERTE », une seule définition, écrite à l'identique dans la garde, le filet et la purge : une ligne de la
+-- portée survenue à partir de `depuis` et, si `jusqu_a` est posé, jusqu'à `jusqu_a` INCLUS (à la milliseconde).
+-- `jusqu_a` nul : l'incident est en cours, le gel couvre aussi les lignes à venir, jusqu'à sa levée.
+-- (1) La garde du gel : un gel naît OUVERT ; la levée s'écrit une fois ; rien d'autre ne bouge, `jusqu_a` compris ;
+--     un gel ne s'efface que LEVÉ et quand AUCUNE ligne qu'il a protégée n'est encore à purger, soit les lignes
+--     couvertes survenues jusqu'à sa levée : [depuis, LEAST(jusqu_a, leve_at)] ; TRUNCATE refusé.
 CREATE FUNCTION journal_acces_console_gels_garde() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'TRUNCATE' THEN
@@ -64,7 +68,9 @@ BEGIN
   ELSIF TG_OP = 'DELETE' THEN
     IF OLD."leve_at" IS NULL OR EXISTS (
       SELECT 1 FROM "journal_acces_console" j
-      WHERE j."purge_at" IS NULL AND j."survenu_at" >= OLD."depuis"
+      WHERE j."purge_at" IS NULL
+        AND j."survenu_at" >= OLD."depuis" AND (OLD."jusqu_a" IS NULL OR j."survenu_at" <= OLD."jusqu_a")
+        AND j."survenu_at" <= OLD."leve_at"
         AND (j."utilisateur_console_id" = OLD."utilisateur_vise_id" OR j."cible_id" = OLD."cible_id")
     ) THEN
       RAISE EXCEPTION 'journal_acces_console_gels_garde : un gel ne s''efface que levé, et ses lignes purgées';
@@ -89,12 +95,13 @@ CREATE TRIGGER journal_acces_console_gels_troncature BEFORE TRUNCATE ON "journal
   FOR EACH STATEMENT EXECUTE FUNCTION journal_acces_console_gels_garde();
 
 -- (2) Le FILET de la base : une ligne du journal couverte par un gel OUVERT ne se purge pas, même si le code
---     l'oubliait. Déclencheur NEUF, à côté du gabarit existant, qui n'est pas recréé.
+--     l'oubliait ; une ligne survenue après `jusqu_a` n'est pas couverte, et se purge à son échéance. Déclencheur NEUF, à côté du gabarit existant, qui n'est pas recréé.
 CREATE FUNCTION journal_acces_console_gel_respecte() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF NEW."purge_at" IS NOT NULL AND OLD."purge_at" IS NULL AND EXISTS (
     SELECT 1 FROM "journal_acces_console_gels" g
-    WHERE g."leve_at" IS NULL AND OLD."survenu_at" >= g."depuis"
+    WHERE g."leve_at" IS NULL
+      AND OLD."survenu_at" >= g."depuis" AND (g."jusqu_a" IS NULL OR OLD."survenu_at" <= g."jusqu_a")
       AND (g."utilisateur_vise_id" = OLD."utilisateur_console_id" OR g."cible_id" = OLD."cible_id")
   ) THEN
     RAISE EXCEPTION 'journal_acces_console_gel_respecte : une ligne gelée ne se purge pas avant la levée du gel';

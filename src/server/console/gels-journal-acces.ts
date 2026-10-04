@@ -2,7 +2,8 @@
  * Le gel du journal des accès à la console (SEC-61, forme d'A02 accordée avec la sécurité).
  *
  * Un gel vise UNE portée, un utilisateur de la console OU une cible, et protège de la purge les lignes
- * de cette portée survenues depuis `depuis`, futures comprises, tant qu'il est OUVERT. La base tient la
+ * de cette portée survenues depuis `depuis` et jusqu'à `jusqu_a` inclus, futures comprises si `jusqu_a` est
+ * nul, tant qu'il est OUVERT. `jusqu_a` ne se modifie pas : une nouvelle période passe par un nouveau gel. La base tient la
  * forme (CHECK de portée, de période, de référence, « pas sur soi », quatre yeux de la levée), la garde
  * dédiée (un gel naît ouvert, seule la levée s'écrit, une fois) et le filet sur le journal. Ce module
  * ajoute ce que la base ne peut pas dire : le droit relu en base, et l'événement chaîné.

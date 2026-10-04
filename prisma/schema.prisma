@@ -1426,8 +1426,8 @@ enum MotifGelJournal {
 
 /// Un gel du journal des accès à la console (SEC-61, forme d'A02 accordée avec la sécurité). Il vise
 /// UNE portée, un utilisateur de la console OU une cible (CHECK `journal_acces_console_gels_une_portee`),
-/// et protège de la purge les lignes de cette portée survenues depuis `depuis`, futures comprises,
-/// tant qu'il est OUVERT ; `jusquA` date la fin de la période en cause, pour le dossier. La référence
+/// et protège de la purge les lignes de cette portée survenues depuis `depuis`, futures comprises si
+/// `jusquA` est nul, tant qu'il est OUVERT ; `jusquA` posé BORNE le gel, inclus, et ne se modifie pas. La référence
 /// est opaque (CHECK `journal_acces_console_gels_reference_forme`). Personne ne gèle ses propres traces
 /// (CHECK `journal_acces_console_gels_pas_sur_soi`) ; la levée est faite par un autre que l'auteur et
 /// que la personne visée (CHECK `journal_acces_console_gels_levee_quatre_yeux`). Garde dédiée en SQL

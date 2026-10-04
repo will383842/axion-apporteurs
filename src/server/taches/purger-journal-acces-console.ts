@@ -8,12 +8,14 @@
  * cette purge, une fois, et le CHECK `journal_acces_console_purge_liee` refuse une purge partielle.
  * Idempotente, lue sur `purge_at` ; un lot qui n'écrit rien arrête la boucle.
  *
- * LES GELS (SEC-61) : une trace couverte par un gel OUVERT (même portée, utilisateur ou cible, survenue
- * depuis `depuis`) est EXCLUE dès la lecture du lot : un lot ne bute jamais sur elle, et le filet de la
- * base (`journal_acces_console_gel_respecte`) refuse de toute façon de la purger. Après la levée, la
- * purge suivante la vide comme les autres. Puis les gels LEVÉS dont aucune ligne couverte ne reste à
- * purger sont supprimés, par lots bornés : leur durée est finie, et ils portent des identifiants
- * d'employés. La garde dédiée refuse d'effacer un gel ouvert, ou levé avec des lignes à purger.
+ * LES GELS (SEC-61) : une trace COUVERTE par un gel OUVERT (même portée, utilisateur ou cible, survenue
+ * à partir de `depuis` et jusqu'à `jusqu_a` inclus quand il est posé) est EXCLUE dès la lecture du lot :
+ * un lot ne bute jamais sur elle, et le filet de la base (`journal_acces_console_gel_respecte`, même
+ * définition) refuse de toute façon de la purger. Une trace survenue après `jusqu_a` n'est pas couverte.
+ * Après la levée, la purge suivante la vide comme les autres. Puis les gels LEVÉS dont aucune ligne
+ * protégée, couverte et survenue jusqu'à la levée, ne reste à purger sont supprimés, par lots bornés :
+ * leur durée est finie, et ils portent des identifiants d'employés. La garde dédiée refuse d'effacer un
+ * gel ouvert, ou levé avec des lignes protégées à purger.
  */
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { SEUILS } from '../../domain/seuils/ssot';
@@ -35,19 +37,25 @@ function lotEchu(prisma: PrismaClient, limite: Date) {
     WHERE j."survenu_at" < ${limite} AND j."purge_at" IS NULL
       AND NOT EXISTS (
         SELECT 1 FROM "journal_acces_console_gels" g
-        WHERE g."leve_at" IS NULL AND j."survenu_at" >= g."depuis"
+        WHERE g."leve_at" IS NULL
+          AND j."survenu_at" >= g."depuis" AND (g."jusqu_a" IS NULL OR j."survenu_at" <= g."jusqu_a")
           AND (g."utilisateur_vise_id" = j."utilisateur_console_id" OR g."cible_id" = j."cible_id"))
     ORDER BY j."survenu_at" ASC, j."id" ASC
     LIMIT ${LOT_DE_PURGE_DU_JOURNAL_DES_ACCES}`);
 }
 
-/** Les gels LEVÉS dont aucune ligne couverte ne reste à purger, par lot borné. */
+/**
+ * Les gels LEVÉS dont aucune ligne protégée ne reste à purger, par lot borné : couverte, et survenue
+ * jusqu'à la levée. Une ligne neuve de la même portée, écrite après la levée, ne retient pas le gel.
+ */
 function gelsEpuises(prisma: PrismaClient) {
   return prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
     SELECT g."id" FROM "journal_acces_console_gels" g
     WHERE g."leve_at" IS NOT NULL AND NOT EXISTS (
       SELECT 1 FROM "journal_acces_console" j
-      WHERE j."purge_at" IS NULL AND j."survenu_at" >= g."depuis"
+      WHERE j."purge_at" IS NULL
+        AND j."survenu_at" >= g."depuis" AND (g."jusqu_a" IS NULL OR j."survenu_at" <= g."jusqu_a")
+        AND j."survenu_at" <= g."leve_at"
         AND (j."utilisateur_console_id" = g."utilisateur_vise_id" OR j."cible_id" = g."cible_id"))
     ORDER BY g."leve_at" ASC, g."id" ASC
     LIMIT ${LOT_DE_PURGE_DU_JOURNAL_DES_ACCES}`);

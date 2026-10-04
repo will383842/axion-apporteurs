@@ -6,8 +6,9 @@
  *
  * TÉMOIN DE LA SÉCURITÉ, MOT POUR MOT : « la purge du journal des accès épargne une ligne gelée, et la
  * purge à la levée du gel ». Un gel OUVERT protège les lignes de SA portée (un utilisateur OU une
- * cible) survenues depuis `depuis`, futures comprises et au-delà de `jusqu_a` ; après la levée, la
- * purge les vide, puis supprime le gel épuisé. Le filet de la base refuse une purge forcée ; la garde
+ * cible) survenues depuis `depuis` et jusqu'à `jusqu_a` INCLUS, futures comprises si `jusqu_a` est nul
+ * (règle de la juriste, conditions de la sécurité) ; après la levée, la purge les vide, puis supprime le
+ * gel épuisé, même si la portée écrit des lignes neuves après la levée (correction d'A02). Le filet de la base refuse une purge forcée ; la garde
  * dédiée refuse toute réécriture, une seconde levée, l'effacement d'un gel vivant et TRUNCATE.
  * L'événement chaîné ne porte AUCUN identifiant d'employé ni de cible, ni la référence en clair.
  * Sous `partners_app`, le rôle du serveur ; les admins sont VALIDÉS (quatre yeux).
@@ -61,6 +62,11 @@ const CONFIGURATION = {
 const MAINTENANT = new Date('2028-06-01T12:00:00.000Z');
 const PLUS_TARD = new Date('2028-06-02T12:00:00.000Z');
 const DEPUIS = new Date('2026-01-01T00:00:00.000Z');
+/** La fin d'une période en cause, et la milliseconde d'après : la borne est INCLUSIVE. */
+const JUSQU_A = new Date('2027-01-01T00:00:00.000Z');
+const JUSQU_A_PLUS_1MS = new Date(JUSQU_A.getTime() + 1);
+/** Une purge assez tardive pour que toutes les traces semées soient échues. */
+const BIEN_PLUS_TARD = new Date('2030-01-01T00:00:00.000Z');
 const IP_HASH = '0123456789abcdef';
 
 beforeAll(async () => {
@@ -200,20 +206,73 @@ describe('REQ-SEC-058 — la purge épargne une ligne gelée, et la purge à la 
     expect((await ligne(autre)).purgeAt).toEqual(MAINTENANT);
   });
 
-  it('REQ-SEC-058 : TÉMOIN — une ligne écrite APRÈS la pose, et une ligne au-delà de jusqu_a, sont protégées tant que le gel est ouvert', async () => {
+  it('REQ-SEC-058 : TÉMOIN — sans jusqu_a, l’incident est en cours : une ligne écrite APRÈS la pose est protégée, une ligne avant depuis est purgée', async () => {
     const poseur = await unAdmin();
     const vise = await semer('lecteur');
-    // Posé à `MAINTENANT`, la période en cause close à `MAINTENANT`.
-    await poser(poseur, { type: 'utilisateur', utilisateurId: vise }, { jusquA: MAINTENANT });
-    // Survenue APRÈS la pose et au-delà de `jusqu_a` : couverte tant que le gel est ouvert.
+    await poser(poseur, { type: 'utilisateur', utilisateurId: vise });
     const apres = await uneTrace({ utilisateurConsoleId: vise }, PLUS_TARD);
-    // Survenue AVANT `depuis` : hors de la portée, purgée.
     const avant = await uneTrace({ utilisateurConsoleId: vise }, new Date(DEPUIS.getTime() - 1));
-    // Une purge assez tardive pour que les deux soient échues.
-    const bienPlusTard = new Date('2030-01-01T00:00:00.000Z');
-    await purgerLeJournalDesAccesConsole(app, bienPlusTard);
+    await purgerLeJournalDesAccesConsole(app, BIEN_PLUS_TARD);
     expect((await ligne(apres)).purgeAt).toBeNull();
-    expect((await ligne(avant)).purgeAt).toEqual(bienPlusTard);
+    expect((await ligne(avant)).purgeAt).toEqual(BIEN_PLUS_TARD);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — jusqu_a borne le gel ouvert, inclus à la milliseconde : la purge épargne la ligne à jusqu_a et vide celle de jusqu_a + 1 ms', async () => {
+    const poseur = await unAdmin();
+    const vise = await semer('lecteur');
+    await poser(poseur, { type: 'utilisateur', utilisateurId: vise }, { jusquA: JUSQU_A });
+    const aLaBorne = await uneTrace({ utilisateurConsoleId: vise }, JUSQU_A);
+    const apresLaBorne = await uneTrace({ utilisateurConsoleId: vise }, JUSQU_A_PLUS_1MS);
+    await purgerLeJournalDesAccesConsole(app, BIEN_PLUS_TARD);
+    expect(await ligne(aLaBorne)).toMatchObject({ utilisateurConsoleId: vise, purgeAt: null });
+    expect(await ligne(apresLaBorne)).toMatchObject({
+      utilisateurConsoleId: null,
+      purgeAt: BIEN_PLUS_TARD,
+    });
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — le filet, à deux faces : la purge forcée de la ligne à jusqu_a est refusée, celle de jusqu_a + 1 ms est admise', async () => {
+    const poseur = await unAdmin();
+    const vise = await semer('lecteur');
+    await poser(poseur, { type: 'utilisateur', utilisateurId: vise }, { jusquA: JUSQU_A });
+    const aLaBorne = await uneTrace({ utilisateurConsoleId: vise }, JUSQU_A);
+    const apresLaBorne = await uneTrace({ utilisateurConsoleId: vise }, JUSQU_A_PLUS_1MS);
+    const purgeForcee = (id: string) =>
+      app.journalAccesConsole.update({
+        where: { id },
+        data: { utilisateurConsoleId: null, cibleId: null, ipHash: null, purgeAt: MAINTENANT },
+      });
+    await expect(purgeForcee(aLaBorne)).rejects.toThrow(/journal_acces_console_gel_respecte/);
+    await purgeForcee(apresLaBorne);
+    expect((await ligne(apresLaBorne)).purgeAt).toEqual(MAINTENANT);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — un gel levé, ses lignes protégées purgées, est supprimé même si la portée écrit une ligne neuve APRÈS la levée ; une ligne protégée non purgée le retient', async () => {
+    const poseur = await unAdmin();
+    const leveur = await unAdmin();
+    const viseEpuise = await semer('lecteur');
+    const viseRetenu = await semer('lecteur');
+    await uneTrace({ utilisateurConsoleId: viseEpuise });
+    await uneTrace({ utilisateurConsoleId: viseRetenu });
+    const epuise = await poser(poseur, { type: 'utilisateur', utilisateurId: viseEpuise });
+    const retenu = await poser(poseur, { type: 'utilisateur', utilisateurId: viseRetenu });
+    for (const g of [epuise, retenu])
+      await leverUnGel(app, { acteur: leveur, gelId: g.id, maintenant: PLUS_TARD }, CLES);
+    // Une ligne neuve, après la levée : non échue, non purgée, hors de ce que le gel a protégé.
+    const neuve = await uneTrace(
+      { utilisateurConsoleId: viseEpuise },
+      new Date(PLUS_TARD.getTime() + 1)
+    );
+    // Une ligne protégée (avant la levée) mais pas encore échue : non purgée, elle retient le gel.
+    await uneTrace({ utilisateurConsoleId: viseRetenu }, MAINTENANT);
+    await purgerLeJournalDesAccesConsole(app, PLUS_TARD);
+    expect((await ligne(neuve)).purgeAt).toBeNull();
+    expect(
+      await base.prisma.journalAccesConsoleGel.findUnique({ where: { id: epuise.id } })
+    ).toBeNull();
+    expect(
+      await base.prisma.journalAccesConsoleGel.findUnique({ where: { id: retenu.id } })
+    ).not.toBeNull();
   });
 
   it('REQ-SEC-058 : TÉMOIN — le filet : une purge forcée d’une ligne couverte est refusée par la base', async () => {
@@ -304,6 +363,12 @@ describe('REQ-SEC-058 — la forme du gel, tenue par la base', () => {
         app.journalAccesConsoleGel.update({ where: { id: gel.id }, data: { reference: 'AUTRE-1' } })
       )
     ).toMatch(/journal_acces_console_gels_garde/);
+    // `jusqu_a` ne se modifie pas : ni prolongation, ni raccourcissement silencieux.
+    expect(
+      await motif(
+        app.journalAccesConsoleGel.update({ where: { id: gel.id }, data: { jusquA: JUSQU_A } })
+      )
+    ).toMatch(/journal_acces_console_gels_garde/);
     await leverUnGel(app, { acteur: leveur, gelId: gel.id, maintenant: PLUS_TARD }, CLES);
     expect(
       await motif(leverUnGel(app, { acteur: leveur, gelId: gel.id, maintenant: PLUS_TARD }, CLES))
@@ -335,6 +400,33 @@ describe('REQ-SEC-058 — la forme du gel, tenue par la base', () => {
     expect(
       await motif(base.prisma.$executeRawUnsafe('TRUNCATE "journal_acces_console_gels"'))
     ).toMatch(/journal_acces_console_gels_garde/);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — la garde de suppression, à deux faces, lit [depuis, LEAST(jusqu_a, leve_at)] inclus à la milliseconde', async () => {
+    const poseur = await unAdmin();
+    const leveur = await unAdmin();
+    /** Un gel levé à `PLUS_TARD` dont la seule ligne non purgée survient à `survenuAt`. */
+    const gelLeveAvecUneLigne = async (jusquA: Date | null, survenuAt: Date) => {
+      const vise = await semer('lecteur');
+      await uneTrace({ utilisateurConsoleId: vise }, survenuAt);
+      const gel = await poser(poseur, { type: 'utilisateur', utilisateurId: vise }, { jusquA });
+      await leverUnGel(app, { acteur: leveur, gelId: gel.id, maintenant: PLUS_TARD }, CLES);
+      return () =>
+        app.$executeRawUnsafe(
+          `DELETE FROM "journal_acces_console_gels" WHERE "id" = $1::uuid`,
+          gel.id
+        );
+    };
+    // Borne `jusqu_a` : la ligne à la borne retient le gel, celle d'après ne le retient pas.
+    expect(await motif((await gelLeveAvecUneLigne(JUSQU_A, JUSQU_A))())).toMatch(
+      /journal_acces_console_gels_garde/
+    );
+    expect(await (await gelLeveAvecUneLigne(JUSQU_A, JUSQU_A_PLUS_1MS))()).toBe(1);
+    // Sans `jusqu_a`, borne de la levée : même règle, à la milliseconde.
+    expect(await motif((await gelLeveAvecUneLigne(null, PLUS_TARD))())).toMatch(
+      /journal_acces_console_gels_garde/
+    );
+    expect(await (await gelLeveAvecUneLigne(null, new Date(PLUS_TARD.getTime() + 1)))()).toBe(1);
   });
 });
 

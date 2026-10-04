@@ -321,12 +321,17 @@ const MAINTENANT = new Date('2027-10-03T12:00:00.000Z');
  */
 function fauxClientDePurge(lots: number[], compte: (n: number) => number = (n) => n) {
   const lectures: { texte: string; valeurs: unknown[] }[] = [];
+  const lecturesDesGels: string[] = [];
   const ecritures: { where: unknown; data: unknown }[] = [];
   let rang = 0;
   const client = {
     $queryRaw: async (requete: { sql: string; values: unknown[] }) => {
-      if (/FROM "journal_acces_console_gels" g\s+WHERE g\."leve_at" IS NOT NULL/.test(requete.sql))
+      if (
+        /FROM "journal_acces_console_gels" g\s+WHERE g\."leve_at" IS NOT NULL/.test(requete.sql)
+      ) {
+        lecturesDesGels.push(requete.sql);
         return [];
+      }
       lectures.push({ texte: requete.sql, valeurs: requete.values });
       const n = lots[rang] ?? 0;
       rang += 1;
@@ -339,7 +344,7 @@ function fauxClientDePurge(lots: number[], compte: (n: number) => number = (n) =
       },
     },
   } as unknown as PrismaClient;
-  return { client, lectures, ecritures };
+  return { client, lectures, lecturesDesGels, ecritures };
 }
 
 describe('REQ-SEC-058 — la purge à l’échéance vide les identifiants, la ligne nue reste', () => {
@@ -356,15 +361,24 @@ describe('REQ-SEC-058 — la purge à l’échéance vide les identifiants, la l
     await purgerLeJournalDesAccesConsole(f.client, MAINTENANT);
     const { texte, valeurs } = f.lectures[0]!;
     expect(texte).toMatch(/j\."survenu_at" < \? AND j\."purge_at" IS NULL/);
-    // SEC-61 : le critère du filet — un gel OUVERT, de la même portée, depuis sa date.
+    // SEC-61 : le critère du filet — un gel OUVERT, de la même portée, dans sa période (jusqu_a inclus).
     expect(texte).toMatch(
-      /NOT EXISTS \(\s*SELECT 1 FROM "journal_acces_console_gels" g\s+WHERE g\."leve_at" IS NULL AND j\."survenu_at" >= g\."depuis"\s+AND \(g\."utilisateur_vise_id" = j\."utilisateur_console_id" OR g\."cible_id" = j\."cible_id"\)\)/
+      /NOT EXISTS \(\s*SELECT 1 FROM "journal_acces_console_gels" g\s+WHERE g\."leve_at" IS NULL\s+AND j\."survenu_at" >= g\."depuis" AND \(g\."jusqu_a" IS NULL OR j\."survenu_at" <= g\."jusqu_a"\)\s+AND \(g\."utilisateur_vise_id" = j\."utilisateur_console_id" OR g\."cible_id" = j\."cible_id"\)\)/
     );
     expect(texte).toMatch(/ORDER BY j\."survenu_at" ASC, j\."id" ASC\s+LIMIT \?/);
     expect(valeurs).toEqual([
       limiteDuJournalDesAcces(MAINTENANT),
       LOT_DE_PURGE_DU_JOURNAL_DES_ACCES,
     ]);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — un gel levé s’efface quand ses lignes protégées, couvertes et survenues jusqu’à la levée, sont purgées', async () => {
+    const f = fauxClientDePurge([]);
+    await purgerLeJournalDesAccesConsole(f.client, MAINTENANT);
+    expect(f.lecturesDesGels).toHaveLength(1);
+    expect(f.lecturesDesGels[0]).toMatch(
+      /WHERE j\."purge_at" IS NULL\s+AND j\."survenu_at" >= g\."depuis" AND \(g\."jusqu_a" IS NULL OR j\."survenu_at" <= g\."jusqu_a"\)\s+AND j\."survenu_at" <= g\."leve_at"\s+AND \(j\."utilisateur_console_id" = g\."utilisateur_vise_id" OR j\."cible_id" = g\."cible_id"\)\)/
+    );
   });
 
   it('REQ-SEC-058 : TÉMOIN — la purge VIDE l’utilisateur, la cible et l’empreinte, et pose sa date, en une écriture par lot', async () => {
