@@ -1,5 +1,6 @@
 // @req REQ-SEC-022
 // @req REQ-UX-002
+// @req REQ-SEC-020
 /**
  * SEC-12 — la DÉCISION d'un dépôt d'apporteur, pure : des faits lus sous verrou, une issue.
  *
@@ -180,5 +181,17 @@ describe('REQ-UX-002 — l’art. 3.3 ne dit jamais lequel de ses critères joue
     const devis = issueRendue(deciderDuDepot({ ...LIBRE, anteriorite: 'devis' }).issue);
     expect(JSON.stringify(client)).toBe(JSON.stringify(devis));
     expect(JSON.stringify(client)).not.toMatch(/client|devis|factur|sign/i);
+  });
+});
+
+describe('REQ-SEC-020 — ni la zone ni le secteur ne refusent un dépôt', () => {
+  it('REQ-SEC-020 : la décision ne reçoit ni zone ni secteur ; un dépôt libre est enregistré quels qu’ils soient', () => {
+    expect(Object.keys(LIBRE).filter((k) => /zone|secteur/i.test(k))).toEqual([]);
+    const horsZone: FaitsDuDepot & { zone: string; secteur: string } = {
+      ...LIBRE,
+      zone: 'hors zone',
+      secteur: 'hors secteur',
+    };
+    expect(deciderDuDepot(horsZone)).toEqual(deciderDuDepot(LIBRE));
   });
 });
