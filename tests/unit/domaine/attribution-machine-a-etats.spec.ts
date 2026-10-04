@@ -1243,6 +1243,9 @@ describe('REQ-DM-006 — anteriorite_etablie n’est émise que par le passage d
  */
 describe('REQ-DM-006 — l’écrivain porte le motif, et écrit la notification de la décision', () => {
   const ANOMALIE = '0190f0a0-0000-7000-8000-0000000000c3';
+  const SIREN = '123456789';
+  const RANG1 = '0190f0a0-0000-7000-8000-0000000000f6';
+  const APPORTEUR_RANG1 = '0190f0a0-0000-7000-8000-0000000000f7';
   const AUTRE = '0190f0a0-0000-7000-8000-0000000000d4';
   const CONSOLE = {
     par: 'utilisateur_console',
@@ -1255,12 +1258,23 @@ describe('REQ-DM-006 — l’écrivain porte le motif, et écrit la notification
       statut: string;
       attributionId: string | null;
       apporteurId: string | null;
-    } | null = null
+    } | null = null,
+    rang1: { id: string; apporteurId: string | null } | null = null
   ) {
     const base = txSimule([ligne]);
     const notifications: unknown[] = [];
     const lues: unknown[] = [];
+    const filesLues: unknown[] = [];
+    const attribution = (base.tx as { attribution: object }).attribution;
     const tx = Object.assign(base.tx as object, {
+      attribution: {
+        ...attribution,
+        findUnique: async () => ({ siren: SIREN }),
+        findFirst: async (arg: unknown) => {
+          filesLues.push(arg);
+          return rang1;
+        },
+      },
       notificationEspace: {
         create: async (arg: unknown) => {
           notifications.push(arg);
@@ -1274,7 +1288,7 @@ describe('REQ-DM-006 — l’écrivain porte le motif, et écrit la notification
         },
       },
     });
-    return { ...base, tx: tx as never, notifications, lues };
+    return { ...base, tx: tx as never, notifications, lues, filesLues };
   }
 
   beforeEach(() => {
@@ -1490,6 +1504,81 @@ describe('REQ-DM-006 — l’écrivain porte le motif, et écrit la notification
           anomalieId: ANOMALIE,
         },
       },
+    ]);
+  });
+
+  it('REQ-DM-004 : TÉMOIN — l’attribution qui QUITTE l’occupation libère le premier rang : son apporteur est notifié, sur SA ligne, avec l’événement de la libération', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({ statut: 'active' }), null, {
+      id: RANG1,
+      apporteurId: APPORTEUR_RANG1,
+    });
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'perimee',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(t.filesLues).toStrictEqual([
+      {
+        where: { siren: SIREN, statut: 'en_attente', rangAttente: 1 },
+        select: { id: true, apporteurId: true },
+      },
+    ]);
+    expect(t.notifications).toStrictEqual([
+      {
+        data: {
+          apporteurId: APPORTEUR_RANG1,
+          cle: 'premier_rang_libere',
+          attributionId: RANG1,
+          evenementId: BigInt(42),
+        },
+      },
+    ]);
+  });
+
+  it('REQ-DM-004 : une transition qui RESTE dans l’occupation ne libère rien, et ne lit pas la file', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({ statut: 'active' }), null, {
+      id: RANG1,
+      apporteurId: APPORTEUR_RANG1,
+    });
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'rdv_pris',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(t.filesLues).toStrictEqual([]);
+    expect(t.notifications).toStrictEqual([]);
+  });
+
+  it('REQ-DM-004 : une libération sans rang 1 en attente ne notifie personne', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({ statut: 'active' }));
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'perimee',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(t.notifications).toStrictEqual([]);
+  });
+
+  it('REQ-DM-004 : TÉMOIN — une décision qui libère notifie les DEUX : la décision à son apporteur, le premier rang au sien', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txDM55(ligneDe({}), null, { id: RANG1, apporteurId: APPORTEUR_RANG1 });
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'non_confirmee',
+      acteur: ACTEUR,
+      maintenant: MAINTENANT,
+    });
+    expect(
+      t.notifications.map((n) => (n as { data: { cle: string; apporteurId: string } }).data)
+    ).toMatchObject([
+      { cle: 'decision_attribution', apporteurId: APPORTEUR },
+      { cle: 'premier_rang_libere', apporteurId: APPORTEUR_RANG1 },
     ]);
   });
 });
