@@ -1145,7 +1145,8 @@
       "etape": 5,
       "phase": 0,
       "taches": [
-        "SEC-01"
+        "SEC-01",
+        "SEC-63"
       ]
     },
     {
@@ -1222,6 +1223,7 @@
       "phase": 1,
       "taches": [
         "SEC-26",
+        "SEC-64",
         "UX-P1-03"
       ]
     },
@@ -2218,7 +2220,8 @@
       "taches": [
         "INT-T08-A",
         "INT-T08-P",
-        "INT-T73-P"
+        "INT-T73-P",
+        "INT-T74-P"
       ]
     },
     {
@@ -2386,7 +2389,8 @@
       "etape": null,
       "phase": 0,
       "taches": [
-        "INT-T14"
+        "INT-T14",
+        "SEC-64"
       ]
     },
     {
@@ -6453,7 +6457,8 @@
       "phase": 1,
       "taches": [
         "JUR-T61",
-        "JUR-T62"
+        "JUR-T62",
+        "JUR-T63"
       ]
     },
     {

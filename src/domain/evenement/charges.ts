@@ -36,7 +36,7 @@ import {
   EVENEMENTS_ATTRIBUTION,
   NAISSANCES_ATTRIBUTION,
 } from '../attribution/machine';
-import { STATUTS_PIECE_KYC, TYPES_PIECE_KYC } from '../kyc/pieces';
+import { MOTIFS_REFUS_PIECE, STATUTS_PIECE_KYC, TYPES_PIECE_KYC } from '../kyc/pieces';
 import { ETATS_DEMANDE_CONFIRMATION } from '../confirmation/demande';
 import {
   ETATS_CONTESTATION,
@@ -277,15 +277,27 @@ export const CHARGES_PAR_TYPE = {
   /**
    * DM-11 (REQ-DM-027) : un changement de statut d'une pièce du KYC, sur l'agrégat `piece_kyc`.
    * `de` est nul à la naissance de la pièce. Ni fichier, ni IBAN, ni donnée de personne.
+   * CPL-T07 (forme d'A02) : le motif FERMÉ d'un refus, exigé si et seulement si `vers` vaut
+   * `refusee` ; l'espace le relit dans le dernier événement de l'agrégat de la pièce, sans colonne.
    */
   piece_kyc_statut_modifie: z
     .object({
       de: z.enum(STATUTS_PIECE_KYC).nullable(),
       vers: z.enum(STATUTS_PIECE_KYC),
       type: z.enum(TYPES_PIECE_KYC),
+      motifRefus: z.enum(MOTIFS_REFUS_PIECE).optional(),
       acteur: FORMES.acteur(),
     })
-    .strict(),
+    .strict()
+    .superRefine((c, ctx) => {
+      if ((c.vers === 'refusee') !== (c.motifRefus !== undefined)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['motifRefus'],
+          message: 'motif_refus_si_et_seulement_si_refusee',
+        });
+      }
+    }),
   /**
    * DM-40 (REQ-DM-060) : un changement d'état de la demande de confirmation, naissance comprise (`de`
    * nul, `planifiee`). Ni jeton, ni empreinte, ni donnée de personne : l'état seul.
