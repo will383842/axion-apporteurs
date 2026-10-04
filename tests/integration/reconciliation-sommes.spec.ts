@@ -156,16 +156,22 @@ describe('REQ-INT-013 — le passage des sommes : relecture, comparaison, alerte
     charge: { ...CHARGE_CONFORME, siren, montantHtCents: montant, factureMontantHtCents: montant },
   });
 
-  function ports(relues: ReturnType<typeof ligneRelue>[], recus: ReturnType<typeof recu>[]) {
+  function ports(
+    relues: ReturnType<typeof ligneRelue>[],
+    recus: ReturnType<typeof recu>[],
+    lire?: PortsDesSommes['lire']
+  ) {
     const signaux: unknown[] = [];
     const lectures: bigint[] = [];
     const p: PortsDesSommes = {
       maintenant: () => MAINTENANT,
       sequenceAvant: async () => 40n,
-      lire: async (apres) => {
-        lectures.push(apres);
-        return { ok: true, lignes: relues, derniereSequence: 99n, suite: false };
-      },
+      lire:
+        lire ??
+        (async (apres) => {
+          lectures.push(apres);
+          return { ok: true, lignes: relues, derniereSequence: 99n, suite: false };
+        }),
       evenementsRecus: async () => recus,
       sirensAttribues: async () => attribues,
       signaler: async (s) => {
@@ -205,13 +211,16 @@ describe('REQ-INT-013 — le passage des sommes : relecture, comparaison, alerte
   });
 
   it('REQ-INT-013 : TÉMOIN — une relecture refusée ou bornée ne compare RIEN : jamais un faux écart', async () => {
-    const refusee = ports([], []);
-    refusee.p.lire = async () => ({ ok: false, motif: 'appel_echoue' });
+    const refusee = ports([], [], async () => ({ ok: false, motif: 'appel_echoue' }));
     await expect(passageDesSommes(refusee.p)).rejects.toThrow(/relecture_echouee/);
     expect(refusee.signaux).toEqual([{ genre: 'relecture_echouee', motif: 'appel_echoue' }]);
 
-    const bornee = ports([], []);
-    bornee.p.lire = async () => ({ ok: true, lignes: [], derniereSequence: 99n, suite: true });
+    const bornee = ports([], [], async () => ({
+      ok: true,
+      lignes: [],
+      derniereSequence: 99n,
+      suite: true,
+    }));
     await expect(passageDesSommes(bornee.p)).rejects.toThrow(/relecture_bornee/);
     expect(bornee.signaux).toEqual([{ genre: 'relecture_bornee', nombre: PAGES_MAX_DES_SOMMES }]);
   });
