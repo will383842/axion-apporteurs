@@ -111,9 +111,15 @@ describe('REQ-QA-027 — l’alerte des attentes au-delà, et le canal (arbitrag
     expect(canalDAlerte({})).toBeNull();
     expect(canalDAlerte({ TELEGRAM_BOT_TOKEN: 'x'.repeat(40) })).toBeNull();
     expect(canalDAlerte({ TELEGRAM_CHAT_ID: '-100' })).toBeNull();
+    // SEC-64 : jeton ET salon construisent le canal RÉEL, qui exige la décision consignée sur le
+    // transfert hors de l'Union européenne ; avec elle, le canal existe ; sans elle, refus nommé.
+    const decision = { pays: 'p', encadrement: 'e', decideLe: '2026-10-04', source: 's' };
     expect(
-      canalDAlerte({ TELEGRAM_BOT_TOKEN: 'x'.repeat(40), TELEGRAM_CHAT_ID: '-100' })
+      canalDAlerte({ TELEGRAM_BOT_TOKEN: 'x'.repeat(40), TELEGRAM_CHAT_ID: '-100' }, decision)
     ).not.toBeNull();
+    expect(() =>
+      canalDAlerte({ TELEGRAM_BOT_TOKEN: 'x'.repeat(40), TELEGRAM_CHAT_ID: '-100' })
+    ).toThrow(/^transfert_telegram_non_consigne/);
   });
 });
 

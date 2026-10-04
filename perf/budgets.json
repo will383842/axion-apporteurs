@@ -44,6 +44,12 @@
       "path": ".next/static/chunks/app/(espace)/confidentialite/page*.js",
       "limit": "75 KB",
       "gzip": true
+    },
+    {
+      "name": "/notifications",
+      "path": ".next/server/app/(espace)/notifications/page_client-reference-manifest.js",
+      "limit": "75 KB",
+      "gzip": true
     }
   ],
   "socle": {

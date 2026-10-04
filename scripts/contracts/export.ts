@@ -17,7 +17,10 @@
  *     pas d'une version de code à l'autre.
  *   — `contracts.sha256` — l'empreinte du fichier précédent, au format `sha256sum` (empreinte,
  *     deux espaces, nom du fichier) pour qu'un `sha256sum -c contracts.sha256` la vérifie sans
- *     outil de ce dépôt, y compris depuis axionia.
+ *     outil de ce dépôt, y compris depuis axionia. Elle couvre AUSSI, sur les lignes suivantes, la
+ *     chaîne canonique de la relecture et ses vecteurs figés (`FICHIERS_EMPREINTES`, INT-T74-P,
+ *     forme d'A02) : ils transcrivent l'ordre déclaré au `$comment` de la route sans toucher le
+ *     schéma, et leurs lignes viennent APRÈS celle du schéma, que l'autre dépôt lit en premier.
  *   — `events.zod.ts` — le schéma Zod que REQ-INT-003 nomme, GÉNÉRÉ. Il n'est importé nulle part
  *     ici : `zod` n'est pas une dépendance de ce dépôt et `package.json` est partagé. Le générer
  *     quand même est ce qui garantit qu'il ne sera jamais TRANSCRIT à la main le jour où la
@@ -41,6 +44,15 @@ export const NOM_JSON_SCHEMA = `contracts.v${SCHEMA_VERSION}.json`;
 export const NOM_EMPREINTE = 'contracts.sha256';
 export const NOM_ZOD = 'events.zod.ts';
 
+/**
+ * Les fichiers du contrat que l'empreinte couvre en plus du schéma, chemins relatifs à
+ * `RACINE_CONTRATS`, dans l'ordre de leurs lignes. Axion-ia (INT-T72-A) les reprend à l'identique.
+ */
+export const FICHIERS_EMPREINTES = [
+  'signature-relecture.ts',
+  'fixtures/signature-relecture.vecteurs.json',
+] as const;
+
 /** Tri récursif des clés : la seule sérialisation qu'on puisse hacher deux fois avec le même résultat. */
 function trier(valeur: unknown): unknown {
   if (Array.isArray(valeur)) return valeur.map(trier);
@@ -61,6 +73,13 @@ export function canoniser(valeur: unknown): string {
 /** L'empreinte d'un texte, en hexadécimal minuscule. */
 export function empreinte(texte: string): string {
   return createHash('sha256').update(texte, 'utf8').digest('hex');
+}
+
+/** L'empreinte d'un fichier commité, sur ses octets, lu sous `racine`. */
+function empreinteDuFichier(chemin: string, racine: string): string {
+  return createHash('sha256')
+    .update(readFileSync(join(racine, RACINE_CONTRATS, chemin)))
+    .digest('hex');
 }
 
 /**
@@ -104,14 +123,22 @@ export function sourceZod(): string {
 
 export type Artefact = { chemin: string; contenu: string };
 
-/** Les trois artefacts, en mémoire. C'est cette fonction que le test de contrat confronte au disque. */
-export function artefacts(): Artefact[] {
+/**
+ * Les trois artefacts, en mémoire. C'est cette fonction que le test de contrat confronte au disque.
+ * `racine` est le dossier d'où se lisent les fichiers hachés (`FICHIERS_EMPREINTES`) : le
+ * répertoire courant pour `pnpm contracts:export`, la racine du dépôt pour un témoin qui tourne
+ * dans le bac à sable de Stryker, où chaque `.ts` reçoit un `// @ts-nocheck` qui change ses octets.
+ */
+export function artefacts(racine = '.'): Artefact[] {
   const jsonSchema = canoniser(contratJsonSchema());
   return [
     { chemin: join(RACINE_CONTRATS, NOM_JSON_SCHEMA), contenu: jsonSchema },
     {
       chemin: join(RACINE_CONTRATS, NOM_EMPREINTE),
-      contenu: `${empreinte(jsonSchema)}  ${NOM_JSON_SCHEMA}\n`,
+      contenu: [
+        `${empreinte(jsonSchema)}  ${NOM_JSON_SCHEMA}\n`,
+        ...FICHIERS_EMPREINTES.map((f) => `${empreinteDuFichier(f, racine)}  ${f}\n`),
+      ].join(''),
     },
     { chemin: join(RACINE_CONTRATS, NOM_ZOD), contenu: sourceZod() },
   ];
