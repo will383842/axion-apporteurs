@@ -668,6 +668,25 @@ describe('REQ-SEC-003 — l’appareil à la CONSOMMATION, voie (b) de la lentil
     }
   });
 
+  it('REQ-SEC-003 : (2) une session en LECTURE (SEC-19 : un résilié aux droits en cours) — l’avis part, RIEN n’est confirmé (`non_confirme`) : une session sans action sensible ne fait connaître aucun appareil', async () => {
+    const c = consommation({
+      session: sessionRelue({
+        apporteur: { statut: 'resilie', sessionVersion: 3, droitsEnCours: true },
+      }),
+    });
+    const r = await consommerLien(
+      { jeton: JETON, ipHash: null, identifiantAppareil: IDENTIFIANT },
+      c.p
+    );
+    expect(r).toMatchObject({
+      etat: 'ouverte',
+      appareil: { identifiant: IDENTIFIANT, issue: 'non_confirme' },
+    });
+    expect(c.aviser).toHaveBeenCalledTimes(1);
+    expect(c.lireSession).toHaveBeenCalledTimes(1);
+    expect(c.appareils.confirmerSiInconnu).not.toHaveBeenCalled();
+  });
+
   it('REQ-SEC-003 : (2) la confirmation est idempotente — un appareil devenu connu entre-temps n’est pas confirmé deux fois, rien n’est réécrit, l’issue dit `connu`', async () => {
     const c = consommation();
     c.appareils.confirmerSiInconnu.mockResolvedValueOnce('deja_connu');
@@ -1010,11 +1029,21 @@ function unDouble(o: { frais?: number } = {}) {
 }
 
 describe('REQ-SEC-003 — la transaction COURTE de confirmation, telle que la base la reçoit', () => {
-  function base(ligneLue: Record<string, unknown> | null) {
+  function base(ligneLue: Record<string, unknown> | null, figee: { id: string } | null = null) {
     const findUnique = vi.fn(async () => ligneLue);
-    const tx = { sessionEspace: { findUnique }, appareilConnu: unDouble().d.appareilConnu };
+    const findFirst = vi.fn(async () => figee);
+    const tx = {
+      sessionEspace: { findUnique },
+      attribution: { findFirst },
+      appareilConnu: unDouble().d.appareilConnu,
+    };
     const $transaction = vi.fn(async (travail: (t: typeof tx) => Promise<unknown>) => travail(tx));
-    return { findUnique, $transaction, prisma: { $transaction } as unknown as PrismaClient };
+    return {
+      findUnique,
+      findFirst,
+      $transaction,
+      prisma: { $transaction } as unknown as PrismaClient,
+    };
   }
 
   it('REQ-SEC-003 : UNE transaction relit la session par l’empreinte de son jeton — ce que juge `jugerSession`, et le lien qui l’a ouverte —, et rend la ligne séparée du lien', async () => {
@@ -1036,7 +1065,22 @@ describe('REQ-SEC-003 — la transaction COURTE de confirmation, telle que la ba
         lienMagique: { select: { consommeAt: true } },
       },
     });
-    expect(lue).toEqual({ ligne: attendue, lienMagiqueId: LIEN.id });
+    expect(lue).toEqual({
+      ligne: { ...attendue, apporteur: { ...attendue.apporteur, droitsEnCours: false } },
+      lienMagiqueId: LIEN.id,
+    });
+  });
+
+  it('REQ-SEC-003 : la MÊME transaction relit les droits en cours de l’apporteur (SEC-19), comme le dépôt des sessions — le juge voit la session telle qu’elle est', async () => {
+    const attendue = ligne(T);
+    const b = base({ ...attendue, lienMagiqueId: LIEN.id }, { id: 'attribution-figee' });
+    const lue = await transactionDeConfirmation(b.prisma)((tx) => tx.lireSession('empreinte-x'));
+    expect(b.$transaction).toHaveBeenCalledTimes(1);
+    expect(b.findFirst).toHaveBeenCalledWith({
+      where: { apporteurId: APPORTEUR, statut: 'figee_resiliation' },
+      select: { id: true },
+    });
+    expect(lue?.ligne.apporteur).toEqual({ ...attendue.apporteur, droitsEnCours: true });
   });
 
   it('REQ-SEC-003 : une session absente se lit `null` ; le dépôt des appareils est celui de la MÊME transaction', async () => {

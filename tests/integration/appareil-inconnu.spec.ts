@@ -43,7 +43,7 @@ import {
 } from '../../src/server/auth/lien-magique-production';
 import { horlogeFigee } from '../../src/domain/temps/horloge';
 import type { DemandeDEnvoi } from '../../src/server/integrations/zeptomail/emetteur';
-import { depotDeSessions } from '../../src/server/auth/session';
+import { depotDeSessions, exigerSession } from '../../src/server/auth/session';
 import {
   cleDesAppareils,
   depotDAppareils,
@@ -54,6 +54,7 @@ import {
 } from '../../src/server/auth/appareil';
 import { purgerLesAppareils } from '../../src/server/taches/purger-appareils';
 import { semerSession } from '../../prisma/seed/05-sessions';
+import { semerAttribution } from '../../prisma/seed/10-attributions';
 import {
   ROLE_D_EXECUTION,
   provisionnerRoleDExecution,
@@ -134,6 +135,37 @@ async function apporteur(): Promise<string> {
     },
   });
   return id;
+}
+
+/**
+ * Un RÉSILIÉ AUX DROITS EN COURS (SEC-19) : une attribution `figee_resiliation` le garde en LECTURE
+ * (A02, #703). Sa grille est une version d'essai, propre au témoin.
+ */
+async function resilieAuxDroitsEnCours(): Promise<string> {
+  const a = await apporteur();
+  const grille = await base.prisma.grilleCommission.create({
+    data: {
+      version: 900 + sequence,
+      hash: randomBytes(32).toString('hex'),
+      contenuJson: { essai: true },
+      publieeAt: d('2026-10-01T08:00:00.000Z'),
+      importeeAt: d('2026-10-01T08:00:00.000Z'),
+    },
+  });
+  await semerAttribution(base.prisma, {
+    id: randomUUID(),
+    apporteurId: a,
+    grilleCommissionId: grille.id,
+    siren: `9${String(sequence).padStart(8, '0')}`,
+    statut: 'figee_resiliation',
+    dateContact: d('2026-10-01T00:00:00.000Z'),
+  });
+  // La base exige le motif d'une résiliation (`apporteurs_motif_si_resilie`).
+  await base.prisma.apporteur.update({
+    where: { id: a },
+    data: { statut: 'resilie', resiliationMotif: 'ordinaire_apporteur' },
+  });
+  return a;
 }
 
 /** Ouvre une session dont le lien a été consommé à `consommeAt` ; rend le jeton de session. */
@@ -529,6 +561,33 @@ describe('REQ-SEC-003 — voie (b) de la lentille sécurité, en base réelle : 
         derniereVueAt: avant,
       },
     ]);
+  });
+});
+
+describe('REQ-SEC-003 — SEC-62 sur SEC-19 : une session en LECTURE ne fait connaître aucun appareil (A09, #563 5983094689)', () => {
+  it('REQ-SEC-003 : TÉMOIN à deux faces — un résilié aux droits en cours consomme un lien sur un appareil neuf : l’avis part, la session s’ouvre en LECTURE, `non_confirme`, aucune ligne d’appareil ; le même parcours pour un apporteur `signe` confirme l’appareil', async () => {
+    const maintenant = d('2026-10-03T14:00:00.000Z');
+
+    const resilie = await resilieAuxDroitsEnCours();
+    const enLecture = await connecter(resilie, tirerIdentifiantDAppareil(), maintenant);
+    expect(enLecture.resultat).toMatchObject({
+      etat: 'ouverte',
+      appareil: { issue: 'non_confirme' },
+    });
+    expect(enLecture.aviser).toHaveBeenCalledTimes(1);
+    expect(await appareilsDe(resilie)).toEqual([]);
+    const jeton =
+      enLecture.resultat.etat === 'ouverte' ? enLecture.resultat.jetonSession : undefined;
+    expect(await exigerSession(jeton, ports(maintenant).session)).toMatchObject({
+      ok: true,
+      session: { apporteurId: resilie, niveau: 'lecture' },
+    });
+
+    const signe = await apporteur();
+    const pleine = await connecter(signe, tirerIdentifiantDAppareil(), maintenant);
+    expect(pleine.resultat).toMatchObject({ etat: 'ouverte', appareil: { issue: 'confirme' } });
+    expect(pleine.aviser).toHaveBeenCalledTimes(1);
+    expect(await appareilsDe(signe)).toHaveLength(1);
   });
 });
 
