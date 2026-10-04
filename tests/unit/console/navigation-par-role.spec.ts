@@ -1,6 +1,7 @@
 // @req REQ-UX-048
 // @req REQ-UX-019
 // @req REQ-UX-018
+// @req REQ-UX-047
 /**
  * UX-P1-16 — le cadre de la console : la navigation DÉRIVÉE de la matrice, et l'accueil de chaque rôle.
  *
@@ -30,6 +31,7 @@ import {
   barreMobile,
   entreesDuRole,
 } from '../../../src/server/console/navigation';
+import { BUDGETS_UX } from '../../../src/domain/seuils/ssot';
 
 const CARTE = readFileSync('docs/CONSOLE-ROUTES.md', 'utf8');
 
@@ -222,5 +224,20 @@ describe('REQ-UX-018 — le composant de navigation', () => {
     expect(feuille).toMatch(/min-height:\s*2\.75rem/);
     expect(feuille).toMatch(/@media \(max-width: 767\.98px\)/);
     expect(readFileSync('src/components/console/navigation.tsx', 'utf8')).not.toMatch(/style=/);
+  });
+});
+
+// REQ-UX-047 point 1 (consultation) : chaque écran du rôle s'atteint, depuis n'importe quel écran
+// de la console, en au plus le budget de consultation — une interaction par la barre, deux par le
+// menu (l'ouvrir, puis choisir). Jugé sur TOUTES les entrées que la carte prévoit, livrées ou non.
+describe('REQ-UX-047 — la navigation tient le budget de consultation', () => {
+  it('REQ-UX-047 : TÉMOIN — pour chaque rôle, chaque entrée s’atteint en au plus CONSULTATION_INTERACTIONS_MAX interactions', () => {
+    const toutes = ENTREES_DE_LA_CONSOLE.map((e) => e.route);
+    for (const role of ROLES_CONSOLE) {
+      const { visibles, dansLeMenu } = barreMobile(entreesDuRole(role, { livrees: toutes }));
+      const cout = [...visibles.map(() => 1), ...dansLeMenu.map(() => 2)];
+      for (const c of cout)
+        expect(c, role).toBeLessThanOrEqual(BUDGETS_UX.CONSULTATION_INTERACTIONS_MAX.valeur);
+    }
   });
 });
