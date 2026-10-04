@@ -41,9 +41,19 @@ import { LEXIQUE_INTERDIT } from '../../../src/domain/lexique/lexique-interdit';
 import { MOTIFS_ANNULATION_CONSOLE } from '../../../src/domain/attribution/machine';
 import { CHARGES_PAR_TYPE } from '../../../src/domain/evenement/charges';
 import { motifDeLaForme } from '../../../scripts/gates/lexique-apporteurs';
+import { randomBytes } from 'node:crypto';
+import { NOMS_DES_SECRETS } from '../../../src/lib/env';
+import { clesPii, empreinteRecherche } from '../../../src/server/securite/pii';
+import {
+  depotDesCourriels,
+  emettre,
+  type LigneCourriel,
+  type Relais,
+} from '../../../src/server/integrations/zeptomail/emetteur';
 import {
   CLES_ENVOYEES_PAR_LE_PASSAGE,
   envoyerLesNotificationsDeLEspace,
+  envoyerParLEmetteur,
   portsDuPassage,
   type NotificationAEnvoyer,
   type PortsDuPassage,
@@ -663,5 +673,125 @@ describe('REQ-DM-006 — le motif d’une annulation par la console, liste ferm�
     expect(Object.keys(RAISONS_D_ANNULATION).sort()).toEqual(
       MOTIFS_ANNULATION_CONSOLE.filter((m) => m !== 'erreur_de_saisie_de_la_societe').sort()
     );
+  });
+});
+
+describe('REQ-UX-016 — le courriel de la notification s’écrit dans la transaction du passage, lié à elle', () => {
+  const INSTANT = new Date('2027-05-10T08:00:00.000Z');
+  const ID_COURRIEL = '0190f3a0-0000-7000-8000-00000000c0c0';
+  const ID_NOTIF = '0190f3a0-0000-7000-8000-00000000b0b0';
+  const ID_APPORTEUR = '0190f3a0-0000-7000-8000-00000000a0a0';
+  const ADRESSE = 'camille@envoi.partners.test';
+
+  function cles() {
+    const env: Record<string, string> = { NODE_ENV: 'test' };
+    for (const nom of NOMS_DES_SECRETS) env[nom] = randomBytes(32).toString('hex');
+    return clesPii(env);
+  }
+
+  function relais(): Relais & { appels: number } {
+    const r = {
+      appels: 0,
+      async envoyer() {
+        r.appels += 1;
+        return { messageId: 'msg-1' };
+      },
+    };
+    return r;
+  }
+
+  /** Un client de TRANSACTION qui enregistre : la ligne doit s'écrire sur lui, pas ailleurs. */
+  function transaction(supprimees: readonly string[] = []) {
+    const lignes: LigneCourriel[] = [];
+    const tx = {
+      courrielEnvoye: {
+        create: async (q: { data: LigneCourriel }) => {
+          lignes.push(q.data);
+          return q.data;
+        },
+      },
+      suppressionCourriel: {
+        findUnique: async (q: { where: { emailHash: string } }) =>
+          supprimees.includes(q.where.emailHash) ? { id: 'x' } : null,
+      },
+    };
+    return { lignes, tx: tx as unknown as PrismaClient };
+  }
+
+  const dependances = (dmarcVerifie: boolean, r: Relais, c: ReturnType<typeof cles>) => ({
+    configuration: { expediteur: 'camille@envoi.partners.test', dmarcVerifie },
+    relais: r,
+    cles: c,
+    maintenant: () => INSTANT,
+    nouvelId: () => ID_COURRIEL,
+  });
+
+  it('REQ-UX-016 : TÉMOIN — l’émetteur rend la ligne ENTIÈRE, avec la notification qu’elle porte', async () => {
+    const c = cles();
+    const t = transaction();
+    const ligne = await emettre(
+      {
+        gabarit: 'premier_rang_libere',
+        a: ADRESSE,
+        sujet: 'Objet',
+        corps: 'Corps',
+        apporteurId: ID_APPORTEUR,
+        notificationEspaceId: ID_NOTIF,
+      },
+      { ...dependances(true, relais(), c), depot: depotDesCourriels(t.tx) }
+    );
+    expect(ligne).toMatchObject({
+      statut: 'envoye',
+      envoyeAt: INSTANT,
+      notificationEspaceId: ID_NOTIF,
+    });
+    expect(t.lignes).toEqual([ligne]);
+  });
+
+  it('REQ-UX-016 : sans notification, la ligne porte une notification NULLE (les autres courriels)', async () => {
+    const t = transaction();
+    const ligne = await emettre(
+      {
+        gabarit: 'premier_rang_libere',
+        a: ADRESSE,
+        sujet: 'Objet',
+        corps: 'Corps',
+        apporteurId: null,
+      },
+      { ...dependances(true, relais(), cles()), depot: depotDesCourriels(t.tx) }
+    );
+    expect(ligne.notificationEspaceId).toBeNull();
+  });
+
+  it('REQ-UX-016 : TÉMOIN — le pont du passage écrit le courriel SUR la transaction, lié à la notification, et rend l’heure de l’envoi', async () => {
+    const c = cles();
+    const t = transaction();
+    const r = relais();
+    const envoyer = envoyerParLEmetteur(dependances(true, r, c), async () => ADRESSE);
+    const n = notif(ID_NOTIF, 'premier_rang_libere', { apporteurId: ID_APPORTEUR });
+    const issue = await envoyer(t.tx, n, { sujet: 'Objet', corps: 'Corps' });
+    expect(issue).toEqual({ statut: 'envoye', envoyeAt: INSTANT });
+    expect(r.appels).toBe(1);
+    expect(t.lignes).toHaveLength(1);
+    expect(t.lignes[0]).toMatchObject({
+      gabarit: 'premier_rang_libere',
+      apporteurId: ID_APPORTEUR,
+      notificationEspaceId: ID_NOTIF,
+      emailHash: empreinteRecherche('courriel', ADRESSE, c),
+      statut: 'envoye',
+    });
+  });
+
+  it('REQ-UX-016 : TÉMOIN — retenu (DMARC non vérifié), le courriel ne part pas et ne rend AUCUNE heure : aucun délai ne court', async () => {
+    const t = transaction();
+    const r = relais();
+    const envoyer = envoyerParLEmetteur(dependances(false, r, cles()), async () => ADRESSE);
+    const issue = await envoyer(t.tx, notif(ID_NOTIF, 'premier_rang_libere'), {
+      sujet: 'Objet',
+      corps: 'Corps',
+    });
+    expect(issue).toEqual({ statut: 'retenu_dmarc_non_verifie', envoyeAt: null });
+    expect(r.appels).toBe(0);
+    expect(t.lignes[0]).toMatchObject({ notificationEspaceId: ID_NOTIF, envoyeAt: null });
   });
 });
