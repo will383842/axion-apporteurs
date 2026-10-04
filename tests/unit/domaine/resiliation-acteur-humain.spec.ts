@@ -1170,7 +1170,13 @@ describe('REQ-SEC-032 — la reconnexion par lien d’un résilié', () => {
 
   it('REQ-SEC-032 : TÉMOIN STATIQUE — la demande ET la consommation du lien passent par ouvertureDuCompte, jamais par peutOuvrirLEspace seul', () => {
     const source = readFileSync('src/server/auth/lien-magique.ts', 'utf8');
-    expect(source.match(/await ouvertureDuCompte\(/g) ?? []).toHaveLength(2);
+    // Les APPELANTS, pas les occurrences : l'instrumentation de la mutation recopie un appel dans les
+    // branches de ses ternaires (vu au premier passage de la mutation, PR 718), jamais une fonction.
+    const appelants = source
+      .split(/\n(?=(?:export )?(?:async )?function )/)
+      .filter((f) => /await ouvertureDuCompte\(/.test(f))
+      .map((f) => /function (\w+)/.exec(f)?.[1]);
+    expect(appelants).toEqual(['emettreLien', 'ouvrirLaSession']);
     const horsDuJuge = source.split('export async function ouvertureDuCompte')[0]!;
     expect(horsDuJuge).not.toMatch(/peutOuvrirLEspace\(/);
   });
@@ -1474,8 +1480,16 @@ describe('REQ-JUR-006 — l’idempotence de la mise en demeure', () => {
       source.indexOf('\n}\n', source.indexOf('export async function mettreEnDemeure'))
     );
     expect(corps).not.toMatch(/findMany|findFirst|count\(|envoisDeLArticle|notificationEspace/);
-    expect(corps.match(/findUnique\(/g) ?? []).toHaveLength(1);
-    expect(corps).toMatch(/findUnique\(\{\s*where: \{ cleIdempotence \}/);
+    // Des formes que l'instrumentation de la mutation garde : elle enveloppe chaque objet dans un
+    // ternaire, sans en retirer le texte (vu au premier passage de la mutation, PR 718).
+    expect(new Set(corps.match(/\.\w+\.findUnique\(/g))).toEqual(
+      new Set(['.decisionDeContrat.findUnique('])
+    );
+    for (const appel of corps.split(/(?=\.findUnique\()/).slice(1)) {
+      expect(appel).toMatch(
+        /^\.findUnique\([\s\S]{0,200}?where:[\s\S]{0,120}?\{\s*cleIdempotence\s*\}/
+      );
+    }
   });
 
   it('REQ-JUR-006 : le prédicat « sous contrat » du domaine : signé ou suspendu, et rien d’autre', async () => {
