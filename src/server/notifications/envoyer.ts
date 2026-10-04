@@ -29,7 +29,8 @@ import {
   GABARITS,
   schemaGabarit,
   schemaPreferenceNotification,
-  type Gabarit,
+  estGabaritDeLApporteur,
+  type GabaritDeLApporteur,
   type LigneDeNotification,
 } from './table-ssot';
 
@@ -63,9 +64,11 @@ const PARAMETRE = /\{([a-zA-Z]+)\}/g;
  */
 const VALEUR = /^[^\p{Cc}\p{Cf}]{1,300}$/u;
 
-function cleDeLaTable(cle: string): Gabarit {
+function cleDeLaTable(cle: string): GabaritDeLApporteur {
   const lue = schemaGabarit.safeParse(cle);
-  if (!lue.success) throw new NotificationRefusee('cle_inconnue', cle);
+  // SEC-29 : la clé du courriel de la console n'est pas une notification de l'apporteur.
+  if (!lue.success || !estGabaritDeLApporteur(lue.data))
+    throw new NotificationRefusee('cle_inconnue', cle);
   return lue.data;
 }
 
@@ -81,7 +84,7 @@ export const PARAMETRES_DE_LA_SSOT: Readonly<Record<string, string>> = {
  * Le corps d'une clé. Celui d'`attribution_liberee` dépend de la CAUSE de la fin (A07, 2026-10-02) :
  * l'émettrice la donne, faute de quoi la notification est refusée. Aucune autre clé n'en reçoit.
  */
-function corpsDe(cle: Gabarit, cause: string | undefined): string | null {
+function corpsDe(cle: GabaritDeLApporteur, cause: string | undefined): string | null {
   if (cle !== 'attribution_liberee') {
     if (cause !== undefined) throw new NotificationRefusee('cause_en_trop', cause);
     return TEXTES_DES_NOTIFICATIONS[cle].corps;
@@ -92,7 +95,7 @@ function corpsDe(cle: Gabarit, cause: string | undefined): string | null {
 }
 
 /** Les paramètres que l'ÉMETTEUR fournit pour une clé, triés : ceux des textes, hors SSOT. */
-export function parametresDe(cle: Gabarit, cause?: CauseDeLiberation): string[] {
+export function parametresDe(cle: GabaritDeLApporteur, cause?: CauseDeLiberation): string[] {
   const t = TEXTES_DES_NOTIFICATIONS[cle];
   const noms = [t.titre, t.appel, corpsDe(cle, cause) ?? ''].flatMap((x) =>
     [...x.matchAll(PARAMETRE)].map((m) => m[1]!)
