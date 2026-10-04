@@ -17,7 +17,7 @@
  * leur durée est finie, et ils portent des identifiants d'employés. La garde dédiée refuse d'effacer un
  * gel ouvert, ou levé avec des lignes protégées à purger.
  */
-import { Prisma, type PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { SEUILS } from '../../domain/seuils/ssot';
 
 /** La taille d'un lot : un vidage borné des identifiants, relancé jusqu'à épuisement. */
@@ -32,7 +32,7 @@ export function limiteDuJournalDesAcces(maintenant: Date): Date {
 
 /** Les traces échues, NON gelées : le lot suivant de la purge, dans l'ordre du temps. */
 function lotEchu(prisma: PrismaClient, limite: Date) {
-  return prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+  return prisma.$queryRaw<{ id: string }[]>`
     SELECT j."id" FROM "journal_acces_console" j
     WHERE j."survenu_at" < ${limite} AND j."purge_at" IS NULL
       AND NOT EXISTS (
@@ -41,7 +41,7 @@ function lotEchu(prisma: PrismaClient, limite: Date) {
           AND j."survenu_at" >= g."depuis" AND (g."jusqu_a" IS NULL OR j."survenu_at" <= g."jusqu_a")
           AND (g."utilisateur_vise_id" = j."utilisateur_console_id" OR g."cible_id" = j."cible_id"))
     ORDER BY j."survenu_at" ASC, j."id" ASC
-    LIMIT ${LOT_DE_PURGE_DU_JOURNAL_DES_ACCES}`);
+    LIMIT ${LOT_DE_PURGE_DU_JOURNAL_DES_ACCES}`;
 }
 
 /**
@@ -49,7 +49,7 @@ function lotEchu(prisma: PrismaClient, limite: Date) {
  * jusqu'à la levée. Une ligne neuve de la même portée, écrite après la levée, ne retient pas le gel.
  */
 function gelsEpuises(prisma: PrismaClient) {
-  return prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+  return prisma.$queryRaw<{ id: string }[]>`
     SELECT g."id" FROM "journal_acces_console_gels" g
     WHERE g."leve_at" IS NOT NULL AND NOT EXISTS (
       SELECT 1 FROM "journal_acces_console" j
@@ -58,7 +58,7 @@ function gelsEpuises(prisma: PrismaClient) {
         AND j."survenu_at" <= g."leve_at"
         AND (j."utilisateur_console_id" = g."utilisateur_vise_id" OR j."cible_id" = g."cible_id"))
     ORDER BY g."leve_at" ASC, g."id" ASC
-    LIMIT ${LOT_DE_PURGE_DU_JOURNAL_DES_ACCES}`);
+    LIMIT ${LOT_DE_PURGE_DU_JOURNAL_DES_ACCES}`;
 }
 
 export async function purgerLeJournalDesAccesConsole(

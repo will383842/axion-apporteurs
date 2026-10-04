@@ -13,7 +13,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import type { PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
 import {
   CibleInconnue,
@@ -325,7 +325,8 @@ function fauxClientDePurge(lots: number[], compte: (n: number) => number = (n) =
   const ecritures: { where: unknown; data: unknown }[] = [];
   let rang = 0;
   const client = {
-    $queryRaw: async (requete: { sql: string; values: unknown[] }) => {
+    $queryRaw: async (chaines: TemplateStringsArray, ...parametres: unknown[]) => {
+      const requete = Prisma.sql(chaines, ...parametres);
       if (
         /FROM "journal_acces_console_gels" g\s+WHERE g\."leve_at" IS NOT NULL/.test(requete.sql)
       ) {
