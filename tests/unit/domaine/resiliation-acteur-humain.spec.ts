@@ -637,7 +637,9 @@ describe('REQ-SEC-032 — la résiliation révoque les sessions ouvertes', () =>
       'src/server/apporteur/resiliation.ts',
       'utf8'
     );
-    expect(source).toContain('sessionVersion: { increment: 1 }');
+    // Une forme qui survit à l'instrumentation de Stryker : la mutation enveloppe l'objet dans un ternaire
+    // sans en retirer le texte (vu rougir au run initial de la mutation, PR 718).
+    expect(source).toMatch(/sessionVersion:[\s\S]{0,200}?\{\s*increment: 1\s*\}/);
   });
 });
 
