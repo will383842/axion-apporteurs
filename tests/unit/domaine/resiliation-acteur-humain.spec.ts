@@ -173,11 +173,12 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
   it('REQ-JUR-042 : TÉMOIN (acteur humain) — une résiliation par le SYSTÈME est refusée, nommée, et rien n’est écrit', async () => {
     const { resilierUnApporteur } = await import('../../../src/server/apporteur/resiliation');
     const t = txSimule('signe');
+    const SYSTEME = { par: 'systeme' };
     const e = await refusDe(
       resilierUnApporteur(t.tx, {
         apporteurId: ID,
         motif: 'ordinaire_axion',
-        acteur: { par: 'systeme' } as never,
+        acteur: SYSTEME as never,
         maintenant: MAINTENANT,
       })
     );
