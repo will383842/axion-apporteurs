@@ -148,6 +148,20 @@ function jugerLeMotif(demande: DemandeEcriture): void {
  * du MÊME apporteur. Sinon un refus nommé, et rien n'est écrit.
  */
 async function jugerSousLeVerrou(tx: Tx, demande: DemandeEcriture, l: Ligne): Promise<void> {
+  // DM-25 (juriste) : l'antériorité ne se fonde que sur un fait ANTÉRIEUR au dépôt — la règle de fond
+  // est tenue à l'écriture même. Un fait daté du dépôt, ou après lui, n'annule rien.
+  if (demande.fait !== undefined) {
+    const depot = await tx.attribution.findUnique({
+      where: { id: demande.attributionId },
+      select: { deposeeAt: true },
+    });
+    if (depot === null || new Date(demande.fait.le).getTime() >= depot.deposeeAt.getTime()) {
+      throw new ErreurTransitionAttribution(
+        'fait_posterieur_au_depot',
+        'anteriorite_etablie : le fait fondateur ne précède pas le dépôt'
+      );
+    }
+  }
   if (
     demande.motifAnnulation === 'erreur_de_saisie_de_la_societe' &&
     porteurDe(l) !== 'conseiller'
