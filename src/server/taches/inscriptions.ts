@@ -65,6 +65,7 @@ import {
   purgerLesDementis,
 } from './purger-contestations-anomalies';
 import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
+import { purgerLesTracesDeLaListe } from './purger-traces-liste-noire';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
 import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
@@ -221,6 +222,9 @@ export function inscriptions(
     // SEC-58 : le journal des accès à la console, purgé à son échéance (la purge vide les identifiants).
     journal_acces_console_purger: () =>
       purgerLeJournalDesAccesConsole(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-65 : la trace de la liste de la Société, effacée cinq ans après le retrait.
+    traces_liste_noire_purger: () =>
+      purgerLesTracesDeLaListe(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>

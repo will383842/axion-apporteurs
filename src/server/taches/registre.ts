@@ -34,6 +34,8 @@ export const TACHES = {
   droits_contact_purger: { req: 'REQ-JUR-065' },
   /** SEC-58 — la purge, à échéance, du journal des accès à la console. */
   journal_acces_console_purger: { req: 'REQ-SEC-023' },
+  /** DM-65 — l'effacement, cinq ans après le retrait, de la trace de la liste tenue par la Société. */
+  traces_liste_noire_purger: { req: 'REQ-DM-028' },
   /**
    * INT-T08-P — la réconciliation quotidienne avec axion-ia : relecture de sa file depuis la plus
    * haute séquence reçue, rejeu des trous (`src/server/jobs/reconciliation.ts`).
