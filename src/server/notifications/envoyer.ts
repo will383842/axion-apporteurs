@@ -73,7 +73,7 @@ const LONGUEUR_DE_VALEUR_MAX = 300;
  * `FAITS_ANOMALIE_CARACTERES_MAX` ; sa borne est celle des faits plus le plus long gabarit de motif,
  * dérivée de leurs sources. Toute autre valeur garde la borne commune.
  */
-const LONGUEUR_DU_MOTIF_MAX =
+export const LONGUEUR_DU_MOTIF_MAX =
   FAITS_ANOMALIE_CARACTERES_MAX.valeur +
   Math.max(...Object.values(MOTIFS_DES_DECISIONS).map((t) => [...t].length));
 
