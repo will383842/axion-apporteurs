@@ -328,6 +328,13 @@ describe('REQ-INT-012 — le client de relecture vérifie la chaîne CANONIQUE (
     }
   });
 
+  it('REQ-INT-012 : TÉMOIN BOM à deux faces — une page AUTHENTIQUE préfixée d’un indicateur d’ordre est refusée `ligne_illisible`, jamais lue en le retirant ; sans lui, elle passe', async () => {
+    expect((await clientRelecture(canal(APRES_3))(3n)).ok).toBe(true);
+    expect(
+      await clientRelecture(canal({ ...APRES_3, corps: `\uFEFF${APRES_3.corps}` }))(3n)
+    ).toEqual({ ok: false, motif: 'ligne_illisible' });
+  });
+
   it('REQ-INT-012 : la cible demandée est celle que la chaîne lie — `after_sequence` et `limit` en chiffres canoniques', async () => {
     const cibles: string[] = [];
     const c = canal(APRES_3);
@@ -346,9 +353,12 @@ describe('REQ-INT-012 — le client de relecture vérifie la chaîne CANONIQUE (
 
 // ── le rejeu : la réponse dit EXACTEMENT ce qui a été demandé ──────────────────────────────────────
 
-/** Un axion-ia qui répond `reponse` à la demande de rejeu, signé (forme du rejeu, inchangée). */
-function canalDeRejeu(reponse: unknown, maintenantMs = MAINTENANT_MS) {
-  const corps = JSON.stringify(reponse);
+/**
+ * Un axion-ia qui répond `reponse` à la demande de rejeu, signé (forme du rejeu, inchangée). `prefixe`
+ * précède le JSON dans les octets SIGNÉS : la réponse reste authentique.
+ */
+function canalDeRejeu(reponse: unknown, maintenantMs = MAINTENANT_MS, prefixe = '') {
+  const corps = prefixe + JSON.stringify(reponse);
   const appeler = (async () =>
     new Response(corps, {
       status: 200,
@@ -381,6 +391,15 @@ describe('REQ-INT-013 — la réponse de rejeu : rearmes ∪ introuvables égale
     expect(await clientRejeu(canalDeRejeu({ rearmes: [x], introuvables: [b] }))([a, b])).toEqual({
       ok: false,
       motif: 'reponse_hors_demande',
+    });
+  });
+
+  it('REQ-INT-013 : TÉMOIN BOM à deux faces — la réponse AUTHENTIQUE préfixée d’un indicateur d’ordre est refusée `reponse_illisible` (échec fermé) ; sans lui, elle passe', async () => {
+    const reponse = { rearmes: [a], introuvables: [b] };
+    expect((await clientRejeu(canalDeRejeu(reponse))([a, b])).ok).toBe(true);
+    expect(await clientRejeu(canalDeRejeu(reponse, MAINTENANT_MS, '\uFEFF'))([a, b])).toEqual({
+      ok: false,
+      motif: 'reponse_illisible',
     });
   });
 
