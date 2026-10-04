@@ -369,7 +369,12 @@ function cellules(ligne: string): string[] {
 export function etatsDuGlossaire(glossaire: string): { valeur: string; occupant: boolean }[] {
   const debut = glossaire.indexOf('## 1.');
   if (debut === -1) return [];
-  const fin = glossaire.indexOf('## 2.', debut);
+  // Le tableau des états s'arrête à la première sous-section du §1 (« ### 1.1 Transitions de la fin
+  // du contrat », SEC-19) : une transition n'est pas un état.
+  const bornes = [glossaire.indexOf('## 2.', debut), glossaire.indexOf('\n### ', debut)].filter(
+    (i) => i !== -1
+  );
+  const fin = bornes.length === 0 ? -1 : Math.min(...bornes);
   const section = glossaire.slice(debut, fin === -1 ? undefined : fin);
   const sortie: { valeur: string; occupant: boolean }[] = [];
   for (const ligne of section.split('\n')) {

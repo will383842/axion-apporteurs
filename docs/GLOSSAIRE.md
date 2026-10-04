@@ -53,6 +53,13 @@ Colonnes de temps (REQ-DM-007, HYP-E1-9) : `deposeeAt` (dépôt), `confirmeeAt` 
 paramètres), `peremptionAt` (seule colonne recalculée). Synonymes interdits : `deposeLe`, `enregistreeLe`,
 `dateDeDepart` (→ `confirmeeAt`).
 
+### 1.1 Transitions de la fin du contrat (SEC-19)
+
+| Transition | Tâche | Sens |
+| --- | --- | --- |
+| `fin_de_contrat` | SEC-19 | La résiliation du contrat de l'apporteur porteur, dans la transaction de la résiliation : `en_attente` → `annulee` ; `provisoire` → `annulee` ; `active`, `rdv_pris` et `proposition` (sans commande) → `expiree`. Les attributions avec commande (`signee`, `convertie`) ne la prennent pas : elles passent en `figee_resiliation` par `figee`, et gardent le droit à commission sur les encaissements (art. 12) |
+| `figee` | SEC-19 | Depuis SEC-19, `figee` n'est admise QUE depuis `signee` et `convertie` (attributions avec commande) ; les états sans commande prennent `fin_de_contrat`. |
+
 ## 2. Apporteur — 9 états stockés + 2 dérivés (`StatutApporteur`, REQ-DM-011, REQ-CPL-027)
 
 | Valeur           | Sens                                                                       |

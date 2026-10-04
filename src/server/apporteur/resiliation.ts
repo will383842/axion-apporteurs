@@ -31,7 +31,11 @@ import {
   jugerLaResiliationPourManquement,
   type ArticleMiseEnDemeure,
 } from '../../domain/apporteur/resiliation';
-import type { EtatAttribution } from '../../domain/attribution/machine';
+import {
+  ETATS_ATTRIBUTION,
+  TRANSITIONS_ATTRIBUTION,
+  type EtatAttribution,
+} from '../../domain/attribution/machine';
 import { ajouterEvenement, lireLaChargeDUnFait } from '../evenement/journal';
 import { revoquerJetonsALaResiliation } from '../auth/jeton-depot';
 import { transitionnerUneAttribution } from '../attribution/transitionner';
@@ -70,19 +74,18 @@ export interface DemandeDeResiliation {
   readonly maintenant: Date;
 }
 
-/** Les attributions que la fin du contrat traite : la file et les occupantes, sauf celles déjà figées. */
-const A_TRAITER = [
-  'en_attente',
-  'provisoire',
-  'active',
-  'rdv_pris',
-  'proposition',
-  'signee',
-  'convertie',
-] as const satisfies readonly EtatAttribution[];
-
-/** Les états AVEC commande : ils gardent le droit à commission (art. 12.3), par `figee`. */
-const AVEC_COMMANDE: readonly string[] = ['signee', 'convertie'];
+/**
+ * DÉRIVÉES DE LA MATRICE, jamais recopiées : un état est à traiter s'il admet l'une des deux sorties
+ * de fin de contrat ; il garde le droit à commission (art. 12.3) s'il admet `figee` — ce sont les
+ * états AVEC commande.
+ */
+const sortieDeFinDeContrat = (e: EtatAttribution): 'figee' | 'fin_de_contrat' | null =>
+  TRANSITIONS_ATTRIBUTION[e].figee !== undefined
+    ? 'figee'
+    : TRANSITIONS_ATTRIBUTION[e].fin_de_contrat !== undefined
+      ? 'fin_de_contrat'
+      : null;
+const A_TRAITER = ETATS_ATTRIBUTION.filter((e) => sortieDeFinDeContrat(e) !== null);
 
 /**
  * Les `envoye_at` des mises en demeure de CET article : chaque notification `mise_en_demeure` de
@@ -182,7 +185,7 @@ export async function resilierUnApporteur(
   for (const a of attributions) {
     await transitionnerUneAttribution(tx, {
       attributionId: a.id,
-      transition: AVEC_COMMANDE.includes(a.statut) ? 'figee' : 'fin_de_contrat',
+      transition: sortieDeFinDeContrat(a.statut)!,
       acteur,
       maintenant,
     });
