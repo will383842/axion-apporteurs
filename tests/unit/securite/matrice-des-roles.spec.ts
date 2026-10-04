@@ -25,7 +25,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { ConsoleRole, type PrismaClient } from '@prisma/client';
 import { kidDe } from '../../../src/lib/env';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
@@ -1660,5 +1660,17 @@ describe('REQ-SEC-023 — SEC-30 : la liste des rôles du domaine, et l’évén
         email: 'x@example.org',
       }).success
     ).toBe(false);
+  });
+});
+
+// Remarque de la sécurité : `activee_at` a un défaut (clock_timestamp()) ; l'invitation est le SEUL
+// chemin d'un compte non activé, et elle doit l'écrire EXPLICITEMENT, sinon le défaut l'activerait.
+describe('REQ-DM-024 — SEC-30 : l’invitation écrit activeeAt: null explicitement', () => {
+  it('REQ-DM-024 : TÉMOIN STATIQUE — la création de l’invitation porte inviteeAt et activeeAt: null', () => {
+    const source = readFileSync('src/server/console/utilisateurs/administration.ts', 'utf8');
+    const creation = source.slice(source.indexOf('tx.utilisateurConsole.create('));
+    const bloc = creation.slice(0, creation.indexOf('});'));
+    expect(bloc).toContain('inviteeAt: d.maintenant');
+    expect(bloc).toContain('activeeAt: null');
   });
 });

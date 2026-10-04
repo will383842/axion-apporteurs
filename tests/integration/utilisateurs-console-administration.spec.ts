@@ -26,6 +26,7 @@ import { clesPii } from '../../src/server/securite/pii';
 import { tirerJeton } from '../../src/server/auth/lien-magique';
 import { depotDeSessionsConsole, requireRole } from '../../src/server/roles/require-role';
 import { semerSessionConsole, semerUtilisateurConsole } from '../../prisma/seed/06-console';
+import { inviter } from '../../src/server/console/utilisateurs/administration';
 
 let base: Base;
 let app: PrismaClient;
@@ -219,6 +220,94 @@ describe('REQ-SEC-023 — SEC-30 : un administrateur est validé par un AUTRE ad
       q
     );
     expect(await verdict(q)).toBe('admin_en_attente');
+  });
+});
+
+describe('REQ-SEC-023 — SEC-30 : un administrateur réactivé repart en attente (forme d’A02)', () => {
+  const desactiver = (id: string) =>
+    app.$executeRawUnsafe(
+      'UPDATE utilisateurs_console SET desactive_at = clock_timestamp() WHERE id = $1::uuid',
+      id
+    );
+  const reactiver = (id: string) =>
+    app.$executeRawUnsafe(
+      'UPDATE utilisateurs_console SET desactive_at = NULL WHERE id = $1::uuid',
+      id
+    );
+
+  it('REQ-SEC-023 : TÉMOIN — un admin désactivé puis réactivé est EN ATTENTE, refusé jusqu’à sa nouvelle validation', async () => {
+    await tronquer();
+    const premier = await utilisateur('admin');
+    await valider(app, premier, null);
+    const second = await utilisateur('admin');
+    await valider(app, second, premier);
+    await desactiver(second);
+    await reactiver(second);
+    expect(await verdict(second)).toBe('admin_en_attente');
+    await valider(app, second, premier);
+    expect(await verdict(second)).toBe('admin');
+  });
+
+  it('REQ-SEC-023 : un autre rôle se réactive sans changement de validation', async () => {
+    await tronquer();
+    const c = await utilisateur('comptable');
+    await desactiver(c);
+    await reactiver(c);
+    const ligne = await base.prisma.utilisateurConsole.findUniqueOrThrow({
+      where: { id: c },
+      select: { desactiveAt: true, valideAt: true },
+    });
+    expect(ligne).toEqual({ desactiveAt: null, valideAt: null });
+  });
+});
+
+describe('REQ-DM-024 — SEC-30 : l’invitation en base (forme d’A02)', () => {
+  it('REQ-DM-024 : TÉMOIN — un compte créé sans les deux champs est activé au défaut ; un compte invité par le serveur a activee_at NULL', async () => {
+    await tronquer();
+    const seme = await utilisateur('comptable');
+    const ligne = await base.prisma.utilisateurConsole.findUniqueOrThrow({
+      where: { id: seme },
+      select: { inviteeAt: true, activeeAt: true },
+    });
+    expect(ligne.inviteeAt).toBeNull();
+    expect(ligne.activeeAt).not.toBeNull();
+
+    const premier = await utilisateur('admin');
+    await valider(app, premier, null);
+    const invite = await inviter(app, {
+      acteur: { id: premier, role: 'admin' },
+      email: 'invitee-sec30@example.org',
+      role: 'lecteur',
+      cles: CLES,
+      maintenant: new Date(t0),
+    });
+    const l = await base.prisma.utilisateurConsole.findUniqueOrThrow({
+      where: { id: invite },
+      select: { inviteeAt: true, activeeAt: true },
+    });
+    expect(l.activeeAt).toBeNull();
+    expect(l.inviteeAt).not.toBeNull();
+  });
+
+  it('REQ-DM-024 : TÉMOIN — ni invité ni activé est refusé ; une activation antérieure à l’invitation est refusée', async () => {
+    await tronquer();
+    const c = await utilisateur('comptable');
+    expect(
+      await refus(
+        app.$executeRawUnsafe(
+          'UPDATE utilisateurs_console SET activee_at = NULL, invitee_at = NULL WHERE id = $1::uuid',
+          c
+        )
+      )
+    ).toContain('utilisateurs_console_invitee_ou_activee');
+    expect(
+      await refus(
+        app.$executeRawUnsafe(
+          "UPDATE utilisateurs_console SET invitee_at = activee_at + interval '1 hour' WHERE id = $1::uuid",
+          c
+        )
+      )
+    ).toContain('utilisateurs_console_activee_apres_invitation');
   });
 });
 

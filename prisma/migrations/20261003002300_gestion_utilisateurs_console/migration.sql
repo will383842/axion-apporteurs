@@ -88,6 +88,18 @@ CREATE FUNCTION utilisateurs_console_quatre_yeux() RETURNS trigger LANGUAGE plpg
 DECLARE
   validateur RECORD;
 BEGIN
+  -- (e) un administrateur RÉACTIVÉ repart en attente : un départ ou un compte suspect ne redevient
+  -- pas administrateur par un seul regard. La réactivation n'incrémente pas la version : la
+  -- désactivation l'a déjà fait.
+  IF TG_OP = 'UPDATE' AND OLD."desactive_at" IS NOT NULL AND NEW."desactive_at" IS NULL
+     AND NEW."role" = 'admin' THEN
+    IF NEW."valide_at" IS DISTINCT FROM OLD."valide_at" OR NEW."valide_par_id" IS DISTINCT FROM OLD."valide_par_id" THEN
+      RAISE EXCEPTION 'utilisateurs_console_quatre_yeux : une réactivation d''administrateur repart en attente';
+    END IF;
+    NEW."valide_at" := NULL;
+    NEW."valide_par_id" := NULL;
+    RETURN NEW;
+  END IF;
   -- (d) passer VERS admin remet en attente ; quitter admin efface la validation.
   IF TG_OP = 'UPDATE' AND NEW."role" IS DISTINCT FROM OLD."role" THEN
     IF NEW."role" = 'admin' AND (NEW."valide_at" IS NOT NULL OR NEW."valide_par_id" IS NOT NULL) THEN
@@ -129,7 +141,7 @@ BEGIN
 END;
 $$;
 CREATE TRIGGER utilisateurs_console_quatre_yeux_garde
-  BEFORE INSERT OR UPDATE OF "role", "valide_par_id", "valide_at" ON "utilisateurs_console"
+  BEFORE INSERT OR UPDATE OF "role", "valide_par_id", "valide_at", "desactive_at" ON "utilisateurs_console"
   FOR EACH ROW EXECUTE FUNCTION utilisateurs_console_quatre_yeux();
 
 
