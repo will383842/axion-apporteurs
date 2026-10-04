@@ -150,6 +150,32 @@ describe('REQ-JUR-063 — chaque motif a son témoin', () => {
     }
   });
 
+  it('REQ-JUR-063 : TÉMOIN `profession_exclue` — la liste FIGÉE de la juriste (#563, commentaire 5981998246) : douze codes, dans cet ordre', () => {
+    expect([...CODES_NAF_EXCLUS]).toEqual([
+      '69.10Z',
+      '86.10Z',
+      '86.21Z',
+      '86.22A',
+      '86.22B',
+      '86.22C',
+      '86.23Z',
+      '86.90A',
+      '86.90B',
+      '86.90D',
+      '86.90E',
+      '47.73Z',
+    ]);
+  });
+
+  it('REQ-JUR-063 : TÉMOIN `profession_exclue` — un code voisin qui mêle professions réglementées et activités libres n’exclut PAS d’office : il relève de la revue humaine (REQ-JUR-022)', () => {
+    for (const code of ['86.90C', '86.90F', '75.00Z']) {
+      expect(estProfessionExclue(code), code).toBe(false);
+      expect(jugerAdmission(candidature({ codeNaf: code }), CONSEILLERS_ACTIFS).reponse).toEqual({
+        issue: 'recue',
+      });
+    }
+  });
+
   it('REQ-JUR-063 : TÉMOIN `profession_exclue` — la liste est en nomenclature NAF rév. 2, sans doublon', () => {
     for (const code of CODES_NAF_EXCLUS) expect(code).toMatch(/^\d{2}\.\d{2}[A-Z]$/);
     expect(new Set(CODES_NAF_EXCLUS).size).toBe(CODES_NAF_EXCLUS.length);
