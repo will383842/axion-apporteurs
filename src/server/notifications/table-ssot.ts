@@ -26,17 +26,26 @@
  */
 import { z } from 'zod';
 import { SEUILS } from '../../domain/seuils/ssot';
+import { CONNEXION_CONSOLE } from '../../content/micro-copy/console/connexion';
 import {
   TEXTES_DES_NOTIFICATIONS,
   type TexteDeNotification,
 } from '../../content/micro-copy/courriels/notifications';
 
 const SOURCE_DES_TEXTES = 'src/content/micro-copy/courriels/notifications.ts';
+/** SEC-29 : les textes et les routes d'une notification de la CONSOLE vivent avec la console. */
+const SOURCE_DES_TEXTES_CONSOLE = 'src/content/micro-copy/console/connexion.ts';
 
 export type Declencheur = 'evenement' | 'echeance_piece' | 'calendrier_fixe';
 export type Canal = 'email' | 'espace';
 
 export type LigneDeNotification = {
+  /**
+   * SEC-29 (forme d'A02) : à qui part la notification. Une ligne `utilisateur_console` n'a que le
+   * canal e-mail, n'est jamais désactivable (aucune préférence d'apporteur ne la porte), et sa route
+   * est déclarée dans `docs/CONSOLE-ROUTES.md`.
+   */
+  readonly destinataire: 'apporteur' | 'utilisateur_console';
   /** L'exigence qui fonde la notification ; la tâche émettrice la cite. */
   readonly req: `REQ-${string}`;
   /** La tâche du registre qui émet la notification ; elle prouve l'émission à sa livraison. */
@@ -64,22 +73,52 @@ const action = (cle: keyof typeof TEXTES_DES_NOTIFICATIONS) => [
   },
 ];
 
+/** Le lien de connexion de l'espace apporteur (SEC-03, puis SEC-42 en production). */
+const LIEN_DE_L_ESPACE = {
+  destinataire: 'apporteur',
+  req: 'REQ-SEC-001',
+  emetteur: 'SEC-42',
+  fondement: 'REQ-SEC-001 — connexion par lien, transactionnel',
+  declencheur: 'evenement',
+  notificationObligatoire: true,
+  faitCourirUnDelai: false,
+  canaux: ['email'],
+  desactivable: false,
+  actions: action('lien_magique'),
+  route: '/connexion/<jeton>',
+  routeEnAttente: null,
+} as const satisfies LigneDeNotification;
+
 export const GABARITS = {
-  /** Le lien de connexion de l'espace apporteur (SEC-03, puis SEC-42 en production). */
-  lien_magique: {
-    req: 'REQ-SEC-001',
-    emetteur: 'SEC-42',
-    fondement: 'REQ-SEC-001 — connexion par lien, transactionnel',
-    declencheur: 'evenement',
-    notificationObligatoire: true,
-    faitCourirUnDelai: false,
-    canaux: ['email'],
-    desactivable: false,
-    actions: action('lien_magique'),
-    route: '/connexion/<jeton>',
+  lien_magique: LIEN_DE_L_ESPACE,
+  /**
+   * SEC-29 : le lien de connexion de la CONSOLE. Lu par ses utilisateurs seuls ; ses textes vivent
+   * avec ceux de la connexion de la console, jamais parmi ceux de l'apporteur.
+   */
+  lien_magique_console: {
+    destinataire: 'utilisateur_console',
+    req: 'REQ-UX-048',
+    emetteur: 'SEC-29',
+    fondement:
+      'REQ-UX-048 et REQ-SEC-003 — connexion de la console par lien et code, transactionnel',
+    // La forme est CALQUÉE sur le lien de l'espace (forme d'A02) : le même déclencheur, la même
+    // obligation, l'e-mail seul, jamais désactivable.
+    declencheur: LIEN_DE_L_ESPACE.declencheur,
+    notificationObligatoire: LIEN_DE_L_ESPACE.notificationObligatoire,
+    faitCourirUnDelai: LIEN_DE_L_ESPACE.faitCourirUnDelai,
+    canaux: LIEN_DE_L_ESPACE.canaux,
+    desactivable: LIEN_DE_L_ESPACE.desactivable,
+    actions: [
+      {
+        libelle: CONNEXION_CONSOLE.courriel.appel,
+        source: 'src/content/micro-copy/console/connexion.ts',
+      },
+    ],
+    route: '/console/connexion',
     routeEnAttente: null,
   },
   depot_injoignable_j5: {
+    destinataire: 'apporteur',
     req: 'REQ-UX-038',
     emetteur: 'DM-13',
     fondement: 'REQ-UX-038 et W20 — une seule fois, sans confirmation à J+5 ouvrés',
@@ -93,6 +132,7 @@ export const GABARITS = {
     routeEnAttente: null,
   },
   attribution_liberee: {
+    destinataire: 'apporteur',
     req: 'REQ-DM-007',
     emetteur: 'DM-13',
     fondement:
@@ -107,6 +147,7 @@ export const GABARITS = {
     routeEnAttente: null,
   },
   decision_attribution: {
+    destinataire: 'apporteur',
     req: 'REQ-DM-006',
     emetteur: 'DM-55',
     fondement:
@@ -121,6 +162,7 @@ export const GABARITS = {
     routeEnAttente: 'DM-25',
   },
   premier_rang_libere: {
+    destinataire: 'apporteur',
     req: 'REQ-DM-004',
     emetteur: 'DM-55',
     fondement: `art. 3.5 al. 2 — ${SEUILS.FILE_FENETRE_REDECLARATION_JOURS.valeur} jours pour déclarer à nouveau, à compter de l’information`,
@@ -134,6 +176,7 @@ export const GABARITS = {
     routeEnAttente: null,
   },
   refus_declaration: {
+    destinataire: 'apporteur',
     req: 'REQ-SEC-022',
     emetteur: 'SEC-12',
     fondement: 'art. 3.3 et 3.3 bis — notifié avec sa catégorie (le délai court contre la Société)',
@@ -147,6 +190,7 @@ export const GABARITS = {
     routeEnAttente: 'DM-25',
   },
   suspension_declarations: {
+    destinataire: 'apporteur',
     req: 'REQ-SEC-018',
     emetteur: 'SEC-15',
     fondement: `art. 3.7 al. 3 — notifiée avec les faits qui la motivent, ${SEUILS.SUSPENSION_MAX_JOURS.valeur} jours au plus`,
@@ -160,6 +204,7 @@ export const GABARITS = {
     routeEnAttente: null,
   },
   rappel_rc_pro: {
+    destinataire: 'apporteur',
     req: 'REQ-DM-027',
     emetteur: 'DM-51',
     fondement: 'art. 6.4 — échéance de l’attestation d’assurance, un service',
@@ -173,6 +218,7 @@ export const GABARITS = {
     routeEnAttente: null,
   },
   rattachement_decide: {
+    destinataire: 'apporteur',
     req: 'REQ-DM-034',
     emetteur: 'DM-12',
     fondement: 'art. 3.6 — notifié avec son motif',
@@ -188,6 +234,19 @@ export const GABARITS = {
 } as const satisfies Readonly<Record<string, LigneDeNotification>>;
 
 export type Gabarit = keyof typeof GABARITS;
+
+/**
+ * SEC-29 (forme d'A02) : les clés des notifications de l'APPORTEUR. Une ligne `utilisateur_console`
+ * n'en est pas : elle n'a ni texte d'apporteur ni préférence. `envoyer.ts` (les notifications de
+ * l'apporteur) refuse donc la clé de la console comme une clé inconnue.
+ */
+export type GabaritDeLApporteur = {
+  [C in Gabarit]: (typeof GABARITS)[C]['destinataire'] extends 'apporteur' ? C : never;
+}[Gabarit];
+
+export function estGabaritDeLApporteur(cle: Gabarit): cle is GabaritDeLApporteur {
+  return GABARITS[cle].destinataire === 'apporteur';
+}
 
 const CLES = Object.keys(GABARITS) as [Gabarit, ...Gabarit[]];
 
@@ -225,10 +284,25 @@ export function fautesDeLaTable(
     registre: readonly TacheDuRegistre[];
     routes: readonly string[];
     textes: Readonly<Record<string, TexteDeNotification>>;
+    /**
+     * SEC-29 : les routes (`docs/CONSOLE-ROUTES.md`) et les appels des notifications de la console.
+     * Absent, une ligne destinée à la console est une faute : elle n'est jamais jugée sur l'espace.
+     */
+    console?: {
+      routes: readonly string[];
+      textes: Readonly<Record<string, { readonly appel: string }>>;
+    };
   }
 ): string[] {
   const f: string[] = [];
   for (const [cle, l] of Object.entries(table)) {
+    const deLaConsole = l.destinataire === 'utilisateur_console';
+    if (deLaConsole && ctx.console === undefined)
+      f.push(`contexte_console_absent : ${cle} est destinée à la console, jugée sans ses routes`);
+    const routes = deLaConsole ? (ctx.console?.routes ?? []) : ctx.routes;
+    const textes = deLaConsole ? (ctx.console?.textes ?? {}) : ctx.textes;
+    const sourceDesTextes = deLaConsole ? SOURCE_DES_TEXTES_CONSOLE : SOURCE_DES_TEXTES;
+    const sourceDesRoutes = deLaConsole ? 'docs/CONSOLE-ROUTES.md' : 'docs/ESPACE-ROUTES.md';
     const tache = ctx.registre.find((t) => t.id === l.emetteur);
     if (tache === undefined)
       f.push(`emetteur_inconnu : ${cle} nomme ${l.emetteur}, absent du registre`);
@@ -248,13 +322,13 @@ export function fautesDeLaTable(
       );
     if (INACTIVITE.test(l.fondement))
       f.push(`declenche_par_l_inactivite : ${cle} — « ${l.fondement} »`);
-    const texte = ctx.textes[cle];
+    const texte = textes[cle];
     if (texte === undefined)
-      f.push(`texte_absent : ${cle} n'a pas de texte dans ${SOURCE_DES_TEXTES}`);
+      f.push(`texte_absent : ${cle} n'a pas de texte dans ${sourceDesTextes}`);
     if (l.actions.length !== 1 || l.actions[0]?.libelle !== texte?.appel)
       f.push(`action_non_unique : ${cle} doit porter UN appel, celui de la micro-copie`);
-    if (l.route !== null && !ctx.routes.includes(l.route))
-      f.push(`route_non_declaree : ${cle} mène à ${l.route}, absente de docs/ESPACE-ROUTES.md`);
+    if (l.route !== null && !routes.includes(l.route))
+      f.push(`route_non_declaree : ${cle} mène à ${l.route}, absente de ${sourceDesRoutes}`);
     if (l.route === null && l.routeEnAttente === null)
       f.push(`route_absente_sans_tache : ${cle} n'a ni route ni tâche qui la posera`);
   }

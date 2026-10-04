@@ -30,21 +30,31 @@ import { creerNotifieur, productionDeclaree, type Notifieur } from '../../lib/no
 import { SAUTS_DE_CONFIANCE, adresseDuClient } from '../securite/adresse-du-client';
 import { clesPii, empreinteAdresseReseau, empreinteRecherche, type ClesPii } from '../securite/pii';
 import { signalerPotDeMiel } from '../securite/pot-de-miel';
-import { limiter, sujetDepuisEmpreinte } from '../securite/rate-limit';
+import { limiter, sujetDepuisEmpreinte, type VerdictDeLimite } from '../securite/rate-limit';
 import { CONNEXION } from '../../content/micro-copy/espace/vocabulaire';
+import { CONNEXION_CONSOLE } from '../../content/micro-copy/console/connexion';
 import { DUREES_AUTH } from './durees';
+import { empreinteDeSessionConsole } from './lien-magique';
+import { depotDeSessionsConsole, type PortsDeRole } from '../roles/require-role';
 import { CODE_DU_COURRIEL_DE_CONNEXION } from '../../content/micro-copy/courriels/notifications';
 import type {
   ConfigurationDuLien,
   PortsDeConsommation,
+  PortsDeConsommationConsole,
   PortsDeDemande,
+  PortsDeDemandeConsole,
   PortsDuCode,
+  PortsDuCodeConsole,
 } from './lien-magique';
 import {
   ecrituresDeLien,
+  ecrituresDeLienConsole,
   lectureDuCompte,
+  lectureDuCompteConsole,
   transactionDeConsommation,
+  transactionDeConsommationConsole,
   transactionDuCode,
+  transactionDuCodeConsole,
 } from './lien-magique-depot';
 import {
   configurationDeLEmetteur,
@@ -58,7 +68,13 @@ export { MODELE_APPORTEUR } from './lien-magique-depot';
 
 /** L'envoi du lien : l'adresse stockée, un sujet, un corps qui porte l'URL. */
 export interface EnvoiDuLien {
-  envoyer(message: { a: string; sujet: string; corps: string }): Promise<void>;
+  /** SEC-29 : `gabarit` absent vaut `lien_magique`, celui de l'espace. */
+  envoyer(message: {
+    a: string;
+    sujet: string;
+    corps: string;
+    gabarit?: 'lien_magique' | 'lien_magique_console';
+  }): Promise<void>;
 }
 
 export interface DependancesDuLien {
@@ -173,11 +189,45 @@ export const COOKIE_DATTENTE = {
  * accepté qu'avec Secure et Path=/, et un effacement nu (`delete`) sans Secure serait REJETÉ par le
  * navigateur, le cookie restant jusqu'à son terme (lentille sécurité, 2026-10-03).
  */
-export function effacerLeCookieDAttente(pot: {
-  set(nom: string, valeur: string, attributs: Record<string, unknown>): unknown;
-}): void {
-  pot.set(COOKIE_DATTENTE.nom, '', { ...COOKIE_DATTENTE.attributs, maxAge: 0 });
+export function effacerLeCookieDAttente(pot: PotDeCookies): void {
+  effacerUnCookie(pot, COOKIE_DATTENTE);
 }
+
+/** Ce qu'un effacement lit du magasin de cookies de Next : la pose seule. */
+type PotDeCookies = {
+  set(nom: string, valeur: string, attributs: Record<string, unknown>): unknown;
+};
+
+/** SEC-29 : l'effacement d'un cookie `__Host-`, quel qu'il soit, par le même en-tête que sa pose. */
+export function effacerUnCookie(
+  pot: PotDeCookies,
+  cookie: { readonly nom: string; readonly attributs: Readonly<Record<string, unknown>> }
+): void {
+  pot.set(cookie.nom, '', { ...cookie.attributs, maxAge: 0 });
+}
+
+/**
+ * SEC-29 (lentille sécurité, condition b) : les cookies de la CONSOLE sont DISTINCTS de ceux de
+ * l'espace. La session de la console porte son nom `__Host-` propre et dure ce que dure une session
+ * de la console (`durees.ts`), sans « rester connecté » ; SameSite=Strict : seule une requête du
+ * même site la porte. L'attente du code de la console a son propre nom, mêmes attributs que celle
+ * de l'espace.
+ */
+export const COOKIE_DE_SESSION_CONSOLE = {
+  nom: '__Host-partners-console',
+  attributs: {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    path: '/',
+    maxAge: DUREES_AUTH.sessionConsoleMs.valeur / 1000,
+  },
+} as const;
+
+export const COOKIE_DATTENTE_CONSOLE = {
+  nom: '__Host-console_code',
+  attributs: COOKIE_DATTENTE.attributs,
+} as const;
 
 /** L'empreinte de recherche de l'adresse saisie, comme à l'émission, ou `null` si elle est hors forme. */
 export function empreinteDeLaSaisie(env: DependancesDuLien['env'], saisie: string): string | null {
@@ -224,6 +274,105 @@ export function envoiParLeNotifieur(notifieur: Notifieur): EnvoiDuLien {
   };
 }
 
+// ── SEC-29 : la console ──────────────────────────────────────────────────────────────────────────
+
+/** Le corps du courriel de la console : sa phrase (juriste), l'URL, puis le code et sa phrase. */
+export function corpsDuCourrielConsole(url: string, code: string): string {
+  const { avant, apres } = CODE_DU_COURRIEL_DE_CONNEXION;
+  return `${CONNEXION_CONSOLE.courriel.corps}
+
+${url}
+
+${avant}
+${code}
+${apres}`;
+}
+
+/**
+ * Les compteurs de la console (REQ-SEC-062). Chaque appel à `limiter` est DIRECT, à nom littéral
+ * du registre (garde `securite:rate-famille`). Un compteur ÉPUISÉ se signale sous sa CLÉ, jamais
+ * sous sa seule famille (condition de la lentille sécurité) : la console, cible de plus grande
+ * valeur, a ses propres signaux. La clé s'écrit par son suffixe, qui la désigne seule (la famille ne
+ * s'écrit qu'au registre) ; le motif est fermé : ni sujet, ni adresse, ni empreinte.
+ */
+type CleDeLaConsole =
+  'console-demande-ip' | 'console-demande-courriel' | 'console-code-ip' | 'console-code-courriel';
+
+function signalerSiEpuise(
+  verdict: VerdictDeLimite,
+  cle: CleDeLaConsole,
+  journal: DependancesDuLien['journal']
+): VerdictDeLimite {
+  if (!verdict.autorise) journal.warn(`compteur_epuise:${cle}`);
+  return verdict;
+}
+
+export function portsDeDemandeConsole(d: DependancesDuLien): PortsDeDemandeConsole {
+  const cles = clesPii(d.env);
+  const espace = portsDeDemande(d);
+  return {
+    ...espace,
+    compterAdresse: async (sujet, maintenantMs) =>
+      signalerSiEpuise(
+        await limiter('magic:console-demande-ip', sujetDepuisEmpreinte(sujet), maintenantMs),
+        'console-demande-ip',
+        d.journal
+      ),
+    compterCourriel: async (sujet, maintenantMs) =>
+      signalerSiEpuise(
+        await limiter('magic:console-demande-courriel', sujetDepuisEmpreinte(sujet), maintenantMs),
+        'console-demande-courriel',
+        d.journal
+      ),
+    emission: {
+      ...lectureDuCompteConsole(d.prisma, cles),
+      ...ecrituresDeLienConsole(d.prisma),
+      envoyer: ({ a, url, code }) =>
+        d.envoi.envoyer({
+          a,
+          sujet: CONNEXION_CONSOLE.courriel.sujet,
+          corps: corpsDuCourrielConsole(url, code),
+          gabarit: 'lien_magique_console',
+        }),
+      signalerPotDeMiel: espace.emission.signalerPotDeMiel,
+      signalerEchec: (motif) => d.journal.warn(`lien_magique_console_${motif}`),
+    },
+  };
+}
+
+export function portsDeConsommationConsole(
+  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge'>
+): PortsDeConsommationConsole {
+  return {
+    maintenant: () => new Date(d.horloge.maintenant()),
+    transaction: transactionDeConsommationConsole(d.prisma),
+    configuration: configurationDuLien(d.env),
+  };
+}
+
+export function portsDuCodeConsole(
+  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge' | 'journal'>,
+  lienAnnule?: () => void
+): PortsDuCodeConsole {
+  return {
+    ...portsDuCode(d, lienAnnule),
+    compterAdresseCode: async (sujet, maintenantMs) =>
+      signalerSiEpuise(
+        await limiter('magic:console-code-ip', sujetDepuisEmpreinte(sujet), maintenantMs),
+        'console-code-ip',
+        d.journal
+      ),
+    compterCourrielCode: async (sujet, maintenantMs) =>
+      signalerSiEpuise(
+        await limiter('magic:console-code-courriel', sujetDepuisEmpreinte(sujet), maintenantMs),
+        'console-code-courriel',
+        d.journal
+      ),
+    transaction: transactionDuCodeConsole(d.prisma),
+    signaler: (motif) => d.journal.warn(`lien_magique_console_${motif}`),
+  };
+}
+
 /**
  * SEC-42 — l'envoi par l'ÉMETTEUR de courriels (INT-T10) : chaque demande écrit sa ligne
  * `courriels_envoyes` (gabarit, empreinte de l'adresse, statut — ni adresse, ni corps, donc ni
@@ -233,11 +382,8 @@ export function envoiParLeNotifieur(notifieur: Notifieur): EnvoiDuLien {
  */
 export function envoiParLEmetteur(emetteur: () => DependancesDeLEmetteur): EnvoiDuLien {
   return {
-    async envoyer({ a, sujet, corps }) {
-      await demanderEnvoi(
-        { gabarit: 'lien_magique', a, sujet, corps, apporteurId: null },
-        emetteur()
-      );
+    async envoyer({ a, sujet, corps, gabarit = 'lien_magique' }) {
+      await demanderEnvoi({ gabarit, a, sujet, corps, apporteurId: null }, emetteur());
     },
   };
 }
@@ -294,4 +440,39 @@ export function dependancesDuProcessus(outils: {
     }),
     journal,
   };
+}
+
+/**
+ * SEC-29 : les ports de `requireRole` pour le processus — le dépôt des sessions de la console, son
+ * horloge, et le secret des sessions (celui de l'espace : même table, domaine d'empreinte distinct).
+ */
+export function portsDeRoleConsole(
+  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge'>
+): PortsDeRole {
+  const { session } = configurationDuLien(d.env);
+  return {
+    maintenant: () => new Date(d.horloge.maintenant()),
+    depot: depotDeSessionsConsole(d.prisma),
+    configuration: session,
+  };
+}
+
+/**
+ * SEC-29 : la déconnexion de la console. La session est RÉVOQUÉE en base (une écriture
+ * conditionnelle, sur une session de la console encore ouverte), puis son cookie est effacé par
+ * l'appelant : un jeton copié ailleurs ne rouvre rien.
+ */
+export async function revoquerSessionConsole(
+  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge'>,
+  jeton: string
+): Promise<void> {
+  const { session } = configurationDuLien(d.env);
+  await d.prisma.sessionEspace.updateMany({
+    where: {
+      tokenHash: empreinteDeSessionConsole(jeton, session.secret),
+      utilisateurConsoleId: { not: null },
+      revoqueAt: null,
+    },
+    data: { revoqueAt: new Date(d.horloge.maintenant()) },
+  });
 }
