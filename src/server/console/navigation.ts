@@ -60,6 +60,8 @@ export const ROUTES_LIVREES_DE_LA_CONSOLE: readonly string[] = [
   '/console/connexion/[jeton]',
   '/console',
   '/console/acces-refuse',
+  // SEC-30 : l'administration des utilisateurs de la console.
+  '/console/utilisateurs',
 ];
 
 /** La liste de préférence de l'accueil, rôle par rôle (`docs/CONSOLE-ROUTES.md`). */
