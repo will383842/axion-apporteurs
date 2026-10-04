@@ -529,6 +529,37 @@ describe('REQ-DM-004 — la fenêtre finit à MINUIT, heure de Paris, après le 
     }
   });
 
+  it.each([
+    [
+      'le 16 mars à 23 h 17 (heure d’été en route : 15 jours moins 17 minutes)',
+      '2027-03-16T23:17:00.000+01:00',
+      '2027-03-31T22:00:00.000Z',
+      -17,
+    ],
+    [
+      'la veille du passage à l’heure d’hiver, à midi (15 jours plus une heure… et la fin du jour)',
+      '2027-10-30T12:00:00.000+02:00',
+      '2027-11-14T23:00:00.000Z',
+      12 * 60 + 60,
+    ],
+    [
+      'un jour ordinaire, à midi',
+      '2027-06-10T12:00:00.000+02:00',
+      '2027-06-25T22:00:00.000Z',
+      12 * 60,
+    ],
+  ] as const)(
+    'REQ-DM-004 : TÉMOIN (forme finale d’A02) — envoyé %s : dernier jour = envoi + 15 jours civils, fin à minuit (Paris) le lendemain',
+    (_, envoi, fin, ecartMinutes) => {
+      const e = paris(envoi);
+      const f = finDeLaFenetreDeRedeclaration(e);
+      expect(new Date(f).toISOString()).toBe(fin);
+      expect(f - e).toBe(
+        SEUILS.FILE_FENETRE_REDECLARATION_JOURS.valeur * MS_PAR_JOUR + ecartMinutes * 60 * 1000
+      );
+    }
+  );
+
   it('REQ-DM-004 : la date limite affichée est le jour de (fin − 1 ms) : envoi + 15 jours, à Paris', () => {
     const fin = finDeLaFenetreDeRedeclaration(paris('2027-05-10T23:50:00.000+02:00'));
     expect(jourLimiteDeLaFenetre(fin)).toEqual({ annee: 2027, mois: 5, jour: 25 });

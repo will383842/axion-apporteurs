@@ -119,6 +119,12 @@ export const RAISONS_D_ANNULATION = {
     '{categorie} (contrat, article 3.3 bis), situation qui existait déjà à la date de votre dépôt',
 } as const;
 
+/**
+ * DM-55 — le nom de l'entreprise quand l'attribution n'a pas de raison sociale (saisie de repli) :
+ * texte d'attente de la coordination, à confirmer par la juriste.
+ */
+export const ENTREPRISE_DE_REPLI = 'l’entreprise déclarée';
+
 /** Les mois en toutes lettres, pour une date en clair (« 25 mai 2027 »). */
 export const MOIS_EN_TOUTES_LETTRES = [
   'janvier',

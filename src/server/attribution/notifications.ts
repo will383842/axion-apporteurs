@@ -11,6 +11,7 @@
  * saisie. Une valeur vide est refusée. Un refus lève, nommé : la notification ne part pas à moitié.
  */
 import {
+  ENTREPRISE_DE_REPLI,
   MOIS_EN_TOUTES_LETTRES,
   MOTIFS_DES_DECISIONS,
   RAISONS_D_ANNULATION,
@@ -77,6 +78,12 @@ export function motifDeLaDecision(d: Decision): string | null {
   return MOTIFS_DES_DECISIONS[transition]
     .replace('{faits}', () => faits ?? '')
     .replace('{raison}', () => libelle);
+}
+
+/** Le nom de l'entreprise : sa raison sociale, ou le repli de la micro-copie s'il n'y en a pas. */
+export function entrepriseDeLaNotification(raisonSociale: string | null): string {
+  const nom = raisonSociale?.trim() ?? '';
+  return nom === '' ? ENTREPRISE_DE_REPLI : nom;
 }
 
 /** Une date en clair, au jour civil de Paris : « 25 mai 2027 ». */
