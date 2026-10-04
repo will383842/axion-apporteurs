@@ -19297,7 +19297,8 @@
       "zone": "integration",
       "paths": [
         "docs/tiers/axionia.md",
-        "docs/tiers/README.md"
+        "docs/tiers/README.md",
+        "docs/rgpd/registre-article-30.md"
       ],
       "schema": false,
       "sensible": [],
@@ -19312,7 +19313,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Écart C-06 de la vérification transversale, porté par l'audit indépendant du plan de la Phase 1 (2026-10-01). La fiche `docs/tiers/axionia.md` documente la relecture par `after_sequence`, `rejouerEvenement`, et qui les déclenche. TABLEAU DES TIERS (rattrapage 96, coordination) : la tâche CRÉE `docs/tiers/axionia.md`, et le témoin `fiches-tiers.spec.ts` exige sa ligne (`fiche_hors_tableau`) : `docs/tiers/README.md` entre aux chemins, avec la règle, MOT POUR MOT : « une ligne du tableau \"Les tiers\" et, si la rubrique 2 (Source officielle) est vide, une entrée de sa liste fermée ; rien d'autre »."
+      "acceptance": "Écart C-06 de la vérification transversale, porté par l'audit indépendant du plan de la Phase 1 (2026-10-01). La fiche `docs/tiers/axionia.md` documente la relecture par `after_sequence`, `rejouerEvenement`, et qui les déclenche. TABLEAU DES TIERS (rattrapage 96, coordination) : la tâche CRÉE `docs/tiers/axionia.md`, et le témoin `fiches-tiers.spec.ts` exige sa ligne (`fiche_hors_tableau`) : `docs/tiers/README.md` entre aux chemins, avec la règle, MOT POUR MOT : « une ligne du tableau \"Les tiers\" et, si la rubrique 2 (Source officielle) est vide, une entrée de sa liste fermée ; rien d'autre ». REGISTRE (rattrapage 97, coordination) : `registre-rgpd.spec.ts` (REQ-JUR-025) exige que chaque fiche de `docs/tiers` ait sa ligne au registre des destinataires de l'art. 30 : `docs/rgpd/registre-article-30.md` entre aux chemins, règle MOT POUR MOT « une ligne au registre des destinataires pour axion-ia ; rien d'autre »."
     },
     {
       "id": "INT-T50-A",
@@ -21670,7 +21671,8 @@
         "axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts",
         "axionia/src/server/partners-sync/__tests__/producteur-devis.spec.ts",
         "axionia/src/server/partners-sync/__tests__/producteurs-client.spec.ts",
-        "axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts"
+        "axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts",
+        "axionia/src/server/partners/__tests__/payloads.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -21684,7 +21686,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 66 sur décision de la coordination (2026-10-02), pour tenir l'ordre d'A02 sans bloquer `rejouerEvenement` (INT-T08-A, déjà codée) : l'ADOPTION unique de la v3 côté axion-ia vient APRÈS la déclaration de la route (INT-T70-P). (1) La copie de `contracts.v3.json` dans axion-ia est vérifiée par `sha256sum -c contracts.sha256`, avec l'empreinte égale à celle de Partners. (2) Le témoin de la route de relecture valide sa réponse contre `api_relecture_reponse` de SA copie, et rougit si un champ sort du schéma. Une fois cette adoption fusionnée, la v3 est FIGÉE : toute route de plus est une v4 (A02). Auteur : A05. LOCKSTEP (rattrapage 96, arbitrage de la coordination, recommandation de l'auteur back) : INT-T70-A et INT-T46-A sont livrées par UNE SEULE PR commune, une seule adoption de la v3 dans axion-ia (le cliquet « aucun type du contrat sans producteur » de `fixtures-et-frontiere.spec.ts` lie `devis.emis` à son producteur) ; la PR déclare « Lot: INT-T70-A, INT-T46-A ». PÉRIMÈTRE MESURÉ (auteur back, tête `partners/int-t70-a` 0dd947da : 28 rouges dans 4 fichiers à la bascule, 4 restants sur 315, tous dus au lockstep) : sources `src/server/partners/contrat.ts` (union `TypeEvenement` gagne `devis.emis`), `src/server/partners/payloads.ts` (`facture.emise` v3 exige `devisId`), `src/server/partners-sync/producteurs/facturation.ts` (pose `devisId`), `scripts/partners/fixtures.ts` (sortie et générateur), `src/server/partners/contrat/fixtures.v3.json` (NEUF, remplace `fixtures.v2.json`), `.prettierignore` (protège `contracts.v3.json` et `fixtures.v3.json` du reformatage, qui cassait l'empreinte, comme la v2) ; tests lecteurs de la copie v2 : le validateur `src/server/partners/__tests__/contrat-schema.ts` (lit aussi le mot-clé `minimum`, nouveau en v3), et neuf fichiers de `src/server/partners/__tests__/` et `src/server/partners-sync/__tests__/`.",
+      "acceptance": "Versée au rattrapage 66 sur décision de la coordination (2026-10-02), pour tenir l'ordre d'A02 sans bloquer `rejouerEvenement` (INT-T08-A, déjà codée) : l'ADOPTION unique de la v3 côté axion-ia vient APRÈS la déclaration de la route (INT-T70-P). (1) La copie de `contracts.v3.json` dans axion-ia est vérifiée par `sha256sum -c contracts.sha256`, avec l'empreinte égale à celle de Partners. (2) Le témoin de la route de relecture valide sa réponse contre `api_relecture_reponse` de SA copie, et rougit si un champ sort du schéma. Une fois cette adoption fusionnée, la v3 est FIGÉE : toute route de plus est une v4 (A02). Auteur : A05. LOCKSTEP (rattrapage 96, arbitrage de la coordination, recommandation de l'auteur back) : INT-T70-A et INT-T46-A sont livrées par UNE SEULE PR commune, une seule adoption de la v3 dans axion-ia (le cliquet « aucun type du contrat sans producteur » de `fixtures-et-frontiere.spec.ts` lie `devis.emis` à son producteur) ; la PR déclare « Lot: INT-T70-A, INT-T46-A ». PÉRIMÈTRE MESURÉ (auteur back, tête `partners/int-t70-a` 0dd947da : 28 rouges dans 4 fichiers à la bascule, 4 restants sur 315, tous dus au lockstep) : sources `src/server/partners/contrat.ts` (union `TypeEvenement` gagne `devis.emis`), `src/server/partners/payloads.ts` (`facture.emise` v3 exige `devisId`), `src/server/partners-sync/producteurs/facturation.ts` (pose `devisId`), `scripts/partners/fixtures.ts` (sortie et générateur), `src/server/partners/contrat/fixtures.v3.json` (NEUF, remplace `fixtures.v2.json`), `.prettierignore` (protège `contracts.v3.json` et `fixtures.v3.json` du reformatage, qui cassait l'empreinte, comme la v2) ; tests lecteurs de la copie v2 : le validateur `src/server/partners/__tests__/contrat-schema.ts` (lit aussi le mot-clé `minimum`, nouveau en v3), et neuf fichiers de `src/server/partners/__tests__/` et `src/server/partners-sync/__tests__/`. CHEMIN (rattrapage 97, coordination) : `src/server/partners/__tests__/payloads.spec.ts`, règle MOT POUR MOT « les objets de test portent devisId (facture v3) et sentAt (devis) ; rien d'autre » (#1280 le touche pour le TS strict de la v3).",
       "tests": {
         "REQ-INT-012": [
           "axionia/src/server/partners-sync/__tests__/relecture-contrat-v3.spec.ts"
