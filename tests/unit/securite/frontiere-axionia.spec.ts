@@ -212,7 +212,7 @@ describe('REQ-SEC-012 — le vocabulaire fermé de la frontière', () => {
     ]);
     expect(VARIABLE_DE_LA_LISTE).toBe('AXIONIA_API_ALLOWLIST');
     expect(PLANCHER_LECTURE_MS).toBe(150);
-    expect(CHAMPS_DE_LA_REPONSE).toEqual(['statut', 'until', 'apporteurRef']);
+    expect(CHAMPS_DE_LA_REPONSE).toEqual(['statut', 'until', 'apporteurRef', 'nomAffichable']);
   });
 
   it('le refus unique : 404, corps vide, aucun en-tête — un objet neuf à chaque appel', async () => {
@@ -233,14 +233,22 @@ describe('REQ-SEC-012 — le vocabulaire fermé de la frontière', () => {
 // ── La réponse minimale ─────────────────────────────────────────────────────────────────────────
 
 describe('REQ-INT-014 — la forme de la réponse, jugée par le schéma', () => {
-  const juste = { statut: 'attribuee', until: '2027-03', apporteurRef: REF };
+  const juste = {
+    statut: 'attribuee',
+    until: '2027-03',
+    apporteurRef: REF,
+    nomAffichable: 'Paul D.',
+  };
   it.each([
     ['attribuée, échéance et référence', juste],
-    ['cliente, sans échéance ni référence', { statut: 'cliente', until: null, apporteurRef: null }],
+    [
+      'cliente, sans échéance ni référence',
+      { statut: 'cliente', until: null, apporteurRef: null, nomAffichable: null },
+    ],
     ['attribuée, décembre', { ...juste, until: '2027-12' }],
     ['attribuée, octobre', { ...juste, until: '2027-10' }],
     ['attribuée, janvier', { ...juste, until: '2027-01' }],
-    ['libre, nue', { statut: 'libre', until: null, apporteurRef: null }],
+    ['libre, nue', { statut: 'libre', until: null, apporteurRef: null, nomAffichable: null }],
   ])('acceptée : %s', (_q, r) => {
     expect(schemaReponseAttribution.safeParse(r).success).toBe(true);
   });
@@ -253,9 +261,23 @@ describe('REQ-INT-014 — la forme de la réponse, jugée par le schéma', () =>
     ['année sur trois chiffres', { ...juste, until: '027-03' }],
     ['référence qui n’est pas un UUID', { ...juste, apporteurRef: 'Sophie Martin' }],
     ['champ en plus', { ...juste, nom: 'Martin' }],
-    ['statut hors contrat', { statut: 'suivie', until: null, apporteurRef: null }],
-    ['libre avec une échéance', { statut: 'libre', until: '2027-03', apporteurRef: null }],
-    ['libre avec une référence', { statut: 'libre', until: null, apporteurRef: REF }],
+    [
+      'statut hors contrat',
+      { statut: 'suivie', until: null, apporteurRef: null, nomAffichable: null },
+    ],
+    [
+      'libre avec une échéance',
+      { statut: 'libre', until: '2027-03', apporteurRef: null, nomAffichable: null },
+    ],
+    [
+      'libre avec une référence',
+      { statut: 'libre', until: null, apporteurRef: REF, nomAffichable: null },
+    ],
+    [
+      'libre avec un nom',
+      { statut: 'libre', until: null, apporteurRef: null, nomAffichable: 'Paul D.' },
+    ],
+    ['nom affichable absent', { statut: 'attribuee', until: '2027-03', apporteurRef: REF }],
   ])('refusée : %s', (_q, r) => {
     expect(schemaReponseAttribution.safeParse(r).success).toBe(false);
   });
@@ -523,7 +545,7 @@ describe('REQ-INT-014 — 6. le SIREN, puis la lecture au plancher', () => {
     const r = await traiterAppel(requete(), 'attributions', m.frontiere);
     expect(await vu(r)).toEqual({
       statut: 200,
-      corps: '{"statut":"libre","until":null,"apporteurRef":null}',
+      corps: '{"statut":"libre","until":null,"apporteurRef":null,"nomAffichable":null}',
       entetes: [['content-type', 'application/json; charset=utf-8']],
     });
     expect(m.lectures).toEqual([SIREN]);
@@ -533,19 +555,31 @@ describe('REQ-INT-014 — 6. le SIREN, puis la lecture au plancher', () => {
 
   it('SIREN attribué : 200, le corps reconstruit champ par champ, dans l’ordre du contrat', async () => {
     const m = monde({
-      lire: async () => ({ apporteurRef: REF, until: '2027-03', statut: 'attribuee' }),
+      lire: async () => ({
+        nomAffichable: 'Paul D.',
+        apporteurRef: REF,
+        until: '2027-03',
+        statut: 'attribuee',
+      }),
     });
     const r = await traiterAppel(requete(), 'attributions', m.frontiere);
     expect(await vu(r)).toEqual({
       statut: 200,
-      corps: `{"statut":"attribuee","until":"2027-03","apporteurRef":"${REF}"}`,
+      corps: `{"statut":"attribuee","until":"2027-03","apporteurRef":"${REF}","nomAffichable":"Paul D."}`,
       entetes: [['content-type', 'application/json; charset=utf-8']],
     });
     expect(journal(m)).toEqual([ligne('attribuee', {}, false, AU_PLANCHER)]);
   });
 
   it('SIREN client : le journal porte « cliente »', async () => {
-    const m = monde({ lire: async () => ({ statut: 'cliente', until: null, apporteurRef: null }) });
+    const m = monde({
+      lire: async () => ({
+        statut: 'cliente',
+        until: null,
+        apporteurRef: null,
+        nomAffichable: null,
+      }),
+    });
     const r = await traiterAppel(requete(), 'attributions', m.frontiere);
     expect(r.status).toBe(200);
     expect(journal(m)).toEqual([ligne('cliente', {}, false, AU_PLANCHER)]);
@@ -579,9 +613,18 @@ describe('REQ-INT-014 — 6. le SIREN, puis la lecture au plancher', () => {
   it.each([
     [
       'un champ de personne en plus',
-      { statut: 'attribuee', until: '2027-03', apporteurRef: REF, nom: 'Martin' },
+      {
+        statut: 'attribuee',
+        until: '2027-03',
+        apporteurRef: REF,
+        nomAffichable: 'Paul D.',
+        nom: 'Martin',
+      },
     ],
-    ['un libre qui porte une référence', { statut: 'libre', until: null, apporteurRef: REF }],
+    [
+      'un libre qui porte une référence',
+      { statut: 'libre', until: null, apporteurRef: REF, nomAffichable: null },
+    ],
     ['une chaîne au lieu d’un objet', 'libre'],
   ])('un lecteur qui rend %s : 503 sans corps, « reponse_non_conforme »', async (_q, lu) => {
     const m = monde({ lire: async () => lu });

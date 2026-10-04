@@ -37,7 +37,7 @@
  */
 import { createHmac } from 'node:crypto';
 import { z } from 'zod';
-import { ENTETE_KID_AXIONIA } from '../../../../packages/contracts/api';
+import { API_ATTRIBUTIONS, ENTETE_KID_AXIONIA } from '../../../../packages/contracts/api';
 import { cleDuKid, lireEnvironnement, lireTrousseaux, type Trousseau } from '../../../lib/env';
 import { horlogeSysteme } from '../../../lib/horloge';
 import { SAUTS_DE_CONFIANCE, adresseDuClient } from '../../securite/adresse-du-client';
@@ -60,8 +60,28 @@ export type MethodeHttp = (typeof METHODES_HTTP)[number];
 export const ROUTES_DE_LA_FRONTIERE = ['attributions', 'inconnue'] as const;
 export type RouteDeLaFrontiere = (typeof ROUTES_DE_LA_FRONTIERE)[number];
 
-/** REQ-INT-014 : `statut: libre|attribuee|cliente`. */
-export const STATUTS_D_ATTRIBUTION = ['libre', 'attribuee', 'cliente'] as const;
+/**
+ * La réponse de l'API 1 telle que le CONTRAT la publie (`packages/contracts/api.ts`) : la forme
+ * admise ici en est DÉRIVÉE (statuts, champs, motifs), jamais réécrite (INT-T07-P, écart C-03).
+ */
+const DEF_REPONSE = API_ATTRIBUTIONS.defs.api_attributions_reponse as {
+  required: readonly string[];
+  properties: Record<string, { enum?: readonly string[]; anyOf?: readonly { pattern?: string }[] }>;
+};
+
+/** Le motif d'un champ nullable du contrat (`ouNul({type: 'string', pattern})`). */
+function motifDuContrat(champ: string): RegExp {
+  const motif = DEF_REPONSE.properties[champ]?.anyOf?.[0]?.pattern;
+  if (motif === undefined) throw new Error(`contrat : le champ ${champ} n'a pas de motif.`);
+  return new RegExp(motif, 'u');
+}
+
+/** REQ-INT-014 : `statut: libre|attribuee|cliente`, lu dans le contrat. */
+export const STATUTS_D_ATTRIBUTION = DEF_REPONSE.properties.statut!.enum as readonly [
+  'libre',
+  'attribuee',
+  'cliente',
+];
 
 export const RESULTATS_D_APPEL = [
   'configuration_refusee',
@@ -90,28 +110,45 @@ export const PLANCHER_LECTURE_MS = 150;
 
 // ── La réponse minimale ─────────────────────────────────────────────────────────────────────────
 
-const MOIS = /^\d{4}-(?:0[1-9]|1[0-2])$/;
 const SIREN = /^\d{9}$/;
 
 const formeDeLaReponse = z
   .object({
     statut: z.enum(STATUTS_D_ATTRIBUTION),
-    until: z.string().regex(MOIS).nullable(),
+    until: z.string().regex(motifDuContrat('until')).nullable(),
     /** Opaque : un UUID ne peut porter ni un nom ni une adresse de courriel. */
-    apporteurRef: z.string().uuid().nullable(),
+    apporteurRef: z.string().regex(motifDuContrat('apporteurRef')).nullable(),
+    /** Le prénom et l'initiale du nom : ni arobase ni chiffre (décision de Williams, 2026-10-01). */
+    nomAffichable: z.string().regex(motifDuContrat('nomAffichable')).nullable(),
   })
   .strict();
 
-/** Les champs du contrat, DÉRIVÉS du schéma. */
-export const CHAMPS_DE_LA_REPONSE = Object.keys(formeDeLaReponse.shape);
+/** Les champs du contrat, DÉRIVÉS du schéma, dans l'ordre du contrat. */
+export const CHAMPS_DE_LA_REPONSE: readonly string[] = DEF_REPONSE.required;
+if (
+  CHAMPS_DE_LA_REPONSE.length !== Object.keys(formeDeLaReponse.shape).length ||
+  CHAMPS_DE_LA_REPONSE.some((c) => !(c in formeDeLaReponse.shape))
+) {
+  throw new Error('api-entrante : la forme admise diverge des champs du contrat.');
+}
 
-/** Un « libre » ne porte ni échéance ni référence : c'est ce qui le rend identique à « inconnu ». */
+/**
+ * Un « libre » ne porte ni échéance, ni référence, ni nom : c'est ce qui le rend identique à
+ * « inconnu ».
+ */
 export const schemaReponseAttribution = formeDeLaReponse.refine(
-  (r) => r.statut !== 'libre' || (r.until === null && r.apporteurRef === null)
+  (r) =>
+    r.statut !== 'libre' ||
+    (r.until === null && r.apporteurRef === null && r.nomAffichable === null)
 );
 export type ReponseAttribution = z.infer<typeof formeDeLaReponse>;
 
-const LIBRE: ReponseAttribution = { statut: 'libre', until: null, apporteurRef: null };
+const LIBRE: ReponseAttribution = {
+  statut: 'libre',
+  until: null,
+  apporteurRef: null,
+  nomAffichable: null,
+};
 
 // ── Les ports ───────────────────────────────────────────────────────────────────────────────────
 
@@ -314,6 +351,7 @@ export async function traiterAppel(
     statut: verifie.data.statut,
     until: verifie.data.until,
     apporteurRef: verifie.data.apporteurRef,
+    nomAffichable: verifie.data.nomAffichable,
   };
   noter(corps.statut, lecture.depasse);
   return new Response(JSON.stringify(corps), {
