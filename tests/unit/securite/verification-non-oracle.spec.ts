@@ -64,8 +64,12 @@ describe('REQ-UX-007 — quatre états, et rien d’autre', () => {
   });
 
   it('REQ-UX-007 : occupée, la file a une place — suivie_place_disponible ; deux en file — complète', () => {
-    expect(etatDeVerification({ ...LIBRE, occupee: true, enFile: 0 })).toBe('suivie_place_disponible');
-    expect(etatDeVerification({ ...LIBRE, occupee: true, enFile: 1 })).toBe('suivie_place_disponible');
+    expect(etatDeVerification({ ...LIBRE, occupee: true, enFile: 0 })).toBe(
+      'suivie_place_disponible'
+    );
+    expect(etatDeVerification({ ...LIBRE, occupee: true, enFile: 1 })).toBe(
+      'suivie_place_disponible'
+    );
     expect(etatDeVerification({ ...LIBRE, occupee: true, enFile: 2 })).toBe('suivie_file_complete');
     expect(etatDeVerification({ ...LIBRE, occupee: true, enFile: 3 })).toBe('suivie_file_complete');
   });
@@ -154,7 +158,9 @@ describe('G-SEC-ORACLE — deux causes d’un même état, la même réponse, ap
     // Le porteur de l'occupation n'entre pas dans les faits : un conseiller occupe comme un apporteur.
     const parApporteur = ports({ ...LIBRE, occupee: true, enFile: 1 });
     const parConseiller = ports({ ...LIBRE, occupee: true, enFile: 1 });
-    const a = JSON.stringify(await verifierUneEntreprise(parApporteur.p, DEMANDE, REGISTRE_CHIFFRE));
+    const a = JSON.stringify(
+      await verifierUneEntreprise(parApporteur.p, DEMANDE, REGISTRE_CHIFFRE)
+    );
     const b = JSON.stringify(
       await verifierUneEntreprise(
         parConseiller.p,
@@ -204,9 +210,16 @@ describe('REQ-SEC-021 — limitée par identité et par empreinte d’adresse, �
   });
 
   it('REQ-SEC-021 : TÉMOIN — un compteur ABSENT du registre REFUSE : aucun fait lu, rien au journal', async () => {
-    for (const registre of [{}, { 'verif:identite': { prefixe: 'verif:' } }, { 'verif:ip': { prefixe: 'verif:' } }]) {
+    for (const registre of [
+      {},
+      { 'verif:identite': { prefixe: 'verif:' } },
+      { 'verif:ip': { prefixe: 'verif:' } },
+    ]) {
       const { p, trace } = ports(LIBRE);
-      expect(await verifierUneEntreprise(p, DEMANDE, registre)).toEqual({ ok: false, refus: 'limite' });
+      expect(await verifierUneEntreprise(p, DEMANDE, registre)).toEqual({
+        ok: false,
+        refus: 'limite',
+      });
       expect(trace).toEqual([]);
     }
   });
@@ -235,10 +248,12 @@ describe('REQ-SEC-021 — limitée par identité et par empreinte d’adresse, �
 
   it('REQ-SEC-021 : sans empreinte d’adresse, le compteur ne compte rien — refusé', async () => {
     const { p, trace } = ports(LIBRE);
-    expect(await verifierUneEntreprise(p, { ...DEMANDE, sujetIp: null }, REGISTRE_CHIFFRE)).toEqual({
-      ok: false,
-      refus: 'limite',
-    });
+    expect(await verifierUneEntreprise(p, { ...DEMANDE, sujetIp: null }, REGISTRE_CHIFFRE)).toEqual(
+      {
+        ok: false,
+        refus: 'limite',
+      }
+    );
     expect(trace).toEqual(['limiter:verif:identite']);
   });
 
@@ -294,6 +309,8 @@ describe('REQ-SEC-021 — chaque vérification admise est journalisée, par iden
     p.journaliser = async () => {
       throw new Error('journal refusé');
     };
-    await expect(verifierUneEntreprise(p, DEMANDE, REGISTRE_CHIFFRE)).rejects.toThrow('journal refusé');
+    await expect(verifierUneEntreprise(p, DEMANDE, REGISTRE_CHIFFRE)).rejects.toThrow(
+      'journal refusé'
+    );
   });
 });
