@@ -15,6 +15,8 @@
 
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { CHAMPS_PII, decryptPii, type ClesPii } from '../securite/pii';
+import { ajouterEvenement } from '../evenement/journal';
+import { invitationOuverte } from '../console/utilisateurs/regles';
 import {
   ESSAIS_DU_CODE_MAX,
   type PortsDEmission,
@@ -251,15 +253,40 @@ function consommationConsoleSur(tx: Prisma.TransactionClient): TransactionDeCons
       });
       return n === 1;
     },
-    async utilisateurActif(utilisateurConsoleId) {
+    async utilisateurActif(utilisateurConsoleId, maintenant) {
       const u = await tx.utilisateurConsole.findUnique({
         where: { id: utilisateurConsoleId },
-        select: { desactiveAt: true },
+        select: { desactiveAt: true, inviteeAt: true, activeeAt: true },
       });
-      return u !== null && u.desactiveAt === null;
+      if (u === null || u.desactiveAt !== null) return false;
+      // SEC-30 (forme d'A02) : une invitation non activée à son échéance répond comme un compte
+      // désactivé ; l'égalité est refusée, à la milliseconde. Un compte activé ne vieillit plus.
+      if (u.activeeAt == null && u.inviteeAt != null)
+        return invitationOuverte({ inviteeAt: u.inviteeAt, activeeAt: null }, maintenant);
+      return true;
     },
     async ouvrirSessionConsole(session) {
       await tx.sessionEspace.create({ data: session });
+      // SEC-30 : la première connexion ACTIVE le compte invité, une seule fois, dans la transaction
+      // qui ouvre la session ; le geste est journalisé, l'utilisateur étant son propre acteur.
+      if (session.utilisateurConsoleId == null) return;
+      const { count } = await tx.utilisateurConsole.updateMany({
+        where: { id: session.utilisateurConsoleId, activeeAt: null },
+        data: { activeeAt: session.creeAt },
+      });
+      if (count === 1)
+        await ajouterEvenement(tx, {
+          type: 'utilisateur_console_modifie',
+          agregat: 'utilisateur_console',
+          agregatId: session.utilisateurConsoleId,
+          survenuAt: session.creeAt,
+          charge: {
+            geste: 'activer',
+            de: null,
+            vers: null,
+            acteur: { par: 'utilisateur_console', id: session.utilisateurConsoleId },
+          },
+        });
     },
   };
 }

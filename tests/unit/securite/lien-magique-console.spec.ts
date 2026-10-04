@@ -346,7 +346,17 @@ describe('REQ-SEC-003 — (5) la session de la console est courte', () => {
       expireAt: new Date(MAINTENANT.getTime() + 60_000),
       revoqueAt: null,
       derniereVueAt: new Date(MAINTENANT.getTime() - vue),
-      utilisateurConsole: { id: 'u-actif', role: 'admin' as const, desactiveAt: null },
+      // SEC-30 : ouverte à l'instant (le step-up de la levée de gel tient) et à la version de son
+      // utilisateur, validé (un admin non validé est en attente).
+      creeAt: MAINTENANT,
+      sessionVersion: 0,
+      utilisateurConsole: {
+        id: 'u-actif',
+        role: 'admin' as const,
+        desactiveAt: null,
+        sessionVersion: 0,
+        valideAt: MAINTENANT,
+      },
     });
     const droit = 'action:lever_gel';
     expect(jugerAcces(droit, ligne(inactivite), MAINTENANT, CONFIG.session.kid)).toEqual({
@@ -446,16 +456,37 @@ describe('REQ-SEC-003 — (a) les adaptateurs jugent la population à chaque lec
     ]);
   });
 
+  // SEC-30 (forme d'A02) : un compte invité non activé à son échéance répond comme un compte
+  // désactivé ; l'égalité est refusée, à la milliseconde ; un compte activé ne vieillit plus.
+  it('REQ-SEC-003 : TÉMOIN À DEUX FACES — une invitation non activée à l’échéance n’ouvre rien ; une milliseconde avant, elle ouvre ; activée, elle ne vieillit plus', async () => {
+    const delai = DUREES_AUTH.invitationConsoleMs.valeur;
+    const invite = (ilYA: number, activeeAt: Date | null = null) => ({
+      desactiveAt: null,
+      inviteeAt: new Date(MAINTENANT.getTime() - ilYA),
+      activeeAt,
+    });
+    for (const [reponse, attendu] of [
+      [invite(delai), false],
+      [invite(delai - 1), true],
+      [invite(delai * 10, MAINTENANT), true],
+    ] as const) {
+      const { prisma } = fauxClient({ 'utilisateurConsole.findUnique': reponse });
+      expect(
+        await transactionDeConsommationConsole(prisma)((tx) => tx.utilisateurActif('u', MAINTENANT))
+      ).toBe(attendu);
+    }
+  });
+
   it('REQ-SEC-003 : TÉMOIN — un utilisateur introuvable ou désactivé n’est pas actif ; l’annulation ne touche que SES liens', async () => {
     for (const [reponse, attendu] of [
       [null, false],
-      [{ desactiveAt: MAINTENANT }, false],
-      [{ desactiveAt: null }, true],
+      [{ desactiveAt: MAINTENANT, inviteeAt: null, activeeAt: MAINTENANT }, false],
+      [{ desactiveAt: null, inviteeAt: null, activeeAt: MAINTENANT }, true],
     ] as const) {
       const { prisma } = fauxClient({ 'utilisateurConsole.findUnique': reponse });
-      expect(await transactionDeConsommationConsole(prisma)((tx) => tx.utilisateurActif('u'))).toBe(
-        attendu
-      );
+      expect(
+        await transactionDeConsommationConsole(prisma)((tx) => tx.utilisateurActif('u', MAINTENANT))
+      ).toBe(attendu);
     }
     const { prisma, appels } = fauxClient();
     await ecrituresDeLienConsole(prisma).annulerLiensActifs('u', MAINTENANT);
