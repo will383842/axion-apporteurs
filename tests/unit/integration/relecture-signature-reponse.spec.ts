@@ -1,4 +1,5 @@
 // @req REQ-INT-012
+// @req REQ-INT-013
 /**
  * INT-T74-P — la réponse de relecture est signée sur une chaîne CANONIQUE, construite par UNE
  * fonction partagée par le contrat (`packages/contracts/signature-relecture.ts`, condition 3 de la
