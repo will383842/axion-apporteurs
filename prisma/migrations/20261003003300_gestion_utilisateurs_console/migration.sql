@@ -1,5 +1,5 @@
 -- SEC-30 (REQ-SEC-003, REQ-SEC-023, REQ-DM-024) — la gestion des utilisateurs de la console.
--- Préfixe réservé : 20261003002300. ADDITIVE, SAUF deux points acceptés par A02 :
+-- Préfixe réservé : 20261003003300 (002300 avant le renommage, sous 002700 fusionnée). ADDITIVE, SAUF deux points acceptés par A02 :
 --   — le corps de `sessions_espace_version_console()` est remplacé (CREATE OR REPLACE) : c'est une
 --     fonction d'INSERT, non protectrice ; son déclencheur n'est pas recréé ;
 --   — DEUX lignes de données : (a) le REPORT des comptes existants, activés depuis leur création
