@@ -251,6 +251,7 @@ describe('REQ-INT-014 — la forme de la réponse, jugée par le schéma', () =>
     ['attribuée, janvier', { ...juste, until: '2027-01' }],
     ['libre, nue', { statut: 'libre', until: null, apporteurRef: null, nomAffichable: null }],
     ['attribuée, prénom composé', { ...juste, nomAffichable: 'Jean-Paul D.' }],
+    ['attribuée, nom illisible (A02)', { ...juste, nomAffichable: null }],
   ])('acceptée : %s', (_q, r) => {
     expect(schemaReponseAttribution.safeParse(r).success).toBe(true);
   });
@@ -294,7 +295,6 @@ describe('REQ-INT-014 — la forme de la réponse, jugée par le schéma', () =>
     ],
     ['attribuée sans échéance', { ...juste, until: null }],
     ['attribuée sans référence', { ...juste, apporteurRef: null }],
-    ['attribuée sans nom', { ...juste, nomAffichable: null }],
     ['le nom entier au lieu de l’initiale', { ...juste, nomAffichable: 'Paul Durand' }],
     ['un prénom seul', { ...juste, nomAffichable: 'Paul' }],
     ['plus de 64 caractères', { ...juste, nomAffichable: `${'A'.repeat(62)} D.` }],

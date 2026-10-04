@@ -52,7 +52,7 @@ const CLES = clesPii({
   PII_ENCRYPTION_KEY: 'e'.repeat(64),
 });
 const CLE_REFERENCE = { APPORTEUR_REF_KEY: 'temoin-int-t07-reference-'.padEnd(48, '0') };
-const DEPS = { cles: CLES, cleReference: CLE_REFERENCE };
+const DEPS = { cles: CLES, cleReference: CLE_REFERENCE, signaler: () => {} };
 
 const chiffrer = (modele: string, champ: string, id: string, clair: string) =>
   Buffer.from(encryptPii({ modele, champ, id }, clair, CLES));
@@ -83,7 +83,7 @@ afterAll(async () => {
 });
 
 /** Un apporteur signé, dont le prénom et le nom sont chiffrés comme le fait le dépôt. */
-async function unApporteur(prenom: string, nom: string): Promise<string> {
+async function unApporteur(prenom: string | null, nom: string): Promise<string> {
   const id = randomUUID();
   await base.prisma.apporteur.create({
     data: {
@@ -97,7 +97,8 @@ async function unApporteur(prenom: string, nom: string): Promise<string> {
       scorePartsJson: {},
       scoreBaremeVersion: 'v1',
       creeAt: MAINTENANT,
-      prenomChiffre: chiffrer(MODELE_APPORTEUR, 'prenomChiffre', id, prenom),
+      prenomChiffre:
+        prenom === null ? null : chiffrer(MODELE_APPORTEUR, 'prenomChiffre', id, prenom),
       nomChiffre: chiffrer(MODELE_APPORTEUR, 'nomChiffre', id, nom),
     },
   });
@@ -271,6 +272,27 @@ describe('REQ-INT-014 — le lecteur de l’API 1, sur la base, sous le rôle d�
     );
   });
 
+  it('REQ-INT-014 : un apporteur sans prénom en base répond `attribuee`, nom nul, et l’alerte technique est levée (A02)', async () => {
+    const siren = unSiren();
+    const apporteurId = await unApporteur(null, 'Durand');
+    await uneAttribution(base.prisma, {
+      siren,
+      statut: 'active',
+      apporteurId,
+      fenetreFinAt: new Date('2027-05-10T12:00:00.000Z'),
+    });
+    const signaux: unknown[] = [];
+    const r = await lecteurDeLaBase(app, { ...DEPS, signaler: (s) => signaux.push(s) })(siren);
+    expect(r).toEqual({
+      statut: 'attribuee',
+      until: '2027-05',
+      apporteurRef: referenceOpaque('apporteur', apporteurId, CLE_REFERENCE),
+      nomAffichable: null,
+    });
+    expect(schemaReponseAttribution.safeParse(r).success).toBe(true);
+    expect(signaux).toEqual([{ genre: 'nom_affichable_indisponible', nombre: 1 }]);
+  });
+
   it('REQ-INT-014 : un nom chiffré sous une autre clé est illisible — le lecteur lève, il ne rend ni libre ni un nom', async () => {
     const siren = unSiren();
     const apporteurId = await unApporteur('Zoé', 'Petit');
@@ -282,8 +304,6 @@ describe('REQ-INT-014 — le lecteur de l’API 1, sur la base, sous le rôle d�
       ),
       PII_ENCRYPTION_KEY: 'f'.repeat(64),
     });
-    await expect(
-      lecteurDeLaBase(app, { cles: autres, cleReference: CLE_REFERENCE })(siren)
-    ).rejects.toThrow();
+    await expect(lecteurDeLaBase(app, { ...DEPS, cles: autres })(siren)).rejects.toThrow();
   });
 });

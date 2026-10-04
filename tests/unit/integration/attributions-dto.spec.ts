@@ -152,7 +152,7 @@ describe('REQ-INT-014 — le contrat juge seul la réponse : motif du nom et coh
     ['attribuée, les trois posés', attribuee, true],
     ['attribuée sans échéance', { ...attribuee, until: null }, false],
     ['attribuée sans référence', { ...attribuee, apporteurRef: null }, false],
-    ['attribuée sans nom', { ...attribuee, nomAffichable: null }, false],
+    ['attribuée sans nom lisible (A02, 5981837236)', { ...attribuee, nomAffichable: null }, true],
     ['cliente, les trois nuls', { statut: 'cliente', ...nuls }, true],
     ['cliente avec une échéance', { statut: 'cliente', ...nuls, until: '2027-03' }, false],
     ['cliente avec une référence', { statut: 'cliente', ...nuls, apporteurRef: REF }, false],
@@ -266,7 +266,12 @@ const parConseiller = (statut: string, nom = 'Julie Martin') => ({
 });
 const lire = (ligne: Ligne | null, cleReference: { APPORTEUR_REF_KEY: string } = CLE_REF) => {
   const b = base(ligne);
-  return { b, lecture: lecteurDeLaBase(b.prisma, { cles: CLES, cleReference })(SIREN_TEMOIN) };
+  const signaler = vi.fn();
+  return {
+    b,
+    signaler,
+    lecture: lecteurDeLaBase(b.prisma, { cles: CLES, cleReference, signaler })(SIREN_TEMOIN),
+  };
 };
 const SIREN_TEMOIN = '552100554';
 
@@ -465,16 +470,42 @@ describe('REQ-INT-014 — `nomAffichable`, le prénom et l’initiale du nom, ri
   it('REQ-INT-014 : un prénom ou un nom absent de la fiche (colonne nulle) — rien n’est déchiffré, le nom suit la règle', async () => {
     const sansPrenom = parApporteur('active');
     (sansPrenom.apporteur as Ligne).prenomChiffre = null;
-    const r = await lire(sansPrenom).lecture;
-    expect(r).toMatchObject({ nomAffichable: null });
-    // Une `attribuee` sans nom n'est pas conforme : la frontière rend 503, jamais « libre ».
-    expect(schemaReponseAttribution.safeParse(r).success).toBe(false);
+    const l = lire(sansPrenom);
+    const r = await l.lecture;
+    expect(r).toMatchObject({ statut: 'attribuee', nomAffichable: null });
+    // A02 (5981837236) : le STATUT passe toujours ; le nom, seul, est nul — et l'alerte est levée.
+    expect(schemaReponseAttribution.safeParse(r).success).toBe(true);
+    expect(l.signaler).toHaveBeenCalledWith({ genre: 'nom_affichable_indisponible', nombre: 1 });
     const sansNom = parApporteur('active');
     (sansNom.apporteur as Ligne).nomChiffre = null;
     expect(await lire(sansNom).lecture).toMatchObject({ nomAffichable: null });
     const conseiller = parConseiller('active');
     (conseiller.utilisateurConsole as Ligne).nomChiffre = null;
     expect(await lire(conseiller).lecture).toMatchObject({ nomAffichable: null });
+  });
+
+  it('REQ-INT-014 : un conseiller au nom d’un seul mot répond `attribuee`, nom nul, et l’alerte technique est levée sans SIREN ni nom ni identifiant (A02)', async () => {
+    const l = lire(parConseiller('active', 'Paul'));
+    const r = await l.lecture;
+    expect(r).toMatchObject({ statut: 'attribuee', nomAffichable: null, until: '2027-03' });
+    expect(schemaReponseAttribution.safeParse(r).success).toBe(true);
+    expect(l.signaler).toHaveBeenCalledTimes(1);
+    const [signal] = l.signaler.mock.calls[0]!;
+    expect(signal).toEqual({ genre: 'nom_affichable_indisponible', nombre: 1 });
+    expect(JSON.stringify(signal)).not.toMatch(new RegExp(`${SIREN_TEMOIN}|Paul|${CONSEILLER}`));
+  });
+
+  it('REQ-INT-014 : un nom lisible — aucune alerte ; une cliente ou un SIREN libre — aucune alerte', async () => {
+    for (const ligne of [
+      parApporteur('active'),
+      parConseiller('active'),
+      parApporteur('convertie'),
+      null,
+    ]) {
+      const l = lire(ligne);
+      await l.lecture;
+      expect(l.signaler).not.toHaveBeenCalled();
+    }
   });
 
   it('REQ-INT-014 : une ligne sans aucun porteur — la lecture lève, jamais une réponse sans porteur', async () => {

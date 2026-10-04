@@ -65,10 +65,21 @@ const NOM_DU_CONTRAT = (
 ).properties.nomAffichable.anyOf[0]!;
 const FORME_NOM = new RegExp(NOM_DU_CONTRAT.pattern, 'u');
 
+/**
+ * L'alerte technique d'un nom indisponible (A02, PR 710) : son genre et un NOMBRE, rien d'autre —
+ * ni SIREN, ni nom, ni identifiant.
+ */
+export type SignalDuLecteur = {
+  readonly genre: 'nom_affichable_indisponible';
+  readonly nombre: number;
+};
+
 export interface DependancesDuLecteur {
   readonly cles: ClesPii;
   /** La clé de dérivation des références opaques. */
   readonly cleReference: CleDesReferences;
+  /** L'alerte technique : une `attribuee` dont le porteur n'a pas de nom lisible. */
+  readonly signaler: (s: SignalDuLecteur) => void;
 }
 
 // ── Les dérivations ─────────────────────────────────────────────────────────────────────────────
@@ -185,6 +196,9 @@ export function lecteurDeLaBase(
       throw new Error('attribution_sans_porteur');
     }
 
+    // A02 (PR 710) : un porteur sans nom lisible répond quand même `attribuee` — le nom, seul, est
+    // nul, et l'alerte technique le dit, sans rien qui désigne le SIREN ni le porteur.
+    if (nom === null) d.signaler({ genre: 'nom_affichable_indisponible', nombre: 1 });
     const fin = a.fenetreFinAt ?? a.peremptionAt;
     return {
       statut: 'attribuee',
@@ -207,5 +221,9 @@ export const lecteurDeProduction: LecteurDAttribution = async (siren) => {
   return lecteurDeLaBase(client, {
     cles: clesPii(process.env),
     cleReference: { APPORTEUR_REF_KEY: process.env[VARIABLE_CLE_REFERENCE] ?? '' },
+    // Le canal de la frontière (son puits) : une ligne, le genre et le nombre.
+    signaler: (s) => {
+      process.stderr.write(`${JSON.stringify({ alerte: s.genre, nombre: s.nombre })}\n`);
+    },
   })(siren);
 };

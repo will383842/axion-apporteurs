@@ -235,22 +235,27 @@ const MOTIF_NOM_AFFICHABLE = "^[\\p{L}][\\p{L}'’-]*( [\\p{L}][\\p{L}'’-]*)* 
 /** La longueur d'un nom d'affichage, au plus (A02). */
 const LONGUEUR_MAX_NOM_AFFICHABLE = 64;
 
-/** Les trois champs que le statut gouverne : tous nuls, ou tous posés. */
-const CHAMPS_DU_PORTEUR = ['until', 'apporteurRef', 'nomAffichable'] as const;
+/** Ce que le statut exige d'un champ du porteur : posé, ou nul. Un champ absent reste libre. */
+type ExigenceDuStatut = Partial<Record<'until' | 'apporteurRef' | 'nomAffichable', 'pose' | 'nul'>>;
 /**
- * `if`/`then` : quand `statut` vaut `statut`, les trois champs du porteur sont nuls, ou tous posés.
- * Le contrat juge seul la cohérence — elle ne vit plus dans un `$comment`.
+ * `if`/`then` : quand `statut` vaut `statut`, chaque champ nommé est posé ou nul. Le contrat juge
+ * seul la cohérence — elle ne vit plus dans un `$comment`.
  */
-function siLeStatut(statut: string, poses: boolean): FragmentSchema {
+function siLeStatut(statut: string, exigences: ExigenceDuStatut): FragmentSchema {
   return {
     if: { properties: { statut: { const: statut } }, required: ['statut'] },
     then: {
       properties: Object.fromEntries(
-        CHAMPS_DU_PORTEUR.map((c) => [c, poses ? { type: 'string' } : { type: 'null' }])
+        Object.entries(exigences).map(([c, e]) => [
+          c,
+          e === 'pose' ? { type: 'string' } : { type: 'null' },
+        ])
       ),
     },
   };
 }
+/** Les trois champs du porteur, nuls : `libre` et `cliente`. */
+const SANS_PORTEUR: ExigenceDuStatut = { until: 'nul', apporteurRef: 'nul', nomAffichable: 'nul' };
 
 /**
  * L'API 1, `GET /api/integrations/axionia/attributions?siren=` — REQ-INT-014, INT-T07-P.
@@ -300,14 +305,17 @@ export const API_ATTRIBUTIONS: ApiDuContrat = {
         }),
       },
       allOf: [
-        siLeStatut('libre', false),
-        siLeStatut('attribuee', true),
-        siLeStatut('cliente', false),
+        siLeStatut('libre', SANS_PORTEUR),
+        // A02 (PR 710, 5981837236) : `nomAffichable` peut être nul pour un porteur sans nom lisible —
+        // le STATUT passe toujours, l'échéance et la référence restent exigées.
+        siLeStatut('attribuee', { until: 'pose', apporteurRef: 'pose' }),
+        siLeStatut('cliente', SANS_PORTEUR),
       ],
       $comment:
         'Réponse 200, fermée. `libre` et `cliente` : `until`, `apporteurRef` et `nomAffichable` ' +
         'nuls (`allOf`), `libre` étant la même réponse pour un SIREN inconnu, au même instant, et ' +
-        '`cliente` n’exposant aucun porteur ; `attribuee` : les trois posés. `apporteurRef` est opaque, de même forme ' +
+        '`cliente` n’exposant aucun porteur ; `attribuee` : `until` et `apporteurRef` posés, ' +
+        '`nomAffichable` nul quand le porteur n’a pas de nom lisible. `apporteurRef` est opaque, de même forme ' +
         'pour un apporteur et pour un conseiller salarié (W19) ; `nomAffichable` est le prénom et ' +
         'l’initiale du nom du porteur, sans mention de rôle (décisions de Williams du 2026-10-01) — ' +
         'jamais e-mail, téléphone, identifiant ni adresse. Côté axion-ia, le nom ne s’affiche qu’à ' +
