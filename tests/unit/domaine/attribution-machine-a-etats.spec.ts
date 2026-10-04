@@ -1643,3 +1643,73 @@ describe('REQ-DM-006 — l’antériorité ne se fonde que sur un fait ANTÉRIEU
     expect(r).toStrictEqual({ de: 'signee', vers: 'annulee' });
   });
 });
+
+/**
+ * DM-25 (juriste, critère d) : l'antériorité établie après coup est notifiée à l'APPORTEUR, une fois,
+ * avec l'événement qui la fonde ; pour un conseiller, la console seule (aucune notification).
+ */
+describe('REQ-JUR-007 — l’antériorité établie notifie l’apporteur (DM-25)', () => {
+  const DEPOT_APRES = new Date('2027-01-01T00:00:00.000Z');
+
+  function txNotifiant(ligne: LigneSimulee) {
+    const base = txSimule([ligne]);
+    const notifications: unknown[] = [];
+    const attribution = (base.tx as { attribution: object }).attribution;
+    const tx = Object.assign(base.tx as object, {
+      attribution: {
+        ...attribution,
+        findUnique: async (q: { select?: { deposeeAt?: boolean } }) =>
+          q.select?.deposeeAt ? { deposeeAt: DEPOT_APRES } : null,
+      },
+      notificationEspace: {
+        create: async (arg: unknown) => {
+          notifications.push(arg);
+          return {};
+        },
+      },
+    });
+    return { ...base, tx: tx as never, notifications };
+  }
+
+  beforeEach(() => {
+    journalSimule.ajouterEvenement.mockReset();
+    journalSimule.ajouterEvenement.mockResolvedValue({ id: '77', selfHash: 'x' });
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — l’apporteur reçoit attribution_annulee_anteriorite, UNE fois, avec l’événement de l’annulation', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txNotifiant(ligneDe({ statut: 'signee' }));
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'anteriorite_etablie',
+      critere: 'devis_signe',
+      fait: DEVIS,
+      acteur: { par: 'systeme' },
+      maintenant: MAINTENANT,
+    });
+    expect(t.notifications).toStrictEqual([
+      {
+        data: {
+          apporteurId: APPORTEUR,
+          cle: 'attribution_annulee_anteriorite',
+          attributionId: ID,
+          evenementId: BigInt(77),
+        },
+      },
+    ]);
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — pour un conseiller, aucune notification : la console seule', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txNotifiant(ligneDe({ statut: 'signee', apporteur_id: null }));
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'anteriorite_etablie',
+      critere: 'devis_signe',
+      fait: DEVIS,
+      acteur: { par: 'systeme' },
+      maintenant: MAINTENANT,
+    });
+    expect(t.notifications).toStrictEqual([]);
+  });
+});
