@@ -41,7 +41,7 @@
 | `perdue`              | Qualification `perdue` avec `motifPerte`                                                | non        |
 | `perimee`             | 90 j sans suite après qualification (`peremptionAt`, REQ-DM-007)                        | non        |
 | `expiree`             | `fenetreFinAt` atteinte (12 mois après `confirmeeAt`)                                   | non        |
-| `annulee`             | Retirée par l'apporteur ou par la console avant qualification                           | non        |
+| `annulee`             | Retirée par l'apporteur ou par la console avant qualification, ou annulée pour antériorité établie après coup (anteriorite_etablie, DM-67), depuis tout état occupant | non        |
 
 **`ETATS_OCCUPANTS` = {provisoire, active, rdv_pris, proposition, signee, convertie, figee_resiliation}** (7 états,
 REQ-DM-003). Constante unique `src/domain/attribution/etats.ts`, projetée dans l'index partiel
