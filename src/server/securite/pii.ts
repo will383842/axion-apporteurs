@@ -44,7 +44,8 @@ export type MotifPii =
   | 'iban_invalide'
   | 'siret_invalide'
   | 'nom_personne_invalide'
-  | 'agent_invalide';
+  | 'agent_invalide'
+  | 'reference_gel_invalide';
 
 export class ErreurPii extends Error {
   constructor(
@@ -312,6 +313,17 @@ const normaliserAgent = (valeur: string): string => {
   return normalise;
 };
 
+/**
+ * La référence d'un incident ou d'un litige qui gèle le journal des accès (SEC-61) : opaque, en
+ * capitales, la forme du CHECK `journal_acces_console_gels_reference_forme` ; bords retirés.
+ */
+const normaliserReferenceGel = (valeur: string): string => {
+  const normalise = valeur.trim().toUpperCase();
+  if (!/^[A-Z0-9][A-Z0-9-]{2,39}$/.test(normalise))
+    throw refus('reference_gel_invalide', 'la référence du gel');
+  return normalise;
+};
+
 /** La SOURCE des types d'empreinte : le type se dérive de ses clés, jamais d'une liste tapée. */
 const NORMALISATIONS = {
   courriel: normaliserCourriel,
@@ -320,6 +332,7 @@ const NORMALISATIONS = {
   siret: normaliserSiret,
   nom_personne: normaliserNomPersonne,
   agent: normaliserAgent,
+  reference_gel: normaliserReferenceGel,
 } satisfies Record<string, (valeur: string) => string>;
 
 export type TypeEmpreinte = keyof typeof NORMALISATIONS;

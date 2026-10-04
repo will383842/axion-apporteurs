@@ -64,6 +64,10 @@ export const MATRICE_DES_ROLES = {
   // écran sans (le lire n'engage rien).
   'ecran:utilisateurs_console': { roles: ['admin'], stepUp: false },
   'action:gerer_utilisateur_console': { roles: ['admin'], stepUp: true },
+  // SEC-61 (conditions de la sécurité) : poser et lever un gel du journal des accès, à un admin
+  // VALIDÉ, sous step-up ; la levée par un AUTRE que l'auteur et que la personne visée (CHECK).
+  'action:poser_gel_journal_acces': { roles: ['admin'], stepUp: true },
+  'action:lever_gel_journal_acces': { roles: ['admin'], stepUp: true },
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, EntreeDeLaMatrice>>;
 
 /**
