@@ -2419,12 +2419,12 @@ Voir le tableau partagé : exemple.invalid/releves</textarea>
                 </nav>
               </div>
             </section>
-            <section class="ecran" id="etat-hors-contrat" aria-label="État : Hors contrat">
+            <section class="ecran" id="etat-vide" aria-label="État : Hors contrat">
               <p class="sans-js-titre">État : Hors contrat</p>
               <div class="app avec-barre">
                 <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
                 <div class="s-voile" hidden></div>
-                <header class="c-tete s-barre" id="barre-etat-hors-contrat">
+                <header class="c-tete s-barre" id="barre-etat-vide">
                   <div class="s-haut">
                     <a class="s-marque" href="console-cadre.html#etat-admin"
                       ><span class="s-logo" aria-hidden="true">A</span
@@ -2495,7 +2495,7 @@ Voir le tableau partagé : exemple.invalid/releves</textarea>
                       <p class="s-titre">Réglages</p>
                       <a
                         class="s-entree"
-                        href="utilisateurs-console.html#etat-hors-contrat"
+                        href="utilisateurs-console.html#etat-vide"
                         aria-current="page"
                         data-libelle="Administration"
                         ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -2547,11 +2547,7 @@ Voir le tableau partagé : exemple.invalid/releves</textarea>
                   <a href="file-qualification.html#etat-nominal">Qualification</a>
                   <a href="console-cadre.html#etat-admin">Apporteurs</a>
                   <a href="console-cadre.html#etat-admin">Prospects</a>
-                  <button
-                    type="button"
-                    aria-expanded="false"
-                    aria-controls="barre-etat-hors-contrat"
-                  >
+                  <button type="button" aria-expanded="false" aria-controls="barre-etat-vide">
                     <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M4 7h16M4 12h16M4 17h16" /></svg
                     >Menu
@@ -2825,6 +2821,277 @@ Voir le tableau partagé : exemple.invalid/releves</textarea>
                 </nav>
               </div>
             </section>
+            <section class="ecran" id="etat-erreur" aria-label="État : Erreur">
+              <p class="sans-js-titre">État : Erreur</p>
+              <div class="app avec-barre">
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-erreur">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="M20 20l-4.5-4.5" /></svg
+                    ><span class="cache">Rechercher dans la console</span
+                    ><input
+                      type="search"
+                      placeholder="Rechercher"
+                      aria-label="Rechercher dans la console"
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-erreur"
+                        aria-current="page"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Mise en demeure">
+                  <div class="vide">
+                    <h3>La page ne s’affiche pas</h3>
+                    <p role="alert">
+                      La mise en demeure n’a pas pu être préparée ou enregistrée : rien n’est parti.
+                      Réessayez dans un instant.
+                    </p>
+                    <p class="rangee"><a class="c-bouton" href="#etat-nominal">Réessayer</a></p>
+                  </div>
+                </div>
+                <nav class="c-barre" aria-label="Console, barre du bas">
+                  <a href="file-qualification.html#etat-nominal">Qualification</a>
+                  <a href="console-cadre.html#etat-admin">Apporteurs</a>
+                  <a href="console-cadre.html#etat-admin">Prospects</a>
+                  <button type="button" aria-expanded="false" aria-controls="barre-etat-erreur">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h16M4 12h16M4 17h16" /></svg
+                    >Menu
+                  </button>
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-refuse" aria-label="État : Accès refusé">
+              <p class="sans-js-titre">État : Accès refusé</p>
+              <div class="app avec-barre">
+                <div class="s-mobile"><span class="s-mobile-nom">Console Axion Partners</span></div>
+                <div class="s-voile" hidden></div>
+                <header class="c-tete s-barre" id="barre-etat-refuse">
+                  <div class="s-haut">
+                    <a class="s-marque" href="console-cadre.html#etat-admin"
+                      ><span class="s-logo" aria-hidden="true">A</span
+                      ><span class="s-nom">Axion Partners<small>Console</small></span></a
+                    ><button
+                      type="button"
+                      class="s-replier"
+                      aria-pressed="false"
+                      aria-label="Replier la barre"
+                      title="Replier la barre"
+                    >
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16M15 10l-2 2 2 2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <label class="s-recherche"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="M20 20l-4.5-4.5" /></svg
+                    ><span class="cache">Rechercher dans la console</span
+                    ><input
+                      type="search"
+                      placeholder="Rechercher"
+                      aria-label="Rechercher dans la console"
+                    /><kbd>Ctrl K</kbd></label
+                  >
+                  <nav class="s-nav" aria-label="Console">
+                    <div class="s-section">
+                      <p class="s-titre">Au quotidien</p>
+                      <a
+                        class="s-entree"
+                        href="file-qualification.html#etat-nominal"
+                        data-libelle="Qualification"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M9 4h6v3H9z" />
+                          <path d="M8 5H6v15h12V5h-2" />
+                          <path d="M9 13l2 2 4-4" /></svg
+                        ><span class="s-libelle">Qualification</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réseau</p>
+                      <a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Apporteurs"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="9" cy="8" r="3.5" />
+                          <path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+                          <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+                          <path d="M18 14.8c2 .8 3.2 2.6 3.5 5.2" /></svg
+                        ><span class="s-libelle">Apporteurs</span></a
+                      ><a
+                        class="s-entree"
+                        href="console-cadre.html#etat-admin"
+                        data-libelle="Prospects"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M4 20V6l8-3v17" />
+                          <path d="M12 9h8v11" />
+                          <path d="M7 9h2M7 13h2M15 13h2M15 16h2" />
+                          <path d="M2 20h20" /></svg
+                        ><span class="s-libelle">Prospects</span></a
+                      >
+                    </div>
+                    <div class="s-section">
+                      <p class="s-titre">Réglages</p>
+                      <a
+                        class="s-entree"
+                        href="utilisateurs-console.html#etat-refuse"
+                        aria-current="page"
+                        data-libelle="Administration"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="3" />
+                          <path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"
+                          /></svg
+                        ><span class="s-libelle">Administration</span></a
+                      >
+                    </div>
+                  </nav>
+                  <div class="s-compte">
+                    <button
+                      type="button"
+                      class="s-qui-bouton"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      data-libelle="Alice Admin-Exemple"
+                    >
+                      <span class="s-avatar" aria-hidden="true">AA</span
+                      ><span class="s-qui"><b>Alice Admin-Exemple</b><small>admin</small></span
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                    <div class="s-menu" role="menu" hidden>
+                      <a role="menuitem" href="utilisateurs-console.html#etat-votre-role"
+                        >Votre rôle : admin</a
+                      ><a role="menuitem" href="connexion-console.html#etat-adresse"
+                        >Se déconnecter</a
+                      >
+                    </div>
+                  </div>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Mise en demeure">
+                  <div class="vide">
+                    <h3>Cette page n’est pas ouverte à votre rôle</h3>
+                    <p>« Mise en demeure » est réservée aux administrateurs.</p>
+                    <p>
+                      <b>Quoi faire :</b> si vous avez besoin de cette page, demandez à un
+                      administrateur de changer votre rôle.
+                    </p>
+                    <p class="rangee">
+                      <a class="c-bouton" href="console-cadre.html#etat-admin"
+                        >Retour à mon accueil</a
+                      >
+                    </p>
+                  </div>
+                </div>
+                <nav class="c-barre" aria-label="Console, barre du bas">
+                  <a href="file-qualification.html#etat-nominal">Qualification</a>
+                  <a href="console-cadre.html#etat-admin">Apporteurs</a>
+                  <a href="console-cadre.html#etat-admin">Prospects</a>
+                  <button type="button" aria-expanded="false" aria-controls="barre-etat-refuse">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h16M4 12h16M4 17h16" /></svg
+                    >Menu
+                  </button>
+                </nav>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -2843,9 +3110,11 @@ Voir le tableau partagé : exemple.invalid/releves</textarea>
         </ul>
         <p class="groupe">Vide et techniques</p>
         <ul>
-          <li><a href="#etat-hors-contrat">Hors contrat</a></li>
+          <li><a href="#etat-vide">Hors contrat</a></li>
           <li><a href="#etat-introuvable">Apporteur introuvable</a></li>
           <li><a href="#etat-chargement">Chargement</a></li>
+          <li><a href="#etat-erreur">Erreur</a></li>
+          <li><a href="#etat-refuse">Accès refusé</a></li>
         </ul>
       </nav>
       <aside class="notes" aria-label="Notes de conception">
@@ -2901,7 +3170,7 @@ Voir le tableau partagé : exemple.invalid/releves</textarea>
             en échec ne fait courir aucun délai.
           </p>
         </section>
-        <section class="note" data-pour="etat-hors-contrat">
+        <section class="note" data-pour="etat-vide">
           <h2>Hors contrat</h2>
           <p>
             État vide : un apporteur dont le contrat n’est pas signé ne reçoit pas de mise en
@@ -2915,6 +3184,21 @@ Voir le tableau partagé : exemple.invalid/releves</textarea>
         <section class="note" data-pour="etat-chargement">
           <h2>Chargement</h2>
           <p>Le repli de la page, le temps de lire l’apporteur.</p>
+        </section>
+        <section class="note" data-pour="etat-erreur">
+          <h2>Erreur</h2>
+          <p>
+            La frontière d’erreur de la page : elle dit que rien n’est parti, et propose de
+            réessayer. Aucun détail de l’erreur, qui pourrait porter les faits.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-refuse">
+          <h2>Accès refusé</h2>
+          <p>
+            Un autre rôle que l’administrateur est renvoyé vers l’écran commun
+            <a href="acces-refuse.html#etat-ecran">acces-refuse.html</a>, dessiné ici dans le cadre
+            de la page.
+          </p>
         </section>
       </aside>
     </main>

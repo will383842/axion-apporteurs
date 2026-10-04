@@ -24,6 +24,13 @@ export const MISE_EN_DEMEURE_CONSOLE = {
   enregistree:
     'La mise en demeure est enregistrée. Le courriel part à l’apporteur au prochain envoi, et le délai court à partir de cet envoi.',
   chargement: 'Chargement…',
+  /** La frontière d'erreur de la page : rien n'est parti, et le geste se refait ; aucun détail. */
+  erreur: {
+    titre: 'La page ne s’affiche pas',
+    phrase:
+      'La mise en demeure n’a pas pu être préparée ou enregistrée : rien n’est parti. Réessayez dans un instant.',
+    action: 'Réessayer',
+  },
   introuvable: {
     titre: 'Apporteur introuvable',
     phrase: 'Cet apporteur n’existe pas, ou plus. Revenez à la liste des apporteurs.',

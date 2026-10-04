@@ -96,6 +96,7 @@ import {
   ChargementDeLaMiseEnDemeure,
   EcranMiseEnDemeure,
 } from '../../../src/components/console/mise-en-demeure';
+import ErreurMiseEnDemeure from '../../../src/app/(console)/console/apporteurs/[id]/mise-en-demeure/error';
 
 const RACINE = join(__dirname, '..', '..', '..');
 const ACTIONS = 'src/server/console/mise-en-demeure/actions.ts';
@@ -395,5 +396,19 @@ describe('REQ-UX-047 — l’écran : le formulaire, ses états, ses refus nomm�
     const chargement = renderToStaticMarkup(createElement(ChargementDeLaMiseEnDemeure));
     expect(chargement).toContain('role="status"');
     expect(texteDe(chargement)).toBe(T.chargement);
+  });
+
+  it('REQ-UX-047 : TÉMOIN — erreur : la page dit que rien n’est parti, et propose de réessayer, sans détail de l’erreur', () => {
+    const html = renderToStaticMarkup(
+      createElement(ErreurMiseEnDemeure, {
+        error: new Error(`panne ${MARQUEUR}`),
+        reset: () => undefined,
+      })
+    );
+    expect(html).toContain('role="alert"');
+    expect(texteDe(html)).toContain(T.erreur.phrase);
+    expect(T.erreur.phrase).toMatch(/[Rr]ien n’est parti/);
+    expect(html).toContain(`<button type="button">${T.erreur.action}</button>`);
+    expect(html).not.toContain(MARQUEUR);
   });
 });
