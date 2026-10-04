@@ -33,7 +33,7 @@ export const ETATS_VIDES_ESPACE: Readonly<Record<string, EtatVide>> = {
   '/mes-commissions': {
     titre: 'Pas encore de commission',
     phrase:
-      "Elles apparaissent ici quand une entreprise que vous avez déposée signe, puis quand elle paie. Vous verrez alors ce qui vous revient, quand, et d'où vient chaque montant.",
+      "Elles apparaissent ici quand une entreprise que vous avez déposée signe, puis à chaque paiement. Vous verrez alors ce qui vous revient, quand, et d'où vient chaque montant.",
     action: RETOUR_ACCUEIL,
   },
   '/plus': {
