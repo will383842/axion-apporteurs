@@ -111,7 +111,8 @@ Ajouté par SEC-19, dans le cadre posé par la sécurité et A02 sur l'issue de 
   profil et la conformité lui sont fermés.
 - **Ce qu'il peut encore faire** : se déconnecter et révoquer ses sessions, exercer ses droits RGPD
   (`docs/runbooks/demandes-de-droits.md`), et accepter une nouvelle version de la politique de
-  confidentialité. **Tout autre geste est refusé par le serveur**, quel que soit l'écran.
+  confidentialité. **Tout autre geste est refusé par le serveur**, quel que soit l'écran. Espace fermé,
+  il les exerce par écrit à l'adresse de tête de la politique de confidentialité.
 - **Son RIB ne change plus en libre service.** Ses commissions continuent d'être payées (art. 12.3) :
   s'il faut changer ses coordonnées bancaires, il l'écrit, et le changement se fait **en console**, avec
   la validation à quatre yeux du RIB (CPL-T24). Aucun versement ne part vers un RIB non validé.
