@@ -27,35 +27,65 @@ import { ConsoleRole } from '@prisma/client';
 /** Les quatre rôles, DÉRIVÉS de l'enum du schéma — jamais une liste retapée (RM-01). */
 export const ROLES_CONSOLE: readonly ConsoleRole[] = Object.values(ConsoleRole);
 
-/** La table : un droit, les rôles qui l'ont. */
+/**
+ * Une entrée : les rôles qui ont le droit, et le STEP-UP (SEC-30, arbitrage de la sécurité). Le
+ * step-up est déclaré sur CHAQUE entrée, vrai ou faux : un oubli ne vaut jamais « sans step-up ».
+ * Vrai, la session doit avoir été OUVERTE depuis moins que `DUREES_AUTH.releveMs`, lu en base.
+ */
+export interface EntreeDeLaMatrice {
+  readonly roles: readonly ConsoleRole[];
+  readonly stepUp: boolean;
+}
+
+/** La table : un droit, les rôles qui l'ont, et son step-up. */
 export const MATRICE_DES_ROLES = {
-  'action:voir_iban_en_clair': ['admin', 'comptable'],
-  'action:approuver_lot': ['admin', 'comptable'],
-  'action:exporter_pain001': ['admin', 'comptable'],
-  'action:lever_gel': ['admin'],
-  'action:suspendre_apporteur': ['admin'],
-  'action:resilier_apporteur': ['admin'],
-  'action:exporter_das2': ['admin'],
+  // Condition 4 de la sécurité (rattrapage 96) : un export de données de personnes, et l'IBAN en
+  // clair, demandent le step-up.
+  'action:voir_iban_en_clair': { roles: ['admin', 'comptable'], stepUp: true },
+  'action:approuver_lot': { roles: ['admin', 'comptable'], stepUp: false },
+  'action:exporter_pain001': { roles: ['admin', 'comptable'], stepUp: true },
+  // SEC-30 (texte de la sécurité, point 4) : la levée d'un gel est sous step-up dès maintenant.
+  'action:lever_gel': { roles: ['admin'], stepUp: true },
+  'action:suspendre_apporteur': { roles: ['admin'], stepUp: false },
+  'action:resilier_apporteur': { roles: ['admin'], stepUp: false },
+  'action:exporter_das2': { roles: ['admin'], stepUp: true },
   // DM-12 (REQ-DM-034, amendement A1-01) : le rattachement manuel motivé, au qualifieur (glossaire §7)
   // et à l'admin ; jamais au comptable ni au lecteur.
-  'action:rattacher_manuellement': ['admin', 'qualifieur'],
+  'action:rattacher_manuellement': { roles: ['admin', 'qualifieur'], stepUp: false },
   // DM-12 (REQ-DM-033, cadrage de la sécurité) : déchiffrer la justification d'une anomalie, par le
   // lecteur unique ; jamais au comptable ni au lecteur.
-  'action:lire_justification_anomalie': ['admin', 'qualifieur'],
+  'action:lire_justification_anomalie': { roles: ['admin', 'qualifieur'], stepUp: false },
   // SEC-29 : l'écran `/console` minimal (le repli de la redirection, avant l'accueil du rôle
   // d'UX-P1-16) et la déconnexion, ouverts aux quatre rôles : chacun doit pouvoir arriver et partir.
-  'ecran:accueil': ['admin', 'qualifieur', 'comptable', 'lecteur'],
-  'action:se_deconnecter': ['admin', 'qualifieur', 'comptable', 'lecteur'],
+  'ecran:accueil': { roles: ['admin', 'qualifieur', 'comptable', 'lecteur'], stepUp: false },
+  'action:se_deconnecter': {
+    roles: ['admin', 'qualifieur', 'comptable', 'lecteur'],
+    stepUp: false,
+  },
   // UX-P1-16 : les écrans de la PHASE 1 de la navigation (`docs/CONSOLE-ROUTES.md`), répartis selon la
   // carte ; une entrée n'apparaît que si l'écran est AUSSI livré. Les écrans des phases 2 et 3
-  // entrent avec la tâche qui les livre.
-  'ecran:qualification': ['admin', 'qualifieur', 'lecteur'],
-  'ecran:apporteurs': ['admin', 'qualifieur', 'comptable'],
-  'ecran:attributions': ['admin', 'qualifieur', 'lecteur'],
-  'ecran:utilisateurs_console': ['admin'],
+  // entrent avec la tâche qui les livre. Un écran se lit sans step-up : le lire n'engage rien.
+  'ecran:qualification': { roles: ['admin', 'qualifieur', 'lecteur'], stepUp: false },
+  'ecran:apporteurs': { roles: ['admin', 'qualifieur', 'comptable'], stepUp: false },
+  'ecran:attributions': { roles: ['admin', 'qualifieur', 'lecteur'], stepUp: false },
   // L'écran d'accès refusé, ouvert à tout rôle : il dit ce que le rôle permet et à qui s'adresser.
-  'ecran:acces_refuse': ['admin', 'qualifieur', 'comptable', 'lecteur'],
-} as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, readonly ConsoleRole[]>>;
+  'ecran:acces_refuse': {
+    roles: ['admin', 'qualifieur', 'comptable', 'lecteur'],
+    stepUp: false,
+  },
+  // SEC-30 : la gestion des utilisateurs de la console, à admin seul ; l'action sous step-up, son
+  // écran sans (le lire n'engage rien).
+  'ecran:utilisateurs_console': { roles: ['admin'], stepUp: false },
+  'action:gerer_utilisateur_console': { roles: ['admin'], stepUp: true },
+} as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, EntreeDeLaMatrice>>;
+
+/**
+ * Les rôles par droit, PROJETÉS de la table : la forme que lit la garde `securite:roles`. Une
+ * projection, jamais une seconde table.
+ */
+export const ROLES_PAR_DROIT: Readonly<Record<string, readonly ConsoleRole[]>> = Object.fromEntries(
+  Object.entries(MATRICE_DES_ROLES).map(([droit, entree]) => [droit, entree.roles])
+);
 
 /** Un droit DÉCLARÉ — le seul que le typage laisse passer à `requireRole`. */
 export type DroitConsole = keyof typeof MATRICE_DES_ROLES;
@@ -71,6 +101,19 @@ export function droitDeclare(droit: string): droit is DroitConsole {
 /** Vrai si le rôle a le droit. Un droit absent de la table rend faux, pour tous les rôles. */
 export function roleAutorise(droit: string, role: ConsoleRole): boolean {
   if (!droitDeclare(droit)) return false;
-  const roles: readonly ConsoleRole[] = MATRICE_DES_ROLES[droit];
+  const roles: readonly ConsoleRole[] = MATRICE_DES_ROLES[droit].roles;
   return roles.includes(role);
+}
+
+/** SEC-30 : vrai si le droit exige le step-up. Un droit absent de la table l'exige (échec fermé). */
+export function exigeLeStepUp(droit: string): boolean {
+  return !droitDeclare(droit) || MATRICE_DES_ROLES[droit].stepUp;
+}
+
+/**
+ * SEC-30 (quatre yeux) : vrai si le droit est ouvert aux QUATRE rôles — arriver, partir. C'est tout
+ * ce qu'un admin en attente de validation garde. Un droit absent de la table : faux.
+ */
+export function ouvertATousLesRoles(droit: string): boolean {
+  return ROLES_CONSOLE.every((role) => roleAutorise(droit, role));
 }
