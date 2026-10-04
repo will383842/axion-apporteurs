@@ -124,6 +124,9 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
   'public/confirmation-contact.ts':
     'page publique du contact, hors de l’espace : couverte par le témoin confirmation-par-courriel',
   'console/a-appeler.ts': 'lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
+  // SEC-30 : l'écran des utilisateurs de la console et ses courriels, lus par ses utilisateurs seuls.
+  'console/utilisateurs.ts':
+    'administration des utilisateurs de la console et ses courriels, lus par ses utilisateurs seuls (portée dépôt, REQ-GOV-017)',
   // CPL-T07 : le dossier de conformité, lu par Axion-IA seul ; les phrases des motifs que l'apporteur
   // lira y sont celles de la juriste, mot pour mot, et repassent par l'espace quand il les affichera.
   'console/conformite.ts':
