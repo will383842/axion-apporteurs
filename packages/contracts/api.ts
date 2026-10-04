@@ -222,8 +222,119 @@ export const API_RELECTURE: ApiDuContrat = {
   },
 };
 
+/** Un mois `AAAA-MM`, mois de 01 à 12. */
+const MOTIF_MOIS = '^[0-9]{4}-(0[1-9]|1[0-2])$';
+/** Une référence opaque : un UUID, qui ne peut porter ni un nom ni une adresse de courriel. */
+const MOTIF_UUID = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+/**
+ * Un nom d'affichage : le ou les mots du prénom, puis UNE initiale suivie d'un point (« Paul D. »,
+ * « Jean-Paul D. ») — motif d'A02 (PR 710, commentaire 5981840348). Le nom entier, un prénom seul, une
+ * adresse de courriel ou un numéro ne passent pas.
+ */
+const MOTIF_NOM_AFFICHABLE = "^[\\p{L}][\\p{L}'’-]*( [\\p{L}][\\p{L}'’-]*)* \\p{L}\\.$";
+/** La longueur d'un nom d'affichage, au plus (A02). */
+const LONGUEUR_MAX_NOM_AFFICHABLE = 64;
+
+/** Ce que le statut exige d'un champ du porteur : posé, ou nul. Un champ absent reste libre. */
+type ExigenceDuStatut = Partial<Record<'until' | 'apporteurRef' | 'nomAffichable', 'pose' | 'nul'>>;
+/**
+ * `if`/`then` : quand `statut` vaut `statut`, chaque champ nommé est posé ou nul. Le contrat juge
+ * seul la cohérence — elle ne vit plus dans un `$comment`.
+ */
+function siLeStatut(statut: string, exigences: ExigenceDuStatut): FragmentSchema {
+  return {
+    if: { properties: { statut: { const: statut } }, required: ['statut'] },
+    then: {
+      properties: Object.fromEntries(
+        Object.entries(exigences).map(([c, e]) => [
+          c,
+          e === 'pose' ? { type: 'string' } : { type: 'null' },
+        ])
+      ),
+    },
+  };
+}
+
+/**
+ * L'API 1, `GET /api/integrations/axionia/attributions?siren=` — REQ-INT-014, INT-T07-P.
+ *
+ * axion-ia → Partners. Réponse 200 : `{statut, until, apporteurRef, nomAffichable}`, FERMÉE. Tout
+ * refus d'authentification, de méthode ou de route rend 404 sans corps, identique à une route
+ * inexistante (REQ-SEC-012) ; un SIREN mal formé rend 400 ; une lecture impossible rend 503.
+ */
+export const API_ATTRIBUTIONS: ApiDuContrat = {
+  methode: 'GET',
+  chemin: '/api/integrations/axionia/attributions',
+  prefixeDefs: 'api_attributions',
+  defs: {
+    api_attributions_parametres: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['siren'],
+      properties: { siren: { type: 'string', pattern: '^[0-9]{9}$' } },
+      $comment: 'Le paramètre de requête : le SIREN, neuf chiffres. Mal formé : 400 sans corps.',
+    },
+    api_attributions_requete_entetes: {
+      type: 'object',
+      required: ['authorization', ENTETE_KID_AXIONIA],
+      properties: {
+        authorization: { type: 'string', pattern: '^Bearer \\S+$' },
+        [ENTETE_KID_AXIONIA]: { type: 'string', pattern: MOTIF_KID },
+      },
+      $comment:
+        'Requête axion-ia → Partners : le jeton porteur dédié à l’API 1, comparé à temps constant ' +
+        'à la clé que désigne `x-axionia-kid`, EXIGÉ et dérivé par kidDe(AXIONIA_API_TOKEN) ' +
+        '(avenant A01 du 2026-09-30, QA-T52) ; liste d’autorisation d’adresses réseau ; 60 appels ' +
+        'par minute et par adresse. Un kid absent ou inconnu, un jeton faux ou échu, une adresse ' +
+        'hors liste : 404 sans corps, identique à une route inexistante (REQ-SEC-012).',
+    },
+    api_attributions_reponse: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['statut', 'until', 'apporteurRef', 'nomAffichable'],
+      properties: {
+        statut: { type: 'string', enum: ['libre', 'attribuee', 'cliente'] },
+        until: ouNul({ type: 'string', pattern: MOTIF_MOIS }),
+        apporteurRef: ouNul({ type: 'string', pattern: MOTIF_UUID }),
+        nomAffichable: ouNul({
+          type: 'string',
+          pattern: MOTIF_NOM_AFFICHABLE,
+          maxLength: LONGUEUR_MAX_NOM_AFFICHABLE,
+        }),
+      },
+      // Conditions d'A02, version consolidée et source publique : PR 710, commentaire 5981840348.
+      // `nomAffichable` est au motif OU nul pour un porteur sans nom lisible (disponibilité) : le
+      // statut et la référence passent toujours.
+      allOf: [
+        siLeStatut('libre', { until: 'nul', apporteurRef: 'nul', nomAffichable: 'nul' }),
+        // A02 (5981872875) : `until` nul = attribuée, fin pas encore fixée (attribution non
+        // confirmée) — jamais lu comme `libre`.
+        siLeStatut('attribuee', { apporteurRef: 'pose' }),
+        // Décision B de Williams : « Apportée par Paul » sur la fiche client — une `cliente` a un
+        // porteur ; elle n'a plus d'échéance.
+        siLeStatut('cliente', { until: 'nul', apporteurRef: 'pose' }),
+      ],
+      $comment:
+        'Réponse 200, fermée. `libre` : `until`, `apporteurRef` et `nomAffichable` ' +
+        'nuls (`allOf`), la même réponse pour un SIREN inconnu, au même instant ; `attribuee` : ' +
+        '`apporteurRef` posé, et `until` nul signifie « attribuée, fin pas encore fixée (attribution ' +
+        'non confirmée) » — jamais `libre` ; `cliente` : `apporteurRef` posé, `until` nul. ' +
+        '`nomAffichable` est nul quand le porteur n’a pas de nom lisible. `apporteurRef` est opaque, de même forme ' +
+        'pour un apporteur et pour un conseiller salarié (W19) ; `nomAffichable` est le prénom et ' +
+        'l’initiale du nom du porteur, sans mention de rôle (décisions de Williams du 2026-10-01) — ' +
+        'jamais e-mail, téléphone, identifiant ni adresse. Côté axion-ia, le nom ne s’affiche qu’à ' +
+        'qui crée ou lit un devis, n’entre dans aucun journal ni rapport d’erreur, ni dans aucun ' +
+        'document ou message au client, et n’est conservé que le temps du cache (5 minutes).',
+    },
+  },
+};
+
 /** Les API dont ce paquet porte le schéma. */
-export const API_DU_CONTRAT: readonly ApiDuContrat[] = [API_COORDONNEES_CANDIDATURE, API_RELECTURE];
+export const API_DU_CONTRAT: readonly ApiDuContrat[] = [
+  API_COORDONNEES_CANDIDATURE,
+  API_RELECTURE,
+  API_ATTRIBUTIONS,
+];
 
 /** Les `$defs` de toutes les API, à fusionner dans le JSON Schema publié. */
 export function defsApi(): Record<string, FragmentSchema> {

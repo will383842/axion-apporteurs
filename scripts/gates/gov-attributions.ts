@@ -1843,14 +1843,6 @@ export const CITATIONS_DECLAREES: Citation[] = [
       'la garde de l’oracle appartient à SEC-16 ; UX-P1-01 est nommée comme l’écran dont les réponses doivent rester indistinctes.',
   },
   {
-    ou: 'docs/gates.json(tests/unit/securite/revocation.spec.ts).verifie',
-    ligne: 1,
-    id: 'SEC-19',
-    nature: 'contexte',
-    raison:
-      'la garde de révocation appartient à SEC-04 ; SEC-19 est nommée comme la tâche voisine qui prolonge la règle.',
-  },
-  {
     ou: 'docs/gates.json(scripts/gates/harnais-mcp.ts).verifie',
     ligne: 1,
     id: 'INT-T13',
