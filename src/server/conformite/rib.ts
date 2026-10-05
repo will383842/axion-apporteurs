@@ -24,7 +24,7 @@
  * Aucune donnée de personne dans un refus ou un événement.
  */
 import type { Prisma, PrismaClient } from '@prisma/client';
-import { ajouterEvenement } from '../evenement/journal';
+import { acteursDUneTransition, ajouterEvenement } from '../evenement/journal';
 import { roleAutorise } from '../roles/matrice';
 import { empreinteRecherche, type ClesPii } from '../securite/pii';
 import type { ActeurDuDossier } from './dossier';
@@ -85,12 +85,9 @@ function lireLaPiece(tx: Tx, pieceId: string) {
 
 /** Refuse l'acteur s'il a ouvert le dossier de cet apporteur : l'ouverture est relue au journal. */
 async function exigerUnAutreQueLOuvreur(tx: Tx, apporteurId: string, acteurId: string) {
-  const ouvreurs = await tx.$queryRaw<{ id: string | null }[]>`
-    SELECT "charge"->'acteur'->>'id' AS id FROM "evenements"
-    WHERE "agregat_id" = ${apporteurId}::uuid AND "type" = 'apporteur_statut_modifie'
-      AND "charge"->>'transition' = 'ouvrir_kyc'`;
-  if (ouvreurs.some((o) => o.id === acteurId))
-    throw new ErreurRibQuatreYeux('auteur_de_l_ouverture');
+  // Le journal ne se lit que par son module (garde journal:sans-pii).
+  const ouvreurs = await acteursDUneTransition(tx, apporteurId, 'ouvrir_kyc');
+  if (ouvreurs.includes(acteurId)) throw new ErreurRibQuatreYeux('auteur_de_l_ouverture');
 }
 
 /** Le premier regard : vérifier hors bande un RIB à vérifier. Le statut ne change pas. */

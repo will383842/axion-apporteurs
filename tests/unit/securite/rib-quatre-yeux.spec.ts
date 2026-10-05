@@ -23,6 +23,7 @@ import {
   verifierUnRib,
 } from '../../../src/server/conformite/rib';
 import { clesPii, empreinteRecherche } from '../../../src/server/securite/pii';
+import { acteursDUneTransition } from '../../../src/server/evenement/journal';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 
 const ADMIN = { id: '0190f0f0-0000-7000-8000-0000000000a1', role: 'admin' } as const;
@@ -100,10 +101,19 @@ function fauxClient(o: {
         return { count: o.compte ?? 1 };
       },
     },
-    $queryRaw: async (chaines: TemplateStringsArray, ...valeurs: unknown[]) => {
-      const sql = Prisma.sql(chaines, ...valeurs);
-      appels.push({ quoi: 'ouvreurs', args: { sql: sql.sql, valeurs: sql.values } });
-      return (o.ouvreurs ?? []).map((id) => ({ id }));
+    // Le journal, lu par son module (`acteursDUneTransition`) : des charges d'ouverture du dossier.
+    evenement: {
+      findMany: async (args: unknown) => {
+        appels.push({ quoi: 'ouvreurs', args });
+        return (o.ouvreurs ?? []).map((id) => ({
+          charge: {
+            de: 'retenu',
+            vers: 'kyc_en_cours',
+            transition: 'ouvrir_kyc',
+            acteur: { par: 'utilisateur_console', id },
+          },
+        }));
+      },
     },
   };
   const evenements: unknown[] = [];
@@ -177,14 +187,16 @@ describe('REQ-DM-027 — vérifier un RIB : le premier regard', () => {
       )
     ).toBe('auteur_de_l_ouverture');
     expect(ecritures(f.appels)).toEqual([]);
-    const lecture = f.appels.find((a) => a.quoi === 'ouvreurs')!.args as {
-      sql: string;
-      valeurs: unknown[];
-    };
-    expect(lecture.sql).toMatch(/FROM "evenements"/);
-    expect(lecture.sql).toMatch(/"type" = 'apporteur_statut_modifie'/);
-    expect(lecture.sql).toMatch(/"charge"->>'transition' = 'ouvrir_kyc'/);
-    expect(lecture.valeurs).toEqual([APPORTEUR]);
+    // Lu par le module du journal, paramétré : l'agrégat, le type et la transition.
+    expect(f.appels.find((a) => a.quoi === 'ouvreurs')!.args).toEqual({
+      where: {
+        agregat: 'apporteur',
+        agregatId: APPORTEUR,
+        type: 'apporteur_statut_modifie',
+        charge: { path: ['transition'], equals: 'ouvrir_kyc' },
+      },
+      select: { charge: true },
+    });
   });
 
   it('REQ-DM-027 : TÉMOIN — la vérification pose le regard et sa date, une fois, sans toucher le statut', async () => {
@@ -391,5 +403,60 @@ describe('REQ-DM-027 — rib.ts ne lit jamais l’IBAN (condition de la sécurit
     expect(fichiers.length).toBeGreaterThan(0);
     const importeurs = fichiers.filter((f) => /conformite\/rib['"]/.test(readFileSync(f, 'utf8')));
     expect(importeurs).toEqual([]);
+  });
+});
+
+describe('REQ-DM-027 — l’auteur de l’ouverture, relu par le module du journal (conditions d’A02 et de la sécurité)', () => {
+  const journal = (charges: unknown[]) => {
+    const appels: unknown[] = [];
+    const client = {
+      evenement: {
+        findMany: async (args: unknown) => {
+          appels.push(args);
+          return charges.map((charge) => ({ charge }));
+        },
+      },
+    } as unknown as Prisma.TransactionClient;
+    return { client, appels };
+  };
+  const ouverture = (acteur: Record<string, unknown>) => ({
+    de: 'retenu',
+    vers: 'kyc_en_cours',
+    transition: 'ouvrir_kyc',
+    acteur,
+  });
+
+  it('REQ-DM-027 : TÉMOIN — le lecteur ne rend que les identifiants des acteurs, et null pour le système', async () => {
+    const j = journal([
+      ouverture({ par: 'utilisateur_console', id: ADMIN.id }),
+      ouverture({ par: 'systeme' }),
+    ]);
+    expect(await acteursDUneTransition(j.client, APPORTEUR, 'ouvrir_kyc')).toEqual([
+      ADMIN.id,
+      null,
+    ]);
+  });
+
+  it('REQ-DM-027 : TÉMOIN — une transition hors de la liste fermée, un agrégat qui n’est pas un UUID, ou une charge hors schéma : refus, sans rien rendre', async () => {
+    const j = journal([ouverture({ par: 'utilisateur_console', id: ADMIN.id })]);
+    await expect(
+      acteursDUneTransition(j.client, APPORTEUR, 'pas_une_transition' as 'ouvrir_kyc')
+    ).rejects.toThrow(/^lecture_du_journal_refusee/);
+    await expect(acteursDUneTransition(j.client, 'pas-un-uuid', 'ouvrir_kyc')).rejects.toThrow(
+      /^lecture_du_journal_refusee/
+    );
+    expect(j.appels).toEqual([]);
+    const illisible = journal([
+      { ...ouverture({ par: 'utilisateur_console', id: ADMIN.id }), iban: 'x' },
+    ]);
+    await expect(acteursDUneTransition(illisible.client, APPORTEUR, 'ouvrir_kyc')).rejects.toThrow(
+      /^lecture_du_journal_refusee/
+    );
+  });
+
+  it('REQ-DM-027 : TÉMOIN STATIQUE — rib.ts n’écrit aucun SQL sur la table du journal', () => {
+    const source = readFileSync('src/server/conformite/rib.ts', 'utf8');
+    expect(source).not.toMatch(/"evenements"|\$queryRaw[^`]*`[^`]*evenements/);
+    expect(source).toMatch(/acteursDUneTransition\(tx, apporteurId, 'ouvrir_kyc'\)/);
   });
 });
