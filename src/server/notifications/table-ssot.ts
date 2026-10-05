@@ -204,6 +204,21 @@ export const GABARITS = {
     route: '/mes-entreprises',
     routeEnAttente: null,
   },
+  attribution_annulee_anteriorite: {
+    destinataire: 'apporteur',
+    req: 'REQ-JUR-007',
+    emetteur: 'DM-25',
+    fondement:
+      'art. 3.3 — l’antériorité de la Société établie après coup : le dépôt est annulé, les commissions acquises restent acquises',
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: false,
+    canaux: ['email', 'espace'],
+    desactivable: false,
+    actions: action('attribution_annulee_anteriorite'),
+    route: '/mes-entreprises',
+    routeEnAttente: null,
+  },
   attribution_liberee: {
     destinataire: 'apporteur',
     req: 'REQ-DM-007',

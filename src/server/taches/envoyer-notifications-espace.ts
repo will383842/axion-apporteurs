@@ -154,6 +154,8 @@ export const CLES_ENVOYEES_PAR_LE_PASSAGE = [
   // courriel fait courir un délai (la mise en demeure, le préavis), compté de `envoye_at`.
   'mise_en_demeure',
   'resiliation',
+  // DM-25 : l'annulation pour antériorité de la Société, écrite avec son événement par la transition.
+  'attribution_annulee_anteriorite',
 ] as const;
 
 /** Les clés du contrat : leur texte se rend depuis la décision liée, jamais depuis une attribution. */
