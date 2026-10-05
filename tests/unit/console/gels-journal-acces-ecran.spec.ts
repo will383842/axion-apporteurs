@@ -35,6 +35,7 @@ import {
   EcranDesGels,
   type GelAffiche,
 } from '../../../src/app/(console)/console/journal-des-acces/gels/ecran';
+import { ROUTES_LIVREES_DE_LA_CONSOLE } from '../../../src/server/console/navigation';
 import { lireLaSaisieDuGel } from '../../../src/app/(console)/console/journal-des-acces/gels/saisie';
 
 const DEPUIS = new Date('2026-01-01T00:00:00.000Z');
@@ -249,7 +250,7 @@ describe('REQ-SEC-023 — (4) la saisie de la pose, fermée avant tout travail',
   });
 
   it('REQ-SEC-023 — TÉMOINS : chaque forme fautive rend null, sans rien écrire', () => {
-    for (const faute of <Record<string, string>[]>[
+    for (const faute of [
       { motif: 'autre' },
       { portee: 'tous' },
       { identifiant: '42' },
@@ -258,7 +259,7 @@ describe('REQ-SEC-023 — (4) la saisie de la pose, fermée avant tout travail',
       { depuis: '2026-02-30' },
       { jusquA: '2025-12-31' },
       { jusquA: 'demain' },
-    ])
+    ] as Record<string, string>[])
       expect(lireLaSaisieDuGel(formulaire(faute)), JSON.stringify(faute)).toBeNull();
   });
 });
@@ -358,10 +359,7 @@ function base(o: { lecteur?: Lu | null; gels?: GelEnBase[]; traceEchoue?: boolea
   return { client, appels, traces };
 }
 
-const lire = (
-  client: PrismaClient,
-  o: { curseur?: string | null; taille?: number } = {}
-) =>
+const lire = (client: PrismaClient, o: { curseur?: string | null; taille?: number } = {}) =>
   lireLesGels(
     client,
     { lecteurId: LECTEUR, adresse: null, curseur: o.curseur ?? null, taille: o.taille },
@@ -457,5 +455,48 @@ describe('REQ-SEC-023 — (6) chaque page lue écrit ses traces avant d’être 
       await expect(lire(client)).rejects.toMatchObject({ motif: 'droit_absent' });
       expect(appels, JSON.stringify(lecteur)).toEqual(['transaction', 'lecteur']);
     }
+  });
+});
+
+describe('REQ-SEC-023 — (7) l’onglet : la route est livrée, et seul l’admin validé en voit le lien', () => {
+  const UTILISATEURS = 'src/app/(console)/console/utilisateurs/page.tsx';
+
+  /** Le lien vers les gels, et la condition qui l'ouvre, lus dans la source de l'administration. */
+  function fautesDuLien(source: string): string[] {
+    const fautes: string[] = [];
+    const lien = /\{(\w+)\s*\?\s*\(?\s*<p>\s*<a href="\/console\/journal-des-acces\/gels">/.exec(
+      source
+    );
+    if (!lien) return ['lien absent, ou ouvert sans condition'];
+    const garde = new RegExp(
+      `const ${lien[1]} =\\s*\\(?\\s*await droitsDuLecteurSurLesGels\\(d\\.prisma, moi\\)`
+    );
+    if (!garde.test(source)) fautes.push(`« ${lien[1]} » n’est pas le droit relu des gels`);
+    return fautes;
+  }
+
+  it('REQ-SEC-023 — le lien depuis l’administration n’existe que sous le droit relu des gels', () => {
+    expect(fautesDuLien(readFileSync(UTILISATEURS, 'utf8'))).toEqual([]);
+  });
+
+  it('REQ-SEC-023 — TÉMOINS : un lien ouvert sans condition, ou sous une autre condition, rougit', () => {
+    const source = readFileSync(UTILISATEURS, 'utf8');
+    const sansCondition = source.replace(
+      /\{(\w+)\s*\?\s*\(?\s*<p>/,
+      '{true ? (<p>'
+    );
+    expect(fautesDuLien(sansCondition)).not.toEqual([]);
+    expect(
+      fautesDuLien(source.replace(/await droitsDuLecteurSurLesGels\(d\.prisma, moi\)/, 'true'))
+    ).not.toEqual([]);
+  });
+
+  it('REQ-SEC-023 — la route est dite livrée, dans la carte ET dans la navigation', () => {
+    expect(ROUTES_LIVREES_DE_LA_CONSOLE).toContain('/console/journal-des-acces/gels');
+    expect(
+      readFileSync('docs/CONSOLE-ROUTES.md', 'utf8')
+        .split('\n')
+        .some((l) => /^\| `\/console\/journal-des-acces\/gels` \|.*\| admin \| 1 \| livrée \|/.test(l))
+    ).toBe(true);
   });
 });
