@@ -21,10 +21,15 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { ConsoleRole, PrismaClient } from '@prisma/client';
 import { ROLES_CONSOLE, roleAutorise } from '../../../src/server/roles/matrice';
 import {
+  CurseurDesGelsIllisible,
   droitsDuLecteurSurLesGels,
   droitsSurLesGels,
+  lireLesGels,
   type MotifDuGel,
 } from '../../../src/server/console/gels-journal-acces';
+import { GELS_JOURNAL_ACCES_PAGE_MAX } from '../../../src/domain/seuils/ssot';
+import { NOMS_DES_SECRETS } from '../../../src/lib/env';
+import { clesPii } from '../../../src/server/securite/pii';
 import { GELS_JOURNAL_ACCES as T } from '../../../src/content/micro-copy/console/gels-journal-acces';
 import {
   EcranDesGels,
@@ -56,6 +61,15 @@ const gel = (extra: Partial<GelAffiche> = {}): GelAffiche => ({
 });
 
 const date = (d: Date) => d.toISOString().slice(0, 10);
+
+/** Des clés de test, fabriquées à l'exécution (jamais un secret réel). */
+const CLES = clesPii({
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-ecran-gel-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: 'c'.repeat(64),
+});
 
 function rendu(
   o: {
@@ -246,5 +260,202 @@ describe('REQ-SEC-023 — (4) la saisie de la pose, fermée avant tout travail',
       { jusquA: 'demain' },
     ])
       expect(lireLaSaisieDuGel(formulaire(faute)), JSON.stringify(faute)).toBeNull();
+  });
+});
+
+// ── (5) la liste des gels : bornée, paginée par curseur, tracée avant le rendu ──
+
+type GelEnBase = {
+  id: string;
+  motif: 'incident' | 'litige';
+  reference: string;
+  utilisateurViseId: string | null;
+  cibleId: string | null;
+  depuis: Date;
+  jusquA: Date | null;
+  poseAt: Date;
+  leveAt: Date | null;
+};
+
+const VISE_A = '0190f0f0-0000-7000-8000-0000000000a1';
+const VISE_B = '0190f0f0-0000-7000-8000-0000000000b2';
+const UNE_CIBLE = '0190f0f0-0000-7000-8000-0000000000c3';
+
+/** `n` gels, du plus récent au plus ancien, posés une heure d'écart, tous sur `vise`. */
+function gelsEnBase(n: number, vise: (i: number) => Partial<GelEnBase> = () => ({})): GelEnBase[] {
+  return Array.from({ length: n }, (_, i) => ({
+    id: `0190f0f0-0000-7000-8000-${String(1000 + i).padStart(12, '0')}`,
+    motif: 'litige' as const,
+    reference: `LIT-${String(i).padStart(4, '0')}`,
+    utilisateurViseId: VISE_A,
+    cibleId: null,
+    depuis: DEPUIS,
+    jusquA: null,
+    poseAt: new Date(POSE.getTime() - i * 3_600_000),
+    leveAt: null,
+    ...vise(i),
+  }));
+}
+
+/**
+ * Un faux client qui applique le keyset et l'ordre comme la base : il juge le `where` qu'il reçoit,
+ * au lieu de rendre une liste fixe — sinon la reprise après la dernière ligne ne serait pas jugée.
+ */
+function base(o: { lecteur?: Lu | null; gels?: GelEnBase[]; traceEchoue?: boolean } = {}) {
+  const appels: string[] = [];
+  const traces: { utilisateurConsoleId: string; nature: string; cibleId: string | null }[] = [];
+  const lecteur = o.lecteur === undefined ? valide('admin') : o.lecteur;
+  const gels = o.gels ?? [];
+  type Where = {
+    OR?: ({ poseAt: { lt: Date } } | { poseAt: Date; id: { lt: string } })[];
+  };
+  const tx = {
+    utilisateurConsole: {
+      findUnique: async () => {
+        appels.push('lecteur');
+        return lecteur;
+      },
+    },
+    journalAccesConsoleGel: {
+      findMany: async (a: { where?: Where; take: number; orderBy: unknown }) => {
+        appels.push('gels');
+        expect(a.orderBy).toEqual([{ poseAt: 'desc' }, { id: 'desc' }]);
+        const apres = (g: GelEnBase) =>
+          !a.where?.OR ||
+          a.where.OR.some((c) =>
+            'id' in c
+              ? g.poseAt.getTime() === c.poseAt.getTime() && g.id < c.id.lt
+              : g.poseAt < c.poseAt.lt
+          );
+        return [...gels]
+          .sort((x, y) => y.poseAt.getTime() - x.poseAt.getTime() || (x.id < y.id ? 1 : -1))
+          .filter(apres)
+          .slice(0, a.take);
+      },
+    },
+    journalAccesConsole: {
+      create: async (a: {
+        data: { utilisateurConsoleId: string; nature: string; cibleId: string | null };
+      }) => {
+        appels.push('trace');
+        if (o.traceEchoue) throw new Error('écriture refusée');
+        traces.push({
+          utilisateurConsoleId: a.data.utilisateurConsoleId,
+          nature: a.data.nature,
+          cibleId: a.data.cibleId,
+        });
+        return a;
+      },
+    },
+  };
+  const client = {
+    ...tx,
+    $transaction: async (f: (t: typeof tx) => Promise<unknown>) => {
+      appels.push('transaction');
+      return f(tx);
+    },
+  } as unknown as PrismaClient;
+  return { client, appels, traces };
+}
+
+const lire = (
+  client: PrismaClient,
+  o: { curseur?: string | null; taille?: number } = {}
+) =>
+  lireLesGels(
+    client,
+    { lecteurId: LECTEUR, adresse: null, curseur: o.curseur ?? null, taille: o.taille },
+    CLES
+  );
+
+describe('REQ-SEC-023 — (5) la liste des gels, bornée et paginée par curseur', () => {
+  it('REQ-SEC-023 — la borne est en SSOT, à 50 lignes, avec sa source', () => {
+    expect(GELS_JOURNAL_ACCES_PAGE_MAX.valeur).toBe(50);
+    expect(GELS_JOURNAL_ACCES_PAGE_MAX.source).toMatch(/coordination.*sécurité/);
+  });
+
+  it('REQ-SEC-023 — TÉMOIN : une page ne dépasse jamais la borne, même quand on en demande plus', async () => {
+    const { client } = base({ gels: gelsEnBase(120) });
+    const page = await lire(client, { taille: 500 });
+    expect(page.gels).toHaveLength(GELS_JOURNAL_ACCES_PAGE_MAX.valeur);
+    expect(page.suivant).not.toBeNull();
+    expect((await lire(client, { taille: 3 })).gels).toHaveLength(3);
+    expect((await lire(client, { taille: 0 })).gels).toHaveLength(1);
+  });
+
+  it('REQ-SEC-023 — TÉMOIN : la page suivante reprend exactement après la dernière ligne rendue', async () => {
+    // Deux gels posés au MÊME instant : seul l'identifiant les départage.
+    const gels = gelsEnBase(7, (i) => (i === 3 || i === 4 ? { poseAt: POSE } : {}));
+    const { client } = base({ gels });
+    const vus: string[] = [];
+    let curseur: string | null = null;
+    do {
+      const page: Awaited<ReturnType<typeof lire>> = await lire(client, { curseur, taille: 2 });
+      vus.push(...page.gels.map((g) => g.id));
+      curseur = page.suivant;
+    } while (curseur !== null);
+    const attendu = [...gels]
+      .sort((x, y) => y.poseAt.getTime() - x.poseAt.getTime() || (x.id < y.id ? 1 : -1))
+      .map((g) => g.id);
+    expect(vus).toEqual(attendu);
+  });
+
+  it('REQ-SEC-023 — TÉMOIN : un curseur forgé ou illisible est refusé sans rien lire', async () => {
+    for (const forge of ['nimportequoi', 'AAAA', btoa('2028.pas-un-id'), '../../etc']) {
+      const { client, appels } = base({ gels: gelsEnBase(3) });
+      await expect(lire(client, { curseur: forge }), forge).rejects.toBeInstanceOf(
+        CurseurDesGelsIllisible
+      );
+      expect(appels, forge).toEqual([]);
+    }
+  });
+
+  it('REQ-SEC-023 — la liste ne rend que le motif, la référence, le type de portée et les dates', async () => {
+    const { client } = base({ gels: gelsEnBase(1) });
+    const [g] = (await lire(client)).gels;
+    expect(Object.keys(g!).sort()).toEqual(
+      ['id', 'motif', 'reference', 'portee', 'depuis', 'jusquA', 'poseAt', 'leveAt'].sort()
+    );
+    expect(g!.portee).toBe('utilisateur');
+  });
+});
+
+describe('REQ-SEC-023 — (6) chaque page lue écrit ses traces avant d’être rendue', () => {
+  it('REQ-SEC-023 — TÉMOIN : deux gels sur le même utilisateur, UNE ligne pour lui, au nom du lecteur', async () => {
+    const gels = gelsEnBase(3, (i) => (i === 2 ? { utilisateurViseId: VISE_B } : {}));
+    const { client, traces, appels } = base({ gels });
+    await lire(client);
+    expect(traces).toEqual([
+      { utilisateurConsoleId: LECTEUR, nature: 'lecture_journal_acces', cibleId: VISE_A },
+      { utilisateurConsoleId: LECTEUR, nature: 'lecture_journal_acces', cibleId: VISE_B },
+    ]);
+    // Dans UNE transaction : le rôle relu, la page lue, les traces écrites.
+    expect(appels).toEqual(['transaction', 'lecteur', 'gels', 'trace', 'trace']);
+  });
+
+  it('REQ-SEC-023 — TÉMOIN : une page de gels sur des cibles n’écrit aucune ligne', async () => {
+    const gels = gelsEnBase(2, () => ({ utilisateurViseId: null, cibleId: UNE_CIBLE }));
+    const { client, traces } = base({ gels });
+    const page = await lire(client);
+    expect(traces).toEqual([]);
+    expect(page.gels.map((g) => g.portee)).toEqual(['cible', 'cible']);
+  });
+
+  it('REQ-SEC-023 — TÉMOIN : une trace qui échoue fait échouer la lecture, rien n’est rendu', async () => {
+    const { client } = base({ gels: gelsEnBase(2), traceEchoue: true });
+    await expect(lire(client)).rejects.toThrow('écriture refusée');
+  });
+
+  it('REQ-SEC-023 — TÉMOIN : un rôle non admis, ou un admin en attente, ne lit rien et n’écrit rien', async () => {
+    for (const lecteur of [
+      valide('lecteur'),
+      valide('qualifieur'),
+      { role: 'admin' as const, desactiveAt: null, valideAt: null },
+      null,
+    ]) {
+      const { client, appels } = base({ lecteur, gels: gelsEnBase(2) });
+      await expect(lire(client)).rejects.toMatchObject({ motif: 'droit_absent' });
+      expect(appels, JSON.stringify(lecteur)).toEqual(['transaction', 'lecteur']);
+    }
   });
 });
