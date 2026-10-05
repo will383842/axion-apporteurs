@@ -45,7 +45,13 @@ export const MISE_EN_DEMEURE_CONSOLE = {
   refus: {
     faits_vides: 'Décrivez les faits : le champ est vide.',
     faits_trop_longs: 'Les faits dépassent la longueur admise : raccourcissez-les avant d’envoyer.',
-    faits_refuses: 'Les faits contiennent un lien ou un mot refusé : retirez-le avant d’envoyer.',
+    faits_avec_lien: 'Les faits contiennent un lien : retirez-le avant d’envoyer.',
+    faits_avec_mot_refuse:
+      'Les faits contiennent un mot que le courriel n’admet pas : reformulez-les avant d’envoyer.',
+    cle_idempotence_invalide:
+      'Le formulaire n’est plus valable : rechargez la page, puis envoyez à nouveau.',
+    cle_deja_employee:
+      'Ce formulaire a déjà servi à un autre envoi : rechargez la page, puis envoyez à nouveau.',
     article_hors_liste: 'Choisissez l’article du contrat dans la liste.',
     statut_sans_contrat:
       'Cet apporteur n’est pas sous contrat : aucune mise en demeure ne peut partir.',

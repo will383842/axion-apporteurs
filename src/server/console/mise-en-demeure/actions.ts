@@ -22,7 +22,7 @@ import {
   portsDeRoleConsole,
 } from '../../auth/lien-magique-production';
 import { clesPii } from '../../securite/pii';
-import { faitsPourLeCourriel } from '../../attribution/notifications';
+import { jugerLesFaitsSaisis } from '../../attribution/notifications';
 import { ErreurResiliation, mettreEnDemeure } from '../../apporteur/resiliation';
 import {
   ARTICLES_MISE_EN_DEMEURE,
@@ -35,12 +35,6 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function texte(formData: FormData, cle: string): string {
   const v = formData.get(cle);
   return typeof v === 'string' ? v : '';
-}
-
-/** Les faits À LA SAISIE : vides, ou trop longs une fois nettoyés, ils sont refusés, nommés. */
-function refusDesFaits(faits: string): 'faits_vides' | 'faits_trop_longs' | null {
-  if (faits.trim() === '') return 'faits_vides';
-  return faitsPourLeCourriel(faits) === null ? 'faits_trop_longs' : null;
 }
 
 /** Le droit retiré entre le juge et la transaction : retour à l'accueil, rien n'est écrit. */
@@ -92,8 +86,12 @@ export async function mettreEnDemeureDepuisLaConsole(formData: FormData): Promis
   if (!(ARTICLES_MISE_EN_DEMEURE as readonly string[]).includes(article))
     redirect(`${ecran}?refus=article_hors_liste`);
   const faits = texte(formData, 'faits');
-  const refus = refusDesFaits(faits);
-  if (refus !== null) redirect(`${ecran}?refus=${refus}`);
+  // À LA SAISIE, par le juge de la fin de contrat : vides, trop longs, avec un lien ou un mot refusé.
+  const juges = jugerLesFaitsSaisis(faits);
+  if (!juges.ok) redirect(`${ecran}?refus=${juges.motif}`);
+  // La clé tirée par le serveur au rendu, rapportée telle quelle : le geste la juge, et refuse une clé
+  // absente ou forgée ; jamais une clé neuve à sa place (condition 6 de la sécurité).
+  const cleIdempotence = texte(formData, 'cleIdempotence');
 
   const acteurId = verdict.utilisateur.id;
   try {
@@ -105,6 +103,7 @@ export async function mettreEnDemeureDepuisLaConsole(formData: FormData): Promis
           apporteurId,
           article: article as ArticleMiseEnDemeure,
           faits,
+          cleIdempotence,
           acteur: { par: 'utilisateur_console', id: acteurId },
           maintenant: new Date(d.horloge.maintenant()),
         },

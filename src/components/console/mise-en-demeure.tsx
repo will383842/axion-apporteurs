@@ -26,12 +26,15 @@ export function EcranMiseEnDemeure({
   action,
   refus,
   enregistree,
+  cleIdempotence,
 }: {
   apporteurId: string;
   etat: EtatDeLaMiseEnDemeure;
   action: (formData: FormData) => Promise<void>;
   refus: RefusDeLaMiseEnDemeure | null;
   enregistree: boolean;
+  /** La clé d'idempotence tirée par le serveur au rendu de la page. */
+  cleIdempotence: string;
 }) {
   if (etat === 'introuvable')
     return (
@@ -65,6 +68,7 @@ export function EcranMiseEnDemeure({
       {enregistree ? <p role="status">{T.enregistree}</p> : null}
       <form action={action}>
         <input type="hidden" name="apporteurId" value={apporteurId} />
+        <input type="hidden" name="cleIdempotence" value={cleIdempotence} />
         <label>
           {T.article}
           <select name="article" required>

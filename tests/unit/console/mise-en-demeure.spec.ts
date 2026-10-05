@@ -105,12 +105,17 @@ const APPORTEUR = '0190f0f0-0000-7000-8000-0000000000e1';
 const ECRAN = `/console/apporteurs/${APPORTEUR}/mise-en-demeure`;
 const MAX = FAITS_ANOMALIE_CARACTERES_MAX.valeur;
 const MARQUEUR = 'MARQUEUR-DES-FAITS-7Q';
+/** La clé d'idempotence que la page a tirée au rendu, et que le formulaire rapporte. */
+const CLE = '0190f0f0-0000-4000-8000-0000000000c1';
 
-function formulaire(o: { apporteurId?: string; article?: string; faits?: string } = {}): FormData {
+function formulaire(
+  o: { apporteurId?: string; article?: string; faits?: string; cle?: string } = {}
+): FormData {
   const f = new FormData();
   f.set('apporteurId', o.apporteurId ?? APPORTEUR);
   f.set('article', o.article ?? '7');
   f.set('faits', o.faits ?? `Les relevés du mois ne sont pas parvenus. ${MARQUEUR}`);
+  f.set('cleIdempotence', o.cle ?? CLE);
   return f;
 }
 
@@ -228,6 +233,7 @@ describe('REQ-JUR-006 — l’article de la liste fermée, les faits jugés à l
         apporteurId: APPORTEUR,
         article: '3.7',
         faits,
+        cleIdempotence: CLE,
         acteur: { par: 'utilisateur_console', id: ADMIN.id },
         maintenant: new Date(h.MAINTENANT),
       },
@@ -268,7 +274,13 @@ describe('REQ-JUR-006 — l’article de la liste fermée, les faits jugés à l
 
   it('REQ-JUR-006 : TÉMOIN — un refus de SEC-19 revient à l’écran, nommé ; une autre erreur n’est pas avalée', async () => {
     accorde();
-    for (const code of ['statut_sans_contrat', 'apporteur_introuvable', 'faits_refuses'] as const) {
+    for (const code of [
+      'statut_sans_contrat',
+      'apporteur_introuvable',
+      'faits_avec_mot_refuse',
+      'cle_idempotence_invalide',
+      'cle_deja_employee',
+    ] as const) {
       vi.mocked(mettreEnDemeure).mockRejectedValueOnce(new ErreurResiliation(code, 'détail'));
       expect(await destination(formulaire()), code).toBe(`${ECRAN}?refus=${code}`);
     }
@@ -287,24 +299,32 @@ describe('REQ-JUR-006 — l’article de la liste fermée, les faits jugés à l
     for (const vue of vues) expect(vue).not.toContain(MARQUEUR);
   });
 
-  // Condition 2 de la sécurité : ni lien ni nom de tiers. Le juge unique des faits est demandé à SEC-19
-  // (coordination, 2026-10-04) ; tant qu'il n'existe pas, ce témoin reste ROUGE.
+  // Condition 2 de la sécurité : ni lien ni nom de tiers. Le juge des faits est celui de la fin de
+  // contrat (`jugerLesFaitsSaisis`), appelé à la saisie : ses motifs ne sont pas recopiés ici.
   it('REQ-JUR-006 : TÉMOIN — un lien dans les faits est refusé à la saisie, nommé, avant tout envoi', async () => {
     accorde();
     expect(
       await destination(
         formulaire({ faits: 'Voir https://exemple.invalid/preuve pour le détail.' })
       )
-    ).toBe(`${ECRAN}?refus=faits_refuses`);
+    ).toBe(`${ECRAN}?refus=faits_avec_lien`);
     expect(vi.mocked(mettreEnDemeure)).not.toHaveBeenCalled();
   });
 
-  // Condition 6 de la sécurité : un double clic ou un rejeu ne crée pas deux mises en demeure. En
-  // arbitrage (sécurité et A02, #703) : la clé d'idempotence tirée par l'écran, que le geste reçoit.
-  it('REQ-JUR-006 : TÉMOIN — le formulaire porte une clé d’idempotence, que l’action passe au geste', async () => {
+  it('REQ-JUR-006 : TÉMOIN — un mot refusé dans les faits est refusé à la saisie, nommé, avant tout envoi', async () => {
+    accorde();
+    expect(await destination(formulaire({ faits: 'Une fraude constatée sur les relevés.' }))).toBe(
+      `${ECRAN}?refus=faits_avec_mot_refuse`
+    );
+    expect(vi.mocked(mettreEnDemeure)).not.toHaveBeenCalled();
+  });
+
+  // Condition 6 de la sécurité : un double clic ou un rejeu ne crée pas deux mises en demeure. La clé
+  // d'idempotence est tirée par le serveur au rendu (sécurité, #703, 5982535417) ; le geste la juge.
+  it('REQ-JUR-006 : TÉMOIN — le formulaire porte la clé d’idempotence tirée au rendu, que l’action passe au geste', async () => {
     const html = rendre({ etat: 'nominal' });
     const cle = /name="cleIdempotence" value="([0-9a-f-]{36})"/.exec(html)?.[1];
-    expect(cle).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7/);
+    expect(cle).toBe(CLE);
     accorde();
     const f = formulaire();
     f.set('cleIdempotence', cle!);
@@ -333,6 +353,7 @@ function rendre(
       action: mettreEnDemeureDepuisLaConsole,
       refus: o.refus ?? null,
       enregistree: o.enregistree ?? false,
+      cleIdempotence: CLE,
     })
   );
 }

@@ -5,6 +5,7 @@
  * refusé. Elle lit seulement l'existence de l'apporteur ; un apporteur hors contrat est dit par le
  * refus de SEC-19, sans recopier sa règle. Le chargement est son repli.
  */
+import { randomUUID } from 'node:crypto';
 import { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -64,6 +65,8 @@ async function Contenu({
       action={mettreEnDemeureDepuisLaConsole}
       refus={etat === 'nominal' ? refus : null}
       enregistree={enregistree}
+      // Condition 6 de la sécurité : la clé d'idempotence est tirée par le SERVEUR, à chaque rendu.
+      cleIdempotence={randomUUID()}
     />
   );
 }
