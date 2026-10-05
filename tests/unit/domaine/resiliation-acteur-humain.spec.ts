@@ -1654,7 +1654,11 @@ describe('REQ-JUR-015 — SEC-66 : le geste « notifier la résiliation par la S
     const e1 = await refusDe(
       notifierLaResiliationParLaSociete(
         systeme.tx,
-        { apporteurId: ID, acteur: { par: 'systeme' } as never, maintenant: MAINTENANT },
+        {
+          apporteurId: ID,
+          acteur: JSON.parse('{"par":"systeme"}') as typeof CONSOLE,
+          maintenant: MAINTENANT,
+        },
         await clesDeTest()
       )
     );
@@ -1850,7 +1854,8 @@ describe('REQ-JUR-015 — SEC-66 : la date d’effet, pour un apporteur', () => 
       evenementId: 41n,
       textePurgeAt: null,
     };
-    const tx = { decisionDeContrat: { findUnique: async () => decision } } as never;
+    const monde = { decisionDeContrat: { findUnique: async () => decision } };
+    const tx = monde as never;
     const n = {
       cle: 'resiliation',
       apporteurId: ID,
