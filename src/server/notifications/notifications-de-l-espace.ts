@@ -13,8 +13,12 @@
  *   — `premier_rang_libere` : par `texteDuPremierRangDansLEspace`, la date limite étant le jour de la
  *     fenêtre POSÉE. Tant que la fenêtre est NULLE, la notification N'APPARAÎT PAS (juriste, option
  *     (a)) : aucun délai ne court avant l'envoi du courriel, et un texte sans date tromperait.
- *   — `decision_attribution` n'est PAS affichée (coordination, option (c)) : son motif porterait les
- *     faits d'une anomalie dans l'espace, ce qui demande sa propre relecture ;
+ *   — `decision_attribution` (UX-P1-58) : par `texteDeLaDecisionDansLEspace`, le MÊME gabarit que le
+ *     courriel. Son motif est lu dans la charge de SON fait, par la source que l'appelant branche
+ *     sur l'écrivain unique du journal (`lireLaChargeDUnFait`) : ce module ne nomme pas sa table ; les
+ *     faits d'une anomalie, par le lecteur DÉDIÉ de l'espace (`lireLesFaitsPourLEspace`, sécurité,
+ *     #726, 5984281779), dont ce module est le SEUL appelant. Purgés, ils deviennent le texte fermé
+ *     de la juriste ; refusés, la notification est écartée. Les faits ne sont jamais consignés.
  *   — toute autre clé est écartée, sans lever : aucune n'a encore de rendu dans l'espace.
  *
  * AUCUN ÉTAT DE LECTURE : la date de lecture n'est ni lue ni écrite ici (REQ-JUR-039).
@@ -23,8 +27,11 @@ import type { PrismaClient } from '@prisma/client';
 import {
   dateEnClair,
   entrepriseDeLaNotification,
+  texteDeLaDecisionDansLEspace,
   texteDuPremierRangDansLEspace,
 } from '../attribution/notifications';
+import { lireLesFaitsPourLEspace } from '../anomalie/justification';
+import type { ClesPii } from '../securite/pii';
 import { GABARITS } from './table-ssot';
 
 /** Une notification telle que l'écran la reçoit : des textes déjà rendus, jamais un identifiant d'attribution. */
@@ -52,9 +59,9 @@ export type LigneDeLEspace = {
 };
 
 /** Les clés que l'espace sait rendre ; les autres sont écartées. */
-export const CLES_RENDUES_DANS_L_ESPACE = ['premier_rang_libere'] as const;
+export const CLES_RENDUES_DANS_L_ESPACE = ['premier_rang_libere', 'decision_attribution'] as const;
 
-/** Une ligne, rendue pour l'écran ; `null` quand elle ne s'affiche pas. */
+/** Une ligne `premier_rang_libere`, rendue pour l'écran ; `null` quand elle ne s'affiche pas. */
 export function entreeDeLEspace(l: LigneDeLEspace): NotificationDeLEspace | null {
   if (l.cle !== 'premier_rang_libere' || l.attribution === null) return null;
   let entreprise: string;
@@ -75,16 +82,68 @@ export function entreeDeLEspace(l: LigneDeLEspace): NotificationDeLEspace | null
   };
 }
 
-/** Le client dont le lecteur a besoin : la seule table des notifications de l'espace. */
-export type ClientDesNotifications = Pick<PrismaClient, 'notificationEspace'>;
+/**
+ * Le client dont le lecteur a besoin : les notifications de l'espace ; pour `decision_attribution`,
+ * l'anomalie (par le lecteur dédié).
+ */
+export type ClientDesNotifications = Pick<PrismaClient, 'notificationEspace' | 'anomalie'>;
+
+/**
+ * Ce qu'il faut pour rendre `decision_attribution` : la charge d'un fait, lue par l'écrivain unique du
+ * journal (branché par l'appelant), et les clés, qui ne servent qu'aux faits d'une anomalie.
+ */
+export type SourcesDesDecisions = {
+  readonly chargeDuFait: (evenementId: string) => Promise<{ type: string; charge: unknown } | null>;
+  readonly cles: ClesPii;
+};
+
+/**
+ * Une ligne `decision_attribution`, rendue pour l'écran ; `null` quand elle ne s'affiche pas. Les
+ * faits ne sont lus que pour une anomalie, et seulement avec les clés : sans elles, une décision qui
+ * repose sur des faits est écartée, jamais rendue à moitié.
+ */
+async function decisionDeLEspace(
+  client: ClientDesNotifications,
+  l: LigneDeLEspace & { evenementId: bigint | null },
+  apporteurId: string,
+  sources: SourcesDesDecisions | undefined
+): Promise<NotificationDeLEspace | null> {
+  if (l.attribution === null || l.evenementId === null) return null;
+  let entreprise: string;
+  try {
+    entreprise = entrepriseDeLaNotification(l.attribution.raisonSociale, l.attribution.siren);
+  } catch {
+    return null;
+  }
+  if (sources === undefined) return null;
+  const fait = await sources.chargeDuFait(String(l.evenementId));
+  if (fait === null || fait.type !== 'attribution_etat_modifie') return null;
+  const anomalie =
+    (fait.charge as { transition?: unknown } | null)?.transition === 'anomalie_confirmee';
+  const faits = anomalie
+    ? await lireLesFaitsPourLEspace(client, { notificationId: l.id, apporteurId }, sources.cles)
+    : null;
+  const texte = texteDeLaDecisionDansLEspace(entreprise, fait.charge, faits);
+  if (texte === null) return null;
+  return {
+    id: l.id,
+    titre: texte.titre,
+    corps: texte.corps,
+    appel: texte.appel,
+    route: GABARITS.decision_attribution.route,
+    quand: dateEnClair(l.creeAt),
+  };
+}
 
 /**
  * Les notifications de l'apporteur DE LA SESSION, les plus récentes d'abord, déjà rendues. Une
- * notification dont l'attribution n'est pas la sienne est écartée.
+ * notification dont l'attribution n'est pas la sienne est écartée. Sans `sources`, une décision n'est
+ * pas rendue : jamais à moitié.
  */
 export async function notificationsDeLEspace(
   client: ClientDesNotifications,
-  apporteurId: string
+  apporteurId: string,
+  sources?: SourcesDesDecisions
 ): Promise<NotificationDeLEspace[]> {
   const lignes = await client.notificationEspace.findMany({
     where: { apporteurId, cle: { in: [...CLES_RENDUES_DANS_L_ESPACE] } },
@@ -93,6 +152,7 @@ export async function notificationsDeLEspace(
       id: true,
       cle: true,
       creeAt: true,
+      evenementId: true,
       attribution: {
         select: {
           apporteurId: true,
@@ -103,9 +163,10 @@ export async function notificationsDeLEspace(
       },
     },
   });
-  return lignes.flatMap(({ attribution, ...n }) => {
-    if (attribution !== null && attribution.apporteurId !== apporteurId) return [];
-    const e = entreeDeLEspace({
+  const rendues: NotificationDeLEspace[] = [];
+  for (const { attribution, ...n } of lignes) {
+    if (attribution !== null && attribution.apporteurId !== apporteurId) continue;
+    const ligne = {
       ...n,
       attribution:
         attribution === null
@@ -115,7 +176,12 @@ export async function notificationsDeLEspace(
               siren: attribution.siren,
               fenetreRedeclarationFinAt: attribution.fenetreRedeclarationFinAt,
             },
-    });
-    return e === null ? [] : [e];
-  });
+    };
+    const e =
+      n.cle === 'decision_attribution'
+        ? await decisionDeLEspace(client, ligne, apporteurId, sources)
+        : entreeDeLEspace(ligne);
+    if (e !== null) rendues.push(e);
+  }
+  return rendues;
 }

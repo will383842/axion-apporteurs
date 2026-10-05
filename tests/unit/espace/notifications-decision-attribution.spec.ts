@@ -16,7 +16,29 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { randomBytes } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
+import type { Prisma } from '@prisma/client';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
+import { FAITS_ANOMALIE_CARACTERES_MAX } from '../../../src/domain/seuils/ssot';
+import {
+  ETATS_ATTRIBUTION,
+  TRANSITIONS_ATTRIBUTION,
+  type TransitionAttribution,
+} from '../../../src/domain/attribution/machine';
+import { NOTIFICATIONS } from '../../../src/content/micro-copy/espace/notifications';
+import type { TexteRendu } from '../../../src/server/notifications/envoyer';
+import { GABARITS } from '../../../src/server/notifications/table-ssot';
+import {
+  entrepriseDeLaNotification,
+  rendreDepuisLaBase,
+  texteDeLaDecisionDansLEspace,
+} from '../../../src/server/attribution/notifications';
+import {
+  notificationsDeLEspace,
+  type ClientDesNotifications,
+} from '../../../src/server/notifications/notifications-de-l-espace';
+import { EcranNotifications } from '../../../src/app/(espace)/notifications/ecran';
 import { clesPii, encryptPii } from '../../../src/server/securite/pii';
 import {
   MODELE_DE_LA_JUSTIFICATION,
@@ -201,5 +223,255 @@ describe('REQ-UX-016 — un lecteur, un appelant (sécurité, voie (b))', () => 
       .filter(([, t]) => /anomalie\/justification/.test(t))
       .map(([f]) => f);
     expect(fautifs).toEqual([]);
+  });
+});
+
+// ── le rendu de `decision_attribution` dans l'espace ────────────────────────────────────────────
+
+const ENTREPRISE_BRUTE = { raisonSociale: 'Boulangerie Exemple', siren: '732829320' };
+/** Une charge VALIDE du fait : `de` et `vers` dérivés de la machine, jamais recopiés. */
+const charge = (transition: string) => {
+  const de = ETATS_ATTRIBUTION.find(
+    (e) => TRANSITIONS_ATTRIBUTION[e][transition as TransitionAttribution] !== undefined
+  )!;
+  return {
+    de,
+    vers: TRANSITIONS_ATTRIBUTION[de][transition as TransitionAttribution],
+    transition,
+    acteur: { par: 'utilisateur_console', id: '0190f3a0-0000-7000-8000-0000000000f6' },
+    lienInteret: 'non_declare',
+  };
+};
+
+/** Le texte que le COURRIEL rend pour la même décision, capté à la composition. */
+async function texteDuCourriel(faits: string): Promise<TexteRendu> {
+  let capte: TexteRendu | null = null;
+  const tx = {
+    attribution: {
+      findUnique: async () => ({ apporteurId: APP, ...ENTREPRISE_BRUTE }),
+    },
+  } as unknown as Prisma.TransactionClient;
+  const rendu = await rendreDepuisLaBase(
+    tx,
+    {
+      cle: 'decision_attribution',
+      apporteurId: APP,
+      attributionId: ATT,
+      evenementId: '42',
+      anomalieId: ANOMALIE,
+    },
+    new Date('2026-10-05T08:00:00.000Z'),
+    {
+      chargeDuFait: async () => charge('anomalie_confirmee'),
+      faitsDe: async () => ({ faits }),
+      composer: (_cle, texte) => {
+        capte = texte;
+        return { sujet: texte.titre, corps: texte.corps ?? '' };
+      },
+    }
+  );
+  expect(rendu).not.toHaveProperty('nonRendue');
+  return capte!;
+}
+const entreprise = entrepriseDeLaNotification(
+  ENTREPRISE_BRUTE.raisonSociale,
+  ENTREPRISE_BRUTE.siren
+);
+
+describe('REQ-UX-016 — l’espace rend la MÊME décision que le courriel, et les faits purgés par le texte de la juriste', () => {
+  it('REQ-UX-016 : TÉMOIN — avec des faits présents, l’espace et le courriel rendent la même chaîne', async () => {
+    const faits = 'deux dépôts le même jour';
+    expect(
+      texteDeLaDecisionDansLEspace(entreprise, charge('anomalie_confirmee'), { faits })
+    ).toEqual(await texteDuCourriel(faits));
+  });
+
+  it('REQ-UX-016 : TÉMOIN — avec des faits purgés, l’espace rend EXACTEMENT la phrase de la juriste, et le reste du motif', () => {
+    const t = texteDeLaDecisionDansLEspace(entreprise, charge('anomalie_confirmee'), 'purgee');
+    expect(t).not.toBeNull();
+    expect(NOTIFICATIONS.faitsNonConserves).toBe(
+      "Faits retenus : leur détail n'est plus conservé, sa durée de conservation ayant pris fin"
+    );
+    expect(t!.corps).toContain(
+      "À la vérification, ce dépôt ne remplit pas les conditions de l'article 3.7 du contrat. " +
+        NOTIFICATIONS.faitsNonConserves
+    );
+    expect(t!.corps).not.toContain('{faits}');
+    expect(t!.corps).not.toContain('Faits retenus : .');
+  });
+
+  it('REQ-UX-016 : TÉMOIN à deux faces — un <script> dans les faits s’affiche comme du TEXTE, échappé une fois', () => {
+    const faits = '<script>alert(1)</script> & co';
+    const t = texteDeLaDecisionDansLEspace(entreprise, charge('anomalie_confirmee'), { faits });
+    // Face 1 : le texte rendu n'est PAS échappé pour le HTML (le courriel l'est, l'écran non).
+    expect(t!.corps).toContain('<script>alert(1)</script> & co');
+    // Face 2 : à l'écran, React l'échappe une seule fois.
+    const html = renderToStaticMarkup(
+      createElement(EcranNotifications, {
+        notifications: [
+          {
+            id: NOTIF,
+            titre: t!.titre,
+            corps: t!.corps,
+            appel: t!.appel,
+            route: null,
+            quand: '5 octobre 2026',
+          },
+        ],
+      })
+    );
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt; &amp; co');
+    expect(html).not.toContain('<script>');
+    expect(html).not.toContain('&amp;lt;');
+  });
+
+  it('REQ-UX-016 : au-delà de la borne, avec un lien, refusés ou absents, les faits ne s’affichent pas — jamais tronqués', () => {
+    const au = (faits: Parameters<typeof texteDeLaDecisionDansLEspace>[2]) =>
+      texteDeLaDecisionDansLEspace(entreprise, charge('anomalie_confirmee'), faits);
+    expect(au({ faits: 'x'.repeat(FAITS_ANOMALIE_CARACTERES_MAX.valeur + 1) })).toBeNull();
+    expect(au({ faits: 'x'.repeat(FAITS_ANOMALIE_CARACTERES_MAX.valeur) })).not.toBeNull();
+    expect(au({ faits: 'voir https://exemple.invalid' })).toBeNull();
+    expect(au('refusee')).toBeNull();
+    expect(au(null)).toBeNull();
+  });
+
+  it('REQ-UX-016 : les autres décisions ne portent pas de faits, et ne changent pas ; une charge illisible n’est pas rendue', () => {
+    const t = texteDeLaDecisionDansLEspace(entreprise, charge('non_confirmee'), null);
+    expect(t).not.toBeNull();
+    expect(t!.corps).toContain(
+      "L'entreprise a indiqué expressément n'avoir eu aucun échange avec vous"
+    );
+    expect(texteDeLaDecisionDansLEspace(entreprise, { pas: 'une charge' }, null)).toBeNull();
+  });
+});
+
+// ── le lecteur de l'espace rend `decision_attribution` ───────────────────────────────────────────
+
+describe('REQ-UX-047 — la liste de l’espace porte la décision, pour l’apporteur de la session seul', () => {
+  type LigneNotif = {
+    id: string;
+    apporteurId: string;
+    cle: string;
+    creeAt: Date;
+    evenementId: bigint | null;
+    attributionId: string | null;
+    anomalieId: string | null;
+  };
+  function clientDeLaListe(lignes: LigneNotif[], a: Anomalie | null) {
+    return {
+      notificationEspace: {
+        findMany: async (args: { where: { apporteurId: string; cle: { in: string[] } } }) =>
+          lignes
+            .filter(
+              (l) => l.apporteurId === args.where.apporteurId && args.where.cle.in.includes(l.cle)
+            )
+            .map((l) => ({
+              id: l.id,
+              cle: l.cle,
+              creeAt: l.creeAt,
+              evenementId: l.evenementId,
+              attribution:
+                l.attributionId === null
+                  ? null
+                  : {
+                      apporteurId: l.apporteurId,
+                      ...ENTREPRISE_BRUTE,
+                      fenetreRedeclarationFinAt: null,
+                    },
+            })),
+        findUnique: async (args: { where: { id: string } }) => {
+          const l = lignes.find((x) => x.id === args.where.id);
+          return l === undefined
+            ? null
+            : {
+                apporteurId: l.apporteurId,
+                cle: l.cle,
+                attributionId: l.attributionId,
+                anomalieId: l.anomalieId,
+              };
+        },
+      },
+      anomalie: { findUnique: async () => a },
+    } as unknown as ClientDesNotifications;
+  }
+  const ligne = (o: Partial<LigneNotif> = {}): LigneNotif => ({
+    id: NOTIF,
+    apporteurId: APP,
+    cle: 'decision_attribution',
+    creeAt: new Date('2026-10-05T08:00:00.000Z'),
+    evenementId: 42n,
+    attributionId: ATT,
+    anomalieId: ANOMALIE,
+    ...o,
+  });
+
+  it('REQ-UX-047 : TÉMOIN — la décision de l’apporteur est rendue, avec le motif et ses faits, par le lecteur dédié', async () => {
+    const rendues = await notificationsDeLEspace(clientDeLaListe([ligne()], anomalie()), APP, {
+      cles: CLES,
+      chargeDuFait: async () => ({
+        type: 'attribution_etat_modifie',
+        charge: charge('anomalie_confirmee'),
+      }),
+    });
+    expect(rendues).toHaveLength(1);
+    expect(rendues[0]!.corps).toContain(`deux dépôts le même jour ${MARQUEUR}`);
+    expect(rendues[0]!.route).toBe(GABARITS.decision_attribution.route);
+  });
+
+  it('REQ-UX-047 : TÉMOIN — purgée, la décision reste affichée avec le texte fermé ; refusée, elle est écartée', async () => {
+    const purgee = await notificationsDeLEspace(
+      clientDeLaListe([ligne()], anomalie({ justificationChiffre: null })),
+      APP,
+      {
+        cles: CLES,
+        chargeDuFait: async () => ({
+          type: 'attribution_etat_modifie',
+          charge: charge('anomalie_confirmee'),
+        }),
+      }
+    );
+    expect(purgee[0]!.corps).toContain(NOTIFICATIONS.faitsNonConserves);
+    const refusee = await notificationsDeLEspace(
+      clientDeLaListe([ligne()], anomalie({ apporteurId: AUTRE })),
+      APP,
+      {
+        cles: CLES,
+        chargeDuFait: async () => ({
+          type: 'attribution_etat_modifie',
+          charge: charge('anomalie_confirmee'),
+        }),
+      }
+    );
+    expect(refusee).toEqual([]);
+  });
+
+  it('REQ-UX-047 : sans sources, une décision n’est pas rendue, jamais à moitié ; une décision sans faits l’est avec ses sources', async () => {
+    expect(await notificationsDeLEspace(clientDeLaListe([ligne()], anomalie()), APP)).toEqual([]);
+    const sansFaits = await notificationsDeLEspace(
+      clientDeLaListe([ligne({ anomalieId: null })], null),
+      APP,
+      {
+        cles: CLES,
+        chargeDuFait: async () => ({
+          type: 'attribution_etat_modifie',
+          charge: charge('non_confirmee'),
+        }),
+      }
+    );
+    expect(sansFaits).toHaveLength(1);
+  });
+
+  it('REQ-UX-047 : TÉMOIN MARQUEUR — la liste ne consigne rien des faits', async () => {
+    const sorties: unknown[] = [];
+    for (const m of ['log', 'info', 'warn', 'error', 'debug'] as const)
+      vi.spyOn(console, m).mockImplementation((...a: unknown[]) => void sorties.push(a));
+    await notificationsDeLEspace(clientDeLaListe([ligne()], anomalie()), APP, {
+      cles: CLES,
+      chargeDuFait: async () => ({
+        type: 'attribution_etat_modifie',
+        charge: charge('anomalie_confirmee'),
+      }),
+    });
+    expect(JSON.stringify(sorties)).not.toContain(MARQUEUR);
   });
 });

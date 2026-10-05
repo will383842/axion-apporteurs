@@ -12,6 +12,8 @@ import { portsDeLaGarde as portsDeLAcceptation } from '../../../server/auth/gard
 import { dependancesDuProcessus } from '../../../server/auth/lien-magique-production';
 import { COOKIE_DE_SESSION, pageEspace, type PortsDeSession } from '../../../server/auth/session';
 import { notificationsDeLEspace } from '../../../server/notifications/notifications-de-l-espace';
+import { clesPii } from '../../../server/securite/pii';
+import { lireLaChargeDUnFait } from '../../../server/evenement/journal';
 import {
   ROUTE_CONFIDENTIALITE,
   ROUTE_INDISPONIBLE,
@@ -50,6 +52,11 @@ export default async function PageNotifications() {
   const verdict = await pageEspace('notifications', jeton, portsDeLaGarde());
   if (!verdict.ok) redirect(destinationDuRefus(verdict.motif));
   const { prisma } = dependancesDuProcessus({ apres: after, env: process.env });
-  const notifications = await notificationsDeLEspace(prisma, verdict.session.apporteurId);
+  // UX-P1-58 : le fait d'une décision, lu par l'écrivain unique du journal ; les clés ne servent qu'à
+  // ses faits, lus par le lecteur dédié de l'espace.
+  const notifications = await notificationsDeLEspace(prisma, verdict.session.apporteurId, {
+    chargeDuFait: (evenementId) => lireLaChargeDUnFait(prisma, evenementId),
+    cles: clesPii(process.env),
+  });
   return <EcranNotifications notifications={notifications} />;
 }
