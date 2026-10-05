@@ -258,6 +258,9 @@ describe('REQ-SEC-058 — le curseur est opaque, et validé à l’entrée', () 
     const forges: [string, string][] = [
       ['vide', ''],
       ['hors alphabet', valide + '='],
+      // Node ignore un caractère hors alphabet au décodage : seule l'ancre du motif le refuse.
+      ['hors alphabet en tête', '!' + valide],
+      ['la charge nulle', Buffer.from('null', 'utf8').toString('base64url')],
       ['pas du JSON', Buffer.from('pas du json', 'utf8').toString('base64url')],
       ['un tableau', charge([] as unknown as Record<string, unknown>)],
       ['autre version', charge({ ...decode, v: 'j0' })],
@@ -281,6 +284,23 @@ describe('REQ-SEC-058 — le curseur est opaque, et validé à l’entrée', () 
       'CurseurDuJournalIllisible',
       'curseur du journal des accès illisible',
     ]);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — la longueur maximale du curseur brut se juge à la borne exacte, avant tout décodage : 256 caractères passent, au-delà un curseur pourtant bien formé est refusé', async () => {
+    const valide = (await lirePage(univers(journal(BORNE() + 1)))).suivant!;
+    const json = Buffer.from(valide, 'base64url').toString('utf8');
+    // Des espaces en tête de la charge : JSON les ignore, la longueur brute les compte.
+    const rembourre = (octets: number) =>
+      Buffer.from(' '.repeat(octets - Buffer.byteLength(json, 'utf8')) + json, 'utf8').toString(
+        'base64url'
+      );
+    expect(rembourre(192)).toHaveLength(256);
+    expect(rembourre(193)).toHaveLength(258);
+    const juste = univers(journal(BORNE() + 1));
+    await expect(lirePage(juste, rembourre(192))).resolves.toMatchObject({ suivant: null });
+    const long = univers(journal(BORNE() + 1));
+    await expect(lirePage(long, rembourre(193))).rejects.toBeInstanceOf(CurseurDuJournalIllisible);
+    expect(long.appels).toEqual([]);
   });
 
   it('REQ-SEC-058 : contre-témoin — le curseur rendu pour une cible est accepté pour cette cible', async () => {
