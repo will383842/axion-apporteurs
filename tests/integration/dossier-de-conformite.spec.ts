@@ -365,13 +365,28 @@ describe('REQ-DM-027 — aucun chemin de code ne valide un RIB (condition de la 
   const ECRITURE_DE_PIECE =
     /pieceKyc\.(create|createMany|update|updateMany|upsert)\b|(UPDATE|INSERT\s+INTO)\s+"?pieces_kyc/;
 
-  it('REQ-DM-027 : TÉMOIN — le SEUL écrivain des pièces est le dossier de conformité, et il refuse le RIB avant toute écriture', () => {
-    const ecrivains = sources().filter((f) => ECRITURE_DE_PIECE.test(readFileSync(f, 'utf8')));
-    expect(ecrivains).toEqual(['src/server/conformite/dossier.ts']);
+  it('REQ-DM-027 : TÉMOIN — les SEULS écrivains des pièces sont le dossier de conformité, qui refuse le RIB avant toute écriture, et le RIB à quatre yeux, qui refuse tout autre type avant toute écriture', () => {
+    // CPL-T24 (sécurité, #705, 5981204995) : `rib.ts`, ET LUI SEUL, est admis comme second écrivain ;
+    // jamais un motif (`src/server/conformite/*`).
+    const ecrivains = sources()
+      .filter((f) => ECRITURE_DE_PIECE.test(readFileSync(f, 'utf8')))
+      .sort();
+    expect(ecrivains).toEqual(['src/server/conformite/dossier.ts', 'src/server/conformite/rib.ts']);
     const texte = readFileSync('src/server/conformite/dossier.ts', 'utf8');
     const refus = texte.indexOf("if (piece.type === 'rib') throw");
     expect(refus).toBeGreaterThan(0);
     expect(refus).toBeLessThan(texte.search(ECRITURE_DE_PIECE));
+    // La règle symétrique : dans CHAQUE geste de rib.ts qui écrit une pièce, le refus d'un autre type
+    // précède la première écriture.
+    const gestes = readFileSync('src/server/conformite/rib.ts', 'utf8')
+      .split(/\n(?=export async function )/)
+      .filter((g) => ECRITURE_DE_PIECE.test(g));
+    expect(gestes.length).toBe(2);
+    for (const g of gestes) {
+      const refusDuType = g.indexOf("if (piece.type !== 'rib') throw");
+      expect(refusDuType, g.slice(0, 60)).toBeGreaterThan(0);
+      expect(refusDuType, g.slice(0, 60)).toBeLessThan(g.search(ECRITURE_DE_PIECE));
+    }
   });
 
   it('REQ-DM-027 : TÉMOIN — la règle rougit sur un second écrivain', () => {

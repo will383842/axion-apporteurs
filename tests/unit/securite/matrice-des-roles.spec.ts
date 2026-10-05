@@ -1765,6 +1765,17 @@ describe('REQ-SEC-023 — CPL-T07 : les droits du dossier de conformité', () =>
         expect(roleAutorise(droit, role), `${droit} × ${role}`).toBe(false);
   });
 
+  it('REQ-SEC-023 : TÉMOIN — vérifier et confirmer un RIB (CPL-T24) : admin seul, sous step-up', () => {
+    expect(MATRICE_DES_ROLES['action:verifier_rib']).toEqual({ roles: ['admin'], stepUp: true });
+    for (const role of ['qualifieur', 'comptable', 'lecteur'] as const)
+      expect(roleAutorise('action:verifier_rib', role), role).toBe(false);
+    expect(jugerAcces('action:verifier_rib', sessionAdmin(releve), T0, KID)).toEqual({
+      ok: false,
+      motif: 'releve_requis',
+    });
+    expect(jugerAcces('action:verifier_rib', sessionAdmin(releve - 1), T0, KID).ok).toBe(true);
+  });
+
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — valider le dossier, session ouverte il y a le délai de relèvement : « releve_requis » ; un instant avant, elle passe', () => {
     expect(jugerAcces('action:valider_kyc', sessionAdmin(releve), T0, KID)).toEqual({
       ok: false,
