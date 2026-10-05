@@ -67,6 +67,15 @@ const ECARTES = [
   // voisines `gardes-de-schema` et `journal-charge-fermee`. Joué par pnpm test et la porte A ; le nom de
   // compteur de la frontière est tué par un espion unitaire.
   'REQ-SEC-016 — la garde de famille',
+  // SEC-12 : les trois autres blocs de `rate-famille.spec.ts` qui partent de l'univers du dépôt
+  // (`universDuDepot`) : la garde y lit les sources MUTÉES par la PR, instrumentées dans le bac. Mesuré
+  // en instrumentant les quatre fichiers mutés de #691 : 48 témoins rougissent, 40 sous le bloc
+  // ci-dessus, ces 8 sous les trois suivants. Le reste du fichier EXÉCUTE `limiter` (verdict, panne,
+  // `REDIS_URL`, empreinte) et reste sous mutation : l'écarter ENTIER faisait tomber `rate-limit.ts` à
+  // 28,57 % (porte A de #691, `mutation:pr` à 70,52 %).
+  'REQ-SEC-016 — option 1 : une limite lue en SSOT',
+  'REQ-SEC-016 — la garde lit le texte en vigueur',
+  'confrontée au chiffre de l.exigence ou à la SSOT ; aucun compteur par identité',
   // JUR-T13 : `jur:aucun-agregat-reseau` lancée sur les sources du dépôt — juge les sources du dépôt,
   // pas le code sous mutation : le bac à sable instrumenté n'est pas la source.
   'le binaire sur le dépôt sort en 0 et imprime les fichiers et clés confrontés',
@@ -116,14 +125,6 @@ export default defineConfig({
       'tests/unit/domaine/journal-charge-fermee.spec.ts',
       'tests/unit/domaine/gardes-de-schema.spec.ts',
       'tests/unit/domaine/schema-centimes.spec.ts',
-      // SEC-12 : la garde de famille (REQ-SEC-016) LIT le texte de src/server/securite/rate-limit.ts
-      // pour confronter les compteurs lus en SSOT (`SEUILS.<NOM>.valeur [* <CONSTANTE>]`). Quand une PR
-      // touche ce registre, Stryker l'instrumente dans le bac, et la garde y voit des valeurs tapées :
-      // 53 témoins sur 162 rougissent à blanc (mesuré en simulant l'instrumentation, porte A de #691).
-      // Le fichier ENTIER est écarté, comme ses voisines qui jugent une garde ; il tourne dans pnpm test
-      // et en porte A, sur le vrai texte. Les mutants du registre restent jugés par les tests qui
-      // EXÉCUTENT `limiter` (lien magique, webhook, API entrante, débit du dépôt).
-      'tests/unit/securite/rate-famille.spec.ts',
     ],
     testNamePattern: new RegExp(`^(?!.*(?:${ECARTES.join('|')})).*$`),
   },
