@@ -88,6 +88,7 @@ import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
 import { clientDuTiers } from '../integrations/recherche-entreprises/tiers';
 import { limiteurDuRegistre } from '../integrations/recherche-entreprises/limiteur';
 import { traitantsDeLAnteriorite } from '../entreprise-connue/projection';
+import { rapprocherLesAnteriorites } from '../jobs/anteriorite-retroactive';
 
 /**
  * Les traitants branchés, par type d'événement reçu. Un seul aujourd'hui : la candidature reçue
@@ -241,6 +242,9 @@ export function inscriptions(
       await alerterLesNonRendus(bilan, canalDAlerte(env));
       return bilan;
     },
+    // DM-25 (REQ-JUR-007) : l'antériorité établie après coup, jugée au dépôt sur des faits antérieurs.
+    anteriorites_rapprocher: () =>
+      rapprocherLesAnteriorites(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-59 (REQ-JUR-065) : la valeur d'une rectification, effacée à son échéance même sans traitement.
     droits_contact_purger: () =>
       purgerLesValeursDesDroits(prisma, new Date(horlogeSysteme.maintenant())),
