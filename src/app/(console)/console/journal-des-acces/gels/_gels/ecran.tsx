@@ -7,11 +7,11 @@
  * plus de bouton. L'écran ne montre ni l'auteur ni la personne visée : la portée, son type seul.
  */
 import type { MotifGelJournal } from '@prisma/client';
-import { GELS_JOURNAL_ACCES as T } from '../../../../../content/micro-copy/console/gels-journal-acces';
+import { GELS_JOURNAL_ACCES as T } from '../../../../../../content/micro-copy/console/gels-journal-acces';
 import type {
   DroitsSurLesGels,
   MotifDuGel,
-} from '../../../../../server/console/gels-journal-acces';
+} from '../../../../../../server/console/gels-journal-acces';
 
 /** Un gel tel que l'écran l'affiche : aucun identifiant de personne ni de cible. */
 export interface GelAffiche {

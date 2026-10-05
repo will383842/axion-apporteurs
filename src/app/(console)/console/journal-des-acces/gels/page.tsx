@@ -32,8 +32,8 @@ import {
   type MotifDuGel,
 } from '../../../../../server/console/gels-journal-acces';
 import { GELS_JOURNAL_ACCES as T } from '../../../../../content/micro-copy/console/gels-journal-acces';
-import { EcranDesGels } from './ecran';
-import { leverLeGel, poserLeGel } from './actions';
+import { EcranDesGels } from './_gels/ecran';
+import { leverLeGel, poserLeGel } from './_gels/actions';
 
 // Lue à chaque requête : la page lit le cookie de session et la base.
 export const dynamic = 'force-dynamic';

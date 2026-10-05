@@ -12,19 +12,19 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { after } from 'next/server';
-import { requireRole, type VerdictDeRole } from '../../../../../server/roles/require-role';
-import { clesPii, ErreurPii } from '../../../../../server/securite/pii';
+import { requireRole, type VerdictDeRole } from '../../../../../../server/roles/require-role';
+import { clesPii, ErreurPii } from '../../../../../../server/securite/pii';
 import {
   COOKIE_DE_SESSION_CONSOLE,
   dependancesDuProcessus,
   portsDeRoleConsole,
-} from '../../../../../server/auth/lien-magique-production';
+} from '../../../../../../server/auth/lien-magique-production';
 import {
   ErreurGelJournal,
   leverUnGel,
   poserUnGel,
   type PorteeDuGel,
-} from '../../../../../server/console/gels-journal-acces';
+} from '../../../../../../server/console/gels-journal-acces';
 import { lireLaSaisieDuGel } from './saisie';
 
 const ECRAN = '/console/journal-des-acces/gels';

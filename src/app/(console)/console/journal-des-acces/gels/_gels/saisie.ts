@@ -8,7 +8,7 @@
  * de son jour, inclus (la période du gel est inclusive).
  */
 import type { MotifGelJournal } from '@prisma/client';
-import { depuisParis } from '../../../../../domain/temps/paris';
+import { depuisParis } from '../../../../../../domain/temps/paris';
 
 const MOTIFS: readonly MotifGelJournal[] = ['incident', 'litige'];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

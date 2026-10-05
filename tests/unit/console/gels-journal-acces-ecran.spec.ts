@@ -34,14 +34,14 @@ import { GELS_JOURNAL_ACCES as T } from '../../../src/content/micro-copy/console
 import {
   EcranDesGels,
   type GelAffiche,
-} from '../../../src/app/(console)/console/journal-des-acces/gels/ecran';
+} from '../../../src/app/(console)/console/journal-des-acces/gels/_gels/ecran';
 import { ROUTES_LIVREES_DE_LA_CONSOLE } from '../../../src/server/console/navigation';
-import { lireLaSaisieDuGel } from '../../../src/app/(console)/console/journal-des-acces/gels/saisie';
+import { lireLaSaisieDuGel } from '../../../src/app/(console)/console/journal-des-acces/gels/_gels/saisie';
 
 const DEPUIS = new Date('2026-01-01T00:00:00.000Z');
 const POSE = new Date('2028-05-01T09:00:00.000Z');
 const LECTEUR = '0190f0f0-0000-7000-8000-00000000000a';
-const ECRAN = 'src/app/(console)/console/journal-des-acces/gels/ecran.tsx';
+const ECRAN = 'src/app/(console)/console/journal-des-acces/gels/_gels/ecran.tsx';
 
 type Lu = { role: ConsoleRole; desactiveAt: Date | null; valideAt: Date | null };
 const valide = (role: ConsoleRole): Lu => ({ role, desactiveAt: null, valideAt: DEPUIS });
