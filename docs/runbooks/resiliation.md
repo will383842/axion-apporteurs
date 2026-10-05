@@ -44,7 +44,7 @@
 ## 4. Le geste de résiliation en console
 
 - Il est réservé au rôle nommé qui porte la résiliation (DM-63). Il est contrôlé côté serveur et
-  journalisé avec l'utilisateur de la console qui l'accomplit (`src/server/apporteur/resilier.ts`).
+  journalisé avec l'utilisateur de la console qui l'accomplit (`src/server/apporteur/resiliation.ts`).
 - Le motif enregistré (`apporteurs.resiliation_motif`) est choisi selon le cas du tableau :
   - `ordinaire_apporteur` pour une résiliation par l'apporteur ;
   - `ordinaire_axion` pour une résiliation par la Société sans motif ;
@@ -93,3 +93,29 @@ Un écrit à son adresse enregistrée, qui dit :
 - l'adresse à laquelle écrire pour toute question ou contestation.
 
 Le courriel envoyé est tracé dans `courriels_envoyes`.
+
+## 7. L'espace de l'apporteur après le geste (SEC-19, REQ-SEC-032)
+
+Ajouté par SEC-19, dans le cadre posé par la sécurité et A02 sur l'issue de la tâche.
+
+- **Toutes ses sessions tombent au geste.** La base incrémente sa version de session à la résiliation
+  (migration `sessions_revocables`) : chaque appareil connecté est déconnecté à la requête suivante.
+  Il n'y a rien à faire en console.
+- **Il se reconnecte par lien magique** à son adresse enregistrée, comme avant. S'il a encore des
+  droits en cours, l'espace s'ouvre **en lecture seule** : tant qu'au moins une de ses attributions
+  reste figée par la résiliation, c'est-à-dire tant qu'une commande signée avant la date d'effet peut
+  encore lui ouvrir droit. Sans droit en cours, l'espace reste fermé : ses relevés, factures et motifs
+  de blocage lui sont alors envoyés par courriel (section 5). Aucun relevé, aucune autofacture ni aucun motif de blocage n'est émis à ce jour : il n'y a rien à lui envoyer. Les tâches qui les émettront ne sont mises en service qu'avec l'envoi par courriel, à son émission, de tout document destiné à un apporteur dont l'espace est fermé, et sans fermeture de l'espace avant la fin des délais de contestation (art. 5.5 et annexe 2).
+- **Ce qu'il voit en lecture**, et rien d'autre : l'accueil, ses commissions, ses entreprises, ses
+  notifications, ses documents et son contrat. Le dépôt, les fiches d'entreprise, les filleuls, le
+  profil et la conformité lui sont fermés.
+- **Ce qu'il peut encore faire** : se déconnecter et révoquer ses sessions, exercer ses droits RGPD
+  (`docs/runbooks/demandes-de-droits.md`), et accepter une nouvelle version de la politique de
+  confidentialité. **Tout autre geste est refusé par le serveur**, quel que soit l'écran. Espace fermé,
+  il les exerce par écrit à l'adresse de tête de la politique de confidentialité.
+- **Son RIB ne change plus en libre service.** Ses commissions continuent d'être payées (art. 12.3) :
+  s'il faut changer ses coordonnées bancaires, il l'écrit, et le changement se fait **en console**, avec
+  la validation à quatre yeux du RIB (CPL-T24). Aucun versement ne part vers un RIB non validé.
+- **S'il signale qu'il ne peut plus se connecter** alors qu'une commande signée avant la date d'effet
+  est en cours d'encaissement, on vérifie sur sa fiche qu'au moins une attribution est bien figée par la
+  résiliation. Si ce n'est pas le cas, il ne faut rien corriger à la main : on ouvre un incident.
