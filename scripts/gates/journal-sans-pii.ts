@@ -15,7 +15,8 @@
  *   — une charge et chaque objet imbriqué `.strict()`, sans `catchall` (`charge_ouverte`) ;
  *   — chaque feuille dans la liste fermée des formes — identifiant `uuid`, empreinte sur
  *     `HASH_HEX_64` (CETTE constante, par identité), enum, `nativeEnum`, littéral de chaîne, entier
- *     sur un champ suffixé `Cents`, horodatage `datetime`, déballés d'`optional` / `nullable`
+ *     sur un champ suffixé `Cents`, horodatage `datetime`, jour civil `date` et citation d'un fait
+ *     sur `ID_DU_JOURNAL` (CETTE constante, par identité ; SEC-66), déballés d'`optional` / `nullable`
  *     (`feuille_hors_liste`) — `z.string()` nu compris : une chaîne libre peut porter un courriel ;
  *   — aucun champ dont un segment de nom est au lexique UNIQUE des champs de personne
  *     (`src/domain/donnees-personnelles/champs.ts`), sauf une EMPREINTE : dernier segment `hash` et
@@ -59,7 +60,12 @@
 import { readFileSync, existsSync } from 'node:fs';
 import ts from 'typescript';
 import { z } from 'zod';
-import { CHARGES_PAR_TYPE, FORMES, HASH_HEX_64 } from '../../src/domain/evenement/charges';
+import {
+  CHARGES_PAR_TYPE,
+  FORMES,
+  HASH_HEX_64,
+  ID_DU_JOURNAL,
+} from '../../src/domain/evenement/charges';
 import { segmentsDuNom, segmentsPersonnels } from '../../src/domain/donnees-personnelles/champs';
 import { enumsDuSchema } from './schema-enums';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
@@ -406,7 +412,16 @@ function estUnRaffinement(schema: z.ZodTypeAny): schema is z.ZodEffects<z.ZodTyp
   return schema instanceof z.ZodEffects && schema._def.effect.type === 'refinement';
 }
 
-type Forme = 'identifiant' | 'empreinte' | 'enum' | 'montant' | 'horodatage' | 'objet' | null;
+type Forme =
+  | 'identifiant'
+  | 'empreinte'
+  | 'enum'
+  | 'montant'
+  | 'horodatage'
+  | 'jourCivil'
+  | 'identifiantDuJournal'
+  | 'objet'
+  | null;
 
 /** La forme d'une feuille, ou `null` si elle est hors de la liste fermée. */
 function forme(schema: z.ZodTypeAny, cle: string): Forme {
@@ -424,6 +439,11 @@ function forme(schema: z.ZodTypeAny, cle: string): Forme {
     if (checks.some((c) => c.kind === 'uuid')) return 'identifiant';
     if (checks.some((c) => c.kind === 'regex' && c.regex === HASH_HEX_64)) return 'empreinte';
     if (checks.some((c) => c.kind === 'datetime')) return 'horodatage';
+    // SEC-66 (A02) : le jour civil, et la citation d'un autre fait par CETTE constante (identité).
+    if (checks.some((c) => c.kind === 'date')) return 'jourCivil';
+    if (checks.some((c) => c.kind === 'regex' && c.regex === ID_DU_JOURNAL)) {
+      return 'identifiantDuJournal';
+    }
     return null;
   }
   if (schema instanceof z.ZodNumber) {
@@ -494,7 +514,8 @@ export function controler(vue: Vue): { fautes: Faute[]; types: number; champs: n
           ou: ici,
           message:
             `${ici} — forme hors de la liste fermée (identifiant uuid, empreinte HASH_HEX_64, enum, ` +
-            'littéral de chaîne, entier sur un champ …Cents, horodatage datetime). Utilise FORMES.',
+            'littéral de chaîne, entier sur un champ …Cents, horodatage datetime, jour civil date, ' +
+            'fait du journal ID_DU_JOURNAL). Utilise FORMES.',
         });
       }
       const sous = objetSous(champ);

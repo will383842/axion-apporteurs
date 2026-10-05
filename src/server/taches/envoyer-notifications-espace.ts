@@ -309,6 +309,7 @@ export function passageDEnvoiDesNotifications(
             ? rendreUneDecisionDeContrat(tx, n, {
                 cles,
                 composer: (cle, texte) => composerLeCourriel(cle, texte, urlDeLEspace),
+                envoyeLe,
               })
             : rendreDepuisLaBase(tx, n, envoyeLe, {
                 chargeDuFait: async (t, id) => {

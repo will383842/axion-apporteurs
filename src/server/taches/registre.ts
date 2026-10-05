@@ -57,6 +57,8 @@ export const TACHES = {
   sessions_purger: { req: 'REQ-SEC-003' },
   /** SEC-65 — l'effacement du nom et de l'adresse d'un accès désactivé de la console, cinq ans après. */
   utilisateurs_console_effacer: { req: 'REQ-JUR-068' },
+  /** SEC-66 — le passage à `resilie` d'une résiliation par la Société, à sa date d'effet. */
+  resiliations_a_date_effet: { req: 'REQ-JUR-015' },
   /**
    * INT-T08-P — la réconciliation quotidienne avec axion-ia : relecture de sa file depuis la plus
    * haute séquence reçue, rejeu des trous (`src/server/jobs/reconciliation.ts`).

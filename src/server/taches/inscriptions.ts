@@ -77,6 +77,7 @@ import {
 } from './purger-contestations-anomalies';
 import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
 import { purgerLesSessions } from './purger-sessions-espace';
+import { resilierALaDateDEffet } from './resilier-a-date-effet';
 import { effacerLesComptesDesactives } from './purger-utilisateurs-console';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import {
@@ -276,6 +277,9 @@ export function inscriptions(
     sessions_purger: () => purgerLesSessions(prisma, new Date(horlogeSysteme.maintenant())),
     utilisateurs_console_effacer: () =>
       effacerLesComptesDesactives(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-66 (REQ-JUR-015) : la résiliation par la Société, à sa date d'effet.
+    resiliations_a_date_effet: () =>
+      resilierALaDateDEffet(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>
