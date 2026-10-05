@@ -16,6 +16,12 @@
  *     date ne se réécrit pas, toute autre modification et DELETE restent refusés par le gabarit, et
  *     la troncature aussi.
  *
+ * DM-68 (REQ-JUR-065, partners/ADR-0032) — à l'anonymisation, dans la même instruction, les dates de
+ * la trace (réception, traitement, prolongation, effacement de la valeur) sont ramenées au premier
+ * jour de LEUR mois, à minuit UTC, et `trace_anonymisee_at` au premier du mois UTC de l'instant
+ * d'anonymisation. Hors de cette écriture, aucune troncature ; une date tronquée ne se réécrit pas ;
+ * un début de mois qui n'est pas celui de la date d'origine est refusé.
+ *
  * Joué par Gate D, sur la base fraîchement migrée.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -123,6 +129,7 @@ async function uneAttribution(): Promise<string> {
 async function uneDemande(d: {
   recueAt: Date;
   traiteeAt?: Date | null;
+  prolongeeAt?: Date | null;
   droit?: 'acces' | 'rectification';
   valeur?: boolean;
 }): Promise<string> {
@@ -147,11 +154,13 @@ async function uneDemande(d: {
     ),
     base.prisma.$executeRawUnsafe(
       `UPDATE demandes_droits_contact SET recue_at = $2, traitee_at = $3,
-         issue = CASE WHEN $3::timestamptz IS NULL THEN NULL ELSE 'appliquee'::issue_demande_droit END
+         issue = CASE WHEN $3::timestamptz IS NULL THEN NULL ELSE 'appliquee'::issue_demande_droit END,
+         prolongee_at = $4
        WHERE id = $1::uuid`,
       id,
       d.recueAt,
-      d.traiteeAt ?? null
+      d.traiteeAt ?? null,
+      d.prolongeeAt ?? null
     ),
     base.prisma.$executeRawUnsafe(
       `ALTER TABLE demandes_droits_contact ENABLE TRIGGER demandes_droits_contact_ajout_seul`
@@ -168,12 +177,13 @@ type Lu = {
   issue: string | null;
   recue_at: Date;
   traitee_at: Date | null;
+  prolongee_at: Date | null;
   valeur_purgee_at: Date | null;
 };
 async function lire(id: string): Promise<Lu> {
   const [l] = await base.prisma.$queryRawUnsafe<Lu[]>(
     `SELECT attribution_id::text, trace_anonymisee_at, droit::text, donnee_visee::text,
-       issue::text, recue_at, traitee_at, valeur_purgee_at
+       issue::text, recue_at, traitee_at, prolongee_at, valeur_purgee_at
      FROM demandes_droits_contact WHERE id = $1::uuid`,
     id
   );
@@ -192,6 +202,24 @@ async function refus(promesse: Promise<unknown>): Promise<string> {
 const maj = (sql: string, ...valeurs: unknown[]) => app.$executeRawUnsafe(sql, ...valeurs);
 const LIMITE = limiteDAnonymisation(MAINTENANT);
 const decale = (minutes: number) => new Date(LIMITE.getTime() + minutes * MINUTE);
+/** Le premier du mois UTC, à minuit, d'un instant. */
+const debutDeMois = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+const auMois = (d: Date | null) => (d === null ? null : debutDeMois(d));
+/** Les dates qu'une trace anonymisée garde : chacune au début de son mois UTC. */
+const tronquee = (l: Lu): Lu => ({
+  ...l,
+  recue_at: debutDeMois(l.recue_at),
+  traitee_at: auMois(l.traitee_at),
+  prolongee_at: auMois(l.prolongee_at),
+  valeur_purgee_at: auMois(l.valeur_purgee_at),
+});
+const ANONYMISEE_LE = debutDeMois(MAINTENANT);
+/** Le début de mois UTC d'une colonne, en SQL : la seule valeur que l'anonymisation lui admet. */
+const AU_MOIS = (c: string) => `date_trunc('month', ${c} AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`;
+/** L'écriture d'anonymisation complète, écrite à la main : les quatre dates à leur mois, et sa date. */
+const ANONYMISER = `attribution_id = NULL, trace_anonymisee_at = ${AU_MOIS('clock_timestamp()')},
+  recue_at = ${AU_MOIS('recue_at')}, traitee_at = ${AU_MOIS('traitee_at')},
+  prolongee_at = ${AU_MOIS('prolongee_at')}, valeur_purgee_at = ${AU_MOIS('valeur_purgee_at')}`;
 
 describe('REQ-JUR-065 — la tâche anonymise la trace à cinq ans', () => {
   it('REQ-JUR-065 : la limite est cinq ans civils avant l’instant du passage, en UTC', () => {
@@ -218,10 +246,13 @@ describe('REQ-JUR-065 — la tâche anonymise la trace à cinq ans', () => {
     ] as const) {
       const l = await lire(id);
       expect([nom, l.attribution_id]).toEqual([nom, null]);
-      expect([nom, l.trace_anonymisee_at?.toISOString()]).toEqual([nom, MAINTENANT.toISOString()]);
-      // La ligne reste : droit, donnée visée, issue et dates, inchangés.
+      expect([nom, l.trace_anonymisee_at?.toISOString()]).toEqual([
+        nom,
+        ANONYMISEE_LE.toISOString(),
+      ]);
+      // La ligne reste : droit, donnée visée et issue inchangés, dates au début de leur mois.
       expect({ ...l, attribution_id: 'vide', trace_anonymisee_at: null }).toEqual({
-        ...avant[nom],
+        ...tronquee(avant[nom]),
         attribution_id: 'vide',
       });
     }
@@ -240,7 +271,7 @@ describe('REQ-JUR-065 — la tâche anonymise la trace à cinq ans', () => {
     await anonymiserLesTracesDesDroits(app, MAINTENANT);
     const e = await lire(echue);
     expect(e.attribution_id).toBeNull();
-    expect(e.trace_anonymisee_at?.toISOString()).toBe(MAINTENANT.toISOString());
+    expect(e.trace_anonymisee_at?.toISOString()).toBe(ANONYMISEE_LE.toISOString());
     expect(e.traitee_at).toBeNull();
     expect((await lire(veille)).attribution_id).not.toBeNull();
   });
@@ -264,7 +295,9 @@ describe('REQ-JUR-065 — la tâche anonymise la trace à cinq ans', () => {
     // lignes échoient dans ces dix minutes. Ce qui est jugé, c'est A intacte et B anonymisée.
     expect((await anonymiserLesTracesDesDroits(app, plusTard)).anonymisees).toBeGreaterThan(0);
     expect(await lire(a)).toEqual(aApres);
-    expect((await lire(b)).trace_anonymisee_at?.toISOString()).toBe(plusTard.toISOString());
+    expect((await lire(b)).trace_anonymisee_at?.toISOString()).toBe(
+      debutDeMois(plusTard).toISOString()
+    );
   });
 
   it('REQ-JUR-065 : TÉMOIN — une demande qui porte encore sa valeur n’est pas anonymisée par la tâche, et ne bloque pas les autres', async () => {
@@ -287,7 +320,8 @@ describe('REQ-JUR-065 — la base tient l’anonymisation', () => {
     expect(
       await refus(
         maj(
-          `UPDATE demandes_droits_contact SET trace_anonymisee_at = clock_timestamp() WHERE id = $1::uuid`,
+          `UPDATE demandes_droits_contact SET ${ANONYMISER.replace('attribution_id = NULL, ', '')}
+           WHERE id = $1::uuid`,
           id
         )
       )
@@ -299,11 +333,7 @@ describe('REQ-JUR-065 — la base tient l’anonymisation', () => {
     ).toContain('demandes_droits_contact_trace_anonymisee_liee');
     // Face 2 : les deux ensemble passent.
     await expect(
-      maj(
-        `UPDATE demandes_droits_contact SET attribution_id = NULL,
-           trace_anonymisee_at = clock_timestamp() WHERE id = $1::uuid`,
-        id
-      )
+      maj(`UPDATE demandes_droits_contact SET ${ANONYMISER} WHERE id = $1::uuid`, id)
     ).resolves.toBe(1);
   });
 
@@ -315,13 +345,7 @@ describe('REQ-JUR-065 — la base tient l’anonymisation', () => {
       valeur: true,
     });
     expect(
-      await refus(
-        maj(
-          `UPDATE demandes_droits_contact SET attribution_id = NULL,
-             trace_anonymisee_at = clock_timestamp() WHERE id = $1::uuid`,
-          id
-        )
-      )
+      await refus(maj(`UPDATE demandes_droits_contact SET ${ANONYMISER} WHERE id = $1::uuid`, id))
     ).toContain('demandes_droits_contact_anonymisee_sans_valeur');
   });
 
@@ -373,28 +397,197 @@ describe('REQ-JUR-065 — la base tient l’anonymisation', () => {
     ).toContain(GABARIT);
   });
 
-  it('REQ-JUR-065 : TÉMOIN — les deux déclencheurs portent les arguments complets, dans l’ordre, remplacés et non doublés', async () => {
-    const lignes = await base.prisma.$queryRaw<{ nom: string; args: string }[]>`
-      SELECT t.tgname AS nom, encode(t.tgargs, 'escape') AS args FROM pg_trigger t
+  it('REQ-JUR-065 : TÉMOIN — les deux déclencheurs exécutent la fonction dédiée, remplacés et non doublés', async () => {
+    const lignes = await base.prisma.$queryRaw<{ nom: string; fonction: string; args: string }[]>`
+      SELECT t.tgname AS nom, p.proname AS fonction, encode(t.tgargs, 'escape') AS args
+      FROM pg_trigger t
       JOIN pg_class c ON c.oid = t.tgrelid
+      JOIN pg_proc p ON p.oid = t.tgfoid
       WHERE c.relname = 'demandes_droits_contact' AND NOT t.tgisinternal
         AND t.tgname IN ('demandes_droits_contact_ajout_seul', 'demandes_droits_contact_troncature')
       ORDER BY t.tgname`;
-    const attendus = [
-      'une_fois:traitee_at',
-      'une_fois:issue',
-      'purge:valeur_chiffree',
-      'une_fois:valeur_purgee_at',
-      'une_fois:prolongee_at',
-      'purge:attribution_id',
-      'une_fois:trace_anonymisee_at',
-    ];
-    expect(lignes.map((l) => l.nom)).toEqual([
-      'demandes_droits_contact_ajout_seul',
-      'demandes_droits_contact_troncature',
+    expect(lignes).toEqual([
+      {
+        nom: 'demandes_droits_contact_ajout_seul',
+        fonction: 'refuser_modification_sauf_droits_contact',
+        args: '',
+      },
+      {
+        nom: 'demandes_droits_contact_troncature',
+        fonction: 'refuser_modification_sauf_droits_contact',
+        args: '',
+      },
     ]);
-    for (const l of lignes) {
-      expect(l.args.split('\\000').filter((a) => a !== '')).toEqual(attendus);
+  });
+});
+
+describe('REQ-JUR-065 — DM-68 : la trace anonymisée ne garde de ses dates que le mois', () => {
+  const estDebutDeMois = (d: Date | null) => d === null || d.getTime() === debutDeMois(d).getTime();
+
+  it('REQ-JUR-065 : TÉMOIN — après l’anonymisation, les cinq dates sont des débuts de mois UTC, et les deux CHECK tiennent', async () => {
+    const id = await uneDemande({
+      recueAt: new Date('2026-08-14T09:17:23.456Z'),
+      prolongeeAt: new Date('2026-09-02T16:40:00.000Z'),
+      traiteeAt: new Date('2026-09-29T08:05:00.000Z'),
+      droit: 'rectification',
+    });
+    const avant = await lire(id);
+    expect(avant.valeur_purgee_at).not.toBeNull();
+    await anonymiserLesTracesDesDroits(app, MAINTENANT);
+    const l = await lire(id);
+    expect(l.attribution_id).toBeNull();
+    expect(l).toEqual({
+      ...tronquee(avant),
+      attribution_id: null,
+      trace_anonymisee_at: ANONYMISEE_LE,
+    });
+    for (const d of [
+      l.recue_at,
+      l.traitee_at,
+      l.prolongee_at,
+      l.valeur_purgee_at,
+      l.trace_anonymisee_at,
+    ]) {
+      expect(d).not.toBeNull();
+      expect(estDebutDeMois(d)).toBe(true);
+    }
+    const [c] = await base.prisma.$queryRawUnsafe<{ ordre: boolean; purge: boolean }[]>(
+      `SELECT prolongee_at <= traitee_at AS ordre,
+         (valeur_chiffree IS NULL AND valeur_purgee_at IS NOT NULL) AS purge
+       FROM demandes_droits_contact WHERE id = $1::uuid`,
+      id
+    );
+    expect(c).toEqual({ ordre: true, purge: true });
+  });
+
+  it('REQ-JUR-065 : TÉMOIN — une demande close le dernier jour du mois à 23 h 30 heure de Paris est tronquée selon son mois UTC', async () => {
+    // 30 septembre, 23 h 30 à Paris (UTC+2) : 21 h 30 UTC, toujours septembre.
+    const septembre = await uneDemande({
+      recueAt: new Date('2026-09-20T10:00:00.000Z'),
+      traiteeAt: new Date('2026-09-30T21:30:00.000Z'),
+    });
+    // 1er septembre, 0 h 30 à Paris : encore le 31 août à 22 h 30 UTC — c'est AOÛT, le mois UTC.
+    const aout = await uneDemande({
+      recueAt: new Date('2026-08-20T10:00:00.000Z'),
+      traiteeAt: new Date('2026-08-31T22:30:00.000Z'),
+    });
+    await anonymiserLesTracesDesDroits(app, MAINTENANT);
+    expect((await lire(septembre)).traitee_at?.toISOString()).toBe('2026-09-01T00:00:00.000Z');
+    expect((await lire(aout)).traitee_at?.toISOString()).toBe('2026-08-01T00:00:00.000Z');
+  });
+
+  it('REQ-JUR-065 : TÉMOIN — une anonymisation écrite sans troncature est tronquée par la base, dans la même instruction', async () => {
+    const id = await uneDemande({
+      recueAt: new Date('2026-06-11T07:42:10.123Z'),
+      prolongeeAt: new Date('2026-07-01T00:00:00.001Z'),
+      traiteeAt: new Date('2026-07-31T23:59:59.999Z'),
+      droit: 'rectification',
+    });
+    const avant = await lire(id);
+    expect(avant.valeur_purgee_at).not.toBeNull();
+    // Un autre chemin que la tâche, une console ou un correctif manuel : il ne tronque rien.
+    await expect(
+      maj(
+        `UPDATE demandes_droits_contact SET attribution_id = NULL, trace_anonymisee_at = $2
+         WHERE id = $1::uuid`,
+        id,
+        new Date('2031-10-17T15:04:05.678Z')
+      )
+    ).resolves.toBe(1);
+    expect(await lire(id)).toEqual({
+      ...tronquee(avant),
+      attribution_id: null,
+      trace_anonymisee_at: new Date('2031-10-01T00:00:00.000Z'),
+    });
+  });
+
+  it('REQ-JUR-065 : TÉMOIN — à l’anonymisation, une date NULL reste NULL', async () => {
+    // Jamais close, jamais prolongée, sans valeur : seule la réception a une date.
+    const jamaisClose = () =>
+      uneDemande({
+        recueAt: new Date('2026-07-15T12:00:00.000Z'),
+        traiteeAt: null,
+        prolongeeAt: null,
+      });
+    const id = await jamaisClose();
+    await anonymiserLesTracesDesDroits(app, MAINTENANT);
+    const l = await lire(id);
+    expect(l.recue_at.toISOString()).toBe('2026-07-01T00:00:00.000Z');
+    expect([l.traitee_at, l.prolongee_at, l.valeur_purgee_at]).toEqual([null, null, null]);
+    // Une valeur posée sur une date NULL dans l'écriture d'anonymisation est refusée, même un
+    // début de mois : la troncature n'invente aucune date.
+    const autre = await jamaisClose();
+    expect(
+      await refus(
+        maj(
+          `UPDATE demandes_droits_contact SET ${ANONYMISER.replace(
+            `prolongee_at = ${AU_MOIS('prolongee_at')}`,
+            `prolongee_at = ${AU_MOIS('recue_at')}`
+          )} WHERE id = $1::uuid`,
+          autre
+        )
+      )
+    ).toContain(GABARIT);
+    expect((await lire(autre)).attribution_id).not.toBeNull();
+  });
+
+  it('REQ-JUR-065 : TÉMOIN — une troncature hors de l’écriture d’anonymisation est refusée', async () => {
+    const id = await uneDemande({ recueAt: decale(-60), traiteeAt: decale(-10) });
+    for (const c of ['recue_at', 'traitee_at']) {
+      expect(
+        await refus(
+          maj(`UPDATE demandes_droits_contact SET ${c} = ${AU_MOIS(c)} WHERE id = $1::uuid`, id)
+        ),
+        c
+      ).toContain(GABARIT);
+    }
+    expect((await lire(id)).attribution_id).not.toBeNull();
+  });
+
+  it('REQ-JUR-065 : TÉMOIN — une date tronquée ne se réécrit pas', async () => {
+    const id = await uneDemande({ recueAt: decale(-60), traiteeAt: decale(-10) });
+    await anonymiserLesTracesDesDroits(app, MAINTENANT);
+    for (const [c, valeur] of [
+      ['recue_at', `recue_at + interval '1 day'`],
+      ['traitee_at', `traitee_at - interval '1 month'`],
+      ['trace_anonymisee_at', `trace_anonymisee_at + interval '1 month'`],
+    ] as const) {
+      expect(
+        await refus(
+          maj(`UPDATE demandes_droits_contact SET ${c} = ${valeur} WHERE id = $1::uuid`, id)
+        ),
+        c
+      ).toContain(GABARIT);
+    }
+  });
+
+  it('REQ-JUR-065 : TÉMOIN — une valeur qui n’est pas un début de mois UTC est refusée, et le début d’un autre mois aussi', async () => {
+    for (const [nom, valeur] of [
+      ['une heure après le début du mois', `${AU_MOIS('recue_at')} + interval '1 hour'`],
+      ['le début du mois précédent', `${AU_MOIS('recue_at')} - interval '1 month'`],
+      ['le début du mois suivant', `${AU_MOIS('recue_at')} + interval '1 month'`],
+      [
+        'minuit du mois à Paris',
+        `date_trunc('month', recue_at AT TIME ZONE 'Europe/Paris') AT TIME ZONE 'Europe/Paris'`,
+      ],
+    ] as const) {
+      const id = await uneDemande({
+        recueAt: new Date('2026-07-15T12:00:00.000Z'),
+        traiteeAt: decale(-10),
+      });
+      expect(
+        await refus(
+          maj(
+            `UPDATE demandes_droits_contact SET ${ANONYMISER.replace(
+              `recue_at = ${AU_MOIS('recue_at')}`,
+              `recue_at = ${valeur}`
+            )} WHERE id = $1::uuid`,
+            id
+          )
+        ),
+        nom
+      ).toContain(GABARIT);
+      expect((await lire(id)).attribution_id, nom).not.toBeNull();
     }
   });
 });
