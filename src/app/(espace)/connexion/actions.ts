@@ -10,10 +10,12 @@
  * Une consommation qui ouvre la session remet son jeton au navigateur dans le cookie `__Host-` de
  * SEC-04 (REQ-SEC-003, `COOKIE_DE_SESSION`), AVANT la redirection ; un lien invalide n'en pose aucun.
  *
- * L'APPAREIL (SEC-55, REQ-SEC-003) : le clic et le code lisent le cookie `__Host-partners-appareil`
- * et le passent TEL QUEL au noyau, qui juge sa forme et confirme l'appareil dans la transaction de la
- * consommation. L'action pose l'identifiant que le noyau rend (le même, ou un neuf), et n'en invente
- * aucun ; une consommation refusée, ou qui ne rend pas d'appareil, n'en pose aucun.
+ * L'APPAREIL (SEC-55, SEC-62, REQ-SEC-003) : le clic et le code lisent le cookie
+ * `__Host-partners-appareil` et le passent TEL QUEL au noyau, qui juge sa forme. Un appareil inconnu
+ * est avisé APRÈS la validation de la consommation, hors de toute transaction, puis confirmé par une
+ * transaction courte (voie (b) de la lentille sécurité) — avant la redirection. L'action pose
+ * l'identifiant que le noyau rend (le même, ou un neuf), et n'en invente aucun ; une consommation
+ * refusée, ou qui ne rend pas d'appareil, n'en pose aucun.
  *
  * PREMIÈRE CONNEXION (JUR-T34, REQ-JUR-025) : une session ouverte dont l'apporteur n'a pas accepté la
  * version courante de la politique de confidentialité mène à `/confidentialite` au lieu de l'issue

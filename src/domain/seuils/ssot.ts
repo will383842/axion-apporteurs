@@ -345,6 +345,15 @@ export const SEUILS = {
     renvois: [{ document: 'annexe-2', unite: '2.5' }],
     verifieLe: LE,
   },
+  // SEC-19 (juriste, #703, 5982101876) : le texte chiffré d'une décision de contrat (decisions_de_contrat).
+  DECISION_CONTRAT_TEXTE_CONSERVATION_ANS: {
+    valeur: 5,
+    unite: 'ans',
+    source:
+      "code civil art. 2224 (prescription de l'action, cinq ans) ; RGPD art. 5.1.e ; décision de la juriste (SEC-19, #703) — À RELIRE, non encore confronté : code civil art. 2224",
+    renvois: [],
+    verifieLe: LE,
+  },
   CONSERVATION_PIECES_ANS: {
     valeur: 10,
     unite: 'ans',

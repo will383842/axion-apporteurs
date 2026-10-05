@@ -909,6 +909,14 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › titre : {entreprise} : décision de rattachement
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › appel : Voir Mes entreprises
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › corps : {decision}. Motif : {motif}.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › nouvel_appareil › titre : Connexion à votre espace depuis un nouvel appareil
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › nouvel_appareil › appel : Demander un nouveau lien de connexion
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › nouvel_appareil › corps : Votre lien de connexion a été utilisé le {dateHeure} sur un appareil que nous ne connaissions pas encore pour votre compte. Si c'est bien vous, vous n'avez rien à faire. Sinon, ne cliquez sur aucun lien reçu que vous n'avez pas demandé, demandez un nouveau lien de connexion depuis la page de connexion, et écrivez à Axion-IA.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure › titre : Mise en demeure de remédier à un manquement au contrat
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure › appel : Écrire à Axion-IA
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure › corps : Axion-IA vous met en demeure de remédier, dans un délai de {delaiMiseEnDemeure} à compter de l'envoi de ce message, au manquement suivant à l'article {article} du contrat : {faits}. À défaut, Axion-IA pourra résilier le contrat sans préavis, par une décision motivée (article 11.2). Cette mise en demeure n'est ni un avertissement ni une mesure disciplinaire, et elle ne constitue pas un antécédent. Vous pouvez répondre par écrit à Axion-IA.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › resiliation › titre : Fin de votre contrat d'apporteur
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › resiliation › appel : Voir mes commissions
       courriels/notifications.ts › CORPS_DE_LA_LIBERATION › demande_verifiee : Ce dépôt a pris fin sans confirmation de l'échange. Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}. Cette fin n'emporte aucune autre conséquence pour vous.
       courriels/notifications.ts › CORPS_DE_LA_LIBERATION › peremption_ou_fin_de_duree : Cette entreprise est de nouveau disponible, y compris pour un nouveau dépôt de votre part.
       courriels/notifications.ts › MOTIFS_DES_DECISIONS › anomalie_confirmee : À la vérification, ce dépôt ne remplit pas les conditions de l'article 3.7 du contrat. Faits retenus : {faits}
@@ -937,7 +945,12 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 10 : novembre
       courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 11 : décembre
       courriels/notifications.ts › CODE_DU_COURRIEL_DE_CONNEXION › avant : Vous pouvez aussi saisir ce code sur la page de connexion :
-      courriels/notifications.ts › CODE_DU_COURRIEL_DE_CONNEXION › apres : Il ne sert qu’une fois, et pas plus longtemps que le lien."
+      courriels/notifications.ts › CODE_DU_COURRIEL_DE_CONNEXION › apres : Il ne sert qu’une fois, et pas plus longtemps que le lien.
+      courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › ordinaire_apporteur : Axion-IA a bien reçu, le {dateReception}, votre décision de résilier le contrat. Celui-ci prend fin le {dateEffet}, au terme du préavis prévu à l'article 11.1.
+      courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › ordinaire_axion : Axion-IA résilie votre contrat d'apporteur, comme le permet l'article 11.1. Le préavis court à compter de l'envoi de ce message : le contrat prend fin le {dateEffet}.
+      courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › manquement_grave : Axion-IA résilie votre contrat d'apporteur sans préavis, par une décision motivée, en application de l'article 11.2 : {motif}. Le contrat prend fin le {dateEffet}.
+      courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › fin_de_plein_droit : Le contrat d'apporteur a pris fin de plein droit le {dateEffet}, en application de l'article 12.5.
+      courriels/notifications.ts › PARAGRAPHE_COMMUN_DE_LA_RESILIATION : Vos dépôts en cours de confirmation et vos dépôts en attente sont annulés ; vos réservations sans commande prennent fin. Les commandes signées avant la fin du contrat continuent de vous ouvrir droit à commission, au fur et à mesure de leurs encaissements, quelle qu'en soit la date. Les commissions déjà acquises vous sont payées au dernier relevé. Vous gardez l'accès en lecture à votre espace jusqu'à l'extinction de vos droits : reconnectez-vous avec votre adresse e-mail pour y accéder."
     `);
   });
 
