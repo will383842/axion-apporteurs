@@ -94,8 +94,15 @@ export type ModeleCloisonne = (typeof MODELES_CLOISONNES)[number];
  * SEC-55 : l'appareil connu non plus. Signal de sécurité du compte, il n'est inscrit ni au dossier
  * de l'apporteur ni sur ses dépôts ; seule la garde de connexion le lit et l'écrit
  * (`src/server/auth/appareil.ts`), sous le compte de la session.
+ *
+ * SEC-19 (forme d'A02, #703) : la décision de contrat non plus. Son texte chiffré et ses dates ne se
+ * lisent qu'au rendu de la notification, par le passage ; l'espace lit le texte rendu.
  */
-export const MODELES_SANS_VUE_APPORTEUR = ['anomalie', 'appareilConnu'] as const;
+export const MODELES_SANS_VUE_APPORTEUR = [
+  'anomalie',
+  'appareilConnu',
+  'decisionDeContrat',
+] as const;
 
 /**
  * DM-07 : les modèles cloisonnés dont la table est en AJOUT SEUL — branchée sur le gabarit
@@ -197,6 +204,9 @@ export const CLES_REFUSEES = {
     'anomalieId',
     'anomalie',
     'courriels',
+    // SEC-19 : la décision de contrat, comme l'anomalie, est HORS DE L'ESPACE.
+    'decisionContratId',
+    'decisionContrat',
   ],
   preferenceNotification: ['id', 'apporteurId', 'apporteur'],
   // DM-12 : le porteur console ne s'écrit jamais de l'espace.
@@ -267,7 +277,14 @@ export const RELATIONS = {
   personneDeclaree: ['apporteur', 'attributions'],
   pieceKyc: ['apporteur', 'identitesFacturation'],
   sessionEspace: ['apporteur', 'utilisateurConsole', 'lienMagique'],
-  notificationEspace: ['apporteur', 'attribution', 'faitDuJournal', 'anomalie', 'courriels'],
+  notificationEspace: [
+    'apporteur',
+    'attribution',
+    'faitDuJournal',
+    'anomalie',
+    'courriels',
+    'decisionContrat',
+  ],
   preferenceNotification: ['apporteur'],
   verification: ['apporteur', 'utilisateurConsole'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
@@ -479,7 +496,14 @@ export const CHAMPS_TUS = {
   ],
   // UX-P1-10 : le propriétaire, et l'attribution dont la notification parle (comme un courriel).
   // DM-55 (sécurité) : l'événement et l'anomalie ne se rendent jamais ; l'espace ne lit que le texte rendu.
-  notificationEspace: ['apporteurId', 'attributionId', 'evenementId', 'anomalieId'],
+  notificationEspace: [
+    'apporteurId',
+    'attributionId',
+    'evenementId',
+    'anomalieId',
+    // SEC-19 : la décision de contrat ne se rend jamais.
+    'decisionContratId',
+  ],
   preferenceNotification: ['apporteurId'],
   // SEC-47 : les secrets, le jugement de la candidature (seuil, score, parts, réponses, barème),
   // les traces d'acquisition et de parrainage, le marqueur de test, la version de session.

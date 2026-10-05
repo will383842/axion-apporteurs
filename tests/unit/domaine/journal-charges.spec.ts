@@ -45,6 +45,8 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
     expect(Object.keys(CHARGES_PAR_TYPE).sort()).toEqual([
       'anomalie_gel_modifie',
       'anomalie_statut_modifie',
+      // SEC-19 (A02, #703) : la mise en demeure datée d'un apporteur, par article.
+      'apporteur_mis_en_demeure',
       'apporteur_statut_modifie',
       'attribution_contact_purge',
       'attribution_etat_modifie',
@@ -414,5 +416,26 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
       expect(u(geste, null, null), geste).toEqual([]);
     expect(u('desactiver', 'lecteur', null)).toEqual(['vers:roles_incoherents_avec_le_geste']);
     expect(u('desactiver', null, 'lecteur')).toEqual(['vers:roles_incoherents_avec_le_geste']);
+  });
+
+  it('REQ-JUR-006 : la mise en demeure ne porte que l’article, pris dans la liste FERMÉE de l’art. 11.2, et l’acteur de la console', () => {
+    for (const article of ['3.7', '6', '7', '8', '9', '23']) {
+      passe('apporteur_mis_en_demeure', { article, acteur: CONSOLE });
+    }
+    expect(refus('apporteur_mis_en_demeure', { article: '10', acteur: CONSOLE })).toHaveLength(1);
+    expect(refus('apporteur_mis_en_demeure', { article: '11.2', acteur: CONSOLE })[0]).toMatch(
+      /^article:/
+    );
+    // NI les faits NI aucun texte libre : la charge est fermée.
+    expect(
+      refus('apporteur_mis_en_demeure', { article: '6', acteur: CONSOLE, faits: 'x' })
+    ).toHaveLength(1);
+    // Un utilisateur de la console, jamais le système ni l'apporteur.
+    expect(refus('apporteur_mis_en_demeure', { article: '6', acteur: { par: 'systeme' } })).toEqual(
+      ['acteur:acteur_console_attendu']
+    );
+    expect(
+      refus('apporteur_mis_en_demeure', { article: '6', acteur: { par: 'apporteur', id: ID } })
+    ).toEqual(['acteur:acteur_console_attendu']);
   });
 });

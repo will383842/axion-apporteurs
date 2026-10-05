@@ -23,6 +23,7 @@ import { empreinteDeSession } from './lien-magique';
 import {
   niveauDAcces,
   routeOuverte,
+  SEGMENT_DE_L_ACCEPTATION,
   type NiveauDAcces,
   type SegmentProtege,
 } from '../../domain/apporteur/acces-espace';
@@ -60,6 +61,9 @@ export const MOTIFS_DE_REFUS = [
   // SEC-43 : un apporteur en ouverture limitée sur une route hors de « Ma conformité » et « Mon
   // contrat ». Au journal seulement : le navigateur reçoit le même refus que pour toute route.
   'hors_ouverture_limitee',
+  // SEC-19 (REQ-SEC-032) : un résilié en LECTURE tente une écriture. Le refus est porté par la
+  // session, dans `actionEspace` et `exigerSessionRelevee`, pas seulement par l'écran.
+  'lecture_seule',
 ] as const;
 export type MotifDeRefus = (typeof MOTIFS_DE_REFUS)[number];
 
@@ -74,7 +78,11 @@ export interface LigneDeSession {
   expireAt: Date;
   revoqueAt: Date | null;
   sessionVersion: number;
-  apporteur: { statut: string; sessionVersion: number } | null;
+  /**
+   * `droitsEnCours` (SEC-19, A02 #703) : au moins une attribution `figee_resiliation` non éteinte.
+   * Relu avec le statut à chaque requête ; absent, il vaut faux — défaut fermé.
+   */
+  apporteur: { statut: string; sessionVersion: number; droitsEnCours?: boolean } | null;
   lienMagique: { consommeAt: Date | null };
 }
 
@@ -83,7 +91,7 @@ export interface SessionOuverte {
   id: string;
   apporteurId: string;
   lienConsommeAt: Date | null;
-  /** `plein` ou `limite` (SEC-43) : une session fermée n'est jamais ouverte. */
+  /** `plein`, `limite` (SEC-43) ou `lecture` (SEC-19) : une session fermée n'est jamais ouverte. */
   niveau: Exclude<NiveauDAcces, 'ferme'>;
   /** Le statut de l'apporteur, pour la seule trace d'un refus d'ouverture limitée. */
   statut: string;
@@ -111,7 +119,7 @@ export function jugerSession(
   if (ligne.revoqueAt !== null) return refus('revoquee');
   if (ligne.expireAt.getTime() <= maintenant.getTime()) return refus('expiree');
   if (ligne.sessionVersion !== ligne.apporteur.sessionVersion) return refus('version_perimee');
-  const niveau = niveauDAcces(ligne.apporteur.statut);
+  const niveau = niveauDAcces(ligne.apporteur.statut, ligne.apporteur.droitsEnCours === true);
   if (niveau === 'ferme') return refus('statut_ferme');
   return {
     ok: true,
@@ -240,9 +248,16 @@ export async function pageEspace(
 }
 
 /**
+ * Les ACTIONS qu'une session en lecture garde (SEC-19, critère 3 de la sécurité), par segment et
+ * nommées : accepter la politique, l'accord qui précède toute lecture. Toute autre est refusée.
+ */
+export const ACTIONS_PERMISES_EN_LECTURE: readonly string[] = [SEGMENT_DE_L_ACCEPTATION];
+
+/**
  * L'enveloppe d'une ACTION serveur de l'espace (SEC-43, SEC-53) : la garde de `pageEspace` pour CE
  * segment est son premier acte, et le corps ne s'exécute que si elle passe. Le refus est rendu tel
- * quel : l'action répond comme à une route inconnue, sans rien révéler.
+ * quel : l'action répond comme à une route inconnue, sans rien révéler. Une session en LECTURE
+ * (SEC-19) n'écrit pas : `lecture_seule`, hors des actions permises nommées.
  */
 export async function actionEspace<T>(
   segment: SegmentProtege,
@@ -252,16 +267,23 @@ export async function actionEspace<T>(
 ): Promise<{ ok: true; valeur: T } | { ok: false; motif: MotifDeRefus | MotifDeLaGarde }> {
   const verdict = await pageEspace(segment, jeton, ports);
   if (!verdict.ok) return verdict;
+  if (verdict.session.niveau === 'lecture' && !ACTIONS_PERMISES_EN_LECTURE.includes(segment)) {
+    return { ok: false, motif: 'lecture_seule' };
+  }
   return { ok: true, valeur: await corps(verdict.session) };
 }
 
-/** La session de la requête, RELEVÉE : à appeler dans toute action qui modifie une coordonnée. */
+/**
+ * La session de la requête, RELEVÉE : à appeler dans toute action qui modifie une coordonnée. Une
+ * session en LECTURE (SEC-19) ne modifie aucune coordonnée : `lecture_seule`, même relevée.
+ */
 export async function exigerSessionRelevee(
   jeton: string | undefined,
   ports: PortsDeSession
 ): Promise<VerdictDeSession> {
   const verdict = await exigerSession(jeton, ports);
   if (!verdict.ok) return verdict;
+  if (verdict.session.niveau === 'lecture') return refus('lecture_seule');
   const consommeAt = verdict.session.lienConsommeAt;
   const age = consommeAt === null ? Infinity : ports.maintenant().getTime() - consommeAt.getTime();
   return age < DUREES_AUTH.releveMs.valeur ? verdict : refus('releve_requis');
@@ -301,8 +323,8 @@ export function revoquerPourMotifDeSecurite(
  */
 export function depotDeSessions(prisma: PrismaClient): DepotDeSessions {
   return {
-    lire(tokenHash) {
-      return prisma.sessionEspace.findUnique({
+    async lire(tokenHash) {
+      const ligne = await prisma.sessionEspace.findUnique({
         where: { tokenHash },
         select: {
           id: true,
@@ -311,10 +333,24 @@ export function depotDeSessions(prisma: PrismaClient): DepotDeSessions {
           expireAt: true,
           revoqueAt: true,
           sessionVersion: true,
-          apporteur: { select: { statut: true, sessionVersion: true } },
+          apporteur: {
+            select: {
+              statut: true,
+              sessionVersion: true,
+              // SEC-19 : les droits en cours, relus à chaque requête avec le statut.
+              attributions: {
+                where: { statut: 'figee_resiliation' },
+                select: { id: true },
+                take: 1,
+              },
+            },
+          },
           lienMagique: { select: { consommeAt: true } },
         },
       });
+      if (ligne?.apporteur == null) return ligne;
+      const { attributions, ...apporteur } = ligne.apporteur;
+      return { ...ligne, apporteur: { ...apporteur, droitsEnCours: attributions.length > 0 } };
     },
     async marquerVue(id, maintenant) {
       await prisma.sessionEspace.updateMany({ where: { id }, data: { derniereVueAt: maintenant } });

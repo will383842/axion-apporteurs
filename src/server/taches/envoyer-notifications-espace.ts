@@ -22,6 +22,7 @@ import { domaines } from '../../config/entite';
 import { horlogeSysteme } from '../../lib/horloge';
 import { lireLesFaitsPourLaNotification } from '../anomalie/justification';
 import { rendreDepuisLaBase } from '../attribution/notifications';
+import { rendreUneDecisionDeContrat } from '../apporteur/resiliation';
 import { MODELE_APPORTEUR } from '../auth/lien-magique-depot';
 import { lireLaChargeDUnFait } from '../evenement/journal';
 import { configurationDeLEmetteur } from '../integrations/zeptomail/emetteur';
@@ -47,6 +48,8 @@ export type NotificationAEnvoyer = {
   evenementId: string | null;
   /** L'anomalie confirmée qui fonde une `decision_attribution` ; nulle sinon, ou vidée. */
   anomalieId: string | null;
+  /** SEC-19 : la décision de contrat d'une `mise_en_demeure` ou d'une `resiliation` ; nulle sinon, ou vidée. */
+  decisionContratId: string | null;
 };
 
 export type IssueDeLEnvoi = {
@@ -147,7 +150,16 @@ export async function envoyerLesNotificationsDeLEspace(p: PortsDuPassage): Promi
 export const CLES_ENVOYEES_PAR_LE_PASSAGE = [
   'decision_attribution',
   'premier_rang_libere',
+  // SEC-19 (A02, #703) : les deux notifications du contrat, rendues depuis leur décision ; leur
+  // courriel fait courir un délai (la mise en demeure, le préavis), compté de `envoye_at`.
+  'mise_en_demeure',
+  'resiliation',
+  // DM-25 : l'annulation pour antériorité de la Société, écrite avec son événement par la transition.
+  'attribution_annulee_anteriorite',
 ] as const;
+
+/** Les clés du contrat : leur texte se rend depuis la décision liée, jamais depuis une attribution. */
+const CLES_DU_CONTRAT: readonly string[] = ['mise_en_demeure', 'resiliation'];
 
 /** Ce que le passage ne sait pas faire seul : l'heure, le rendu du texte, l'envoi par l'émetteur. */
 export type GestesExternes = {
@@ -189,6 +201,7 @@ export function portsDuPassage(prisma: PrismaClient, externes: GestesExternes): 
           attributionId: true,
           evenementId: true,
           anomalieId: true,
+          decisionContratId: true,
         },
       });
       return lignes.map((l) => ({
@@ -292,14 +305,19 @@ export function passageDEnvoiDesNotifications(
       portsDuPassage(prisma, {
         maintenant,
         rendre: (tx, n, envoyeLe) =>
-          rendreDepuisLaBase(tx, n, envoyeLe, {
-            chargeDuFait: async (t, id) => {
-              const fait = await lireLaChargeDUnFait(t, id);
-              return fait?.type === 'attribution_etat_modifie' ? fait.charge : null;
-            },
-            faitsDe: (t, q) => lireLesFaitsPourLaNotification(t, q, cles),
-            composer: (cle, texte) => composerLeCourriel(cle, texte, urlDeLEspace),
-          }),
+          CLES_DU_CONTRAT.includes(n.cle)
+            ? rendreUneDecisionDeContrat(tx, n, {
+                cles,
+                composer: (cle, texte) => composerLeCourriel(cle, texte, urlDeLEspace),
+              })
+            : rendreDepuisLaBase(tx, n, envoyeLe, {
+                chargeDuFait: async (t, id) => {
+                  const fait = await lireLaChargeDUnFait(t, id);
+                  return fait?.type === 'attribution_etat_modifie' ? fait.charge : null;
+                },
+                faitsDe: (t, q) => lireLesFaitsPourLaNotification(t, q, cles),
+                composer: (cle, texte) => composerLeCourriel(cle, texte, urlDeLEspace),
+              }),
         // L'émetteur est construit au PREMIER envoi : une configuration absente fait échouer l'envoi,
         // nommée, jamais un passage qui n'a rien à envoyer.
         envoyer: (tx, n, texte, envoyeLe) => {
