@@ -9,7 +9,7 @@
 | **Exigences servies** | REQ-JUR-065, REQ-DM-037 |
 | **Décisions du registre citées** | — (la durée de cinq ans est une décision de Williams du 2026-10-03, versée au registre des tâches par le rattrapage 79) |
 | **Règle maison appliquée** | RM-01, RM-02, RM-10 |
-| **Remplace / remplacé par** | amende les déclencheurs `demandes_droits_contact_ajout_seul` et `demandes_droits_contact_troncature` de la migration `20261002001600_demandes_droits_contact` |
+| **Remplace / remplacé par** | amende les déclencheurs `demandes_droits_contact_ajout_seul` et `demandes_droits_contact_troncature` de la migration `20261002001600_demandes_droits_contact` ; amendé par `partners/ADR-0032` (décisions 5 et 6 : la fonction des deux déclencheurs) |
 
 ## Contexte
 
@@ -110,8 +110,9 @@ colonne perd son NOT NULL, et le champ Prisma devient `attributionId String?`, r
   `it('REQ-JUR-065 : TÉMOIN — toute autre modification et DELETE restent refusés, la troncature aussi')` :
   décision 5.
 - **Assertion** — `tests/integration/demandes-droits-contact-anonymisation.spec.ts` ·
-  `it('REQ-JUR-065 : TÉMOIN — les deux déclencheurs portent les arguments complets, dans l’ordre, remplacés et non doublés')` :
-  décisions 5 et 6.
+  `it('REQ-JUR-065 : TÉMOIN — les deux déclencheurs exécutent la fonction dédiée, remplacés et non doublés')` :
+  décisions 5 et 6, telles qu'amendées par `partners/ADR-0032` : les sept règles y sont écrites en
+  dur dans une fonction dédiée, qui remplace les arguments du gabarit.
 
 ## Reste à faire
 

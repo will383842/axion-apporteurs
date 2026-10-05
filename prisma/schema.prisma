@@ -401,7 +401,8 @@ model SessionEspace {
   @@map("sessions_espace")
 }
 
-/// SEC-55 (REQ-SEC-003) : un appareil sur lequel une confirmation renforcée a eu lieu, par apporteur.
+/// SEC-55 (REQ-SEC-003) : un appareil sur lequel un lien ou un code de connexion a été consommé,
+/// par apporteur (la formule du registre de l'article 30).
 /// Un signal de sécurité du COMPTE, jamais une anomalie : il n'est inscrit ni au dossier ni sur un
 /// dépôt, et n'a AUCUNE vue dans l'espace. Seule l'EMPREINTE de l'appareil est gardée — un HMAC
 /// tronqué à 128 bits, sous la clé dédiée des appareils (`kid`) —, jamais l'adresse réseau ni

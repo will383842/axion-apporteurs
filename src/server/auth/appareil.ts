@@ -18,11 +18,15 @@
  *     inconnu, et `purger-appareils.ts` efface la ligne.
  *  3. Un appareil inconnu est REFUSÉ (`appareil_inconnu`), quelle que soit la fraîcheur de la
  *     session : la garde ne confirme JAMAIS. L'appareil se confirme À LA CONSOMMATION d'un lien ou de
- *     son code (SEC-54), envoyés à l'adresse vérifiée, sur l'appareil qui consomme et dans la même
- *     transaction (`confirmerALaConsommation`). Un cookie de session volé ne suffit donc pas : le
- *     relèvement est une propriété de la SESSION, pas de l'appareil (note de la lentille sécurité sur
- *     4913c6a3). L'avis à l'adresse vérifiée part D'ABORD, l'appareil devient connu ENSUITE : aucun
- *     appareil ne devient connu sans son avis ; un avis qui échoue le laisse inconnu.
+ *     son code (SEC-54), envoyés à l'adresse vérifiée, sur l'appareil qui consomme. Un cookie de
+ *     session volé ne suffit donc pas : le relèvement est une propriété de la SESSION, pas de
+ *     l'appareil (note de la lentille sécurité sur 4913c6a3). Dans l'ordre de la voie (b) de la
+ *     lentille sécurité : (i) la transaction de la consommation se valide, l'appareil reconnu s'il
+ *     est connu, NON confirmé sinon (`reconnaitreALaConsommation`) ; (ii) l'avis part ensuite à
+ *     l'adresse vérifiée, HORS de toute transaction ; (iii) seulement s'il est accepté, une
+ *     transaction COURTE rejuge la session et confirme l'appareil, une fois (`aviserPuisConfirmer`).
+ *     Aucun appareil ne devient connu sans son avis ; un avis en échec, ou un arrêt entre (i) et
+ *     (iii), le laisse inconnu.
  *  4. En échec FERMÉ : un identifiant absent ou hors forme ne produit AUCUNE empreinte ; l'appareil
  *     compte comme inconnu, et la garde ne lit rien. À la consommation, un identifiant neuf est tiré
  *     à sa place et rendu à l'appelant, qui le pose ; le hors-forme n'est jamais écrit.
@@ -38,6 +42,8 @@ import { kidDe } from '../../lib/env';
 import { DUREES_AUTH } from './durees';
 import {
   exigerSession,
+  jugerSession,
+  type LigneDeSession,
   type PortsDeSession,
   type SessionOuverte,
   type VerdictDeSession,
@@ -105,8 +111,16 @@ export interface DepotDAppareils {
    * cette clé, et vu après `vuApres`. Rend le nombre de lignes écrites : 1, il est connu.
    */
   reconnaitre(appareil: AppareilVu, maintenant: Date, vuApres: Date): Promise<number>;
-  /** L'appareil devient connu, ou le redevient : confirmé et vu à l'instant. */
-  confirmer(appareil: AppareilVu, maintenant: Date): Promise<void>;
+  /**
+   * (iii) L'appareil devient connu, ou le redevient (ligne périmée), confirmé et vu à l'instant :
+   * `confirme`. Déjà connu — vu après `vuApres` —, il ne l'est pas deux fois : RIEN n'est réécrit,
+   * `deja_connu`.
+   */
+  confirmerSiInconnu(
+    appareil: AppareilVu,
+    maintenant: Date,
+    vuApres: Date
+  ): Promise<'confirme' | 'deja_connu'>;
 }
 
 /** L'avis à l'adresse vérifiée : le compte et l'instant, RIEN de l'appareil. */
@@ -123,20 +137,49 @@ export interface PortsDAppareil {
   cle: { readonly secret: string; readonly kid: string };
 }
 
-/** Les ports de la CONFIRMATION, à la consommation d'un lien ou d'un code de l'espace. */
-export interface PortsDeConfirmation {
-  /** Le dépôt de la transaction de la consommation : la confirmation en partage l'issue. */
-  depot: DepotDAppareils;
-  cle: { readonly secret: string; readonly kid: string };
-  aviser(avis: AvisDAppareil): Promise<void>;
-  maintenant: Date;
-}
-
 /** Ce que la consommation rend de l'appareil : l'identifiant à POSER et l'issue, rien d'autre. */
-export type IssueDeLAppareil = 'connu' | 'confirme' | 'avis_echoue';
+export type IssueDeLAppareil = 'connu' | 'confirme' | 'avis_echoue' | 'non_confirme';
 export interface AppareilDeLaConnexion {
   identifiant: string;
   issue: IssueDeLAppareil;
+}
+
+/**
+ * (i) Ce que la transaction de la consommation sait de l'appareil : connu, ou À CONFIRMER après sa
+ * validation. L'empreinte reste dans le noyau ; seul l'identifiant sort vers l'appelant.
+ */
+export type AppareilALaConsommation =
+  { identifiant: string; issue: 'connu' } | { identifiant: string; aConfirmer: AppareilVu };
+
+/** La transaction COURTE de la confirmation (iii) : la session relue, et le dépôt des appareils. */
+export interface TransactionDeConfirmation {
+  /** La session par l'empreinte de son jeton, avec le lien qui l'a ouverte ; `null` si absente. */
+  lireSession(tokenHash: string): Promise<{ ligne: LigneDeSession; lienMagiqueId: string } | null>;
+  appareils: DepotDAppareils;
+}
+
+/**
+ * SEC-55 : les ports de la confirmation à la consommation, côté espace. Branchés, ils font aviser
+ * puis confirmer l'appareil qui consomme, APRÈS la validation de la consommation ; absents, la
+ * consommation est celle d'avant (aucun appareil lu).
+ */
+export interface PortsDesAppareils {
+  /** (ii) L'avis à l'adresse vérifiée : le compte et l'instant, rien de l'appareil. */
+  aviser(avis: AvisDAppareil): Promise<void>;
+  /** L'instant de la confirmation, lu APRÈS l'avis. */
+  maintenant(): Date;
+  /** (iii) La transaction courte, ouverte seulement si l'avis est accepté. */
+  transaction<T>(travail: (tx: TransactionDeConfirmation) => Promise<T>): Promise<T>;
+}
+
+/** L'appareil à confirmer, et de quoi rejuger la session que la consommation a ouverte. */
+export interface AppareilEnAttente {
+  identifiant: string;
+  appareil: AppareilVu;
+  lienMagiqueId: string;
+  sessionTokenHash: string;
+  /** L'instant de la consommation, que l'avis dit. */
+  consommeAt: Date;
 }
 
 export type VerdictDAppareil = VerdictDeSession | { ok: false; motif: 'appareil_inconnu' };
@@ -173,18 +216,20 @@ export async function jugerAppareil(
 }
 
 /**
- * La CONFIRMATION, à la consommation d'un lien ou d'un code de l'espace, sur l'appareil qui
- * consomme, dans la transaction de la consommation (note de la lentille sécurité sur 4913c6a3).
- * L'identifiant lu sur la requête est gardé s'il a la forme d'un tirage ; sinon un identifiant
- * neuf le remplace. Connu de ce compte, l'appareil est reconnu ; neuf, l'avis part D'ABORD, puis il
- * est confirmé. Un avis qui échoue le laisse inconnu : la connexion n'en dépend pas, l'issue le dit.
- * Rend l'identifiant à poser et l'issue, jamais l'empreinte.
+ * (i) DANS la transaction de la consommation, sur l'appareil qui consomme : l'identifiant lu sur la
+ * requête est gardé s'il a la forme d'un tirage ; sinon un identifiant neuf le remplace, et le
+ * hors-forme n'est jamais écrit. Connu de ce compte, l'appareil est reconnu, sa vue avance ; sinon
+ * il reste NON confirmé, à confirmer APRÈS la validation (`aviserPuisConfirmer`).
  */
-export async function confirmerALaConsommation(
+export async function reconnaitreALaConsommation(
   apporteurId: string,
   identifiantLu: unknown,
-  ports: PortsDeConfirmation
-): Promise<AppareilDeLaConnexion> {
+  ports: {
+    depot: DepotDAppareils;
+    cle: { readonly secret: string; readonly kid: string };
+    maintenant: Date;
+  }
+): Promise<AppareilALaConsommation> {
   const lu = empreinteDAppareil(identifiantLu, ports.cle.secret);
   const identifiant = lu === null ? tirerIdentifiantDAppareil() : (identifiantLu as string);
   const empreinte = lu ?? (empreinteDAppareil(identifiant, ports.cle.secret) as string);
@@ -193,13 +238,51 @@ export async function confirmerALaConsommation(
   if ((await ports.depot.reconnaitre(appareil, maintenant, vuApresDe(maintenant))) === 1) {
     return { identifiant, issue: 'connu' };
   }
+  return { identifiant, aConfirmer: appareil };
+}
+
+/**
+ * (ii) puis (iii), APRÈS la validation de la consommation (voie (b) de la lentille sécurité). L'avis
+ * part HORS de toute transaction ; refusé, en échec ou au-delà du délai, il ne confirme RIEN
+ * (`avis_echoue`). Accepté, une transaction COURTE REJUGE la session que la consommation a ouverte
+ * — présente, non révoquée, non expirée, de la bonne version, d'un apporteur toujours actif, de CE
+ * compte, ouverte par CE lien, et pas en LECTURE (SEC-19) — et confirme l'appareil s'il ne l'est pas
+ * déjà ; sinon rien n'est confirmé (`non_confirme`). Un arrêt entre la consommation et la confirmation laisse l'appareil
+ * inconnu : rien n'a été écrit pour lui.
+ */
+export async function aviserPuisConfirmer(
+  attente: AppareilEnAttente,
+  kidDeSession: string,
+  ports: PortsDesAppareils
+): Promise<AppareilDeLaConnexion> {
+  const { identifiant, appareil } = attente;
   try {
-    await ports.aviser({ apporteurId, confirmeAt: maintenant });
+    await ports.aviser({ apporteurId: appareil.apporteurId, confirmeAt: attente.consommeAt });
   } catch {
     return { identifiant, issue: 'avis_echoue' };
   }
-  await ports.depot.confirmer(appareil, maintenant);
-  return { identifiant, issue: 'confirme' };
+  const maintenant = ports.maintenant();
+  const issue = await ports.transaction(async (tx): Promise<IssueDeLAppareil> => {
+    const lue = await tx.lireSession(attente.sessionTokenHash);
+    const verdict = jugerSession(lue?.ligne ?? null, maintenant, kidDeSession);
+    if (
+      !verdict.ok ||
+      lue?.lienMagiqueId !== attente.lienMagiqueId ||
+      verdict.session.apporteurId !== appareil.apporteurId
+    ) {
+      return 'non_confirme';
+    }
+    // SEC-19 (A09, #563 5983094689) : une session en LECTURE n'a aucune action sensible ; un appareil
+    // n'a rien à y gagner. Le refus est une RÈGLE, pas l'effet d'un champ non relu.
+    if (verdict.session.niveau === 'lecture') return 'non_confirme';
+    const confirmation = await tx.appareils.confirmerSiInconnu(
+      appareil,
+      maintenant,
+      vuApresDe(maintenant)
+    );
+    return confirmation === 'confirme' ? 'confirme' : 'connu';
+  });
+  return { identifiant, issue };
 }
 
 /**
@@ -236,12 +319,17 @@ export function depotDAppareils(
       });
       return count;
     },
-    async confirmer(appareil, maintenant) {
+    async confirmerSiInconnu(appareil, maintenant, vuApres) {
+      const frais = await prisma.appareilConnu.count({
+        where: { ...appareil, derniereVueAt: { gt: vuApres } },
+      });
+      if (frais > 0) return 'deja_connu';
       await prisma.appareilConnu.upsert({
         where: { apporteurId_empreinte_kid: appareil },
         create: { ...appareil, confirmeAt: maintenant, derniereVueAt: maintenant },
         update: { confirmeAt: maintenant, derniereVueAt: maintenant },
       });
+      return 'confirme';
     },
   };
 }

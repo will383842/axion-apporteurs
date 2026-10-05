@@ -79,6 +79,14 @@ export const TEXTES_DES_NOTIFICATIONS = {
     appel: 'Voir Mes entreprises',
     corps: '{decision}. Motif : {motif}.',
   },
+  // SEC-55 (rattrapage 102) : l'avis de sécurité du compte, texte de la juriste MOT POUR MOT ; l'appel
+  // mène à la page de connexion, sans jeton ni paramètre. Rien sur l'appareil, ni lieu ni navigateur.
+  nouvel_appareil: {
+    titre: 'Connexion à votre espace depuis un nouvel appareil',
+    appel: 'Demander un nouveau lien de connexion',
+    corps:
+      "Votre lien de connexion a été utilisé le {dateHeure} sur un appareil que nous ne connaissions pas encore pour votre compte. Si c'est bien vous, vous n'avez rien à faire. Sinon, ne cliquez sur aucun lien reçu que vous n'avez pas demandé, demandez un nouveau lien de connexion depuis la page de connexion, et écrivez à Axion-IA.",
+  },
   // SEC-19 (juriste, #703, 5980966503, MOT POUR MOT) : la mise en demeure de l'art. 11.2.
   // {delaiMiseEnDemeure} : la SSOT, en toutes lettres, posée par l'envoi ; {article} : la liste fermée
   // de l'art. 11.2 ; {faits} : saisis par une personne, sous les règles de DM-55.

@@ -14,6 +14,9 @@
  *  - L'envoi : un port. Hors production, le puits du notifieur (`NOTIFY_SINK`) ; en production,
  *    l'émetteur de courriels d'INT-T10 (`demanderEnvoi`), câblé par SEC-42, et son relais réel
  *    (`relaisZeptomail`, INT-T57).
+ *  - Les appareils (SEC-62) : le clic et le code de l'espace avisent l'adresse STOCKÉE d'un nouvel
+ *    appareil par `notifier()` (clé `nouvel_appareil`, texte de la juriste), puis le confirment dans
+ *    une transaction courte ; seul un courriel `envoye` laisse confirmer. La console n'a pas d'appareil.
  *
  * AUCUN JETON ET AUCUNE ADRESSE DANS LES JOURNAUX : l'échec du travail différé s'écrit par son seul
  * motif ; le puits du notifieur n'écrit que le sujet et la taille du corps.
@@ -34,9 +37,16 @@ import { limiter, sujetDepuisEmpreinte, type VerdictDeLimite } from '../securite
 import { CONNEXION } from '../../content/micro-copy/espace/vocabulaire';
 import { CONNEXION_CONSOLE } from '../../content/micro-copy/console/connexion';
 import { DUREES_AUTH } from './durees';
+import { versParis } from '../../domain/temps/paris';
+import { forApporteur } from '../acces/for-apporteur';
+import { notifier, type DependancesDeLaNotification } from '../notifications/envoyer';
+import type { PortsDesAppareils } from './appareil';
 import { empreinteDeSessionConsole } from './lien-magique';
 import { depotDeSessionsConsole, type PortsDeRole } from '../roles/require-role';
-import { CODE_DU_COURRIEL_DE_CONNEXION } from '../../content/micro-copy/courriels/notifications';
+import {
+  CODE_DU_COURRIEL_DE_CONNEXION,
+  MOIS_EN_TOUTES_LETTRES,
+} from '../../content/micro-copy/courriels/notifications';
 import type {
   ConfigurationDuLien,
   PortsDeConsommation,
@@ -51,6 +61,7 @@ import {
   ecrituresDeLienConsole,
   lectureDuCompte,
   lectureDuCompteConsole,
+  transactionDeConfirmation,
   transactionDeConsommation,
   transactionDeConsommationConsole,
   transactionDuCode,
@@ -91,6 +102,11 @@ export interface DependancesDuLien {
   planifier(travail: () => Promise<void>): void;
   envoi: EnvoiDuLien;
   journal: Pick<Journal, 'warn'>;
+  /**
+   * SEC-62 : l'émetteur des notifications de l'apporteur, qui rend le statut du courriel. Absent,
+   * le clic et le code ne jugent aucun appareil : la consommation est celle d'avant.
+   */
+  envoyerCourriel?: DependancesDeLaNotification['envoyerCourriel'];
 }
 
 /** Les secrets jugés en ENTIER ; un refus nomme les variables et leurs motifs, jamais une valeur. */
@@ -162,13 +178,75 @@ export function portsDeDemande(d: DependancesDuLien): PortsDeDemande {
 }
 
 export function portsDeConsommation(
-  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge'>
+  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge' | 'envoyerCourriel'>
 ): PortsDeConsommation {
   return {
     maintenant: () => new Date(d.horloge.maintenant()),
     transaction: transactionDeConsommation(d.prisma),
     configuration: configurationDuLien(d.env),
+    ...appareilsDe(d),
   };
+}
+
+// ── SEC-62 : l'avis « nouvel appareil », puis la confirmation ─────────────────────────────────────
+
+/**
+ * `{dateHeure}` de l'avis : l'instant de la consommation, au jour et à l'heure LÉGALE de Paris, à
+ * la minute — « 4 octobre 2026 à 14 h 20 (heure de Paris) », « 1er » pour le premier du mois.
+ * Rien de l'appareil, ni lieu ni navigateur (texte de la juriste). Les mois sont ceux de la
+ * micro-copie (DM-55), le « 1er » vit ici : la garde de la micro-copie refuse un chiffre en clair.
+ */
+export function dateHeureDeLAvis(instant: Date): string {
+  const p = versParis(instant.getTime());
+  const jour = p.jour === 1 ? '1er' : String(p.jour);
+  const minute = String(p.minute).padStart(2, '0');
+  return `${jour} ${MOIS_EN_TOUTES_LETTRES[p.mois - 1]} ${p.annee} à ${p.heure} h ${minute} (heure de Paris)`;
+}
+
+/**
+ * Les ports des appareils du clic et du code : l'avis part à l'adresse STOCKÉE, déchiffrée sous sa
+ * ligne, par la composition unique de `notifier()` ; il ne porte que le compte et l'instant. Un
+ * courriel qui n'est pas `envoye` (en échec, retenu) fait LEVER l'avis : le noyau le lit comme un
+ * avis en échec, et ne confirme rien (`avis_echoue`). La confirmation est la transaction COURTE de
+ * `transactionDeConfirmation`, ouverte seulement après un avis accepté.
+ */
+function portsDesAppareils(
+  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge'> & {
+    envoyerCourriel: DependancesDeLaNotification['envoyerCourriel'];
+  }
+): PortsDesAppareils {
+  const compte = lectureDuCompte(d.prisma, clesPii(d.env));
+  const urlDeLEspace = new URL(configurationDuLien(d.env).urlPublique);
+  return {
+    async aviser({ apporteurId, confirmeAt }) {
+      const { courriel } = await notifier(
+        {
+          cle: 'nouvel_appareil',
+          a: await compte.adresseStockee(apporteurId),
+          parametres: { dateHeure: dateHeureDeLAvis(confirmeAt) },
+          attributionId: null,
+        },
+        {
+          acces: forApporteur(d.prisma, apporteurId),
+          envoyerCourriel: d.envoyerCourriel,
+          urlDeLEspace,
+        }
+      );
+      if (courriel !== 'envoye') throw new Error(`avis_non_envoye : ${String(courriel)}`);
+    },
+    maintenant: () => new Date(d.horloge.maintenant()),
+    transaction: transactionDeConfirmation(d.prisma),
+  };
+}
+
+/** Le port des appareils, branché seulement quand l'émetteur des notifications est là. */
+function appareilsDe(
+  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge' | 'envoyerCourriel'>
+): { appareils?: PortsDesAppareils } {
+  const { envoyerCourriel } = d;
+  return envoyerCourriel === undefined
+    ? {}
+    : { appareils: portsDesAppareils({ ...d, envoyerCourriel }) };
 }
 
 /**
@@ -250,7 +328,7 @@ export function empreinteDeLaSaisie(env: DependancesDuLien['env'], saisie: strin
  * leur nom ; le journal ne reçoit qu'un motif fermé.
  */
 export function portsDuCode(
-  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge' | 'journal'>,
+  d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge' | 'journal' | 'envoyerCourriel'>,
   lienAnnule?: () => void
 ): PortsDuCode {
   const cles = clesPii(d.env);
@@ -266,6 +344,7 @@ export function portsDuCode(
     transaction: transactionDuCode(d.prisma),
     signaler: (motif) => d.journal.warn(`lien_magique_${motif}`),
     configuration: configurationDuLien(d.env),
+    ...appareilsDe(d),
   };
 }
 
@@ -360,8 +439,11 @@ export function portsDuCodeConsole(
   d: Pick<DependancesDuLien, 'env' | 'prisma' | 'horloge' | 'journal'>,
   lienAnnule?: () => void
 ): PortsDuCodeConsole {
+  // La console n'a pas d'appareil : ses ports sont ceux du code de l'espace, SANS l'émetteur des
+  // notifications, quoi que porte `d`.
+  const { env, prisma, horloge, journal } = d;
   return {
-    ...portsDuCode(d, lienAnnule),
+    ...portsDuCode({ env, prisma, horloge, journal }, lienAnnule),
     compterAdresseCode: async (sujet, maintenantMs) =>
       signalerSiEpuise(
         await limiter('magic:console-code-ip', sujetDepuisEmpreinte(sujet), maintenantMs),
@@ -407,6 +489,22 @@ export function envoiDuProcessus(
     : envoiParLeNotifieur(fabriques.notifieur());
 }
 
+/**
+ * SEC-62 — l'émetteur des notifications de l'apporteur, et lui seul : en PRODUCTION, l'émetteur
+ * de courriels, dont le statut remonte TEL QUEL ; hors production, le puits du notifieur, qui ne
+ * reçoit que le sujet et le corps, et accepte.
+ */
+export function envoiDesNotifications(
+  env: DependancesDuLien['env'],
+  fabriques: { emetteur: () => DependancesDeLEmetteur; notifieur: () => Notifieur }
+): DependancesDeLaNotification['envoyerCourriel'] {
+  if (productionDeclaree(env)) return (demande) => demanderEnvoi(demande, fabriques.emetteur());
+  return async ({ sujet, corps }) => {
+    await fabriques.notifieur().notifier({ sujet, corps });
+    return 'envoye';
+  };
+}
+
 let client: PrismaClient | null = null;
 
 /**
@@ -425,26 +523,28 @@ export function dependancesDuProcessus(outils: {
   client ??= new PrismaClient();
   const prisma = client;
   const journal = creerJournal();
+  const fabriques = {
+    emetteur: (): DependancesDeLEmetteur => ({
+      configuration: configurationDeLEmetteur(outils.env, domaines().envoi),
+      relais: relaisZeptomail({
+        url: outils.env.ZEPTOMAIL_API_URL,
+        jeton: outils.env.ZEPTOMAIL_SEND_TOKEN,
+      }),
+      depot: depotDesCourriels(prisma),
+      cles: clesPii(outils.env),
+      maintenant: () => new Date(horlogeSysteme.maintenant()),
+      nouvelId: randomUUID,
+    }),
+    notifieur: () => creerNotifieur({ env: outils.env, journal, transports: [] }),
+  };
   return {
     env: outils.env,
     prisma,
     horloge: horlogeSysteme,
     planifier: (travail) => outils.apres(travail),
-    envoi: envoiDuProcessus(outils.env, {
-      emetteur: () => ({
-        configuration: configurationDeLEmetteur(outils.env, domaines().envoi),
-        relais: relaisZeptomail({
-          url: outils.env.ZEPTOMAIL_API_URL,
-          jeton: outils.env.ZEPTOMAIL_SEND_TOKEN,
-        }),
-        depot: depotDesCourriels(prisma),
-        cles: clesPii(outils.env),
-        maintenant: () => new Date(horlogeSysteme.maintenant()),
-        nouvelId: randomUUID,
-      }),
-      notifieur: () => creerNotifieur({ env: outils.env, journal, transports: [] }),
-    }),
+    envoi: envoiDuProcessus(outils.env, fabriques),
     journal,
+    envoyerCourriel: envoiDesNotifications(outils.env, fabriques),
   };
 }
 
