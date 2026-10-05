@@ -6,14 +6,17 @@
  * réception si elle n'a jamais été close — une demande sans réponse au bout de cinq ans est une
  * anomalie, et la minimisation l'emporte —, `attribution_id` passe à NULL et `trace_anonymisee_at`
  * date l'anonymisation, en une seule instruction. La ligne RESTE comme preuve du traitement (droit,
- * donnée visée, issue, dates), sans lien à une personne.
+ * donnée visée, issue, dates au mois), sans lien à une personne. Dans cette même instruction, la BASE
+ * ramène les dates de la trace au premier jour de leur mois UTC, et `trace_anonymisee_at` au premier
+ * du mois UTC de l'instant passé ici (DM-68, partners/ADR-0032) : la tâche n'a rien à tronquer.
  *
  * Idempotente, lue sur `trace_anonymisee_at` : une trace anonymisée n'est ni relue ni réécrite. Une
  * demande qui porte encore la valeur d'une rectification n'est pas prise : la base la refuserait
  * (CHECK `demandes_droits_contact_anonymisee_sans_valeur`) et ferait tomber toute l'instruction ; le
  * filet de DM-59 (`droits_contact_purger`) l'efface, et le passage suivant l'anonymise. La base tient
- * le reste : la date est liée au lien vidé (CHECK), le gabarit d'ajout seul n'admet que la purge du
- * lien vers NULL et l'écriture unique de la date. Aucun événement de journal n'est écrit.
+ * le reste : la date est liée au lien vidé (CHECK), la protection d'ajout seul n'admet que la purge du
+ * lien vers NULL, l'écriture unique de la date et la troncature au mois qu'elle fait elle-même.
+ * Aucun événement de journal n'est écrit.
  */
 import type { PrismaClient } from '@prisma/client';
 import { SEUILS } from '../../domain/seuils/ssot';
