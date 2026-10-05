@@ -78,7 +78,7 @@ import {
 import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
 import { purgerLesSessions } from './purger-sessions-espace';
 import { effacerLesComptesDesactives } from './purger-utilisateurs-console';
-import { purgerLesTextesDesDecisions } from './purger-decisions-de-contrat';
+import { purgerLesTextesDesDecisions } from './purger-textes-des-decisions';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import {
   ouvrirLesAnomaliesDAutoParrainage,

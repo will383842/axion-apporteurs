@@ -33,7 +33,7 @@
  * Par lots bornés, en avançant sur l'identifiant : un texte gardé n'est pas relu dans le passage.
  * Idempotente : un texte purgé n'est plus sélectionné.
  */
-import type { PrismaClient } from '@prisma/client';
+import type { GesteDecisionContrat, PrismaClient } from '@prisma/client';
 import { SEUILS } from '../../domain/seuils/ssot';
 import { versParis } from '../../domain/temps/paris';
 import { MS_PAR_JOUR, joursDeLaDate, type DateCivile } from '../../domain/temps/calendrier-civil';
@@ -49,10 +49,13 @@ export const LOT_DE_PURGE_DES_DECISIONS = 500;
 const MARGE_DE_PRESELECTION_JOURS = 2;
 
 type Decision = {
-  geste: 'mise_en_demeure' | 'resiliation';
+  geste: GesteDecisionContrat;
   dateEffet: Date | null;
   creeAt: Date;
 };
+
+/** Une ligne du lot : ce que la purge en lit, rien d'autre. */
+type Candidate = Decision & { id: string; apporteurId: string };
 
 /** Une colonne DATE, telle que Prisma la rend (minuit UTC du jour civil). */
 const dateCivileDe = (d: Date): DateCivile => ({
@@ -123,7 +126,7 @@ export async function purgerLesTextesDesDecisions(
   let textesPurges = 0;
   let apres: string | null = null;
   for (;;) {
-    const lot = await prisma.decisionDeContrat.findMany({
+    const lot: Candidate[] = await prisma.decisionDeContrat.findMany({
       where: apres === null ? aPurger : { ...aPurger, id: { gt: apres } },
       select: { id: true, apporteurId: true, geste: true, dateEffet: true, creeAt: true },
       orderBy: { id: 'asc' },

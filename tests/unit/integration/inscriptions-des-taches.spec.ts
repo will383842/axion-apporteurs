@@ -116,7 +116,7 @@ vi.mock('../../../src/server/taches/purger-utilisateurs-console', async (origina
   ...(await original<object>()),
   effacerLesComptesDesactives: m.effacerLesComptesDesactives,
 }));
-vi.mock('../../../src/server/taches/purger-decisions-de-contrat', async (original) => ({
+vi.mock('../../../src/server/taches/purger-textes-des-decisions', async (original) => ({
   ...(await original<object>()),
   purgerLesTextesDesDecisions: m.purgerLesTextesDesDecisions,
 }));

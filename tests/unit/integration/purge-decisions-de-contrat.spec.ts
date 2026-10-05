@@ -3,7 +3,7 @@
  * DM-70 — la purge du texte d'une décision de contrat, jugée EN PROCESSUS sur un double de Prisma :
  * le point de départ de chaque geste, l'échéance au jour civil de Paris, ce que le passage DEMANDE à
  * la base (sa sélection, son écriture) et ce qu'il en rend. Ce que la base en fait — la garde dédiée
- * de SEC-19, la ligne nue qui reste, le rendu qui refuse un texte purgé — est jugé en base réelle par
+ * de la table, la ligne nue qui reste, le rendu qui refuse un texte purgé — est jugé en base réelle par
  * `tests/integration/purge-decisions-de-contrat.spec.ts`. Ce fichier-ci existe pour la mutation :
  * `pnpm mutation:pr` ne lance que les tests en processus (`vitest.mutation.config.ts`).
  */
@@ -15,7 +15,7 @@ import {
   echeanceDuTexte,
   purgerLesTextesDesDecisions,
   texteEchu,
-} from '../../../src/server/taches/purger-decisions-de-contrat';
+} from '../../../src/server/taches/purger-textes-des-decisions';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
 
 /** Une colonne DATE, telle que Prisma la rend : minuit UTC du jour civil. */
@@ -337,7 +337,7 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
     await purgerLesTextesDesDecisions(avec.prisma, MAINTENANT);
     expect(avec.findMany).toHaveBeenCalledWith({
       // Correction de la juriste (#766, 5988086461, point 1) : seule une résiliation OPPOSABLE compte ;
-      // aujourd'hui, celle que fonde un changement de statut (SEC-19, coupure immédiate).
+      // aujourd'hui, celle que fonde un changement de statut (la coupure immédiate).
       where: {
         apporteurId: { in: [B] },
         geste: 'resiliation',
