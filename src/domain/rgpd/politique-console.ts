@@ -80,6 +80,51 @@ export function segmentsEnCoursConsole(politique: Pick<PolitiqueConsole, 'rubriq
     .length;
 }
 
+/**
+ * JUR-T63 (REQ-JUR-068 ; juriste, #708, 5981356847 ; condition d'A02, 5982307722) — une version
+ * PUBLIÉE de la page : son empreinte (`PolitiqueConsole.version`), l'instant UTC de sa publication, et
+ * ce qui l'a publiée.
+ */
+export type VersionPubliee = {
+  readonly version: string;
+  readonly publieeLe: string;
+  readonly source: string;
+};
+
+/**
+ * Les versions PUBLIÉES de la page, dans l'ordre de leur publication. AJOUT SEUL : une entrée n'est
+ * jamais réécrite ni retirée ; une page qui change reçoit une NOUVELLE entrée, datée de sa
+ * publication (un témoin rougit tant que la dernière entrée n'est pas la version que le registre
+ * rend). La version portée par la trace d'un courriel d'invitation se DÉRIVE de son `envoye_at`
+ * contre cette liste (`versionEnVigueurConsole`) : aucune colonne (forme d'A02, `schema: false`).
+ *
+ * La première est la version rendue par le registre quand la page est devenue publiable, à la
+ * fusion de JUR-T62 : elle n'a pas changé depuis.
+ */
+export const VERSIONS_PUBLIEES_CONSOLE: readonly VersionPubliee[] = [
+  {
+    version: 'aaf43d0ae628eb1c9e696e8613704e44',
+    publieeLe: '2026-10-04T17:59:34.000Z',
+    source: 'fusion de JUR-T62 (#709), 3f020314',
+  },
+];
+
+/**
+ * La version de la page en vigueur à un instant : la dernière publiée à cet instant, borne de
+ * publication INCLUSE ; `null` avant toute publication. La liste ne fait que croître : une version
+ * en vigueur à un instant l'est aussi, ou une plus récente, à tout instant ultérieur.
+ */
+export function versionEnVigueurConsole(
+  instant: Date,
+  versions: readonly VersionPubliee[] = VERSIONS_PUBLIEES_CONSOLE
+): string | null {
+  let enVigueur: string | null = null;
+  for (const v of versions) {
+    if (Date.parse(v.publieeLe) <= instant.getTime()) enVigueur = v.version;
+  }
+  return enVigueur;
+}
+
 /** Publiable : aucun segment en cours de rédaction. Avant, la page n'est pas liée depuis la connexion. */
 export function estPubliableConsole(politique: Pick<PolitiqueConsole, 'rubriques'>): boolean {
   return segmentsEnCoursConsole(politique) === 0;

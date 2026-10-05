@@ -13,6 +13,7 @@
  */
 import type { ConsoleRole, Prisma } from '@prisma/client';
 import { UTILISATEURS_CONSOLE } from '../../../content/micro-copy/console/utilisateurs';
+import { versionEnVigueurConsole } from '../../../domain/rgpd/politique-console';
 import { DUREES_AUTH } from '../../auth/durees';
 import { identiteDeLUtilisateurConsole } from '../../auth/lien-magique-depot';
 import type { ClesPii } from '../../securite/pii';
@@ -30,13 +31,26 @@ export interface CourrielDeLAdministration {
 /** JUR-T62 : la route publique de la page « Vos données dans la console » (`docs/CONSOLE-ROUTES.md`). */
 const ROUTE_VOS_DONNEES_CONSOLE = '/console/vos-donnees';
 
-/** L'invitation : le rôle, l'adresse de connexion (sans jeton), l'échéance, la page des données. */
+/**
+ * L'invitation : le rôle, l'adresse de connexion (sans jeton), l'échéance, la page des données.
+ *
+ * JUR-T63 (REQ-JUR-068) : sa trace porte la version de la page « Vos données dans la console »,
+ * DÉRIVÉE de son `envoye_at` (`versionEnVigueurConsole`). Une invitation à un instant où aucune
+ * version n'est publiée est REFUSÉE, nommée : appelée dans la transaction d'`inviter`, elle n'y crée
+ * pas le compte (échec fermé). L'envoi part après : la version en vigueur à l'invitation l'est encore,
+ * ou une plus récente, à l'envoi.
+ */
 export function courrielDInvitation(d: {
   a: string;
   role: ConsoleRole;
   adresseConnexion: string;
   inviteeAt: Date;
 }): CourrielDeLAdministration {
+  if (versionEnVigueurConsole(d.inviteeAt) === null) {
+    throw new Error(
+      'invitation_sans_version_de_la_page : aucune version publiée de « Vos données dans la console » à cet instant'
+    );
+  }
   const echeance = new Date(d.inviteeAt.getTime() + DUREES_AUTH.invitationConsoleMs.valeur);
   return {
     a: d.a,
