@@ -4,7 +4,7 @@
  * connexion, mot pour mot : « JE trouve que ca fait enormement texte avec manque de contraste un
  * peu... on se perd tellement il y a d'informaitons non ? ». Puis, sur la version épurée : « OK ».
  *
- * CE QUE CE FICHIER GARDE, sur les treize maquettes de la console (section Console de
+ * CE QUE CE FICHIER GARDE, sur les quatorze maquettes de la console (section Console de
  * `VALIDATION.md`, lue, jamais retapée — RM-01) :
  *
  *   (1) L'ATELIER REPLIÉ PAR DÉFAUT : la liste des états et les notes ne s'affichent qu'à la demande,
@@ -32,7 +32,7 @@ const charte = (html: string) =>
 
 describe('REQ-UX-048 — (1) l’atelier replié par défaut', () => {
   it('REQ-UX-048 — chaque maquette de la console porte le bouton « États et notes », non pressé', () => {
-    expect(CONSOLE).toHaveLength(13);
+    expect(CONSOLE).toHaveLength(14);
     for (const f of CONSOLE) {
       expect(lire(f), f).toMatch(
         /<button type="button" id="voir-atelier" aria-pressed="false">\s*États et notes\s*<\/button>/
@@ -98,8 +98,17 @@ describe('REQ-UX-048 — (3) une action dominante : l’écran de connexion', ()
 });
 
 describe('REQ-UX-048 — (4) les treize validations de Williams', () => {
+  // UX-P1-57 : une maquette neuve attend la validation de Williams ; sa ligne garde ses deux colonnes
+  // vides, jamais une date sans signature. Les treize validées le 2026-10-03 le restent.
+  const validees = LIGNES.filter((l) => l.par !== '' || l.valideLe !== '');
+  it('REQ-UX-048 — une maquette de la console en attente porte « Validé le » et « Par » vides, ensemble', () => {
+    for (const l of LIGNES.filter((x) => !validees.includes(x)))
+      expect([l.valideLe, l.par], l.fichier ?? '').toEqual(['', '']);
+    expect(validees).toHaveLength(13);
+  });
+
   it('REQ-UX-048 — chaque maquette de la console est validée par Will le 2026-10-03', () => {
-    for (const l of LIGNES) {
+    for (const l of validees) {
       expect([l.fichier, l.valideLe, l.par], l.fichier ?? '').toEqual([
         l.fichier,
         '2026-10-03',
