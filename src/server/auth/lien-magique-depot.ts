@@ -17,7 +17,7 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import { CHAMPS_PII, decryptPii, type ClesPii } from '../securite/pii';
 import { ajouterEvenement } from '../evenement/journal';
 import { invitationOuverte } from '../console/utilisateurs/regles';
-import { depotDAppareils } from './appareil';
+import { depotDAppareils, type PortsDesAppareils } from './appareil';
 import {
   ESSAIS_DU_CODE_MAX,
   type PortsDEmission,
@@ -102,7 +102,7 @@ export function ecrituresDeLien(prisma: PrismaClient): EcrituresDeLien {
 
 function consommationSur(tx: Prisma.TransactionClient): TransactionDeConsommation {
   return {
-    // SEC-55 : l'appareil qui consomme se confirme dans CETTE transaction.
+    // SEC-55 : l'appareil qui consomme est RECONNU dans cette transaction ; il n'y est jamais confirmé.
     appareils: depotDAppareils(tx),
     async consommer(condition, donnees) {
       const { count } = await tx.lienMagique.updateMany({ where: condition, data: donnees });
@@ -140,6 +140,48 @@ export function transactionDeConsommation(
   prisma: PrismaClient
 ): PortsDeConsommation['transaction'] {
   return (travail) => prisma.$transaction((tx) => travail(consommationSur(tx)));
+}
+
+/**
+ * SEC-55 — la transaction COURTE de la confirmation, ouverte APRÈS l'avis accepté (voie (b) de la
+ * lentille sécurité) : elle relit la session que la consommation a ouverte, avec le lien qui l'a
+ * ouverte, et confirme l'appareil par le même dépôt. Aucun appel réseau n'y a lieu.
+ */
+export function transactionDeConfirmation(prisma: PrismaClient): PortsDesAppareils['transaction'] {
+  return (travail) =>
+    prisma.$transaction((tx) =>
+      travail({
+        async lireSession(tokenHash) {
+          const ligne = await tx.sessionEspace.findUnique({
+            where: { tokenHash },
+            select: {
+              id: true,
+              apporteurId: true,
+              kid: true,
+              expireAt: true,
+              revoqueAt: true,
+              sessionVersion: true,
+              lienMagiqueId: true,
+              apporteur: { select: { statut: true, sessionVersion: true } },
+              lienMagique: { select: { consommeAt: true } },
+            },
+          });
+          if (ligne === null) return null;
+          const { lienMagiqueId, ...session } = ligne;
+          if (session.apporteur === null || session.apporteurId === null) {
+            return { ligne: session, lienMagiqueId };
+          }
+          // SEC-19 (A09, #563 5983094689) : les droits en cours, relus dans la MÊME transaction,
+          // comme le fait le dépôt des sessions. Le juge voit la session telle qu'elle est.
+          const droitsEnCours = await droitsEnCoursDans(tx, session.apporteurId);
+          return {
+            ligne: { ...session, apporteur: { ...session.apporteur, droitsEnCours } },
+            lienMagiqueId,
+          };
+        },
+        appareils: depotDAppareils(tx),
+      })
+    );
 }
 
 /**
