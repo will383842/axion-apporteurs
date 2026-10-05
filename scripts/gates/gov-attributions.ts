@@ -1539,6 +1539,17 @@ export const CITATIONS_DECLAREES: Citation[] = [
       'vraies sont GOV-017a et GOV-017b. Fichier hors des paths de GOV-037.',
   },
   {
+    ou: 'tests/unit/gouvernance/tout-check-est-cable.spec.ts',
+    ligne: 10,
+    id: 'QA-T28',
+    nature: 'contexte',
+    raison:
+      'mention périmée : « size-limit (QA-T28) » donne size-limit à QA-T28 comme reste à livrer, et ' +
+      'c’est faux depuis le rattrapage 115, où QA-T28 devient l’audit de sécurité avant lancement ; ' +
+      'le budget size-limit est porté par QA-T20 (REQ-QA-031), fusionnée. À corriger par la prochaine ' +
+      'tâche qui touche ce fichier ; d’ici là, QA-T28 n’y est nommée que comme voisine.',
+  },
+  {
     ou: 'scripts/lot/tasks.schema.json',
     ligne: 18,
     id: 'GOV-017a',
@@ -1988,11 +1999,6 @@ export const EXEMPTIONS_FIGEES: ExemptionFigee[] = [
     nature: 'mention_paths_non_resolus',
     tache: 'T-ARG-022',
     site: 'tests/integration/webhook-verdicts.spec.ts:19',
-  },
-  {
-    nature: 'mention_paths_non_resolus',
-    tache: 'QA-T28',
-    site: 'tests/unit/gouvernance/tout-check-est-cable.spec.ts:10',
   },
   {
     nature: 'mention_paths_non_resolus',
