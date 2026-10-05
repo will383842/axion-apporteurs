@@ -105,6 +105,12 @@ export default defineConfig({
       'tests/unit/juridique/**/*.spec.ts',
       // UX-P1-41 : les témoins du rendu de l'e-mail au contact (`src/domain/confirmation/`), en processus.
       'tests/unit/micro-copy/**/*.spec.ts',
+      // UX-P1-53 : les témoins de l'écran des gels du journal des accès (droit relu, liste bornée, curseur,
+      // traces) et de la navigation dérivée de la matrice, en processus sur un faux client — sans eux,
+      // les mutants de `gels-journal-acces.ts` et de `navigation.ts` sortaient « sans couverture »
+      // (porte A de la PR 758 : 55,70 %).
+      'tests/unit/console/gels-journal-acces-ecran.spec.ts',
+      'tests/unit/console/navigation-par-role.spec.ts',
       // INT-T73-P : le témoin de la réconciliation des sommes, rangé sous tests/integration/ mais EN
       // PROCESSUS (lignes simulées et faux client, aucune base, aucun dépôt git, aucun sous-processus).
       'tests/integration/reconciliation-sommes.spec.ts',
