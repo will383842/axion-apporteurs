@@ -79,6 +79,22 @@ export const TEXTES_DES_NOTIFICATIONS = {
     appel: 'Voir Mes entreprises',
     corps: '{decision}. Motif : {motif}.',
   },
+  // SEC-19 (juriste, #703, 5980966503, MOT POUR MOT) : la mise en demeure de l'art. 11.2.
+  // {delaiMiseEnDemeure} : la SSOT, en toutes lettres, posée par l'envoi ; {article} : la liste fermée
+  // de l'art. 11.2 ; {faits} : saisis par une personne, sous les règles de DM-55.
+  mise_en_demeure: {
+    titre: 'Mise en demeure de remédier à un manquement au contrat',
+    appel: 'Écrire à Axion-IA',
+    corps:
+      "Axion-IA vous met en demeure de remédier, dans un délai de {delaiMiseEnDemeure} à compter de l'envoi de ce message, au manquement suivant à l'article {article} du contrat : {faits}. À défaut, Axion-IA pourra résilier le contrat sans préavis, par une décision motivée (article 11.2). Cette mise en demeure n'est ni un avertissement ni une mesure disciplinaire, et elle ne constitue pas un antécédent. Vous pouvez répondre par écrit à Axion-IA.",
+  },
+  // SEC-19 (juriste, #703, 5980966503) : la fin du contrat. Le corps dépend du MOTIF de la
+  // résiliation : `PARAGRAPHES_DE_LA_RESILIATION`, puis `PARAGRAPHE_COMMUN_DE_LA_RESILIATION`.
+  resiliation: {
+    titre: "Fin de votre contrat d'apporteur",
+    appel: 'Voir mes commissions',
+    corps: null,
+  },
 } as const satisfies Readonly<Record<string, TexteDeNotification>>;
 
 export type CleDeNotification = keyof typeof TEXTES_DES_NOTIFICATIONS;
@@ -181,3 +197,27 @@ export const CODE_DU_COURRIEL_DE_CONNEXION = {
   avant: 'Vous pouvez aussi saisir ce code sur la page de connexion :',
   apres: 'Il ne sert qu’une fois, et pas plus longtemps que le lien.',
 } as const;
+
+/**
+ * SEC-19 — le paragraphe propre au MOTIF de la résiliation (juriste, #703, 5980966503, MOT POUR MOT),
+ * une valeur par motif de `MotifResiliation`. `{dateEffet}` et `{dateReception}` sont des jours
+ * civils de Paris ; `{motif}` suit les règles de `{faits}` (DM-55).
+ */
+export const PARAGRAPHES_DE_LA_RESILIATION = {
+  ordinaire_apporteur:
+    "Axion-IA a bien reçu, le {dateReception}, votre décision de résilier le contrat. Celui-ci prend fin le {dateEffet}, au terme du préavis prévu à l'article 11.1.",
+  ordinaire_axion:
+    "Axion-IA résilie votre contrat d'apporteur, comme le permet l'article 11.1. Le préavis court à compter de l'envoi de ce message : le contrat prend fin le {dateEffet}.",
+  manquement_grave:
+    "Axion-IA résilie votre contrat d'apporteur sans préavis, par une décision motivée, en application de l'article 11.2 : {motif}. Le contrat prend fin le {dateEffet}.",
+  fin_de_plein_droit:
+    "Le contrat d'apporteur a pris fin de plein droit le {dateEffet}, en application de l'article 12.5.",
+} as const;
+
+/**
+ * SEC-19 — le paragraphe COMMUN de la résiliation (juriste, #703, 5980966503, MOT POUR MOT), dont la
+ * première phrase est celle de 5982317891 et la dernière celle de 5981529273, MOT POUR MOT : dans le
+ * courriel ET dans l'espace.
+ */
+export const PARAGRAPHE_COMMUN_DE_LA_RESILIATION =
+  "Vos dépôts en cours de confirmation et vos dépôts en attente sont annulés ; vos réservations sans commande prennent fin. Les commandes signées avant la fin du contrat continuent de vous ouvrir droit à commission, au fur et à mesure de leurs encaissements, quelle qu'en soit la date. Les commissions déjà acquises vous sont payées au dernier relevé. Vous gardez l'accès en lecture à votre espace jusqu'à l'extinction de vos droits : reconnectez-vous avec votre adresse e-mail pour y accéder.";
