@@ -26,6 +26,8 @@ import { FAITS_ANOMALIE_CARACTERES_MAX } from '../../../src/domain/seuils/ssot';
 import { MODELE_DECISION_DE_CONTRAT } from '../../../src/server/apporteur/resiliation';
 import { CHAMPS_PII, encryptPii, type ClesPii } from '../../../src/server/securite/pii';
 import { PARAMETRES_DE_LA_SSOT } from '../../../src/server/notifications/envoyer';
+import { dateEnClair } from '../../../src/server/attribution/notifications';
+import { PARAGRAPHE_COMMUN_DE_LA_RESILIATION } from '../../../src/content/micro-copy/courriels/notifications';
 import {
   CLES_RENDUES_DANS_L_ESPACE,
   faitsPourLEcran,
@@ -187,7 +189,33 @@ describe('REQ-UX-016 — l’espace rend mise_en_demeure et resiliation (UX-P1-5
     expect(await notificationsDeLEspace(c, MOI)).toEqual([]);
   });
 
-  it.todo('REQ-JUR-006 : des faits purgés donnent le texte FERMÉ (question 1 posée sur #620)');
+  it('REQ-JUR-006 : des faits purgés donnent le texte FERMÉ de la juriste, mot pour mot ; la notification reste', async () => {
+    const { cles, decision, notification } = await miseEnDemeure('Faits effacés.');
+    const purgee = { ...decision, texteChiffre: null, textePurgeAt: quand };
+    const { c } = client([notification], [purgee], {});
+    const [n] = await notificationsDeLEspace(c, MOI, { cles });
+    // Le texte de la juriste (#752, 5986987052), recopié ICI et non lu dans la source.
+    expect(n?.corps).toBe(
+      "Axion-IA vous a adressé une mise en demeure au titre de l'article 7.2 du contrat. Le détail des faits n'est plus conservé, sa durée de conservation ayant pris fin. Cette mise en demeure n'est ni un avertissement ni une mesure disciplinaire, et elle ne constitue pas un antécédent."
+    );
+    expect(n?.titre).toBe('Mise en demeure de remédier à un manquement au contrat');
+    expect(JSON.stringify(n)).not.toMatch(/\{faits\}|\{article\}/);
+  });
+
+  it('REQ-JUR-006 : TÉMOIN à deux faces — sans purge, le corps porte les faits, comme le courriel', async () => {
+    const { cles, decision, notification } = await miseEnDemeure('Faits conservés.');
+    const { c } = client([notification], [decision], {});
+    const [n] = await notificationsDeLEspace(c, MOI, { cles });
+    expect(n?.corps).toContain('Faits conservés.');
+    expect(n?.corps).not.toContain("n'est plus conservé");
+  });
+
+  it('REQ-JUR-006 : une décision purgée sans article n’est pas rendue (échec fermé)', async () => {
+    const { cles, decision, notification } = await miseEnDemeure('Faits.');
+    const purgee = { ...decision, article: null, texteChiffre: null, textePurgeAt: quand };
+    const { c } = client([notification], [purgee], {});
+    expect(await notificationsDeLEspace(c, MOI, { cles })).toEqual([]);
+  });
 });
 
 describe('REQ-UX-047 — les faits à l’écran : même nettoyage, même borne, sans échappement HTML', () => {
@@ -228,7 +256,10 @@ describe('REQ-UX-047 — les faits à l’écran : même nettoyage, même borne,
 });
 
 describe('REQ-UX-016 — la résiliation, vue par le résilié en lecture', () => {
-  const resiliation = async () => {
+  const resiliation = async (
+    resiliationMotif = 'ordinaire_apporteur',
+    purge: { texte?: string } | null = null
+  ) => {
     const cles = await clesDeTest();
     const id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
     const decision: Decision = {
@@ -236,11 +267,18 @@ describe('REQ-UX-016 — la résiliation, vue par le résilié en lecture', () =
       apporteurId: MOI,
       geste: 'resiliation',
       article: null,
-      texteChiffre: null,
+      texteChiffre:
+        purge?.texte === undefined
+          ? null
+          : encryptPii(
+              { modele: MODELE_DECISION_DE_CONTRAT, champ: CHAMPS_PII.texte.chiffre, id },
+              purge.texte,
+              cles
+            ),
       dateReception: new Date('2027-05-02T00:00:00.000Z'),
       dateEffet: new Date('2027-08-02T00:00:00.000Z'),
       evenementId: 52n,
-      textePurgeAt: null,
+      textePurgeAt: purge === null ? quand : null,
       acteurId: EMPLOYE,
     };
     const notification: Notification = {
@@ -259,7 +297,7 @@ describe('REQ-UX-016 — la résiliation, vue par le résilié en lecture', () =
           de: 'signe',
           vers: 'resilie',
           transition: 'resilier',
-          resiliationMotif: 'ordinaire_apporteur',
+          resiliationMotif,
           acteur: { par: 'utilisateur_console', id: EMPLOYE },
         },
       },
@@ -268,7 +306,10 @@ describe('REQ-UX-016 — la résiliation, vue par le résilié en lecture', () =
   };
 
   it('REQ-UX-016 : la résiliation s’affiche avec le paragraphe de son motif, lu dans la charge de son événement', async () => {
-    const { cles, decision, notification, evenements } = await resiliation();
+    const { cles, decision, notification, evenements } = await resiliation(
+      'ordinaire_apporteur',
+      {}
+    );
     const { c, lireUnFait } = client([notification], [decision], evenements);
     const [n] = await notificationsDeLEspace(c, MOI, { cles, lireUnFait });
     expect(n?.titre).toBe("Fin de votre contrat d'apporteur");
@@ -277,7 +318,10 @@ describe('REQ-UX-016 — la résiliation, vue par le résilié en lecture', () =
   });
 
   it('REQ-UX-016 : échec FERMÉ — sans lecteur de la charge, ou sur une autre charge, la résiliation n’apparaît pas', async () => {
-    const { cles, decision, notification, evenements } = await resiliation();
+    const { cles, decision, notification, evenements } = await resiliation(
+      'ordinaire_apporteur',
+      {}
+    );
     const sans = client([notification], [decision], evenements);
     expect(await notificationsDeLEspace(sans.c, MOI, { cles })).toEqual([]);
     const autre = client([notification], [decision], {
@@ -286,6 +330,48 @@ describe('REQ-UX-016 — la résiliation, vue par le résilié en lecture', () =
     expect(
       await notificationsDeLEspace(autre.c, MOI, { cles, lireUnFait: autre.lireUnFait })
     ).toEqual([]);
+  });
+
+  it('REQ-JUR-006 : motif purgé d’un manquement grave — le paragraphe FERMÉ de la juriste, puis le paragraphe commun', async () => {
+    const { cles, decision, notification, evenements } = await resiliation(
+      'manquement_grave',
+      null
+    );
+    const { c, lireUnFait } = client([notification], [decision], evenements);
+    const [n] = await notificationsDeLEspace(c, MOI, { cles, lireUnFait });
+    // Le texte de la juriste (#752, 5986987052), recopié ICI et non lu dans la source.
+    expect(n?.corps).toBe(
+      `Axion-IA a résilié votre contrat d'apporteur sans préavis, par une décision motivée, en application de l'article 11.2 ; le détail du motif n'est plus conservé, sa durée de conservation ayant pris fin. Le contrat a pris fin le ${dateEnClair(decision.dateEffet!)}. ${PARAGRAPHE_COMMUN_DE_LA_RESILIATION}`
+    );
+    expect(n?.titre).toBe("Fin de votre contrat d'apporteur");
+    expect(JSON.stringify(n)).not.toMatch(/\{motif\}|\{dateEffet\}/);
+  });
+
+  it('REQ-JUR-006 : TÉMOIN à deux faces — le même manquement grave NON purgé porte son motif', async () => {
+    const { cles, decision, notification, evenements } = await resiliation('manquement_grave', {
+      texte: 'Démarchage sous un faux nom.',
+    });
+    const { c, lireUnFait } = client([notification], [decision], evenements);
+    const [n] = await notificationsDeLEspace(c, MOI, { cles, lireUnFait });
+    expect(n?.corps).toContain("l'article 11.2 : Démarchage sous un faux nom.");
+    expect(n?.corps).not.toContain("n'est plus conservé");
+  });
+
+  it('REQ-JUR-006 : les autres motifs, purgés, ne changent pas : leur paragraphe n’a pas de texte saisi', async () => {
+    const purgee = await resiliation('ordinaire_apporteur', null);
+    const intacte = await resiliation('ordinaire_apporteur', {});
+    const a = client([purgee.notification], [purgee.decision], purgee.evenements);
+    const b = client([intacte.notification], [intacte.decision], intacte.evenements);
+    const [np] = await notificationsDeLEspace(a.c, MOI, {
+      cles: purgee.cles,
+      lireUnFait: a.lireUnFait,
+    });
+    const [ni] = await notificationsDeLEspace(b.c, MOI, {
+      cles: intacte.cles,
+      lireUnFait: b.lireUnFait,
+    });
+    expect(np?.corps).toBeDefined();
+    expect(np?.corps).toBe(ni?.corps);
   });
 
   it('REQ-UX-016 : TÉMOIN — un résilié en `lecture` ouvre /notifications (SEGMENTS_LECTURE)', () => {
