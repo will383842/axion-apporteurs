@@ -41,6 +41,11 @@ import {
   type TexteRendu,
 } from './envoyer';
 import { GABARITS } from './table-ssot';
+import {
+  PARAGRAPHE_COMMUN_DE_LA_RESILIATION,
+  TEXTES_DES_NOTIFICATIONS,
+} from '../../content/micro-copy/courriels/notifications';
+import { DECISIONS_PURGEES } from '../../content/micro-copy/espace/notifications';
 
 /** Une notification telle que l'écran la reçoit : des textes déjà rendus, jamais un identifiant d'attribution. */
 export type NotificationDeLEspace = {
@@ -161,9 +166,10 @@ async function decisionDeLEspace(
     },
   });
   if (d === null || d.geste !== n.cle || d.evenementId !== n.evenementId) return null;
-  if (d.textePurgeAt !== null) return null;
+  // Un texte PURGÉ n'est plus lu : la notification reste, avec le texte fermé de la juriste.
+  const purge = d.textePurgeAt !== null;
   let faits: string | undefined;
-  if (d.texteChiffre !== null) {
+  if (!purge && d.texteChiffre !== null) {
     const clair = decryptPii(
       {
         modele: MODELE_DECISION_DE_CONTRAT,
@@ -179,7 +185,16 @@ async function decisionDeLEspace(
   }
   try {
     if (d.geste === 'mise_en_demeure') {
-      if (faits === undefined || d.article === null) return null;
+      if (d.article === null) return null;
+      if (purge) {
+        const t = TEXTES_DES_NOTIFICATIONS.mise_en_demeure;
+        return {
+          titre: t.titre,
+          appel: t.appel,
+          corps: DECISIONS_PURGEES.mise_en_demeure.replace('{article}', d.article),
+        };
+      }
+      if (faits === undefined) return null;
       return rendreLaNotification('mise_en_demeure', { article: d.article, faits });
     }
     if (lireUnFait === undefined) return null;
@@ -188,6 +203,18 @@ async function decisionDeLEspace(
     if (fait?.type !== 'apporteur_statut_modifie' || !charge.success) return null;
     const motif = charge.data.resiliationMotif;
     if (motif === undefined || d.dateEffet === null || d.dateReception === null) return null;
+    if (purge && motif === 'manquement_grave') {
+      const t = TEXTES_DES_NOTIFICATIONS.resiliation;
+      const paragraphe = DECISIONS_PURGEES.manquement_grave.replace(
+        '{dateEffet}',
+        dateEnClair(d.dateEffet)
+      );
+      return {
+        titre: t.titre,
+        appel: t.appel,
+        corps: `${paragraphe} ${PARAGRAPHE_COMMUN_DE_LA_RESILIATION}`,
+      };
+    }
     const candidats: Record<string, string | undefined> = {
       dateEffet: dateEnClair(d.dateEffet),
       dateReception: dateEnClair(d.dateReception),
