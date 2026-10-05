@@ -66,7 +66,36 @@ async function exigerUnAdministrateurValide(
     throw new ErreurGelJournal('droit_absent');
 }
 
-const empreinteDeLaReference = (reference: string, cles: ClesPii) =>
+/** Ce que l'écran des gels ouvre au lecteur : poser et lever, ou rien (`null`). */
+export type DroitsSurLesGels = { readonly poser: boolean; readonly lever: boolean };
+
+/**
+ * Le droit de l'écran, jugé sur la ligne RELUE du lecteur : un admin actif et VALIDÉ voit poser et
+ * lever ; un administrateur en attente, désactivé, inconnu, ou tout autre rôle ne voit rien.
+ */
+export function droitsSurLesGels(
+  lu: { role: ConsoleRole; desactiveAt: Date | null; valideAt: Date | null } | null
+): DroitsSurLesGels | null {
+  if (lu === null || lu.desactiveAt !== null || lu.valideAt === null) return null;
+  const poser = roleAutorise('action:poser_gel_journal_acces', lu.role);
+  const lever = roleAutorise('action:lever_gel_journal_acces', lu.role);
+  return poser || lever ? { poser, lever } : null;
+}
+
+/** Le droit de l'écran, RELU en base sur le lecteur seul. Un refus ne lit rien d'autre. */
+export async function droitsDuLecteurSurLesGels(
+  prisma: Pick<PrismaClient, 'utilisateurConsole'>,
+  lecteurId: string
+): Promise<DroitsSurLesGels | null> {
+  return droitsSurLesGels(
+    await prisma.utilisateurConsole.findUnique({
+      where: { id: lecteurId },
+      select: { role: true, desactiveAt: true, valideAt: true },
+    })
+  );
+}
+
+const empreinteDeLaReference =(reference: string, cles: ClesPii) =>
   empreinteRecherche('reference_gel', reference, cles);
 
 /** Poser un gel, OUVERT, et son événement. Rend l'id du gel. */

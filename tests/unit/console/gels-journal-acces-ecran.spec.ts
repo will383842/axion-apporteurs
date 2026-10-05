@@ -30,6 +30,7 @@ import {
   EcranDesGels,
   type GelAffiche,
 } from '../../../src/app/(console)/console/journal-des-acces/gels/ecran';
+import { lireLaSaisieDuGel } from '../../../src/app/(console)/console/journal-des-acces/gels/saisie';
 
 const DEPUIS = new Date('2026-01-01T00:00:00.000Z');
 const POSE = new Date('2028-05-01T09:00:00.000Z');
@@ -196,7 +197,54 @@ describe('REQ-UX-047 — (3) les refus, les états et la source unique des texte
   it('REQ-UX-047 — aucun texte en dur dans le composant : tout vient de la micro-copie', () => {
     const source = readFileSync(ECRAN, 'utf8');
     expect(source).toMatch(/content\/micro-copy\/console\/gels-journal-acces/);
-    // Entre deux balises, rien que des expressions : aucun mot écrit à la main.
-    expect(source.match(/>\s*[A-Za-zÀ-ÿ][^<>{}]*</g) ?? []).toEqual([]);
+    // Après une balise ouvrante, rien que des expressions : aucun mot écrit à la main.
+    const texteEnDur = /<[a-z][^<>]*>\s*[A-Za-zÀ-ÿ][^<>{}]*</g;
+    expect(source.match(texteEnDur) ?? []).toEqual([]);
+    // TÉMOIN : le même contrôle voit un libellé tapé dans un bouton.
+    expect('<button type="submit">Lever</button>'.match(texteEnDur)).toHaveLength(1);
+  });
+});
+
+describe('REQ-SEC-023 — (4) la saisie de la pose, fermée avant tout travail', () => {
+  const formulaire = (o: Record<string, string>) => {
+    const f = new FormData();
+    const base = {
+      motif: 'litige',
+      reference: 'LIT-0042',
+      portee: 'utilisateur',
+      identifiant: '0190F0F0-0000-7000-8000-00000000000C',
+      depuis: '2026-01-01',
+      jusquA: '',
+    };
+    for (const [k, v] of Object.entries({ ...base, ...o })) f.set(k, v);
+    return f;
+  };
+
+  it('REQ-SEC-023 — une saisie juste est lue : jours de Paris, fin de jour incluse, identifiant en minuscules', () => {
+    expect(lireLaSaisieDuGel(formulaire({ jusquA: '2026-07-31' }))).toEqual({
+      motif: 'litige',
+      reference: 'LIT-0042',
+      portee: 'utilisateur',
+      identifiant: '0190f0f0-0000-7000-8000-00000000000c',
+      // Minuit à Paris en hiver : 23 h UTC la veille.
+      depuis: new Date('2025-12-31T23:00:00.000Z'),
+      // La dernière milliseconde du 31 juillet à Paris, en été.
+      jusquA: new Date('2026-07-31T21:59:59.999Z'),
+    });
+    expect(lireLaSaisieDuGel(formulaire({}))?.jusquA).toBeNull();
+  });
+
+  it('REQ-SEC-023 — TÉMOINS : chaque forme fautive rend null, sans rien écrire', () => {
+    for (const faute of <Record<string, string>[]>[
+      { motif: 'autre' },
+      { portee: 'tous' },
+      { identifiant: '42' },
+      { reference: '' },
+      { depuis: '' },
+      { depuis: '2026-02-30' },
+      { jusquA: '2025-12-31' },
+      { jusquA: 'demain' },
+    ])
+      expect(lireLaSaisieDuGel(formulaire(faute)), JSON.stringify(faute)).toBeNull();
   });
 });
