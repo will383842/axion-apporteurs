@@ -45,6 +45,19 @@ const T0 = new Date('2027-03-01T08:00:00.000Z');
 const MAINTENANT = new Date('2027-03-01T10:00:00.000Z');
 const PLUS_TARD = new Date('2027-03-01T11:00:00.000Z');
 const hex = (octets: number) => randomBytes(octets).toString('hex');
+
+/**
+ * Un IBAN français de TEST, fabriqué à l'exécution depuis des numéros fictifs : la clé RIB et la clé
+ * de contrôle sont calculées, aucune coordonnée réelle n'est écrite dans le dépôt (`gov:entite`).
+ */
+function ibanDeTest(banque: string, guichet: string, compte: string): string {
+  const reste = (chiffres: string) => [...chiffres].reduce((r, c) => (r * 10 + Number(c)) % 97, 0);
+  const cle = 97 - ((89 * Number(banque) + 15 * Number(guichet) + 3 * Number(compte)) % 97);
+  const bban = `${banque}${guichet}${compte}${String(cle).padStart(2, '0')}`;
+  // « FR » vaut 15 27 ; la clé de contrôle est 98 moins le reste de (bban + FR00) modulo 97.
+  const controle = 98 - reste(`${bban}152700`);
+  return `FR${String(controle).padStart(2, '0')}${bban}`;
+}
 const cles = clesPii({
   NODE_ENV: 'test',
   ...Object.fromEntries(
@@ -52,8 +65,8 @@ const cles = clesPii({
   ),
   PII_ENCRYPTION_KEY: 'c'.repeat(64),
 });
-const IBAN = 'FR7630006000011234567890189';
-const AUTRE_IBAN = 'FR1420041010050500013M02606';
+const IBAN = ibanDeTest('90001', '00002', '00000012345');
+const AUTRE_IBAN = ibanDeTest('90001', '00002', '00000067890');
 
 /** Les utilisateurs de la console : deux administrateurs validés, et ceux que la garde refuse. */
 const U = {
@@ -163,7 +176,7 @@ const piece = (id: string) => base.prisma.pieceKyc.findUniqueOrThrow({ where: { 
 const ecrire = (sql: string, ...valeurs: unknown[]) =>
   base.prisma.$executeRawUnsafe(sql, ...valeurs);
 
-/** Un RIB vérifié par A1 et confirmé par A2, par les gestes du serveur. */
+/** Un RIB vérifié par le premier administrateur et confirmé par le second, par les gestes du serveur. */
 async function unRibValide(apporteurId: string, iban = IBAN): Promise<string> {
   const id = await unRib(apporteurId, iban);
   await verifierUnRib(app, { acteur: admin(U.a1), pieceId: id, maintenant: MAINTENANT });

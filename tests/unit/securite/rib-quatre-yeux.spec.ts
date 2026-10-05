@@ -31,6 +31,19 @@ const APPORTEUR = '0190f0f0-0000-7000-8000-0000000000b1';
 const PIECE = '0190f0f0-0000-7000-8000-0000000000c1';
 const COURANTE = '0190f0f0-0000-7000-8000-0000000000c2';
 const MAINTENANT = new Date('2026-10-05T10:00:00.000Z');
+
+/**
+ * Un IBAN français de TEST, fabriqué à l'exécution depuis des numéros fictifs : la clé RIB et la clé
+ * de contrôle sont calculées, aucune coordonnée réelle n'est écrite dans le dépôt (`gov:entite`).
+ */
+function ibanDeTest(banque: string, guichet: string, compte: string): string {
+  const reste = (chiffres: string) => [...chiffres].reduce((r, c) => (r * 10 + Number(c)) % 97, 0);
+  const cle = 97 - ((89 * Number(banque) + 15 * Number(guichet) + 3 * Number(compte)) % 97);
+  const bban = `${banque}${guichet}${compte}${String(cle).padStart(2, '0')}`;
+  // « FR » vaut 15 27 ; la clé de contrôle est 98 moins le reste de (bban + FR00) modulo 97.
+  const controle = 98 - reste(`${bban}152700`);
+  return `FR${String(controle).padStart(2, '0')}${bban}`;
+}
 const CLES = clesPii({
   NODE_ENV: 'test',
   ...Object.fromEntries(
@@ -38,7 +51,7 @@ const CLES = clesPii({
   ),
   PII_ENCRYPTION_KEY: 'c'.repeat(64),
 });
-const IBAN = 'FR7630006000011234567890189';
+const IBAN = ibanDeTest('90001', '00002', '00000012345');
 
 type Piece = {
   id: string;
@@ -92,7 +105,6 @@ function fauxClient(o: {
       appels.push({ quoi: 'ouvreurs', args: { sql: sql.sql, valeurs: sql.values } });
       return (o.ouvreurs ?? []).map((id) => ({ id }));
     },
-    evenement: {},
   };
   const evenements: unknown[] = [];
   const client = {
@@ -240,7 +252,7 @@ describe('REQ-UX-027 — confirmer un RIB : le second regard pose `valide` dans 
       acteur: AUTRE_ADMIN,
       pieceId: PIECE,
       maintenant: MAINTENANT,
-      evenement: async (_tx, e) => void evenements.push(e),
+      ecrireUnFait: async (_tx, e) => void evenements.push(e),
     });
     expect(ecritures(f.appels)).toEqual([
       { quoi: 'ecarter', args: { where: { id: COURANTE }, data: { remplaceeAt: MAINTENANT } } },
@@ -332,7 +344,11 @@ describe('REQ-UX-027 — aucun versement vers un RIB non validé : le juge du ve
       ['remplacée', [ligne({ remplacee_at: MAINTENANT })], {}],
       ['autre apporteur', [ligne()], { apporteurId: '0190f0f0-0000-7000-8000-0000000000b2' }],
       ['empreinte différente d’un caractère', [ligne()], { ibanPaye: autreIban }],
-      ['un autre IBAN valide', [ligne()], { ibanPaye: 'FR1420041010050500013M02606' }],
+      [
+        'un autre IBAN valide',
+        [ligne()],
+        { ibanPaye: ibanDeTest('90001', '00002', '00000067890') },
+      ],
       ['à vérifier', [ligne({ statut: 'a_verifier', rib_confirme_at: null })], {}],
       ['une seule personne', [ligne({ rib_confirme_at: null })], {}],
       ['pas un RIB', [ligne({ type: 'identite' })], {}],

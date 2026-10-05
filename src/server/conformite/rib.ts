@@ -125,11 +125,11 @@ export async function confirmerUnRib(
     acteur: ActeurDuDossier;
     pieceId: string;
     maintenant: Date;
-    evenement?: EcrireUnEvenement;
+    ecrireUnFait?: EcrireUnEvenement;
   }
 ): Promise<void> {
   exigerLeDroit(d.acteur);
-  const ecrire = d.evenement ?? ajouterEvenement;
+  const ecrire = d.ecrireUnFait ?? ajouterEvenement;
   await prisma.$transaction(async (tx) => {
     const piece = await lireLaPiece(tx, d.pieceId);
     if (piece === null) throw new ErreurRibQuatreYeux('introuvable');
