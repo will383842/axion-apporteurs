@@ -64,9 +64,10 @@
 
 ## Ouverture — qui atteint quoi (SEC-43)
 
-décision de Williams du 2026-10-01 ; forme à plat, décision A02 du 2026-10-02. Trois niveaux, un
+décision de Williams du 2026-10-01 ; forme à plat, décision A02 du 2026-10-02. Quatre niveaux, un
 seul verdict (`src/domain/apporteur/acces-espace.ts`) : **pleine** pour `signe` et `suspendu`,
-**limitée** pour `kyc_en_cours` et `pret_a_signer`, **fermée** pour tout autre statut. Le segment est
+**limitée** pour `kyc_en_cours` et `pret_a_signer`, **lecture** pour `resilie` tant que ses droits
+courent (SEC-19 : au moins une attribution `figee_resiliation`), **fermée** pour tout autre statut. Le segment est
 le premier dossier sous `src/app/(espace)/` (l'accueil s'appelle `accueil`), et ses listes sont
 fermées dans le domaine : cette table les RAPPORTE, elle n'en est pas la source.
 
@@ -76,6 +77,12 @@ fermées dans le domaine : cette table les RAPPORTE, elle n'en est pas la source
 | `confidentialite` | page publique ; l'action d'acceptation, limitée (et pleine) | `SEGMENT_DE_L_ACCEPTATION` |
 | `accueil`, `mes-entreprises`, `mes-commissions`, `plus`, `entreprise`, `deposer`, `documents`, `filleuls`, `profil`, `notifications`, `activite`, `ressources`, `aide` | pleine seulement | `SEGMENTS_PLEINS` |
 | `connexion`, `d`, `confirmer` | publique, sans session | `SEGMENTS_PUBLICS` |
+
+En **lecture** (SEC-19, liste blanche de la sécurité, #703) : `accueil`, `mes-commissions`,
+`mes-entreprises`, `notifications`, `documents`, `mon-contrat` et l'acceptation de la politique
+répondent, et eux seuls (`SEGMENTS_LECTURE`, défaut fermé : un segment ajouté plus tard aux autres
+listes n'y entre que par décision). Aucune écriture : `actionEspace`, `exigerSessionRelevee` et la
+garde de l'appareil refusent la lecture (`lecture_seule`), sauf l'acceptation de la politique.
 
 Chaque page et chaque route appellent `exigerSessionPour(<son segment>)`, et chaque action serveur
 `actionEspace(<son segment>, …)`, comme **premier acte** ; un layout ne protège jamais. Un segment

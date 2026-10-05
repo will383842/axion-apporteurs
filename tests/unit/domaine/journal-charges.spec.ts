@@ -1,5 +1,7 @@
 // @req REQ-DM-024
 // @req REQ-DM-031
+// @req REQ-DM-027
+// @req REQ-SEC-058
 /**
  * `journal-charges.spec.ts` — les charges FERMÉES du journal (`src/domain/evenement/charges.ts`),
  * jugées valeur par valeur : la forme d'une empreinte, les constructeurs de formes, la charge de
@@ -43,6 +45,8 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
     expect(Object.keys(CHARGES_PAR_TYPE).sort()).toEqual([
       'anomalie_gel_modifie',
       'anomalie_statut_modifie',
+      // SEC-19 (A02, #703) : la mise en demeure datée d'un apporteur, par article.
+      'apporteur_mis_en_demeure',
       'apporteur_statut_modifie',
       'attribution_contact_purge',
       'attribution_etat_modifie',
@@ -50,6 +54,8 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
       'attribution_porteur_reaffecte',
       'contestation_modifiee',
       'demande_confirmation_etat_modifie',
+      // SEC-61 : la pose et la levée d'un gel du journal des accès à la console.
+      'journal_acces_gel_modifie',
       'journal_ouvert',
       'piece_kyc_statut_modifie',
       'rattachement_manuel_modifie',
@@ -200,10 +206,92 @@ describe('REQ-DM-033 REQ-DM-043 — le gel pour litige au journal : le geste, ja
       const forme = (schema as { _def: { schema?: { shape?: object } } })._def;
       const shape = (schema as unknown as { shape?: object }).shape ?? forme.schema?.shape ?? {};
       expect(Object.keys(shape).length, `${type} : forme lue`).toBeGreaterThan(0);
-      for (const cle of Object.keys(shape)) {
-        expect(cle, type).not.toMatch(/ref|litige/i);
+      for (const [cle, champ] of Object.entries(shape)) {
+        // SEC-61 (forme d'A02 et de la sécurité) : une référence n'entre qu'en EMPREINTE, sous une clé
+        // suffixée `Empreinte` dont la forme refuse tout ce qui n'est pas 64 hexadécimaux. Jamais en clair.
+        if (cle.endsWith('Empreinte')) {
+          const z = champ as { safeParse: (v: unknown) => { success: boolean } };
+          expect(z.safeParse('INC-0001').success, `${type}.${cle}`).toBe(false);
+          expect(z.safeParse('a'.repeat(64)).success, `${type}.${cle}`).toBe(true);
+          continue;
+        }
+        // CPL-T07 : « refus » n'est pas une référence — le motif FERMÉ d'un refus de pièce
+        // (`motifRefus`, forme d'A02) passe ; « ref » seul, « reference », « litige » restent refusés.
+        expect(cle, type).not.toMatch(/ref(?!us)|litige/i);
       }
     }
+  });
+
+  it('REQ-SEC-058 : la pose et la levée d’un gel du journal des accès passent, sans aucun identifiant', () => {
+    const charge = CHARGES_PAR_TYPE.journal_acces_gel_modifie;
+    for (const geste of ['poser', 'lever'] as const)
+      expect(
+        charge.safeParse({
+          geste,
+          motif: 'incident',
+          portee: { type: 'utilisateur' },
+          referenceEmpreinte: 'b'.repeat(64),
+          acteur: { par: 'utilisateur_console' },
+        }).success,
+        geste
+      ).toBe(true);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — la charge du gel refuse toute autre clé : un id d’employé, de cible ou la référence en clair', () => {
+    const charge = CHARGES_PAR_TYPE.journal_acces_gel_modifie;
+    const juste = {
+      geste: 'poser',
+      motif: 'litige',
+      portee: { type: 'cible' },
+      referenceEmpreinte: 'c'.repeat(64),
+      acteur: { par: 'utilisateur_console' },
+    };
+    const id = '0190f0f0-0000-7000-8000-000000000001';
+    for (const [nom, variante] of [
+      ['poseParId', { ...juste, poseParId: id }],
+      ['leveParId', { ...juste, leveParId: id }],
+      ['utilisateurViseId', { ...juste, utilisateurViseId: id }],
+      ['cibleId', { ...juste, cibleId: id }],
+      ['reference', { ...juste, reference: 'LIT-0001' }],
+      ['portee.id', { ...juste, portee: { type: 'cible', id } }],
+      ['acteur.id', { ...juste, acteur: { par: 'utilisateur_console', id } }],
+      ['referenceEmpreinte en clair', { ...juste, referenceEmpreinte: 'LIT-0001' }],
+    ] as const)
+      expect(charge.safeParse(variante).success, nom).toBe(false);
+    expect(Object.keys(charge.shape).sort()).toEqual([
+      'acteur',
+      'geste',
+      'motif',
+      'portee',
+      'referenceEmpreinte',
+    ]);
+  });
+});
+
+describe('REQ-DM-027 — le refus d’une pièce porte un motif fermé, et lui seul', () => {
+  const charge = CHARGES_PAR_TYPE.piece_kyc_statut_modifie;
+  const base = {
+    de: 'a_verifier',
+    type: 'rib',
+    acteur: { par: 'utilisateur_console', id: '0190f0f0-0000-7000-8000-000000000001' },
+  } as const;
+
+  it('REQ-DM-027 : TÉMOIN À DEUX FACES — un refus SANS motif est refusé ; le même refus avec un motif de la liste passe', () => {
+    expect(charge.safeParse({ ...base, vers: 'refusee' }).success).toBe(false);
+    expect(charge.safeParse({ ...base, vers: 'refusee', motifRefus: 'illisible' }).success).toBe(
+      true
+    );
+  });
+
+  it('REQ-DM-027 : TÉMOIN — un motif hors refus, un texte libre ou « autre » sont refusés', () => {
+    expect(charge.safeParse({ ...base, vers: 'valide', motifRefus: 'illisible' }).success).toBe(
+      false
+    );
+    for (const libre of ['autre', 'La pièce est floue', ''])
+      expect(charge.safeParse({ ...base, vers: 'refusee', motifRefus: libre }).success, libre).toBe(
+        false
+      );
+    expect(charge.safeParse({ ...base, vers: 'valide' }).success).toBe(true);
   });
 });
 
@@ -328,5 +416,26 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
       expect(u(geste, null, null), geste).toEqual([]);
     expect(u('desactiver', 'lecteur', null)).toEqual(['vers:roles_incoherents_avec_le_geste']);
     expect(u('desactiver', null, 'lecteur')).toEqual(['vers:roles_incoherents_avec_le_geste']);
+  });
+
+  it('REQ-JUR-006 : la mise en demeure ne porte que l’article, pris dans la liste FERMÉE de l’art. 11.2, et l’acteur de la console', () => {
+    for (const article of ['3.7', '6', '7', '8', '9', '23']) {
+      passe('apporteur_mis_en_demeure', { article, acteur: CONSOLE });
+    }
+    expect(refus('apporteur_mis_en_demeure', { article: '10', acteur: CONSOLE })).toHaveLength(1);
+    expect(refus('apporteur_mis_en_demeure', { article: '11.2', acteur: CONSOLE })[0]).toMatch(
+      /^article:/
+    );
+    // NI les faits NI aucun texte libre : la charge est fermée.
+    expect(
+      refus('apporteur_mis_en_demeure', { article: '6', acteur: CONSOLE, faits: 'x' })
+    ).toHaveLength(1);
+    // Un utilisateur de la console, jamais le système ni l'apporteur.
+    expect(refus('apporteur_mis_en_demeure', { article: '6', acteur: { par: 'systeme' } })).toEqual(
+      ['acteur:acteur_console_attendu']
+    );
+    expect(
+      refus('apporteur_mis_en_demeure', { article: '6', acteur: { par: 'apporteur', id: ID } })
+    ).toEqual(['acteur:acteur_console_attendu']);
   });
 });

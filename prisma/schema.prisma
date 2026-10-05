@@ -81,6 +81,8 @@ enum TypeEvenementJournal {
   rattachement_manuel_modifie
   anomalie_gel_modifie
   utilisateur_console_modifie
+  journal_acces_gel_modifie
+  apporteur_mis_en_demeure
 
   @@map("type_evenement_journal")
 }
@@ -96,6 +98,7 @@ enum AgregatJournal {
   demande_confirmation
   anomalie
   utilisateur_console
+  journal_acces_gel
 
   @@map("agregat_journal")
 }
@@ -115,6 +118,8 @@ model Evenement {
 
   /// DM-55 : les notifications de l'espace que cet événement a produites.
   notificationsEspace NotificationEspace[]
+  /// SEC-19 : la décision de contrat que cet événement fonde.
+  decisionDeContrat   DecisionDeContrat?
 
   @@index([agregat, agregatId])
   @@map("evenements")
@@ -304,6 +309,7 @@ model Apporteur {
   personnesDeclarees      PersonneDeclaree[]
   piecesKyc               PieceKyc[]
   notificationsEspace     NotificationEspace[]
+  decisionsDeContrat      DecisionDeContrat[]
   preferencesNotification PreferenceNotification[]
   verifications           Verification[]
   alertesLiberation       AlerteLiberation[]
@@ -451,14 +457,18 @@ model UtilisateurConsole {
 
   liensMagiques           LienMagique[]
   sessionsEspace          SessionEspace[]
-  attributions            Attribution[]         @relation("AttributionsDuConseiller")
-  suspensionsDePeremption Attribution[]         @relation("SuspensionsDePeremption")
+  attributions            Attribution[]            @relation("AttributionsDuConseiller")
+  suspensionsDePeremption Attribution[]            @relation("SuspensionsDePeremption")
   verifications           Verification[]
   anomaliesTraitees       Anomalie[]
   rattachementsDecides    RattachementManuel[]
   contestationsRepondues  Contestation[]
   qualificationsSaisies   Qualification[]
   accesJournalises        JournalAccesConsole[]
+  /// SEC-61 : les gels du journal des accès qui visent l'utilisateur, ceux qu'il a posés, levés.
+  gelsJournalVises        JournalAccesConsoleGel[] @relation("GelsJournalVises")
+  gelsJournalPoses        JournalAccesConsoleGel[] @relation("GelsJournalPoses")
+  gelsJournalLeves        JournalAccesConsoleGel[] @relation("GelsJournalLeves")
   sirensListeNoireAjoutes SirenListeNoire[]
   /// CPL-T06 : les décisions de candidature dont l'utilisateur est l'auteur.
   decisionsCandidature    DecisionCandidature[]
@@ -718,33 +728,39 @@ model CourrielEnvoye {
 /// AUCUN calcul de délai : un délai court de `courriels_envoyes.envoye_at` (garde
 /// `notifications-lue-at-inerte`).
 model NotificationEspace {
-  id            String           @id @default(uuid()) @db.Uuid
-  apporteurId   String           @map("apporteur_id") @db.Uuid
-  apporteur     Apporteur        @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  cle           String           @db.VarChar(64)
-  attributionId String?          @map("attribution_id") @db.Uuid
-  attribution   Attribution?     @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  id                String             @id @default(uuid()) @db.Uuid
+  apporteurId       String             @map("apporteur_id") @db.Uuid
+  apporteur         Apporteur          @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  cle               String             @db.VarChar(64)
+  attributionId     String?            @map("attribution_id") @db.Uuid
+  attribution       Attribution?       @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   /// L'heure d'inscription dans l'espace, PAS un horodatage opposable : aucun délai ne s'y appuie ;
   /// un délai court de `courriels_envoyes.envoye_at` (relecture A02, 2026-10-02).
-  creeAt        DateTime         @default(now()) @map("cree_at") @db.Timestamptz(3)
-  lueAt         DateTime?        @map("lue_at") @db.Timestamptz(3)
+  creeAt            DateTime           @default(now()) @map("cree_at") @db.Timestamptz(3)
+  lueAt             DateTime?          @map("lue_at") @db.Timestamptz(3)
   /// DM-55 : l'événement du journal qui a produit la notification. L'idempotence tient au fait :
   /// index unique partiel `notifications_espace_une_par_evenement` (cle, evenement_id), et CHECK
   /// `notifications_espace_machine_a_son_evenement` (les deux clés de la machine ont leur événement),
   /// en SQL brut (partners/ADR-0015).
-  evenementId   BigInt?          @map("evenement_id")
+  evenementId       BigInt?            @map("evenement_id")
   /// Relation vers le journal chaîné, jamais employée par le code : on écrit `evenementId` (garde de l'écrivain unique).
-  faitDuJournal Evenement?       @relation(fields: [evenementId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  faitDuJournal     Evenement?         @relation(fields: [evenementId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   /// DM-55 : l'anomalie confirmée qui fonde une `decision_attribution`, et elle seule (CHECK
   /// `notifications_espace_anomalie_decision_seule`, en SQL brut). Ses faits se lisent dans sa ligne au
   /// rendu ; ils n'entrent jamais dans le journal chaîné (décision (d) de la juriste pour DM-12).
-  anomalieId    String?          @map("anomalie_id") @db.Uuid
-  anomalie      Anomalie?        @relation(fields: [anomalieId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  anomalieId        String?            @map("anomalie_id") @db.Uuid
+  anomalie          Anomalie?          @relation(fields: [anomalieId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  /// SEC-19 : la décision de contrat (`mise_en_demeure`, `resiliation`) dont le passage rend le texte et
+  /// les dates (CHECK `notifications_espace_decision_contrat_cle`, en SQL brut). SET NULL : rien ne
+  /// bloque la purge de DM-61.
+  decisionContratId String?            @map("decision_contrat_id") @db.Uuid
+  decisionContrat   DecisionDeContrat? @relation(fields: [decisionContratId], references: [id], onDelete: SetNull, onUpdate: Restrict)
   /// DM-55 : les courriels qui l'ont portée, une tentative par ligne.
-  courriels     CourrielEnvoye[]
+  courriels         CourrielEnvoye[]
 
   @@index([apporteurId, creeAt])
   @@index([attributionId])
+  @@index([decisionContratId])
   /// DM-61 : la purge à douze mois lit `cree_at` seul.
   @@index([creeAt])
   @@map("notifications_espace")
@@ -1386,6 +1402,7 @@ enum NatureAccesConsole {
   connexion
   lecture_coordonnees_apporteur
   lecture_coordonnees_contact
+  lecture_journal_acces
 
   @@map("nature_acces_console")
 }
@@ -1394,8 +1411,10 @@ enum NatureAccesConsole {
 /// l'empreinte tronquée de l'adresse réseau ; aucun contenu. Ajout seul par le gabarit commun
 /// (`refuser_modification_sauf`) : la purge, à l'échéance de la SSOT, vide l'utilisateur, la cible et
 /// l'empreinte et pose `purgeAt`, une fois ; la ligne nue (nature, date) reste. `cibleId` est
-/// polymorphe (un apporteur, ou l'attribution qui porte le contact), sans clé étrangère : le code la
-/// vérifie avant d'écrire. Seule une connexion RÉUSSIE s'inscrit.
+/// polymorphe (un apporteur, l'attribution qui porte le contact, ou, pour une lecture du journal
+/// (SEC-60), l'utilisateur de la console dont les traces sont lues), sans clé étrangère, pour les trois
+/// cibles, cette dernière comprise : le code vérifie chacune avant d'écrire. Seule une connexion
+/// RÉUSSIE s'inscrit.
 model JournalAccesConsole {
   id                   String              @id @db.Uuid
   utilisateurConsoleId String?             @map("utilisateur_console_id") @db.Uuid
@@ -1409,6 +1428,43 @@ model JournalAccesConsole {
   @@index([survenuAt])
   @@index([utilisateurConsoleId, survenuAt], map: "journal_acces_console_utilisateur_survenu_idx")
   @@map("journal_acces_console")
+}
+
+/// Le motif d'un gel du journal des accès à la console (SEC-61) : les valeurs du glossaire.
+enum MotifGelJournal {
+  incident
+  litige
+
+  @@map("motif_gel_journal")
+}
+
+/// Un gel du journal des accès à la console (SEC-61, forme d'A02 accordée avec la sécurité). Il vise
+/// UNE portée, un utilisateur de la console OU une cible (CHECK `journal_acces_console_gels_une_portee`),
+/// et protège de la purge les lignes de cette portée survenues depuis `depuis`, futures comprises si
+/// `jusquA` est nul, tant qu'il est OUVERT ; `jusquA` posé BORNE le gel, inclus, et ne se modifie pas. La référence
+/// est opaque (CHECK `journal_acces_console_gels_reference_forme`). Personne ne gèle ses propres traces
+/// (CHECK `journal_acces_console_gels_pas_sur_soi`) ; la levée est faite par un autre que l'auteur et
+/// que la personne visée (CHECK `journal_acces_console_gels_levee_quatre_yeux`). Garde dédiée en SQL
+/// brut (`journal_acces_console_gels_garde`) : un gel naît ouvert, seule la levée s'écrit, une fois ;
+/// il ne s'efface que levé et ses lignes purgées ; TRUNCATE refusé. Filet de la base sur le journal
+/// (`journal_acces_console_gel_respecte`). Deux index partiels sur les gels ouverts.
+model JournalAccesConsoleGel {
+  id                String              @id @db.Uuid
+  motif             MotifGelJournal
+  reference         String              @db.VarChar(40)
+  utilisateurViseId String?             @map("utilisateur_vise_id") @db.Uuid
+  utilisateurVise   UtilisateurConsole? @relation("GelsJournalVises", fields: [utilisateurViseId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "journal_acces_console_gels_utilisateur_vise_fkey")
+  cibleId           String?             @map("cible_id") @db.Uuid
+  depuis            DateTime            @db.Timestamptz(3)
+  jusquA            DateTime?           @map("jusqu_a") @db.Timestamptz(3)
+  poseParId         String              @map("pose_par_id") @db.Uuid
+  posePar           UtilisateurConsole  @relation("GelsJournalPoses", fields: [poseParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  poseAt            DateTime            @default(dbgenerated("clock_timestamp()")) @map("pose_at") @db.Timestamptz(3)
+  leveParId         String?             @map("leve_par_id") @db.Uuid
+  levePar           UtilisateurConsole? @relation("GelsJournalLeves", fields: [leveParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  leveAt            DateTime?           @map("leve_at") @db.Timestamptz(3)
+
+  @@map("journal_acces_console_gels")
 }
 
 /// L'origine d'une entreprise connue de la Société (REQ-DM-029) : les valeurs du glossaire.
@@ -1469,4 +1525,45 @@ model DevisConnu {
 
   @@index([siren])
   @@map("devis_connus")
+}
+
+// ── SEC-19 : les décisions de contrat (forme d'A02, #703) ───────────────────
+
+/// Le geste d'une décision de contrat (art. 11 et 12).
+enum GesteDecisionContrat {
+  mise_en_demeure
+  resiliation
+
+  @@map("geste_decision_contrat")
+}
+
+/// SEC-19 (REQ-JUR-006) : le texte d'une mise en demeure (`{faits}`) ou d'une résiliation motivée
+/// (`{motif}`), CHIFFRÉ, et ses dates ; jamais au journal chaîné. La ligne nue reste comme preuve du
+/// fait daté : seul le texte est purgé (garde `decisions_de_contrat_garde` et CHECK en SQL brut).
+model DecisionDeContrat {
+  id                  String               @id @default(uuid()) @db.Uuid
+  apporteurId         String               @map("apporteur_id") @db.Uuid
+  apporteur           Apporteur            @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  geste               GesteDecisionContrat
+  /// La liste FERMÉE de l'art. 11.2, pour la mise en demeure seule (CHECK).
+  article             String?              @db.VarChar(4)
+  texteChiffre        Bytes?               @map("texte_chiffre")
+  /// Jours civils de Paris, pour la résiliation seule (CHECK).
+  dateReception       DateTime?            @map("date_reception") @db.Date
+  dateEffet           DateTime?            @map("date_effet") @db.Date
+  /// L'événement qui fonde la décision. Relation jamais employée par le code : on écrit `evenementId`.
+  evenementId         BigInt               @unique @map("evenement_id")
+  faitDuJournal       Evenement            @relation(fields: [evenementId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creeAt              DateTime             @default(dbgenerated("clock_timestamp()")) @map("cree_at") @db.Timestamptz(3)
+  textePurgeAt        DateTime?            @map("texte_purge_at") @db.Timestamptz(3)
+  /// La clé d'idempotence, tirée par le serveur au rendu du formulaire : UNIQUE, immuable, jamais
+  /// purgée ; exigée pour une mise en demeure (CHECK).
+  cleIdempotence      String?              @unique @map("cle_idempotence") @db.Uuid
+  /// L'empreinte HMAC des faits (`empreinteRecherche('faits_mise_en_demeure', …)`) : elle vit et meurt
+  /// avec le texte (CHECK et garde) ; jamais de clair pour comparer.
+  faitsEmpreinte      String?              @map("faits_empreinte") @db.Char(64)
+  notificationsEspace NotificationEspace[]
+
+  @@index([apporteurId])
+  @@map("decisions_de_contrat")
 }

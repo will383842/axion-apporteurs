@@ -41,6 +41,9 @@ import { clesPii } from '../securite/pii';
 import {
   FORMES_D_ATTENTE,
   creerAlerteur,
+  DECISION_TRANSFERT_TELEGRAM,
+  exigerLeTransfertConsigne,
+  type DecisionDuTransfert,
   notifieurTelegram,
   type Alerteur,
 } from '../integrations/telegram/alertes';
@@ -73,6 +76,8 @@ import {
   purgerLesDementis,
 } from './purger-contestations-anomalies';
 import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
+import { purgerLesSessions } from './purger-sessions-espace';
+import { effacerLesComptesDesactives } from './purger-utilisateurs-console';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import {
   ouvrirLesAnomaliesDAutoParrainage,
@@ -83,6 +88,7 @@ import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
 import { clientDuTiers } from '../integrations/recherche-entreprises/tiers';
 import { limiteurDuRegistre } from '../integrations/recherche-entreprises/limiteur';
 import { traitantsDeLAnteriorite } from '../entreprise-connue/projection';
+import { rapprocherLesAnteriorites } from '../jobs/anteriorite-retroactive';
 
 /**
  * Les traitants branchés, par type d'événement reçu. Un seul aujourd'hui : la candidature reçue
@@ -171,10 +177,16 @@ export async function alerterLesFranchissements(
 }
 
 /** Le canal d'alerte du serveur, lu dans l'environnement ; `null` s'il n'est pas configuré. */
-export function canalDAlerte(env: Readonly<Record<string, string | undefined>>): Alerteur | null {
+export function canalDAlerte(
+  env: Readonly<Record<string, string | undefined>>,
+  decision: DecisionDuTransfert | null = DECISION_TRANSFERT_TELEGRAM
+): Alerteur | null {
   const jeton = env.TELEGRAM_BOT_TOKEN;
   const salon = env.TELEGRAM_CHAT_ID;
   if (jeton === undefined || jeton === '' || salon === undefined || salon === '') return null;
+  // SEC-64 (sécurité, 5982916235) : le canal réel se construirait ; sans décision consignée sur le
+  // transfert, il est refusé, nommé, et le lanceur ne démarre pas.
+  exigerLeTransfertConsigne(env, decision);
   return creerAlerteur({
     notifieur: notifieurTelegram(jeton, salon),
     horloge: horlogeSysteme,
@@ -230,6 +242,9 @@ export function inscriptions(
       await alerterLesNonRendus(bilan, canalDAlerte(env));
       return bilan;
     },
+    // DM-25 (REQ-JUR-007) : l'antériorité établie après coup, jugée au dépôt sur des faits antérieurs.
+    anteriorites_rapprocher: () =>
+      rapprocherLesAnteriorites(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-59 (REQ-JUR-065) : la valeur d'une rectification, effacée à son échéance même sans traitement.
     droits_contact_purger: () =>
       purgerLesValeursDesDroits(prisma, new Date(horlogeSysteme.maintenant())),
@@ -256,6 +271,11 @@ export function inscriptions(
     // SEC-58 : le journal des accès à la console, purgé à son échéance (la purge vide les identifiants).
     journal_acces_console_purger: () =>
       purgerLeJournalDesAccesConsole(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-65 (REQ-SEC-003, REQ-JUR-068) : les sessions finies, six mois après leur fin ; le nom et
+    // l'adresse d'un accès désactivé de la console, cinq ans après la désactivation.
+    sessions_purger: () => purgerLesSessions(prisma, new Date(horlogeSysteme.maintenant())),
+    utilisateurs_console_effacer: () =>
+      effacerLesComptesDesactives(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>

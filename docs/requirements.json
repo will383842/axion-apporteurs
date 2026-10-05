@@ -752,6 +752,7 @@
         "SEC-45",
         "SEC-55",
         "SEC-62",
+        "SEC-65",
         "UX-P1-04"
       ]
     },
@@ -946,6 +947,7 @@
       "phase": 0,
       "taches": [
         "DM-31",
+        "GOV-149",
         "QA-T68",
         "SEC-03",
         "SEC-10",
@@ -1145,7 +1147,8 @@
       "etape": 5,
       "phase": 0,
       "taches": [
-        "SEC-01"
+        "SEC-01",
+        "SEC-63"
       ]
     },
     {
@@ -1222,6 +1225,7 @@
       "phase": 1,
       "taches": [
         "SEC-26",
+        "SEC-64",
         "UX-P1-03"
       ]
     },
@@ -1810,14 +1814,15 @@
       "id": "REQ-ARG-026",
       "domaine": "argent",
       "texte": "Sortie : à `resilie`, **quel que soit le motif** : les lignes `acquise` sont portées au dernier relevé, produit au lot suivant **sans le seuil de versement minimal** (HYP-E1-17) ; les lignes `prevue` restent `prevue` et deviennent `acquise` si l'encaissement survient dans les conditions du contrat art. 12.3 ; un solde ≤ 0 devient une `creance_apporteur` exportée en compta, sans virement. Les attributions `signee` et `convertie` passent en `figee_resiliation` ; la commande signée avant la fin du contrat continue d'ouvrir droit à commission au fur et à mesure de ses encaissements, quelle qu'en soit la date (contrat art. 12.3) ; aucune commande signée après n'en ouvre. [REMPLACÉ au rattrapage 110, juriste #703, 5981011150 : « gardent leur état »] Aucune ligne `dechue` n'existe (REQ-DM-020, REQ-JUR-007).",
-      "source": "audit-outil §5 étape 12, D11 ; anti-abus §4 ; ARG-15, ARG-25 ; réécrite le 2026-09-03 — déchéance retirée du produit ; amendée le 2026-10-03, texte de la juriste (oubli de `signee`, et « jusqu'à leur expiration » contredisait l'art. 12.3), rattrapage 88 ; rattrapage 110 (#703, juriste 5981011150)",
+      "source": "audit-outil §5 étape 12, D11 ; anti-abus §4 ; ARG-15, ARG-25 ; réécrite le 2026-09-03 — déchéance retirée du produit ; amendée le 2026-10-03, texte de la juriste (oubli de `signee`, et « jusqu'à leur expiration » contredisait l'art. 12.3), rattrapage 88 ; rattrapage 110 (#703, juriste 5981011150) ; phase 2 → 1 au rattrapage 112 (gouvernance : SEC-19 et SEC-66, en phase 1, la mettent en œuvre)",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
       "etape": 11,
-      "phase": 2,
+      "phase": 1,
       "taches": [
         "DM-18",
+        "SEC-66",
         "T-ARG-033",
         "T-ARG-038"
       ]
@@ -1909,6 +1914,7 @@
       "etape": 10,
       "phase": 2,
       "taches": [
+        "T-ARG-043",
         "UX-P2-01"
       ]
     },
@@ -2218,7 +2224,8 @@
       "taches": [
         "INT-T08-A",
         "INT-T08-P",
-        "INT-T73-P"
+        "INT-T73-P",
+        "INT-T74-P"
       ]
     },
     {
@@ -2386,7 +2393,8 @@
       "etape": null,
       "phase": 0,
       "taches": [
-        "INT-T14"
+        "INT-T14",
+        "SEC-64"
       ]
     },
     {
@@ -2587,7 +2595,8 @@
         "JUR-T28",
         "SEC-15",
         "SEC-19",
-        "UX-P1-57"
+        "UX-P1-57",
+        "UX-P1-59"
       ]
     },
     {
@@ -2722,7 +2731,8 @@
       "phase": 0,
       "taches": [
         "GOV-129",
-        "JUR-T02"
+        "JUR-T02",
+        "SEC-66"
       ]
     },
     {
@@ -2921,9 +2931,11 @@
       "etape": 11,
       "phase": 0,
       "taches": [
+        "DM-70",
         "INT-T44",
         "INT-T56",
         "JUR-T02",
+        "JUR-T64",
         "T-ARG-033"
       ]
     },
@@ -3196,6 +3208,8 @@
         "UX-P1-10",
         "UX-P1-11",
         "UX-P1-54",
+        "UX-P1-58",
+        "UX-P1-59",
         "UX-P3-01",
         "UX-P3-06"
       ]
@@ -3570,7 +3584,6 @@
       "etape": 7,
       "phase": 2,
       "taches": [
-        "QA-T28",
         "QA-T29"
       ]
     },
@@ -5070,6 +5083,9 @@
         "INT-T62-A",
         "INT-T64-A",
         "INT-T67-A",
+        "INT-T78-A",
+        "INT-T79-A",
+        "INT-T80-A",
         "UX-P2-17"
       ]
     },
@@ -5317,6 +5333,8 @@
         "EXT-T10",
         "EXT-T11",
         "GOV-113",
+        "INT-T78-A",
+        "INT-T79-A",
         "JUR-T32",
         "JUR-T36",
         "JUR-T57",
@@ -5353,6 +5371,8 @@
         "UX-P1-55",
         "UX-P1-56",
         "UX-P1-57",
+        "UX-P1-58",
+        "UX-P1-59",
         "UX-P2-01",
         "UX-P2-02",
         "UX-P2-03",
@@ -6348,6 +6368,8 @@
         "INT-T66-A",
         "INT-T76-A",
         "INT-T76-P",
+        "INT-T77-A",
+        "INT-T81-A",
         "JUR-T47"
       ]
     },
@@ -6453,7 +6475,9 @@
       "phase": 1,
       "taches": [
         "JUR-T61",
-        "JUR-T62"
+        "JUR-T62",
+        "JUR-T63",
+        "SEC-65"
       ]
     },
     {

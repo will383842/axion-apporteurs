@@ -74,16 +74,21 @@ const table = (): Record<string, LigneDeNotification> =>
 describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles', () => {
   it('REQ-UX-016 : la table porte EXACTEMENT les clés arrêtées — celles de l’apporteur, dont la micro-copie porte les mêmes, et celles de la console', () => {
     const attendues = [
+      // DM-25 : l'annulation pour antériorité de la Société (art. 3.3), clé NEUVE (coordination).
+      'attribution_annulee_anteriorite',
       'attribution_liberee',
       'decision_attribution',
       'depot_injoignable_j5',
       'lien_magique',
+      // SEC-19 (A02, #703) : la mise en demeure et la fin du contrat.
+      'mise_en_demeure',
       // SEC-62 (texte du rattrapage 102) : l'avis de sécurité du compte, texte de la juriste.
       'nouvel_appareil',
       'premier_rang_libere',
       'rappel_rc_pro',
       'rattachement_decide',
       'refus_declaration',
+      'resiliation',
       'suspension_declarations',
     ];
     // SEC-29 et SEC-30 : les clés destinées à la console ; leurs textes vivent avec la console.
@@ -138,6 +143,7 @@ describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles'
       admin_reactive: 'T/F',
       depot_injoignable_j5: 'F/F',
       attribution_liberee: 'T/F',
+      attribution_annulee_anteriorite: 'T/F',
       decision_attribution: 'T/F',
       premier_rang_libere: 'T/T',
       refus_declaration: 'T/F',
@@ -145,6 +151,8 @@ describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles'
       rappel_rc_pro: 'F/F',
       rattachement_decide: 'T/F',
       nouvel_appareil: 'T/F',
+      mise_en_demeure: 'T/T',
+      resiliation: 'T/T',
     });
   });
 
@@ -653,5 +661,43 @@ describe('REQ-UX-016 — chaque faute de la table, nommée mot pour mot', () => 
       schemaPreferenceNotification.safeParse({ cle: 'lien_magique', active: true }).success
     ).toBe(true);
     expect(schemaPreferenceNotification.safeParse({ cle: 'lien_magique' }).success).toBe(false);
+  });
+});
+
+describe('REQ-JUR-007 — la notification de l’annulation pour antériorité (DM-25, juriste)', () => {
+  it('REQ-JUR-007 : la fiche de la clé neuve — art. 3.3, événement, courriel et espace, obligatoire, non désactivable, vers Mes entreprises', () => {
+    expect(GABARITS.attribution_annulee_anteriorite).toMatchObject({
+      destinataire: 'apporteur',
+      req: 'REQ-JUR-007',
+      emetteur: 'DM-25',
+      declencheur: 'evenement',
+      notificationObligatoire: true,
+      faitCourirUnDelai: false,
+      canaux: ['email', 'espace'],
+      desactivable: false,
+      route: '/mes-entreprises',
+      routeEnAttente: null,
+    });
+    expect(GABARITS.attribution_annulee_anteriorite.fondement).toMatch(/art. 3.3/);
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — le texte de la juriste, MOT POUR MOT : le motif, les commissions acquises qui restent, le droit de contester', () => {
+    expect(TEXTES_DES_NOTIFICATIONS.attribution_annulee_anteriorite).toEqual({
+      titre: '{entreprise} : votre dépôt est annulé — antériorité de la Société',
+      appel: 'Voir Mes entreprises',
+      corps:
+        "Axion-IA connaissait déjà cette entreprise à la date de votre dépôt (contrat, article 3.3) : votre dépôt est annulé, et aucune commission nouvelle n'est due à son titre. Les commissions déjà acquises restent acquises. Vous pouvez contester cette décision par écrit ; Axion-IA vous répond de façon motivée dans les {delaiReponse}.",
+    });
+  });
+
+  it('REQ-JUR-007 : le délai de réponse vient de la SSOT, jamais écrit en clair ; l’entreprise est le seul paramètre de l’émettrice', () => {
+    expect(parametresDe('attribution_annulee_anteriorite')).toEqual(['entreprise']);
+    const r = rendreLaNotification('attribution_annulee_anteriorite', {
+      entreprise: 'Atelier Dupont',
+    });
+    expect(r.corps).toContain(
+      `${SEUILS.REPONSE_CONTESTATION_JOURS.valeur} ${SEUILS.REPONSE_CONTESTATION_JOURS.unite}`
+    );
+    expect(r.titre).toContain('Atelier Dupont');
   });
 });

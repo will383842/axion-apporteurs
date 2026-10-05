@@ -95,6 +95,7 @@ const notif = (
   attributionId: `att-${id}`,
   evenementId: '42',
   anomalieId: null,
+  decisionContratId: null,
   ...o,
 });
 
@@ -313,6 +314,7 @@ describe('REQ-UX-016 — l’adaptateur du passage, sur la base', () => {
         attributionId: true,
         evenementId: true,
         anomalieId: true,
+        decisionContratId: true,
       },
     });
   });
@@ -368,6 +370,11 @@ describe('REQ-UX-016 — une clé, un seul chemin d’envoi : le passage ou noti
     expect([...CLES_ENVOYEES_PAR_LE_PASSAGE]).toEqual([
       'decision_attribution',
       'premier_rang_libere',
+      // SEC-19 : la mise en demeure (A02, #713, 5981780677), puis la résiliation (A02, #703).
+      'mise_en_demeure',
+      'resiliation',
+      // DM-25 : l'annulation pour antériorité de la Société, envoyée par le passage.
+      'attribution_annulee_anteriorite',
     ]);
     for (const cle of CLES_ENVOYEES_PAR_LE_PASSAGE) {
       expect(GABARITS[cle].canaux, cle).toContain('email');
@@ -947,6 +954,7 @@ describe('REQ-UX-016 — le texte rendu depuis la base, à l’heure de l’envo
     attributionId: ATT,
     evenementId: '42',
     anomalieId: null,
+    decisionContratId: null,
     ...o,
   });
 
@@ -1733,5 +1741,16 @@ describe('REQ-DM-041 — la relation faitDuJournal n’est jamais employée par 
       'src/server/factice.ts : mention de la relation',
       'src/server/autre.ts : mention de la relation',
     ]);
+  });
+});
+
+describe('REQ-JUR-007 — l’annulation pour antériorité part par le passage (DM-25)', () => {
+  it('REQ-JUR-007 : TÉMOIN — ses paramètres de rendu sont l’entreprise SEULE ; le délai vient de la SSOT, posé par l’envoi', () => {
+    expect(
+      parametresDeLaNotification('attribution_annulee_anteriorite', {
+        entreprise: 'Atelier Dupont',
+        envoyeLe: MAINTENANT,
+      })
+    ).toEqual({ entreprise: 'Atelier Dupont' });
   });
 });
