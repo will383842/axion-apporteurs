@@ -17,12 +17,19 @@
  * porte toujours sur les traces D'UN utilisateur de la console, jamais sur une liste globale, et écrit
  * SA ligne (`lecture_journal_acces`, la cible étant l'utilisateur lu) AVANT de lire : même ordre,
  * même échec fermé. Elle ne rend que des identifiants, sans l'empreinte réseau.
+ *
+ * ELLE EST BORNÉE ET PAGINÉE (SEC-67) : une page ne dépasse jamais la borne de la SSOT
+ * (`PARAMETRES.JOURNAL_DES_ACCES_PAGE_MAX`), et la suivante se demande par un curseur keyset sur
+ * `(survenuAt desc, id desc)`, jamais par un décalage. Le curseur est opaque et validé AVANT toute
+ * transaction : illisible, forgé ou né d'une autre cible, il est refusé sans rien écrire ni rien
+ * lire. Chaque page écrit SA ligne `lecture_journal_acces` avant de lire.
  */
 import { randomUUID } from 'node:crypto';
 import type { NatureAccesConsole, Prisma, PrismaClient } from '@prisma/client';
 import { decryptPii, empreinteAdresseReseau, type ClesPii } from '../securite/pii';
 import { MODELE_APPORTEUR } from '../auth/lien-magique-depot';
 import { roleAutorise } from '../roles/matrice';
+import { PARAMETRES } from '../../domain/seuils/ssot';
 
 /**
  * Le modèle sous lequel les coordonnées du contact sont chiffrées, sur l'attribution qui le porte
@@ -45,6 +52,14 @@ export class LectureDuJournalRefusee extends Error {
   constructor() {
     super('lecture du journal des accès refusée');
     this.name = 'LectureDuJournalRefusee';
+  }
+}
+
+/** Levée quand le curseur d'une page du journal est illisible : rien n'est tracé, rien n'est lu. */
+export class CurseurDuJournalIllisible extends Error {
+  constructor() {
+    super('curseur du journal des accès illisible');
+    this.name = 'CurseurDuJournalIllisible';
   }
 }
 
@@ -191,16 +206,80 @@ export type TraceDAcces = {
   survenuAt: Date;
 };
 
+/** Une page du journal : au plus la borne, et le curseur de la suivante, nul en fin de journal. */
+export type PageDuJournal = { traces: TraceDAcces[]; suivant: string | null };
+
+/** La version du curseur : une autre forme est illisible, jamais réinterprétée. */
+const VERSION_DU_CURSEUR = 'j1';
+/** Un curseur plus long qu'aucun curseur rendu est refusé avant d'être décodé. */
+const LONGUEUR_MAX_DU_CURSEUR = 256;
+const FORME_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const CHAMPS_DU_CURSEUR = ['i', 's', 'u', 'v'];
+
+type Position = { survenuAt: Date; id: string };
+
+/** Le curseur de la page qui suit `derniere` : la cible et la position, encodées, jamais signées. */
+function curseurApres(cible: string, derniere: TraceDAcces): string {
+  const charge = {
+    v: VERSION_DU_CURSEUR,
+    u: cible,
+    s: derniere.survenuAt.toISOString(),
+    i: derniere.id,
+  };
+  return Buffer.from(JSON.stringify(charge), 'utf8').toString('base64url');
+}
+
 /**
- * Les traces d'UN utilisateur de la console, les plus récentes d'abord. Le droit du lecteur est relu
- * en base ; la cible est vérifiée ; la ligne de la lecture est écrite AVANT de lire.
+ * Relit un curseur : la forme exacte, la version, la cible de la demande, une date canonique et un
+ * UUID. Tout écart lève `CurseurDuJournalIllisible`.
+ */
+function positionDuCurseur(curseur: string, cible: string): Position {
+  if (curseur.length === 0 || curseur.length > LONGUEUR_MAX_DU_CURSEUR)
+    throw new CurseurDuJournalIllisible();
+  if (!/^[A-Za-z0-9_-]+$/.test(curseur)) throw new CurseurDuJournalIllisible();
+  let charge: unknown;
+  try {
+    charge = JSON.parse(Buffer.from(curseur, 'base64url').toString('utf8'));
+  } catch {
+    throw new CurseurDuJournalIllisible();
+  }
+  if (typeof charge !== 'object' || charge === null || Array.isArray(charge))
+    throw new CurseurDuJournalIllisible();
+  const c = charge as Record<string, unknown>;
+  if (Object.keys(c).sort().join() !== CHAMPS_DU_CURSEUR.join())
+    throw new CurseurDuJournalIllisible();
+  const { v, u, s, i } = c;
+  if (v !== VERSION_DU_CURSEUR || u !== cible) throw new CurseurDuJournalIllisible();
+  if (typeof i !== 'string' || !FORME_UUID.test(i)) throw new CurseurDuJournalIllisible();
+  if (typeof s !== 'string') throw new CurseurDuJournalIllisible();
+  const survenuAt = new Date(s);
+  if (Number.isNaN(survenuAt.getTime()) || survenuAt.toISOString() !== s)
+    throw new CurseurDuJournalIllisible();
+  return { survenuAt, id: i };
+}
+
+/**
+ * UNE page des traces d'UN utilisateur de la console, les plus récentes d'abord. Le curseur est relu
+ * avant tout ; le droit du lecteur est relu en base ; la cible est vérifiée ; la ligne de la lecture
+ * est écrite AVANT de lire.
  */
 export async function lireLeJournalDesAcces(
   prisma: PrismaClient,
-  demande: { lecteurId: string; utilisateurConsoleId: string; adresse: string | null },
+  demande: {
+    lecteurId: string;
+    utilisateurConsoleId: string;
+    adresse: string | null;
+    /** Le curseur rendu par la page précédente ; absent ou nul pour la première. */
+    curseur?: string | null;
+  },
   cles: ClesPii
-): Promise<TraceDAcces[]> {
+): Promise<PageDuJournal> {
   const id = demande.utilisateurConsoleId;
+  const depuis =
+    demande.curseur === undefined || demande.curseur === null
+      ? null
+      : positionDuCurseur(demande.curseur, id);
+  const borne = PARAMETRES.JOURNAL_DES_ACCES_PAGE_MAX.valeur;
   return prisma.$transaction(async (tx) => {
     const lecteur = await tx.utilisateurConsole.findUnique({
       where: { id: demande.lecteurId },
@@ -226,10 +305,26 @@ export async function lireLeJournalDesAcces(
       },
       cles
     );
-    return tx.journalAccesConsole.findMany({
-      where: { utilisateurConsoleId: id },
+    const traces = await tx.journalAccesConsole.findMany({
+      where:
+        depuis === null
+          ? { utilisateurConsoleId: id }
+          : {
+              utilisateurConsoleId: id,
+              OR: [
+                { survenuAt: { lt: depuis.survenuAt } },
+                { survenuAt: depuis.survenuAt, id: { lt: depuis.id } },
+              ],
+            },
       select: { id: true, nature: true, cibleId: true, survenuAt: true },
       orderBy: [{ survenuAt: 'desc' }, { id: 'desc' }],
+      take: borne,
     });
+    const derniere = traces.at(-1);
+    return {
+      traces,
+      suivant:
+        traces.length === borne && derniere !== undefined ? curseurApres(id, derniere) : null,
+    };
   });
 }
