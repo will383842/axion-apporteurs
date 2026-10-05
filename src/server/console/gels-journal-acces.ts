@@ -26,7 +26,13 @@
  * qu'en empreinte (HMAC sous PII_HASH_KEY, `reference_gel`).
  */
 import { randomUUID } from 'node:crypto';
-import type { ConsoleRole, MotifGelJournal, Prisma, PrismaClient } from '@prisma/client';
+import type {
+  ConsoleRole,
+  MotifGelJournal,
+  Prisma,
+  PrismaClient,
+  UtilisateurConsole,
+} from '@prisma/client';
 import { ajouterEvenement } from '../evenement/journal';
 import { roleAutorise } from '../roles/matrice';
 import { empreinteAdresseReseau, empreinteRecherche, type ClesPii } from '../securite/pii';
@@ -58,7 +64,8 @@ type Tx = Prisma.TransactionClient;
 async function exigerUnAdministrateurValide(
   tx: Tx,
   acteur: ActeurDuGel,
-  droit: 'action:poser_gel_journal_acces' | 'action:lever_gel_journal_acces'
+  droit:
+    'action:poser_gel_journal_acces' | 'action:lever_gel_journal_acces' | 'ecran:gels_journal_acces'
 ): Promise<void> {
   if (!roleAutorise(droit, acteur.role)) throw new ErreurGelJournal('droit_absent');
   const lu = await tx.utilisateurConsole.findUnique({
@@ -82,9 +89,10 @@ export type DroitsSurLesGels = { readonly poser: boolean; readonly lever: boolea
  * lever ; un administrateur en attente, désactivé, inconnu, ou tout autre rôle ne voit rien.
  */
 export function droitsSurLesGels(
-  lu: { role: ConsoleRole; desactiveAt: Date | null; valideAt: Date | null } | null
+  lu: Pick<UtilisateurConsole, 'role' | 'desactiveAt' | 'valideAt'> | null
 ): DroitsSurLesGels | null {
   if (lu === null || lu.desactiveAt !== null || lu.valideAt === null) return null;
+  if (!roleAutorise('ecran:gels_journal_acces', lu.role)) return null;
   const poser = roleAutorise('action:poser_gel_journal_acces', lu.role);
   const lever = roleAutorise('action:lever_gel_journal_acces', lu.role);
   return poser || lever ? { poser, lever } : null;
@@ -252,14 +260,14 @@ function tailleDeLaPage(demandee: number | undefined): number {
 /** Une page de la liste des gels, les plus récents d'abord, tracée avant d'être rendue. */
 export async function lireLesGels(
   prisma: PrismaClient,
-  d: { lecteurId: string; adresse: string | null; curseur: string | null; taille?: number },
+  d: { lecteur: ActeurDuGel; adresse: string | null; curseur: string | null; taille?: number },
   cles: ClesPii
 ): Promise<{ gels: GelDeLaListe[]; suivant: string | null }> {
   const apres = d.curseur === null ? null : lireLeCurseur(d.curseur);
   const taille = tailleDeLaPage(d.taille);
   return prisma.$transaction(async (tx) => {
-    if ((await droitsDuLecteurSurLesGels(tx, d.lecteurId)) === null)
-      throw new ErreurGelJournal('droit_absent');
+    // La règle des gestes : le rôle de la session, puis l'admin actif et VALIDÉ relu en base.
+    await exigerUnAdministrateurValide(tx, d.lecteur, 'ecran:gels_journal_acces');
     const lues = await tx.journalAccesConsoleGel.findMany({
       ...(apres === null
         ? {}
@@ -292,7 +300,7 @@ export async function lireLesGels(
       await tx.journalAccesConsole.create({
         data: {
           id: randomUUID(),
-          utilisateurConsoleId: d.lecteurId,
+          utilisateurConsoleId: d.lecteur.id,
           nature: 'lecture_journal_acces',
           cibleId: vise,
           ipHash: d.adresse === null ? null : empreinteAdresseReseau(d.adresse, cles),

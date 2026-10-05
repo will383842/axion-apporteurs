@@ -62,13 +62,13 @@ export default async function PageDesGels(props: {
   const parametres = await props.searchParams;
   const d = dependancesDuProcessus({ apres: after, env: process.env });
   const jeton = (await cookies()).get(COOKIE_DE_SESSION_CONSOLE.nom)?.value;
-  const verdict = await requireRole('action:lire_journal_des_acces', jeton, portsDeRoleConsole(d));
+  const verdict = await requireRole('ecran:gels_journal_acces', jeton, portsDeRoleConsole(d));
   if (!verdict.ok) {
     // Un rôle qui n'a pas l'écran voit l'accès refusé ; une session absente ou tombée, la connexion.
     if (REFUS_DE_ROLE.includes(verdict.motif)) redirect('/console/acces-refuse');
     redirect(`/console/connexion?suite=${encodeURIComponent(ECRAN)}`);
   }
-  const lecteurId = verdict.utilisateur.id;
+  const lecteur = verdict.utilisateur;
   const curseur = typeof parametres.apres === 'string' ? parametres.apres : null;
 
   let page: Awaited<ReturnType<typeof lireLesGels>>;
@@ -76,7 +76,7 @@ export default async function PageDesGels(props: {
     page = await lireLesGels(
       d.prisma,
       {
-        lecteurId,
+        lecteur,
         curseur,
         adresse: adresseDuClient(await headers(), SAUTS_DE_CONFIANCE),
       },
@@ -88,7 +88,7 @@ export default async function PageDesGels(props: {
     throw e;
   }
   // La liste a relu le droit dans sa transaction ; les gestes, eux, le relisent chacun.
-  const droits = (await droitsDuLecteurSurLesGels(d.prisma, lecteurId)) ?? {
+  const droits = (await droitsDuLecteurSurLesGels(d.prisma, lecteur.id)) ?? {
     poser: false,
     lever: false,
   };
