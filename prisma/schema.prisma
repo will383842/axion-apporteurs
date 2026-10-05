@@ -650,6 +650,9 @@ model EvenementRecu {
   @@unique([source, eventId])
   @@index([statut, receivedAt])
   @@index([sujetRef])
+  /// INT-T76-P (recommandation d'A02) : la première réception de la version courante, départ de la
+  /// fenêtre de bascule, se lit par cet index, jamais par un parcours de la table.
+  @@index([source, schemaVersion, receivedAt])
   @@map("evenements_recus")
 }
 
