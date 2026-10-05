@@ -10,7 +10,7 @@ export const MISE_EN_DEMEURE_CONSOLE = {
   titre: 'Mettre en demeure',
   retour: '← Fiche de l’apporteur',
   phrase:
-    'Une mise en demeure demande à l’apporteur d’exécuter une obligation précise de son contrat. Elle part par courriel, et elle est le préalable à toute résiliation pour manquement.',
+    'Une mise en demeure demande à l’apporteur d’exécuter une obligation précise de son contrat. Elle part par courriel. Sauf inexécution irrémédiable, une résiliation pour manquement n’est possible qu’après elle. Ce n’est ni un avertissement ni une mesure disciplinaire.',
   article: 'Article du contrat en cause',
   libelleArticle: (article: string) => `Article ${article}`,
   faits: 'Les faits',
@@ -19,7 +19,7 @@ export const MISE_EN_DEMEURE_CONSOLE = {
     'Décrivez les faits sans aucun lien, et ne nommez aucune autre personne que l’apporteur.',
   borne: (max: number) => `${max} caractères au plus.`,
   delai: (jours: number) =>
-    `Le délai de ${jours} jours court à partir de l’envoi du courriel ; une résiliation pour manquement n’est possible qu’après.`,
+    `Le délai de ${jours} jours court à partir de l’envoi du courriel. Une résiliation pour manquement n’est possible qu’à son expiration, et seulement si le manquement persiste.`,
   envoyer: 'Envoyer la mise en demeure',
   enregistree:
     'La mise en demeure est enregistrée. Le courriel part à l’apporteur au prochain envoi, et le délai court à partir de cet envoi.',
