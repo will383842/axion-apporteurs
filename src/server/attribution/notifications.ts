@@ -178,6 +178,9 @@ export function parametresDeLaNotification(
       ),
     };
   }
+  // DM-25 : l'entreprise SEULE ; {delaiReponse} vient de la SSOT, posé par l'envoi. Aucun critère
+  // d'antériorité n'entre dans le texte (règle de SEC-12).
+  if (cle === 'attribution_annulee_anteriorite') return { entreprise: c.entreprise };
   throw new Error(`cle_hors_passage : ${cle}`);
 }
 
