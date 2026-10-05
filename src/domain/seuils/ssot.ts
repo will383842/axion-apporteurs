@@ -464,7 +464,7 @@ export const FUSEAU_DES_DELAIS = 'Europe/Paris' as const;
  */
 export type Parametre = {
   readonly valeur: number;
-  readonly unite: 'points_de_base' | 'pages';
+  readonly unite: 'points_de_base' | 'pages' | 'traces';
   readonly source: string;
   readonly verifieLe: string;
 };
@@ -485,6 +485,14 @@ export const PARAMETRES = {
     unite: 'pages',
     source: 'INT-T73-P, borne acceptée par la lentille schema (A02) le 2026-10-04',
     verifieLe: '2026-10-04',
+  },
+  // SEC-67 (REQ-SEC-058) : la borne d'une page du journal des accès à la console, lue par
+  // `lireLeJournalDesAcces`. Au-delà, la lecture rend le curseur de la page suivante.
+  JOURNAL_DES_ACCES_PAGE_MAX: {
+    valeur: 50,
+    unite: 'traces',
+    source: 'SEC-67 ; sécurité, #707, commentaire 5981305490 (la lecture du journal est bornée)',
+    verifieLe: '2026-10-05',
   },
 } as const satisfies Record<string, Parametre>;
 
