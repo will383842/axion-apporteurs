@@ -234,17 +234,17 @@ function curseurApres(cible: string, derniere: TraceDAcces): string {
  * UUID. Tout écart lève `CurseurDuJournalIllisible`.
  */
 function positionDuCurseur(curseur: string, cible: string): Position {
-  if (curseur.length === 0 || curseur.length > LONGUEUR_MAX_DU_CURSEUR)
+  // La longueur et l'alphabet se jugent AVANT de décoder : un curseur vide échoue au motif.
+  if (curseur.length > LONGUEUR_MAX_DU_CURSEUR || !/^[A-Za-z0-9_-]+$/.test(curseur))
     throw new CurseurDuJournalIllisible();
-  if (!/^[A-Za-z0-9_-]+$/.test(curseur)) throw new CurseurDuJournalIllisible();
   let charge: unknown;
   try {
     charge = JSON.parse(Buffer.from(curseur, 'base64url').toString('utf8'));
   } catch {
     throw new CurseurDuJournalIllisible();
   }
-  if (typeof charge !== 'object' || charge === null || Array.isArray(charge))
-    throw new CurseurDuJournalIllisible();
+  // Un tableau ou une valeur simple échoue aux champs exacts ci-dessous ; `null` doit l'être ici.
+  if (typeof charge !== 'object' || charge === null) throw new CurseurDuJournalIllisible();
   const c = charge as Record<string, unknown>;
   if (Object.keys(c).sort().join() !== CHAMPS_DU_CURSEUR.join())
     throw new CurseurDuJournalIllisible();
@@ -320,11 +320,8 @@ export async function lireLeJournalDesAcces(
       orderBy: [{ survenuAt: 'desc' }, { id: 'desc' }],
       take: borne,
     });
-    const derniere = traces.at(-1);
-    return {
-      traces,
-      suivant:
-        traces.length === borne && derniere !== undefined ? curseurApres(id, derniere) : null,
-    };
+    // Une page PLEINE a une suite possible : son dernier rang est occupé.
+    const derniere = traces[borne - 1];
+    return { traces, suivant: derniere === undefined ? null : curseurApres(id, derniere) };
   });
 }
