@@ -134,7 +134,11 @@ describe('REQ-SEC-058 — la borne de la lecture du journal des accès vit en SS
     const p = PARAMETRES.JOURNAL_DES_ACCES_PAGE_MAX;
     expect(Number.isInteger(p.valeur) && p.valeur > 0).toBe(true);
     expect(p.unite).toBe('traces');
-    expect(p.source).toMatch(/SEC-67/);
+    // La source, MOT POUR MOT de la sécurité (#563, commentaire 5987408790) : un PLAFOND du serveur.
+    expect(p.valeur).toBe(50);
+    expect(p.source).toBe(
+      'SEC-67 ; sécurité, #707, commentaire 5981305490 ; valeur : sécurité, #563'
+    );
     expect(p.verifieLe).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });
@@ -205,6 +209,30 @@ describe('REQ-SEC-058 — une page ne dépasse jamais la borne, et la suivante r
     expect(natures).toEqual([
       expect.objectContaining({ nature: 'lecture_journal_acces', cibleId: CIBLE }),
       expect.objectContaining({ nature: 'lecture_journal_acces', cibleId: CIBLE }),
+    ]);
+  });
+});
+
+describe('REQ-SEC-058 — une page vide se trace comme une autre', () => {
+  it('REQ-SEC-058 : TÉMOIN — une page VIDE écrit sa ligne `lecture_journal_acces` avant de lire : au bout d’un journal plein à la borne, et sur un journal vide', async () => {
+    const plein = univers(journal(BORNE()));
+    const premiere = await lirePage(plein);
+    expect(premiere.suivant).not.toBeNull();
+    const vide = await lirePage(plein, premiere.suivant);
+    expect(vide).toEqual({ traces: [], suivant: null });
+    expect(plein.appels.slice(4).map((a) => a.quoi)).toEqual([
+      'utilisateur.findUnique',
+      'utilisateur.findUnique',
+      'journal.create',
+      'journal.findMany',
+    ]);
+    const neuf = univers([]);
+    await lirePage(neuf);
+    expect(neuf.appels.map((a) => a.quoi)).toEqual([
+      'utilisateur.findUnique',
+      'utilisateur.findUnique',
+      'journal.create',
+      'journal.findMany',
     ]);
   });
 });
