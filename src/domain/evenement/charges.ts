@@ -27,6 +27,7 @@
 import { z } from 'zod';
 import { ALGORITHME } from './journal';
 import { EVENEMENTS_APPORTEUR, MOTIFS_RESILIATION, STATUTS_APPORTEUR } from '../apporteur/statut';
+import { ARTICLES_MISE_EN_DEMEURE } from '../apporteur/resiliation';
 import {
   CRITERES_D_ANTERIORITE,
   ETATS_ATTRIBUTION,
@@ -107,7 +108,8 @@ export type TypeEvenementJournal =
   | 'rattachement_manuel_modifie'
   | 'anomalie_gel_modifie'
   | 'utilisateur_console_modifie'
-  | 'journal_acces_gel_modifie';
+  | 'journal_acces_gel_modifie'
+  | 'apporteur_mis_en_demeure';
 
 /**
  * SEC-61 : le gel du journal des accès à la console — ses gestes, ses motifs (les valeurs de
@@ -400,6 +402,20 @@ export const CHARGES_PAR_TYPE = {
       portee: z.object({ type: z.enum(PORTEES_GEL_JOURNAL) }).strict(),
       referenceEmpreinte: FORMES.empreinte(),
       acteur: FORMES.acteurSansIdentite(),
+    })
+    .strict(),
+  /**
+   * SEC-19 (forme d'A02, #703, 5980982895 §2) : la mise en demeure datée d'un apporteur (art. 11.2),
+   * agrégat `apporteur`. L'article, de la liste FERMÉE, et l'acteur de la console : NI les faits NI
+   * aucun texte libre — ils ne vivent que dans le courriel `mise_en_demeure`, dont l'`envoye_at` fait
+   * courir le délai. Un fait daté, pas un antécédent : rien ne compte ces événements.
+   */
+  apporteur_mis_en_demeure: z
+    .object({
+      article: z.enum(ARTICLES_MISE_EN_DEMEURE),
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
     })
     .strict(),
 } satisfies Record<TypeEvenementJournal, z.ZodTypeAny>;

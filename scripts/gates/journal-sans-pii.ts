@@ -166,9 +166,12 @@ export const LISTE_BLANCHE_PAR_CONTENU: { chemin: string; motif: string; lignes:
       'la valeur `evenement` du déclencheur d’une notification (acceptance d’UX-P1-10), pas la table',
     lignes: [
       "export type Declencheur = 'evenement' | 'echeance_piece' | 'calendrier_fixe';",
-      // Un texte admis vaut pour UNE ligne : les douze clés déclenchées par un fait du dossier (neuf de
-      // l'apporteur, dont l'annulation pour antériorité de DM-25, et les trois de l'administration de
-      // la console, SEC-30 ; le lien de la console calque celui de l'espace et n'en écrit pas).
+      // Un texte admis vaut pour UNE ligne : les quatorze clés déclenchées par un fait du dossier (onze
+      // de l'apporteur, dont la mise en demeure et la résiliation de SEC-19 et l'annulation pour
+      // antériorité de DM-25, et les trois de l'administration de la console, SEC-30 ; le lien de la
+      // console calque celui de l'espace et n'en écrit pas).
+      "declencheur: 'evenement',",
+      "declencheur: 'evenement',",
       "declencheur: 'evenement',",
       "declencheur: 'evenement',",
       "declencheur: 'evenement',",
