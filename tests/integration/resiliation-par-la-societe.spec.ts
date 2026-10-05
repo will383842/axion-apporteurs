@@ -254,7 +254,11 @@ describe('REQ-JUR-015 — à la décision : la date d’effet, sans changement d
       app.$transaction((tx) =>
         notifierLaResiliationParLaSociete(
           tx,
-          { apporteurId, acteur: { par: 'systeme' } as never, maintenant: DECISION },
+          {
+            apporteurId,
+            acteur: JSON.parse('{"par":"systeme"}') as ReturnType<typeof ACTEUR>,
+            maintenant: DECISION,
+          },
           CLES
         )
       )
