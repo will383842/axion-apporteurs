@@ -394,7 +394,7 @@ describe('REQ-JUR-061 — l’issue contradictoire, jugée sous verrou dans la t
     expect(await depotDeReception(f.client).inscrire(ligne('refus'))).toBe('issue_contradictoire');
     expect(f.appels.map((a) => a.quoi)).toEqual(['transaction', 'verrou', 'lecture']);
     const [verrou, lecture] = [f.appels[1]!.args, f.appels[2]!.args] as unknown[][];
-    expect(verrou!.slice(1)).toEqual(['reception.financement.etape', 'dossier-1']);
+    expect(verrou!.slice(1)).toEqual(['reception.etape-de-financement', 'dossier-1']);
     expect(String(lecture![0])).toMatch(/"charge"->>'dossierId' = \? AND "charge"->>'etape' = \?/);
     expect(lecture!.slice(1)).toEqual(['dossier-1', 'accord']);
   });

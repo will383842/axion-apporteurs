@@ -31,7 +31,7 @@
  * refermée (`v3EncoreTraitee`, `BASCULE_CONTRAT_V3_V4_JOURS`) ; au-delà, elle s'inscrit `held`,
  * rejouable, jamais refusée. Avant toute v4, la v3 est la norme.
  *
- * `financement.etape` (v4) : sa clé de fait est `financement.etape:<dossierId>:<etape>`, une fois par
+ * Une ÉTAPE DE FINANCEMENT (v4) : sa clé de fait est `<type>:<dossierId>:<etape>`, une fois par
  * étape et par dossier, et un rejeu est un doublon. Une SECONDE ISSUE pour le même dossier (un
  * `accord` après un `refus`, ou l'inverse) est refusée, nommée `issue_contradictoire` (422 et une
  * alerte), jugée dans la transaction de l'inscription, sous un verrou du dossier.
@@ -310,7 +310,7 @@ export interface EvenementAInscrire {
 export interface DepotDeReception {
   /**
    * Inscrit, ou dit `doublon` quand la BASE refuse la seconde ligne, ou `issue_contradictoire`
-   * quand un `financement.etape` porte la seconde issue d'un dossier (INT-T76-P).
+   * quand une étape de financement porte la seconde issue d'un dossier (INT-T76-P).
    */
   inscrire(e: EvenementAInscrire): Promise<'inscrit' | 'doublon' | 'issue_contradictoire'>;
   /**
@@ -457,7 +457,7 @@ export async function recevoirEvenementAxionia(
 const ISSUE_CONTRAIRE: Readonly<Record<string, string>> = { accord: 'refus', refus: 'accord' };
 
 /** Le domaine du verrou d'un dossier de financement, à la réception. */
-const DOMAINE_DU_VERROU_DE_FINANCEMENT = 'reception.financement.etape';
+const DOMAINE_DU_VERROU_DE_FINANCEMENT = 'reception.etape-de-financement';
 
 /**
  * La base dit `doublon` : violation d'unicité, (source, eventId) ou l'index de la clé métier. Une
