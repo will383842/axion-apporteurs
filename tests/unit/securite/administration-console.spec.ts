@@ -391,6 +391,27 @@ describe('REQ-SEC-023 — inviter', () => {
       adresseConnexion: 'https://partners.exemple.test/console/connexion',
     });
 
+  it('REQ-JUR-068 : TÉMOIN — une invitation à un instant sans version publiée de « Vos données dans la console » est refusée DANS la transaction, et aucun courriel ne part', async () => {
+    // JUR-T63 (note de la sécurité sur #745) : MAINTENANT précède la première publication de la page.
+    const u = univers([]);
+    const refus = await inviter(u.client, {
+      acteur: ADMIN,
+      email: 'nouveau@exemple.test',
+      role: 'lecteur',
+      cles: CLES,
+      maintenant: MAINTENANT,
+      adresseConnexion: 'https://partners.exemple.test/console/connexion',
+    }).then(
+      () => null,
+      (e: unknown) => e
+    );
+    expect(String(refus)).toMatch(/invitation_sans_version_de_la_page/);
+    // Le refus est levé à l'intérieur de la transaction : la base y annule la création du compte et
+    // son événement (le faux client ne simule pas cette annulation). Aucun courriel n'est rendu, donc
+    // aucun ne part : l'envoi suit la réponse de l'action.
+    expect(u.appels[0]).toEqual({ quoi: '$transaction', args: null });
+  });
+
   it('REQ-SEC-023 : TÉMOIN — un rôle autre qu’admin n’invite pas, sans transaction', async () => {
     const u = univers([]);
     expect(await motif(inviterUn(u, 'lecteur', { id: ADMIN.id, role: 'lecteur' }))).toBe(
