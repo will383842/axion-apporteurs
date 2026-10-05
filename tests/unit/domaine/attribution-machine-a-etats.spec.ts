@@ -754,6 +754,9 @@ function ligneDe(champs: Partial<LigneSimulee>): LigneSimulee {
   };
 }
 
+/** La date du dépôt que le banc rend (DM-25) ; un témoin la fixe autour du fait fondateur. */
+let deposeeDuBanc = new Date('2027-01-01T00:00:00.000Z');
+
 /** Un client de transaction : `$queryRaw` rend les lignes de la file, une par verrou. */
 function txSimule(lignes: LigneSimulee[]) {
   const verrous: { sql: string; valeurs: unknown[] }[] = [];
@@ -771,8 +774,12 @@ function txSimule(lignes: LigneSimulee[]) {
         return {};
       },
       // DM-55 : la libération de l'occupation lit le SIREN ; sans ligne, aucun rang n'est notifié.
-      findUnique: async () => null,
+      // DM-25 : l'antériorité lit la date du dépôt, POSTÉRIEURE aux faits du banc par défaut.
+      findUnique: async (q: { select?: { deposeeAt?: boolean } }) =>
+        q.select?.deposeeAt ? { deposeeAt: deposeeDuBanc } : null,
     },
+    // DM-25 : l'antériorité établie écrit sa notification ; le banc partagé l'accepte sans la juger.
+    notificationEspace: { create: async () => ({}) },
   };
   return { tx: tx as never, verrous, mises };
 }
@@ -1583,5 +1590,176 @@ describe('REQ-DM-006 — l’écrivain porte le motif, et écrit la notification
       { cle: 'decision_attribution', apporteurId: APPORTEUR },
       { cle: 'premier_rang_libere', apporteurId: APPORTEUR_RANG1 },
     ]);
+  });
+});
+
+/**
+ * DM-25 (juriste) : le fait fondateur de l'antériorité est ANTÉRIEUR au dépôt. Un fait daté du dépôt
+ * ou après lui n'annule rien : refus nommé `fait_posterieur_au_depot`, tenu à l'écriture même.
+ */
+describe('REQ-DM-006 — l’antériorité ne se fonde que sur un fait ANTÉRIEUR au dépôt (DM-25)', () => {
+  const DEPOT = new Date('2026-11-15T10:00:00.000Z');
+  const ms = (d: Date, delta: number) => new Date(d.getTime() + delta).toISOString();
+
+  beforeEach(() => {
+    journalSimule.ajouterEvenement.mockReset();
+    journalSimule.ajouterEvenement.mockResolvedValue({ id: '1', selfHash: 'x' });
+    deposeeDuBanc = DEPOT;
+  });
+
+  it.each([
+    ['daté du dépôt même', 0],
+    ['une milliseconde après le dépôt', 1],
+  ])(
+    'REQ-DM-006 : TÉMOIN — un fait fondateur %s : refus nommé, et RIEN n’est écrit',
+    async (_, delta) => {
+      const { transitionnerUneAttribution } = await ecrivain();
+      const { tx, mises } = txSimule([ligneDe({ statut: 'signee' })]);
+      const e = await refusDe(
+        transitionnerUneAttribution(tx, {
+          attributionId: ID,
+          transition: 'anteriorite_etablie',
+          critere: 'devis_signe',
+          fait: { ...DEVIS, le: ms(DEPOT, delta) },
+          acteur: { par: 'systeme' },
+          maintenant: MAINTENANT,
+        })
+      );
+      expect(e.code).toBe('fait_posterieur_au_depot');
+      expect(mises).toStrictEqual([]);
+      expect(evenementsEcrits()).toStrictEqual([]);
+    }
+  );
+
+  it('REQ-DM-006 : TÉMOIN — un fait une milliseconde AVANT le dépôt fonde l’antériorité', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const { tx } = txSimule([ligneDe({ statut: 'signee' })]);
+    const r = await transitionnerUneAttribution(tx, {
+      attributionId: ID,
+      transition: 'anteriorite_etablie',
+      critere: 'devis_signe',
+      fait: { ...DEVIS, le: ms(DEPOT, -1) },
+      acteur: { par: 'systeme' },
+      maintenant: MAINTENANT,
+    });
+    expect(r).toStrictEqual({ de: 'signee', vers: 'annulee' });
+  });
+});
+
+/**
+ * DM-25 (juriste, critère d) : l'antériorité établie après coup est notifiée à l'APPORTEUR, une fois,
+ * avec l'événement qui la fonde ; pour un conseiller, la console seule (aucune notification).
+ */
+describe('REQ-JUR-007 — l’antériorité établie notifie l’apporteur (DM-25)', () => {
+  const DEPOT_APRES = new Date('2027-01-01T00:00:00.000Z');
+
+  function txNotifiant(ligne: LigneSimulee) {
+    const base = txSimule([ligne]);
+    const notifications: unknown[] = [];
+    const attribution = (base.tx as { attribution: object }).attribution;
+    const tx = Object.assign(base.tx as object, {
+      attribution: {
+        ...attribution,
+        findUnique: async (q: { select?: { deposeeAt?: boolean } }) =>
+          q.select?.deposeeAt ? { deposeeAt: DEPOT_APRES } : null,
+      },
+      notificationEspace: {
+        create: async (arg: unknown) => {
+          notifications.push(arg);
+          return {};
+        },
+      },
+    });
+    return { ...base, tx: tx as never, notifications };
+  }
+
+  beforeEach(() => {
+    journalSimule.ajouterEvenement.mockReset();
+    journalSimule.ajouterEvenement.mockResolvedValue({ id: '77', selfHash: 'x' });
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — l’apporteur reçoit attribution_annulee_anteriorite, UNE fois, avec l’événement de l’annulation', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txNotifiant(ligneDe({ statut: 'signee' }));
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'anteriorite_etablie',
+      critere: 'devis_signe',
+      fait: DEVIS,
+      acteur: { par: 'systeme' },
+      maintenant: MAINTENANT,
+    });
+    expect(t.notifications).toStrictEqual([
+      {
+        data: {
+          apporteurId: APPORTEUR,
+          cle: 'attribution_annulee_anteriorite',
+          attributionId: ID,
+          evenementId: BigInt(77),
+        },
+      },
+    ]);
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — pour un conseiller, aucune notification : la console seule', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txNotifiant(ligneDe({ statut: 'signee', apporteur_id: null }));
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'anteriorite_etablie',
+      critere: 'devis_signe',
+      fait: DEVIS,
+      acteur: { par: 'systeme' },
+      maintenant: MAINTENANT,
+    });
+    expect(t.notifications).toStrictEqual([]);
+  });
+});
+
+/**
+ * DM-25 — la RÉFÉRENCE du fait fondateur d'`anteriorite_etablie` (arbitrage de la coordination sur
+ * #731, voie (a) d'A02, 5984318182 ; condition de la sécurité) : `ref = sha256_hex("partners.
+ * anteriorite.v1|" + nature + "|" + id)`, sur l'identifiant OPAQUE d'axion-ia, à l'octet. Un id qui
+ * n'a pas la forme d'un UUID est refusé, nommé : si la règle d'axion-ia change, elle se rouvre.
+ */
+describe('REQ-JUR-007 — la référence du fait fondateur', () => {
+  const ID = '0190f0a0-0000-4000-8000-000000000d01';
+
+  it('REQ-JUR-007 : TÉMOIN — le vecteur FIGÉ, calculé hors du code (printf … | sha256sum)', async () => {
+    const { refDuFaitFondateur } = await import('../../../src/server/attribution/transitionner');
+    expect(refDuFaitFondateur('devis', ID)).toBe(
+      '7708e44da73d14cdf9432be0034469a6bbc10465bd1ba4b06f7a3ced277da029'
+    );
+    expect(refDuFaitFondateur('facture', ID)).toBe(
+      '44f1913396b705256a25e686ae9c3aa691aadce7c7143ea1d06e0a318aa422e5'
+    );
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — le même fait donne la même ref ; un devis et une facture de même id, deux ref', async () => {
+    const { refDuFaitFondateur } = await import('../../../src/server/attribution/transitionner');
+    expect(refDuFaitFondateur('devis', ID)).toBe(refDuFaitFondateur('devis', ID));
+    expect(refDuFaitFondateur('devis', ID)).not.toBe(refDuFaitFondateur('facture', ID));
+    expect(refDuFaitFondateur('devis', ID)).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — un id vide ou hors forme UUID est refusé, nommé (reference_du_fait_invalide)', async () => {
+    const { refDuFaitFondateur } = await import('../../../src/server/attribution/transitionner');
+    for (const id of ['', 'FAC-2026-0001', '42', ` ${ID}`, `${ID}x`]) {
+      expect(() => refDuFaitFondateur('devis', id), JSON.stringify(id)).toThrow(
+        /^reference_du_fait_invalide/
+      );
+    }
+  });
+
+  it('REQ-JUR-007 : TÉMOIN STATIQUE — la chaîne ne lit que la nature et l’id : ni numero, ni clientId, ni siren', () => {
+    const source = readFileSync('src/server/attribution/transitionner.ts', 'utf8');
+    const debut = source.indexOf('export function refDuFaitFondateur');
+    expect(debut).toBeGreaterThan(-1);
+    const corps = source.slice(debut, source.indexOf('\n}\n', debut));
+    expect(corps).not.toMatch(/numero|clientId|siren|nom\b/i);
+    expect(corps).toMatch(/`partners\.anteriorite\.v1\|\$\{nature\}\|\$\{id\}`/);
+    // Et le job ne lui passe que l'identifiant du fait reçu.
+    const job = readFileSync('src/server/jobs/anteriorite-retroactive.ts', 'utf8');
+    expect(job).toMatch(/refDuFaitFondateur\(fondement\.fait\.nature, fondement\.fait\.id\)/);
   });
 });

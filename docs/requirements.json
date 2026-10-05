@@ -1914,6 +1914,7 @@
       "etape": 10,
       "phase": 2,
       "taches": [
+        "T-ARG-043",
         "UX-P2-01"
       ]
     },
@@ -3583,7 +3584,6 @@
       "etape": 7,
       "phase": 2,
       "taches": [
-        "QA-T28",
         "QA-T29"
       ]
     },
