@@ -1,0 +1,59 @@
+{
+  "$comment": "Vecteurs figés de la chaîne canonique de relecture (INT-T74-P, condition 3 de la sécurité, forme d'A02). Le HMAC est calculé HORS DU CODE, par openssl, sur la chaîne attendue, sous un secret de test factice : printf '%s' \"<chaine>\" | openssl dgst -sha256 -hmac 'secret-de-test-relecture-factice'. Axion-ia (INT-T72-A) reprend ce fichier à l'identique et rejoue les mêmes vecteurs.",
+  "secret": "secret-de-test-relecture-factice",
+  "commande": "printf '%s' \"<chaine>\" | openssl dgst -sha256 -hmac 'secret-de-test-relecture-factice'",
+  "vecteurs": [
+    {
+      "nom": "page pleine",
+      "entrees": {
+        "horodatage": "1790000000",
+        "afterSequence": "3",
+        "limit": "100",
+        "derniereSequence": "5",
+        "suite": "1",
+        "corps": "{\"event_id\":\"a\",\"sequence\":4}\n{\"event_id\":\"b\",\"sequence\":5}"
+      },
+      "chaine": "1790000000.3.100.5.1.{\"event_id\":\"a\",\"sequence\":4}\n{\"event_id\":\"b\",\"sequence\":5}",
+      "hmacSha256": "12e699987aea89e500f450f17b90a1a38e7357164caff37bad8168976675fd1f"
+    },
+    {
+      "nom": "page vide",
+      "entrees": {
+        "horodatage": "1790000060",
+        "afterSequence": "7",
+        "limit": "100",
+        "derniereSequence": "7",
+        "suite": "0",
+        "corps": ""
+      },
+      "chaine": "1790000060.7.100.7.0.",
+      "hmacSha256": "6be98055b73733b0fd92c20bad14d915526bd25c165804f5893017284b62bb12"
+    },
+    {
+      "nom": "dernière page",
+      "entrees": {
+        "horodatage": "1790000120",
+        "afterSequence": "9",
+        "limit": "500",
+        "derniereSequence": "10",
+        "suite": "0",
+        "corps": "{\"event_id\":\"c\",\"sequence\":10}"
+      },
+      "chaine": "1790000120.9.500.10.0.{\"event_id\":\"c\",\"sequence\":10}",
+      "hmacSha256": "6596c0a9592e1a11c39d58509c7ee7e0d3d4fe651c094cbb567b2fd218c13475"
+    },
+    {
+      "nom": "au-delà de MAX_SAFE_INTEGER",
+      "entrees": {
+        "horodatage": "1790000180",
+        "afterSequence": "9007199254740993",
+        "limit": "100",
+        "derniereSequence": "9007199254740993",
+        "suite": "0",
+        "corps": ""
+      },
+      "chaine": "1790000180.9007199254740993.100.9007199254740993.0.",
+      "hmacSha256": "e8808ca9eff9f1ceb5847760c76bdfd19d4b74ff5eb605a01483a64db4c87221"
+    }
+  ]
+}

@@ -40,6 +40,11 @@ export const TACHES = {
    * (`decision_attribution`, `premier_rang_libere`) ; la fenêtre de redéclaration court de l'envoi.
    */
   notifications_espace_envoyer: { req: 'REQ-UX-016' },
+  /**
+   * DM-25 — le rapprochement QUOTIDIEN des projections de l'antériorité avec les attributions
+   * occupantes : l'antériorité établie après coup annule le dépôt (`rapprocherLesAnteriorites`).
+   */
+  anteriorites_rapprocher: { req: 'REQ-JUR-007' },
   /** DM-59 — l'effacement, à échéance, de la valeur d'une rectification demandée par le contact. */
   droits_contact_purger: { req: 'REQ-JUR-065' },
   /** DM-60 — l'anonymisation, cinq ans après sa clôture, de la trace d'une demande de droit du contact. */
@@ -48,6 +53,10 @@ export const TACHES = {
   appareils_purger: { req: 'REQ-SEC-003' },
   /** SEC-58 — la purge, à échéance, du journal des accès à la console. */
   journal_acces_console_purger: { req: 'REQ-SEC-023' },
+  /** SEC-65 — la suppression des sessions finies, six mois après leur fin. */
+  sessions_purger: { req: 'REQ-SEC-003' },
+  /** SEC-65 — l'effacement du nom et de l'adresse d'un accès désactivé de la console, cinq ans après. */
+  utilisateurs_console_effacer: { req: 'REQ-JUR-068' },
   /**
    * INT-T08-P — la réconciliation quotidienne avec axion-ia : relecture de sa file depuis la plus
    * haute séquence reçue, rejeu des trous (`src/server/jobs/reconciliation.ts`).

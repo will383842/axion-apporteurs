@@ -15,6 +15,9 @@
  *   — aucun devis signé pendant `provisoire` : la commande est gardée, et le module serveur enchaîne
  *     `confirmee` puis `devis_signe` à la confirmation (avis d'A07) ;
  *   — aucune sortie `perdue` depuis `signee`, `convertie` ou `figee_resiliation` ;
+ *   — SEC-19 (A02, #703 ; juriste, art. 12) : la fin du contrat de l'apporteur porteur a DEUX
+ *     sorties exclusives — `figee` (vers `figee_resiliation`) depuis un état AVEC commande
+ *     (`signee`, `convertie`) seulement, `fin_de_contrat` depuis tout état sans commande ;
  *   — la caducité d'une commande (condition suspensive défaillie) a UN code par destination ; c'est
  *     `codeDeCaducite` qui le choisit selon la fenêtre, jamais l'appelant.
  *
@@ -74,6 +77,9 @@ export const EVENEMENTS_ATTRIBUTION = [
   // DM-67 (REQ-DM-006, art. 3.3) : l'antériorité de la Société établie après l'enregistrement, par
   // des faits datés avant le dépôt. Depuis tout état OCCUPANT ; les commissions acquises restent.
   'anteriorite_etablie',
+  // SEC-19 (REQ-DM-011, art. 12) : la résiliation du contrat de l'apporteur porteur, dans sa
+  // transaction. Une transition, pas un état : ses arrivées sont `annulee` et `expiree`.
+  'fin_de_contrat',
 ] as const;
 export type TransitionAttribution = (typeof EVENEMENTS_ATTRIBUTION)[number];
 
@@ -90,7 +96,7 @@ const SUITES_SANS_PERTE = {
   perdue: 'perdue',
   expiree: 'expiree',
   anomalie_confirmee: 'invalidee',
-  figee: 'figee_resiliation',
+  fin_de_contrat: 'expiree',
   anteriorite_etablie: 'annulee',
 } as const;
 
@@ -100,7 +106,12 @@ export const TRANSITIONS_ATTRIBUTION: {
     Partial<Record<TransitionAttribution, EtatAttribution>>
   >;
 } = {
-  en_attente: { retiree: 'annulee', file_expiree: 'expiree', redeclaree: 'expiree' },
+  en_attente: {
+    retiree: 'annulee',
+    file_expiree: 'expiree',
+    redeclaree: 'expiree',
+    fin_de_contrat: 'annulee',
+  },
   provisoire: {
     confirmee: 'active',
     confirmee_par_courriel: 'active',
@@ -111,7 +122,7 @@ export const TRANSITIONS_ATTRIBUTION: {
     annulee_par_apporteur: 'annulee',
     annulee_par_la_console: 'annulee',
     liberee_sans_confirmation: 'perimee',
-    figee: 'figee_resiliation',
+    fin_de_contrat: 'annulee',
     anteriorite_etablie: 'annulee',
   },
   active: { rdv_pris: 'rdv_pris', perimee: 'perimee', ...SUITES_SANS_PERTE },
@@ -121,7 +132,7 @@ export const TRANSITIONS_ATTRIBUTION: {
     perdue: 'perdue',
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
-    figee: 'figee_resiliation',
+    fin_de_contrat: 'expiree',
     anteriorite_etablie: 'annulee',
   },
   signee: {
@@ -157,6 +168,8 @@ export const REFUSEES_AU_CONSEILLER = [
   'non_confirmee_par_courriel',
   'anomalie_confirmee',
   'figee',
+  // SEC-19 : la résiliation est celle d'un contrat d'apporteur ; un conseiller n'en a pas.
+  'fin_de_contrat',
 ] as const satisfies readonly TransitionAttribution[];
 
 /** La prise en charge est la naissance du conseiller, et de lui seul. */
@@ -208,7 +221,9 @@ export type CodeTransitionAttribution =
   | 'acteur_refuse'
   | 'motif_incoherent'
   | 'porteur_refuse'
-  | 'anomalie_refusee';
+  | 'anomalie_refusee'
+  | 'fait_posterieur_au_depot'
+  | 'reference_du_fait_invalide';
 
 export class ErreurTransitionAttribution extends Error {
   readonly code: CodeTransitionAttribution;

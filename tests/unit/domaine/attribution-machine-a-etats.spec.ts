@@ -3,6 +3,7 @@
 // @req REQ-DM-007
 // @req REQ-QA-004
 // @req REQ-SEC-042
+// @req REQ-DM-011
 /**
  * DM-08 — la machine à états d'attribution, jugée sans base (REQ-DM-006, REQ-QA-004, REQ-DM-007).
  *
@@ -46,7 +47,12 @@ const NAISSANCES: Record<string, string> = {
   prise_en_charge: 'provisoire',
 };
 const ATTENDUE: Record<string, Record<string, string>> = {
-  en_attente: { retiree: 'annulee', file_expiree: 'expiree', redeclaree: 'expiree' },
+  en_attente: {
+    retiree: 'annulee',
+    file_expiree: 'expiree',
+    redeclaree: 'expiree',
+    fin_de_contrat: 'annulee',
+  },
   provisoire: {
     confirmee: 'active',
     confirmee_par_courriel: 'active',
@@ -57,7 +63,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     annulee_par_apporteur: 'annulee',
     annulee_par_la_console: 'annulee',
     liberee_sans_confirmation: 'perimee',
-    figee: 'figee_resiliation',
+    fin_de_contrat: 'annulee',
     anteriorite_etablie: 'annulee',
   },
   active: {
@@ -68,7 +74,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     perimee: 'perimee',
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
-    figee: 'figee_resiliation',
+    fin_de_contrat: 'expiree',
     anteriorite_etablie: 'annulee',
   },
   rdv_pris: {
@@ -77,7 +83,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     perdue: 'perdue',
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
-    figee: 'figee_resiliation',
+    fin_de_contrat: 'expiree',
     anteriorite_etablie: 'annulee',
   },
   proposition: {
@@ -85,7 +91,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     perdue: 'perdue',
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
-    figee: 'figee_resiliation',
+    fin_de_contrat: 'expiree',
     anteriorite_etablie: 'annulee',
   },
   signee: {
@@ -113,6 +119,7 @@ const REFUS_CONSEILLER = [
   'non_confirmee_par_courriel',
   'anomalie_confirmee',
   'figee',
+  'fin_de_contrat',
   'retiree',
   'file_expiree',
   'redeclaree',
@@ -508,7 +515,7 @@ async function chargesRechargees(): Promise<ModuleCharges> {
 }
 
 describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
-  it('REQ-QA-004 : les treize états, les vingt-six transitions et les naissances, dans cet ordre', async () => {
+  it('REQ-QA-004 : les treize états, les vingt-sept transitions et les naissances, dans cet ordre', async () => {
     const m = await machineRechargee();
     expect(m.ETATS_ATTRIBUTION).toEqual([
       'en_attente',
@@ -552,6 +559,7 @@ describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
       'commande_caduque',
       'commande_caduque_hors_fenetre',
       'anteriorite_etablie',
+      'fin_de_contrat',
     ]);
     expect(m.NAISSANCES_ATTRIBUTION).toEqual(NAISSANCES);
   });
@@ -574,6 +582,7 @@ describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
       'non_confirmee_par_courriel',
       'anomalie_confirmee',
       'figee',
+      'fin_de_contrat',
     ]);
   });
 
@@ -597,9 +606,9 @@ describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
     );
     expect(
       erreur(() =>
-        m.transitionnerAttribution({ de: 'active', transition: 'figee', porteur: 'conseiller' })
+        m.transitionnerAttribution({ de: 'signee', transition: 'figee', porteur: 'conseiller' })
       ).message
-    ).toBe('refusee_au_porteur : active × figee × conseiller');
+    ).toBe('refusee_au_porteur : signee × figee × conseiller');
     expect(
       erreur(() =>
         m.transitionnerAttribution({ de: null, transition: 'retiree', porteur: 'apporteur' })
@@ -754,6 +763,9 @@ function ligneDe(champs: Partial<LigneSimulee>): LigneSimulee {
   };
 }
 
+/** La date du dépôt que le banc rend (DM-25) ; un témoin la fixe autour du fait fondateur. */
+let deposeeDuBanc = new Date('2027-01-01T00:00:00.000Z');
+
 /** Un client de transaction : `$queryRaw` rend les lignes de la file, une par verrou. */
 function txSimule(lignes: LigneSimulee[]) {
   const verrous: { sql: string; valeurs: unknown[] }[] = [];
@@ -771,8 +783,12 @@ function txSimule(lignes: LigneSimulee[]) {
         return {};
       },
       // DM-55 : la libération de l'occupation lit le SIREN ; sans ligne, aucun rang n'est notifié.
-      findUnique: async () => null,
+      // DM-25 : l'antériorité lit la date du dépôt, POSTÉRIEURE aux faits du banc par défaut.
+      findUnique: async (q: { select?: { deposeeAt?: boolean } }) =>
+        q.select?.deposeeAt ? { deposeeAt: deposeeDuBanc } : null,
     },
+    // DM-25 : l'antériorité établie écrit sa notification ; le banc partagé l'accepte sans la juger.
+    notificationEspace: { create: async () => ({}) },
   };
   return { tx: tx as never, verrous, mises };
 }
@@ -981,7 +997,7 @@ describe('REQ-DM-006 — l’écrivain des transitions, en processus (client sim
 
   it('REQ-SEC-042 : TÉMOIN — une ligne sans apporteur est jugée au CONSEILLER : un refus nommé, rien d’écrit', async () => {
     const { transitionnerUneAttribution } = await ecrivain();
-    const { tx, mises } = txSimule([ligneDe({ apporteur_id: null })]);
+    const { tx, mises } = txSimule([ligneDe({ apporteur_id: null, statut: 'signee' })]);
     const e = await refusDe(
       transitionnerUneAttribution(tx, {
         attributionId: ID,
@@ -991,7 +1007,7 @@ describe('REQ-DM-006 — l’écrivain des transitions, en processus (client sim
       })
     );
     expect(e.code).toBe('refusee_au_porteur');
-    expect(e.message).toBe('refusee_au_porteur : provisoire × figee × conseiller');
+    expect(e.message).toBe('refusee_au_porteur : signee × figee × conseiller');
     expect(mises).toStrictEqual([]);
     expect(journalSimule.ajouterEvenement).not.toHaveBeenCalled();
   });
@@ -1583,5 +1599,277 @@ describe('REQ-DM-006 — l’écrivain porte le motif, et écrit la notification
       { cle: 'decision_attribution', apporteurId: APPORTEUR },
       { cle: 'premier_rang_libere', apporteurId: APPORTEUR_RANG1 },
     ]);
+  });
+});
+
+/**
+ * SEC-19 (A02, #703, 5980982895 §3 ; juriste, 5981011150) : la fin du contrat. `fin_de_contrat` est
+ * une transition, pas un état ; `figee` n'est plus admise QUE depuis un état avec commande.
+ */
+describe('REQ-DM-011 — la fin du contrat de l’apporteur porteur', () => {
+  it('REQ-DM-011 : TÉMOIN — chaque état sans commande reçoit sa bonne arrivée par fin_de_contrat', () => {
+    expect(
+      transitionnerAttribution({
+        de: 'en_attente',
+        transition: 'fin_de_contrat',
+        porteur: 'apporteur',
+      })
+    ).toBe('annulee');
+    expect(
+      transitionnerAttribution({
+        de: 'provisoire',
+        transition: 'fin_de_contrat',
+        porteur: 'apporteur',
+      })
+    ).toBe('annulee');
+    for (const de of ['active', 'rdv_pris', 'proposition'] as const) {
+      expect(
+        transitionnerAttribution({ de, transition: 'fin_de_contrat', porteur: 'apporteur' }),
+        de
+      ).toBe('expiree');
+    }
+  });
+
+  it('REQ-DM-011 : TÉMOIN — figee est REFUSÉE depuis provisoire, active, rdv_pris et proposition', () => {
+    for (const de of ['provisoire', 'active', 'rdv_pris', 'proposition'] as const) {
+      expect(
+        () => transitionnerAttribution({ de, transition: 'figee', porteur: 'apporteur' }),
+        de
+      ).toThrow(`transition_refusee : ${de} × figee`);
+    }
+  });
+
+  it('REQ-DM-011 : TÉMOIN — une attribution signée ou convertie passe en figee_resiliation, et fin_de_contrat lui est refusée', () => {
+    for (const de of ['signee', 'convertie'] as const) {
+      expect(transitionnerAttribution({ de, transition: 'figee', porteur: 'apporteur' }), de).toBe(
+        'figee_resiliation'
+      );
+      expect(
+        () => transitionnerAttribution({ de, transition: 'fin_de_contrat', porteur: 'apporteur' }),
+        de
+      ).toThrow('transition_refusee');
+    }
+  });
+
+  it('REQ-DM-011 : TÉMOIN — tout état occupant ou en file, sauf figee_resiliation déjà figée, a exactement une sortie de fin de contrat : fin_de_contrat ou figee, jamais les deux', () => {
+    const aTraiter = [
+      'en_attente',
+      ...ETATS_OCCUPANTS.filter((e) => e !== 'figee_resiliation'),
+    ] as const;
+    expect(aTraiter).toHaveLength(7);
+    for (const de of aTraiter) {
+      const sorties = Object.keys(TRANSITIONS_ATTRIBUTION[de]).filter(
+        (t) => t === 'fin_de_contrat' || t === 'figee'
+      );
+      expect(sorties, de).toHaveLength(1);
+    }
+  });
+
+  it('REQ-DM-011 : un conseiller ne prend jamais fin_de_contrat : la résiliation est celle d’un apporteur', () => {
+    expect(() =>
+      transitionnerAttribution({
+        de: 'active',
+        transition: 'fin_de_contrat',
+        porteur: 'conseiller',
+      })
+    ).toThrow('refusee_au_porteur : active × fin_de_contrat × conseiller');
+  });
+});
+
+/**
+ * DM-25 (juriste) : le fait fondateur de l'antériorité est ANTÉRIEUR au dépôt. Un fait daté du dépôt
+ * ou après lui n'annule rien : refus nommé `fait_posterieur_au_depot`, tenu à l'écriture même.
+ */
+describe('REQ-DM-006 — l’antériorité ne se fonde que sur un fait ANTÉRIEUR au dépôt (DM-25)', () => {
+  const DEPOT = new Date('2026-11-15T10:00:00.000Z');
+  const ms = (d: Date, delta: number) => new Date(d.getTime() + delta).toISOString();
+
+  beforeEach(() => {
+    journalSimule.ajouterEvenement.mockReset();
+    journalSimule.ajouterEvenement.mockResolvedValue({ id: '1', selfHash: 'x' });
+    deposeeDuBanc = DEPOT;
+  });
+
+  it.each([
+    ['daté du dépôt même', 0],
+    ['une milliseconde après le dépôt', 1],
+  ])(
+    'REQ-DM-006 : TÉMOIN — un fait fondateur %s : refus nommé, et RIEN n’est écrit',
+    async (_, delta) => {
+      const { transitionnerUneAttribution } = await ecrivain();
+      const { tx, mises } = txSimule([ligneDe({ statut: 'signee' })]);
+      const e = await refusDe(
+        transitionnerUneAttribution(tx, {
+          attributionId: ID,
+          transition: 'anteriorite_etablie',
+          critere: 'devis_signe',
+          fait: { ...DEVIS, le: ms(DEPOT, delta) },
+          acteur: { par: 'systeme' },
+          maintenant: MAINTENANT,
+        })
+      );
+      expect(e.code).toBe('fait_posterieur_au_depot');
+      expect(mises).toStrictEqual([]);
+      expect(evenementsEcrits()).toStrictEqual([]);
+    }
+  );
+
+  it('REQ-DM-006 : TÉMOIN — un fait une milliseconde AVANT le dépôt fonde l’antériorité', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const { tx } = txSimule([ligneDe({ statut: 'signee' })]);
+    const r = await transitionnerUneAttribution(tx, {
+      attributionId: ID,
+      transition: 'anteriorite_etablie',
+      critere: 'devis_signe',
+      fait: { ...DEVIS, le: ms(DEPOT, -1) },
+      acteur: { par: 'systeme' },
+      maintenant: MAINTENANT,
+    });
+    expect(r).toStrictEqual({ de: 'signee', vers: 'annulee' });
+  });
+});
+
+/**
+ * DM-25 (juriste, critère d) : l'antériorité établie après coup est notifiée à l'APPORTEUR, une fois,
+ * avec l'événement qui la fonde ; pour un conseiller, la console seule (aucune notification).
+ */
+describe('REQ-JUR-007 — l’antériorité établie notifie l’apporteur (DM-25)', () => {
+  const DEPOT_APRES = new Date('2027-01-01T00:00:00.000Z');
+
+  function txNotifiant(ligne: LigneSimulee) {
+    const base = txSimule([ligne]);
+    const notifications: unknown[] = [];
+    const attribution = (base.tx as { attribution: object }).attribution;
+    const tx = Object.assign(base.tx as object, {
+      attribution: {
+        ...attribution,
+        findUnique: async (q: { select?: { deposeeAt?: boolean } }) =>
+          q.select?.deposeeAt ? { deposeeAt: DEPOT_APRES } : null,
+      },
+      notificationEspace: {
+        create: async (arg: unknown) => {
+          notifications.push(arg);
+          return {};
+        },
+      },
+    });
+    return { ...base, tx: tx as never, notifications };
+  }
+
+  beforeEach(() => {
+    journalSimule.ajouterEvenement.mockReset();
+    journalSimule.ajouterEvenement.mockResolvedValue({ id: '77', selfHash: 'x' });
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — l’apporteur reçoit attribution_annulee_anteriorite, UNE fois, avec l’événement de l’annulation', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txNotifiant(ligneDe({ statut: 'signee' }));
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'anteriorite_etablie',
+      critere: 'devis_signe',
+      fait: DEVIS,
+      acteur: { par: 'systeme' },
+      maintenant: MAINTENANT,
+    });
+    expect(t.notifications).toStrictEqual([
+      {
+        data: {
+          apporteurId: APPORTEUR,
+          cle: 'attribution_annulee_anteriorite',
+          attributionId: ID,
+          evenementId: BigInt(77),
+        },
+      },
+    ]);
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — pour un conseiller, aucune notification : la console seule', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const t = txNotifiant(ligneDe({ statut: 'signee', apporteur_id: null }));
+    await transitionnerUneAttribution(t.tx, {
+      attributionId: ID,
+      transition: 'anteriorite_etablie',
+      critere: 'devis_signe',
+      fait: DEVIS,
+      acteur: { par: 'systeme' },
+      maintenant: MAINTENANT,
+    });
+    expect(t.notifications).toStrictEqual([]);
+  });
+});
+
+/**
+ * La juriste (#703, 5981011150) : AUCUNE commande signée après la fin n'est commissionnée. Une
+ * attribution `figee_resiliation` ne reçoit plus de nouvelle commande : la machine refuse
+ * `devis_envoye`, `devis_signe` et `rdv_pris`. L'encaissement d'une commande signée AVANT la fin ouvre
+ * droit sans changer l'état figé : c'est une ligne de commission (phase 2), pas une flèche.
+ */
+describe('REQ-DM-011 — une attribution figée par la résiliation ne reçoit plus de commande', () => {
+  it('REQ-DM-011 : TÉMOIN — figee_resiliation refuse devis_envoye, devis_signe et rdv_pris ; elle ne sort que par expiree ou anteriorite_etablie', () => {
+    for (const transition of [
+      'devis_envoye',
+      'devis_signe',
+      'rdv_pris',
+      'paiement_recu',
+    ] as const) {
+      expect(
+        () =>
+          transitionnerAttribution({ de: 'figee_resiliation', transition, porteur: 'apporteur' }),
+        transition
+      ).toThrow(`transition_refusee : figee_resiliation × ${transition}`);
+    }
+    expect(Object.keys(TRANSITIONS_ATTRIBUTION.figee_resiliation).sort()).toEqual([
+      'anteriorite_etablie',
+      'expiree',
+    ]);
+  });
+});
+
+/**
+ * DM-25 — la RÉFÉRENCE du fait fondateur d'`anteriorite_etablie` (arbitrage de la coordination sur
+ * #731, voie (a) d'A02, 5984318182 ; condition de la sécurité) : `ref = sha256_hex("partners.
+ * anteriorite.v1|" + nature + "|" + id)`, sur l'identifiant OPAQUE d'axion-ia, à l'octet. Un id qui
+ * n'a pas la forme d'un UUID est refusé, nommé : si la règle d'axion-ia change, elle se rouvre.
+ */
+describe('REQ-JUR-007 — la référence du fait fondateur', () => {
+  const ID = '0190f0a0-0000-4000-8000-000000000d01';
+
+  it('REQ-JUR-007 : TÉMOIN — le vecteur FIGÉ, calculé hors du code (printf … | sha256sum)', async () => {
+    const { refDuFaitFondateur } = await import('../../../src/server/attribution/transitionner');
+    expect(refDuFaitFondateur('devis', ID)).toBe(
+      '7708e44da73d14cdf9432be0034469a6bbc10465bd1ba4b06f7a3ced277da029'
+    );
+    expect(refDuFaitFondateur('facture', ID)).toBe(
+      '44f1913396b705256a25e686ae9c3aa691aadce7c7143ea1d06e0a318aa422e5'
+    );
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — le même fait donne la même ref ; un devis et une facture de même id, deux ref', async () => {
+    const { refDuFaitFondateur } = await import('../../../src/server/attribution/transitionner');
+    expect(refDuFaitFondateur('devis', ID)).toBe(refDuFaitFondateur('devis', ID));
+    expect(refDuFaitFondateur('devis', ID)).not.toBe(refDuFaitFondateur('facture', ID));
+    expect(refDuFaitFondateur('devis', ID)).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — un id vide ou hors forme UUID est refusé, nommé (reference_du_fait_invalide)', async () => {
+    const { refDuFaitFondateur } = await import('../../../src/server/attribution/transitionner');
+    for (const id of ['', 'FAC-2026-0001', '42', ` ${ID}`, `${ID}x`]) {
+      expect(() => refDuFaitFondateur('devis', id), JSON.stringify(id)).toThrow(
+        /^reference_du_fait_invalide/
+      );
+    }
+  });
+
+  it('REQ-JUR-007 : TÉMOIN STATIQUE — la chaîne ne lit que la nature et l’id : ni numero, ni clientId, ni siren', () => {
+    const source = readFileSync('src/server/attribution/transitionner.ts', 'utf8');
+    const debut = source.indexOf('export function refDuFaitFondateur');
+    expect(debut).toBeGreaterThan(-1);
+    const corps = source.slice(debut, source.indexOf('\n}\n', debut));
+    expect(corps).not.toMatch(/numero|clientId|siren|nom\b/i);
+    expect(corps).toMatch(/`partners\.anteriorite\.v1\|\$\{nature\}\|\$\{id\}`/);
+    // Et le job ne lui passe que l'identifiant du fait reçu.
+    const job = readFileSync('src/server/jobs/anteriorite-retroactive.ts', 'utf8');
+    expect(job).toMatch(/refDuFaitFondateur\(fondement\.fait\.nature, fondement\.fait\.id\)/);
   });
 });

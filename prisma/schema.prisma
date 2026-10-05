@@ -82,6 +82,7 @@ enum TypeEvenementJournal {
   anomalie_gel_modifie
   utilisateur_console_modifie
   journal_acces_gel_modifie
+  apporteur_mis_en_demeure
 
   @@map("type_evenement_journal")
 }
@@ -117,6 +118,8 @@ model Evenement {
 
   /// DM-55 : les notifications de l'espace que cet événement a produites.
   notificationsEspace NotificationEspace[]
+  /// SEC-19 : la décision de contrat que cet événement fonde.
+  decisionDeContrat   DecisionDeContrat?
 
   @@index([agregat, agregatId])
   @@map("evenements")
@@ -325,6 +328,7 @@ model Apporteur {
   personnesDeclarees      PersonneDeclaree[]
   piecesKyc               PieceKyc[]
   notificationsEspace     NotificationEspace[]
+  decisionsDeContrat      DecisionDeContrat[]
   preferencesNotification PreferenceNotification[]
   verifications           Verification[]
   alertesLiberation       AlerteLiberation[]
@@ -416,7 +420,8 @@ model SessionEspace {
   @@map("sessions_espace")
 }
 
-/// SEC-55 (REQ-SEC-003) : un appareil sur lequel une confirmation renforcée a eu lieu, par apporteur.
+/// SEC-55 (REQ-SEC-003) : un appareil sur lequel un lien ou un code de connexion a été consommé,
+/// par apporteur (la formule du registre de l'article 30).
 /// Un signal de sécurité du COMPTE, jamais une anomalie : il n'est inscrit ni au dossier ni sur un
 /// dépôt, et n'a AUCUNE vue dans l'espace. Seule l'EMPREINTE de l'appareil est gardée — un HMAC
 /// tronqué à 128 bits, sous la clé dédiée des appareils (`kid`) —, jamais l'adresse réseau ni
@@ -742,33 +747,39 @@ model CourrielEnvoye {
 /// AUCUN calcul de délai : un délai court de `courriels_envoyes.envoye_at` (garde
 /// `notifications-lue-at-inerte`).
 model NotificationEspace {
-  id            String           @id @default(uuid()) @db.Uuid
-  apporteurId   String           @map("apporteur_id") @db.Uuid
-  apporteur     Apporteur        @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  cle           String           @db.VarChar(64)
-  attributionId String?          @map("attribution_id") @db.Uuid
-  attribution   Attribution?     @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  id                String             @id @default(uuid()) @db.Uuid
+  apporteurId       String             @map("apporteur_id") @db.Uuid
+  apporteur         Apporteur          @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  cle               String             @db.VarChar(64)
+  attributionId     String?            @map("attribution_id") @db.Uuid
+  attribution       Attribution?       @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   /// L'heure d'inscription dans l'espace, PAS un horodatage opposable : aucun délai ne s'y appuie ;
   /// un délai court de `courriels_envoyes.envoye_at` (relecture A02, 2026-10-02).
-  creeAt        DateTime         @default(now()) @map("cree_at") @db.Timestamptz(3)
-  lueAt         DateTime?        @map("lue_at") @db.Timestamptz(3)
+  creeAt            DateTime           @default(now()) @map("cree_at") @db.Timestamptz(3)
+  lueAt             DateTime?          @map("lue_at") @db.Timestamptz(3)
   /// DM-55 : l'événement du journal qui a produit la notification. L'idempotence tient au fait :
   /// index unique partiel `notifications_espace_une_par_evenement` (cle, evenement_id), et CHECK
   /// `notifications_espace_machine_a_son_evenement` (les deux clés de la machine ont leur événement),
   /// en SQL brut (partners/ADR-0015).
-  evenementId   BigInt?          @map("evenement_id")
+  evenementId       BigInt?            @map("evenement_id")
   /// Relation vers le journal chaîné, jamais employée par le code : on écrit `evenementId` (garde de l'écrivain unique).
-  faitDuJournal Evenement?       @relation(fields: [evenementId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  faitDuJournal     Evenement?         @relation(fields: [evenementId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   /// DM-55 : l'anomalie confirmée qui fonde une `decision_attribution`, et elle seule (CHECK
   /// `notifications_espace_anomalie_decision_seule`, en SQL brut). Ses faits se lisent dans sa ligne au
   /// rendu ; ils n'entrent jamais dans le journal chaîné (décision (d) de la juriste pour DM-12).
-  anomalieId    String?          @map("anomalie_id") @db.Uuid
-  anomalie      Anomalie?        @relation(fields: [anomalieId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  anomalieId        String?            @map("anomalie_id") @db.Uuid
+  anomalie          Anomalie?          @relation(fields: [anomalieId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  /// SEC-19 : la décision de contrat (`mise_en_demeure`, `resiliation`) dont le passage rend le texte et
+  /// les dates (CHECK `notifications_espace_decision_contrat_cle`, en SQL brut). SET NULL : rien ne
+  /// bloque la purge de DM-61.
+  decisionContratId String?            @map("decision_contrat_id") @db.Uuid
+  decisionContrat   DecisionDeContrat? @relation(fields: [decisionContratId], references: [id], onDelete: SetNull, onUpdate: Restrict)
   /// DM-55 : les courriels qui l'ont portée, une tentative par ligne.
-  courriels     CourrielEnvoye[]
+  courriels         CourrielEnvoye[]
 
   @@index([apporteurId, creeAt])
   @@index([attributionId])
+  @@index([decisionContratId])
   /// DM-61 : la purge à douze mois lit `cree_at` seul.
   @@index([creeAt])
   @@map("notifications_espace")
@@ -1533,4 +1544,45 @@ model DevisConnu {
 
   @@index([siren])
   @@map("devis_connus")
+}
+
+// ── SEC-19 : les décisions de contrat (forme d'A02, #703) ───────────────────
+
+/// Le geste d'une décision de contrat (art. 11 et 12).
+enum GesteDecisionContrat {
+  mise_en_demeure
+  resiliation
+
+  @@map("geste_decision_contrat")
+}
+
+/// SEC-19 (REQ-JUR-006) : le texte d'une mise en demeure (`{faits}`) ou d'une résiliation motivée
+/// (`{motif}`), CHIFFRÉ, et ses dates ; jamais au journal chaîné. La ligne nue reste comme preuve du
+/// fait daté : seul le texte est purgé (garde `decisions_de_contrat_garde` et CHECK en SQL brut).
+model DecisionDeContrat {
+  id                  String               @id @default(uuid()) @db.Uuid
+  apporteurId         String               @map("apporteur_id") @db.Uuid
+  apporteur           Apporteur            @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  geste               GesteDecisionContrat
+  /// La liste FERMÉE de l'art. 11.2, pour la mise en demeure seule (CHECK).
+  article             String?              @db.VarChar(4)
+  texteChiffre        Bytes?               @map("texte_chiffre")
+  /// Jours civils de Paris, pour la résiliation seule (CHECK).
+  dateReception       DateTime?            @map("date_reception") @db.Date
+  dateEffet           DateTime?            @map("date_effet") @db.Date
+  /// L'événement qui fonde la décision. Relation jamais employée par le code : on écrit `evenementId`.
+  evenementId         BigInt               @unique @map("evenement_id")
+  faitDuJournal       Evenement            @relation(fields: [evenementId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creeAt              DateTime             @default(dbgenerated("clock_timestamp()")) @map("cree_at") @db.Timestamptz(3)
+  textePurgeAt        DateTime?            @map("texte_purge_at") @db.Timestamptz(3)
+  /// La clé d'idempotence, tirée par le serveur au rendu du formulaire : UNIQUE, immuable, jamais
+  /// purgée ; exigée pour une mise en demeure (CHECK).
+  cleIdempotence      String?              @unique @map("cle_idempotence") @db.Uuid
+  /// L'empreinte HMAC des faits (`empreinteRecherche('faits_mise_en_demeure', …)`) : elle vit et meurt
+  /// avec le texte (CHECK et garde) ; jamais de clair pour comparer.
+  faitsEmpreinte      String?              @map("faits_empreinte") @db.Char(64)
+  notificationsEspace NotificationEspace[]
+
+  @@index([apporteurId])
+  @@map("decisions_de_contrat")
 }
