@@ -19,7 +19,7 @@ import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ConsoleRole, PrismaClient } from '@prisma/client';
-import { ROLES_CONSOLE, roleAutorise } from '../../../src/server/roles/matrice';
+import { MATRICE_DES_ROLES, ROLES_CONSOLE, roleAutorise } from '../../../src/server/roles/matrice';
 import {
   CurseurDesGelsIllisible,
   droitsDuLecteurSurLesGels,
@@ -41,6 +41,7 @@ import { lireLaSaisieDuGel } from '../../../src/app/(console)/console/journal-de
 const DEPUIS = new Date('2026-01-01T00:00:00.000Z');
 const POSE = new Date('2028-05-01T09:00:00.000Z');
 const LECTEUR = '0190f0f0-0000-7000-8000-00000000000a';
+const ADMIN = { id: LECTEUR, role: 'admin' as const };
 const ECRAN = 'src/app/(console)/console/journal-des-acces/gels/_gels/ecran.tsx';
 
 type Lu = { role: ConsoleRole; desactiveAt: Date | null; valideAt: Date | null };
@@ -102,11 +103,12 @@ describe('REQ-SEC-023 — (1) le droit de l’écran des gels', () => {
   });
 
   it('REQ-SEC-023 — TÉMOIN : chaque rôle que la matrice n’ouvre pas aux gels ne voit rien, validé ou non', () => {
-    const autres = ROLES_CONSOLE.filter(
-      (r) =>
-        !roleAutorise('action:poser_gel_journal_acces', r) &&
-        !roleAutorise('action:lever_gel_journal_acces', r)
-    );
+    // Le droit de l'écran, un seul pour l'onglet et la lecture (condition 2 de la sécurité).
+    expect(MATRICE_DES_ROLES['ecran:gels_journal_acces']).toEqual({
+      roles: ['admin'],
+      stepUp: false,
+    });
+    const autres = ROLES_CONSOLE.filter((r) => !roleAutorise('ecran:gels_journal_acces', r));
     // La liste n'est pas vide : sinon ce témoin ne jugerait rien.
     expect(autres).toEqual(['qualifieur', 'comptable', 'lecteur']);
     for (const r of autres) expect(droitsSurLesGels(valide(r)), r).toBeNull();
@@ -362,7 +364,7 @@ function base(o: { lecteur?: Lu | null; gels?: GelEnBase[]; traceEchoue?: boolea
 const lire = (client: PrismaClient, o: { curseur?: string | null; taille?: number } = {}) =>
   lireLesGels(
     client,
-    { lecteurId: LECTEUR, adresse: null, curseur: o.curseur ?? null, taille: o.taille },
+    { lecteur: ADMIN, adresse: null, curseur: o.curseur ?? null, taille: o.taille },
     CLES
   );
 
@@ -442,6 +444,16 @@ describe('REQ-SEC-023 — (6) chaque page lue écrit ses traces avant d’être 
   it('REQ-SEC-023 — TÉMOIN : une trace qui échoue fait échouer la lecture, rien n’est rendu', async () => {
     const { client } = base({ gels: gelsEnBase(2), traceEchoue: true });
     await expect(lire(client)).rejects.toThrow('écriture refusée');
+  });
+
+  it('REQ-SEC-023 — TÉMOIN : un rôle de session non admis est refusé sans lire ni écrire', async () => {
+    for (const role of ['qualifieur', 'comptable', 'lecteur'] as const) {
+      const { client, appels } = base({ lecteur: valide(role), gels: gelsEnBase(2) });
+      await expect(
+        lireLesGels(client, { lecteur: { id: LECTEUR, role }, adresse: null, curseur: null }, CLES)
+      ).rejects.toMatchObject({ motif: 'droit_absent' });
+      expect(appels, role).toEqual(['transaction']);
+    }
   });
 
   it('REQ-SEC-023 — TÉMOIN : un rôle non admis, ou un admin en attente, ne lit rien et n’écrit rien', async () => {
