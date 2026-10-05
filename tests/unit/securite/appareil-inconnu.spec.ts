@@ -8,8 +8,10 @@
  *   (1) l'empreinte est minimale — un HMAC tronqué sous une clé dédiée, jamais l'adresse réseau ni
  *       l'identifiant en clair — et gardée au plus la durée des sessions ;
  *   (2) le SEUL effet est une confirmation renforcée avant l'action sensible, et un avis à l'adresse
- *       vérifiée ; la confirmation a lieu À LA CONSOMMATION du lien ou du code, dans sa transaction,
- *       sur l'appareil qui consomme — la garde ne confirme jamais, et une session fraîche présentée
+ *       vérifiée ; la confirmation a lieu À LA CONSOMMATION du lien ou du code, sur l'appareil qui
+ *       consomme, dans l'ordre de la voie (b) de la lentille sécurité — la consommation se valide,
+ *       l'avis part hors de toute transaction, puis une transaction courte rejuge la session et
+ *       confirme —, la garde ne confirme jamais, et une session fraîche présentée
  *       depuis un autre appareil est refusée (note de la lentille sécurité sur 4913c6a3 : un cookie
  *       de session volé ne doit faire connaître aucun appareil) ;
  *       L'action de connexion (`src/app/(espace)/connexion/actions.ts`) lit le cookie de l'appareil,
@@ -20,8 +22,19 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createHmac, hkdfSync } from 'node:crypto';
-import type { PrismaClient } from '@prisma/client';
+import { readFileSync } from 'node:fs';
+import { extrairePolitique } from '../../../src/domain/rgpd/politique';
+import type { PrismaClient, StatutCourriel } from '@prisma/client';
 import { NOMS_DES_SECRETS, kidDe } from '../../../src/lib/env';
+import { domaines } from '../../../src/config/entite';
+import { horlogeFigee } from '../../../src/domain/temps/horloge';
+import { clesPii, colonnesPii } from '../../../src/server/securite/pii';
+import { TEXTES_DES_NOTIFICATIONS } from '../../../src/content/micro-copy/courriels/notifications';
+import type {
+  DemandeDEnvoi,
+  DependancesDeLEmetteur,
+  LigneCourriel,
+} from '../../../src/server/integrations/zeptomail/emetteur';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
 import {
   consommerLien,
@@ -42,7 +55,6 @@ import {
 import {
   COOKIE_D_APPAREIL,
   cleDesAppareils,
-  confirmerALaConsommation,
   depotDAppareils,
   empreinteDAppareil,
   exigerAppareilConfirme,
@@ -53,7 +65,17 @@ import {
   type DepotDAppareils,
   type PortsDAppareil,
 } from '../../../src/server/auth/appareil';
-import { COOKIE_DATTENTE } from '../../../src/server/auth/lien-magique-production';
+import {
+  COOKIE_DATTENTE,
+  MODELE_APPORTEUR,
+  dateHeureDeLAvis,
+  dependancesDuProcessus,
+  envoiDesNotifications,
+  portsDeConsommation,
+  portsDuCode,
+  portsDuCodeConsole,
+} from '../../../src/server/auth/lien-magique-production';
+import { transactionDeConfirmation } from '../../../src/server/auth/lien-magique-depot';
 import { purgerLesAppareils } from '../../../src/server/taches/purger-appareils';
 import { inscriptions } from '../../../src/server/taches/inscriptions';
 import { TACHES } from '../../../src/server/taches/registre';
@@ -140,8 +162,9 @@ function ports(l: LigneDeSession | null, connu: boolean) {
   const ordre: string[] = [];
   const depot = {
     reconnaitre: vi.fn(async () => (connu ? 1 : 0)),
-    confirmer: vi.fn(async () => {
-      ordre.push('confirmer');
+    confirmerSiInconnu: vi.fn(async () => {
+      ordre.push('confirmerSiInconnu');
+      return 'confirme' as const;
     }),
   } satisfies DepotDAppareils;
   const p: PortsDAppareil = { session: portsDeSession(l), depot, cle: CLE };
@@ -241,7 +264,7 @@ describe('REQ-SEC-003 — SEC-55 (2) : la garde refuse tout appareil inconnu ; e
     });
     for (const d of [depot, inconnue.depot]) {
       expect(d.reconnaitre).not.toHaveBeenCalled();
-      expect(d.confirmer).not.toHaveBeenCalled();
+      expect(d.confirmerSiInconnu).not.toHaveBeenCalled();
     }
   });
 
@@ -252,7 +275,7 @@ describe('REQ-SEC-003 — SEC-55 (2) : la garde refuse tout appareil inconnu ; e
     expect(verdict.ok && verdict.session.apporteurId).toBe(APPORTEUR);
     expect(depot.reconnaitre).toHaveBeenCalledTimes(1);
     expect(depot.reconnaitre).toHaveBeenCalledWith(APPAREIL, T, VU_APRES);
-    expect(depot.confirmer).not.toHaveBeenCalled();
+    expect(depot.confirmerSiInconnu).not.toHaveBeenCalled();
   });
 
   it('REQ-SEC-003 : un appareil INCONNU est refusé (`appareil_inconnu`), quelle que soit l’ancienneté de la session ; rien n’est écrit', async () => {
@@ -267,7 +290,7 @@ describe('REQ-SEC-003 — SEC-55 (2) : la garde refuse tout appareil inconnu ; e
         motif: 'appareil_inconnu',
       });
       expect(depot.reconnaitre).toHaveBeenCalledWith(APPAREIL, T, VU_APRES);
-      expect(depot.confirmer).not.toHaveBeenCalled();
+      expect(depot.confirmerSiInconnu).not.toHaveBeenCalled();
     }
   });
 
@@ -278,7 +301,7 @@ describe('REQ-SEC-003 — SEC-55 (2) : la garde refuse tout appareil inconnu ; e
         ok: false,
         motif: 'appareil_inconnu',
       });
-      expect(depot.confirmer).not.toHaveBeenCalled();
+      expect(depot.confirmerSiInconnu).not.toHaveBeenCalled();
     }
   });
 
@@ -290,7 +313,7 @@ describe('REQ-SEC-003 — SEC-55 (2) : la garde refuse tout appareil inconnu ; e
         motif: 'appareil_inconnu',
       });
       expect(depot.reconnaitre).not.toHaveBeenCalled();
-      expect(depot.confirmer).not.toHaveBeenCalled();
+      expect(depot.confirmerSiInconnu).not.toHaveBeenCalled();
     }
   });
 
@@ -334,24 +357,30 @@ describe('REQ-SEC-003 — SEC-55 dans une action de l’espace : après `actionE
         ok: false,
         motif: 'appareil_inconnu',
       });
-      expect(inconnu.depot.confirmer).not.toHaveBeenCalled();
+      expect(inconnu.depot.confirmerSiInconnu).not.toHaveBeenCalled();
       expect(inconnu.p.session.depot.lire).not.toHaveBeenCalled();
     }
   });
 });
 
-// ── la confirmation, à la CONSOMMATION du lien ou du code, sur l'appareil qui consomme ──────────
+// ── l'appareil à la CONSOMMATION, voie (b) de la lentille sécurité (#563) ───────────────────────
+// (i) la transaction de consommation se valide : le lien est consommé, la session ouverte,
+// l'appareil reconnu s'il est connu, NON confirmé sinon ; (ii) l'avis part ensuite, HORS de toute
+// transaction ; (iii) seulement s'il est accepté, une transaction COURTE rejuge la session et
+// confirme l'appareil, une fois.
 
-/** Un dépôt d'appareils EN MÉMOIRE, qui note la suite des écritures et des avis dans `ordre`. */
-function depotEnMemoire(ordre: string[], connus: string[] = []) {
+/** Un dépôt d'appareils EN MÉMOIRE ; `journal` note la suite des appels. */
+function depotEnMemoire(journal: string[], connus: string[] = []) {
   const vus = new Set(connus);
   return {
     reconnaitre: vi.fn(async (a: AppareilVu, _maintenant: Date, _vuApres: Date) =>
       vus.has(a.empreinte) ? 1 : 0
     ),
-    confirmer: vi.fn(async (a: AppareilVu, _maintenant: Date) => {
-      ordre.push('confirmer');
+    confirmerSiInconnu: vi.fn(async (a: AppareilVu, _maintenant: Date, _vuApres: Date) => {
+      journal.push('confirmerSiInconnu');
+      if (vus.has(a.empreinte)) return 'deja_connu' as const;
       vus.add(a.empreinte);
+      return 'confirme' as const;
     }),
   } satisfies DepotDAppareils;
 }
@@ -364,57 +393,109 @@ const CONFIGURATION_DU_LIEN = {
   session: { secret: SECRET_DES_SESSIONS, kid: KID_DES_SESSIONS },
 };
 const LIEN = { id: 'lien-x', apporteurId: APPORTEUR, kid: CONFIGURATION_DU_LIEN.kid };
+/** L'instant de la confirmation, APRÈS l'avis ; la limite de vue s'y rapporte. */
+const T2 = new Date(T.getTime() + 1_500);
+const VU_APRES_T2 = new Date(T2.getTime() - SESSION_MS);
 
-/** Une transaction de consommation en mémoire ; `enTransaction` dit si l'appel a lieu DEDANS. */
-function consommation(o: { connus?: string[]; aviser?: (avis: AvisDAppareil) => Promise<void> }) {
-  const ordre: string[] = [];
-  let enTransaction = false;
-  const appareils = depotEnMemoire(ordre, o.connus);
-  const dansLaTransaction: string[] = [];
+/** La session telle que la transaction de confirmation la RELIT : celle que la consommation a ouverte. */
+function sessionRelue(
+  o: Partial<LigneDeSession> = {},
+  lienMagiqueId: string = LIEN.id
+): { ligne: LigneDeSession; lienMagiqueId: string } {
+  return { ligne: { ...ligne(T), ...o }, lienMagiqueId };
+}
+
+type SessionRelue = ReturnType<typeof sessionRelue> | null;
+
+/**
+ * Les deux transactions en mémoire : celle de la consommation et celle, courte, de la confirmation.
+ * Le journal dit où chaque appel a lieu ; un avis lancé dans une transaction s'y note « DEDANS ».
+ */
+function harnais(o: {
+  connus?: string[];
+  aviser?: (avis: AvisDAppareil) => Promise<void>;
+  session?: SessionRelue;
+}) {
+  const journal: string[] = [];
+  let ouverte: 'aucune' | 'consommation' | 'confirmation' = 'aucune';
+  const appareils = depotEnMemoire(journal, o.connus);
+  const depotDeLaConsommation: DepotDAppareils = {
+    reconnaitre: async (...a) => {
+      journal.push(ouverte === 'consommation' ? 'reconnaitre' : 'reconnaitre HORS');
+      return appareils.reconnaitre(...a);
+    },
+    confirmerSiInconnu: async () => {
+      throw new Error('jamais_dans_la_consommation');
+    },
+  };
+  const lireSession = vi.fn(async (_tokenHash: string) =>
+    o.session === undefined ? sessionRelue() : o.session
+  );
+  const aviser = vi.fn(async (avis: AvisDAppareil) => {
+    journal.push(ouverte === 'aucune' ? 'aviser' : `aviser DEDANS ${ouverte}`);
+    if (o.aviser) await o.aviser(avis);
+  });
+  const portsDesAppareils = {
+    aviser,
+    maintenant: () => T2,
+    transaction: async <R>(
+      travail: (tx: { lireSession: typeof lireSession; appareils: DepotDAppareils }) => Promise<R>
+    ): Promise<R> => {
+      ouverte = 'confirmation';
+      journal.push('confirmation:ouvrir');
+      try {
+        return await travail({ lireSession, appareils });
+      } finally {
+        ouverte = 'aucune';
+        journal.push('confirmation:valider');
+      }
+    },
+  };
+  return {
+    journal,
+    appareils,
+    depotDeLaConsommation,
+    lireSession,
+    aviser,
+    portsDesAppareils,
+    enCours: () => ouverte,
+    ouvrir: (q: typeof ouverte) => {
+      ouverte = q;
+    },
+  };
+}
+
+function consommation(o: Parameters<typeof harnais>[0] = {}) {
+  const h = harnais(o);
   const tx: TransactionDeConsommation = {
     consommer: vi.fn(async () => 1),
     lireLien: vi.fn(async () => LIEN),
     statutApporteur: vi.fn(async () => 'signe'),
     ouvrirSession: vi.fn(async () => {
-      ordre.push('ouvrirSession');
+      h.journal.push('ouvrirSession');
     }),
-    appareils: {
-      reconnaitre: async (...a) => {
-        if (enTransaction) dansLaTransaction.push('reconnaitre');
-        return appareils.reconnaitre(...a);
-      },
-      confirmer: async (...a) => {
-        if (enTransaction) dansLaTransaction.push('confirmer');
-        return appareils.confirmer(...a);
-      },
-    },
+    appareils: h.depotDeLaConsommation,
   };
-  const aviser = vi.fn(
-    o.aviser ??
-      (async () => {
-        ordre.push('aviser');
-      })
-  );
   const p: PortsDeConsommation = {
     maintenant: () => T,
     configuration: CONFIGURATION_DU_LIEN,
     transaction: async (travail) => {
-      enTransaction = true;
+      h.ouvrir('consommation');
       try {
         return await travail(tx);
       } finally {
-        enTransaction = false;
+        h.ouvrir('aucune');
+        h.journal.push('valider');
       }
     },
-    appareils: { aviser },
+    appareils: h.portsDesAppareils,
   };
-  return { p, tx, aviser, appareils, ordre, dansLaTransaction };
+  return { ...h, p, tx };
 }
 
 /** Une transaction du code en mémoire : le bon code consomme le lien et ouvre la session. */
-function verificationDuCode(o: { connus?: string[] } = {}) {
-  const ordre: string[] = [];
-  const appareils = depotEnMemoire(ordre, o.connus);
+function verificationDuCode(o: Parameters<typeof harnais>[0] = {}) {
+  const h = harnais(o);
   const tx: TransactionDuCode = {
     lienActifDe: vi.fn(async () => LIEN),
     compterEssai: vi.fn(async () => ({
@@ -425,13 +506,10 @@ function verificationDuCode(o: { connus?: string[] } = {}) {
     consommerParId: vi.fn(async () => 1),
     statutApporteur: vi.fn(async () => 'signe'),
     ouvrirSession: vi.fn(async () => {
-      ordre.push('ouvrirSession');
+      h.journal.push('ouvrirSession');
     }),
-    appareils,
+    appareils: h.depotDeLaConsommation,
   };
-  const aviser = vi.fn(async () => {
-    ordre.push('aviser');
-  });
   const permis = async () => ({ autorise: true, panne: false });
   const p: PortsDuCode = {
     maintenant: () => T,
@@ -439,21 +517,38 @@ function verificationDuCode(o: { connus?: string[] } = {}) {
     empreinteAdresseReseau: () => '0123456789abcdef',
     compterAdresseCode: permis,
     compterCourrielCode: permis,
-    transaction: (travail) => travail(tx),
+    transaction: async (travail) => {
+      h.ouvrir('consommation');
+      try {
+        return await travail(tx);
+      } finally {
+        h.ouvrir('aucune');
+        h.journal.push('valider');
+      }
+    },
     signaler: () => undefined,
     configuration: CONFIGURATION_DU_LIEN,
-    appareils: { aviser },
+    appareils: h.portsDesAppareils,
   };
-  return { p, tx, aviser, appareils, ordre };
+  return { ...h, p, tx };
 }
 
 const CODE = '042137';
 const EMPREINTE_D_ATTENTE = 'ab'.repeat(32);
 const FORME_IDENTIFIANT = /^[A-Za-z0-9_-]{43}$/;
+const PARCOURS_NEUF = [
+  'ouvrirSession',
+  'reconnaitre',
+  'valider',
+  'aviser',
+  'confirmation:ouvrir',
+  'confirmerSiInconnu',
+  'confirmation:valider',
+];
 
-describe('REQ-SEC-003 — SEC-55 (2) : l’appareil se confirme à la CONSOMMATION du lien ou du code, sur l’appareil qui consomme', () => {
-  it('REQ-SEC-003 : un appareil NEUF pour ce compte — dans la transaction de la consommation : la session, PUIS l’avis, PUIS la confirmation ; l’identifiant lu est rendu à poser', async () => {
-    const c = consommation({});
+describe('REQ-SEC-003 — l’appareil à la CONSOMMATION, voie (b) de la lentille sécurité : la consommation se valide, PUIS l’avis hors de toute transaction, PUIS une transaction COURTE qui confirme', () => {
+  it('REQ-SEC-003 : un appareil NEUF — (i) la session s’ouvre et la consommation se valide, l’appareil NON confirmé ; (ii) l’avis part HORS de toute transaction ; (iii) une transaction courte le confirme', async () => {
+    const c = consommation();
     const r = await consommerLien(
       { jeton: JETON, ipHash: null, identifiantAppareil: IDENTIFIANT },
       c.p
@@ -462,15 +557,28 @@ describe('REQ-SEC-003 — SEC-55 (2) : l’appareil se confirme à la CONSOMMATI
       etat: 'ouverte',
       appareil: { identifiant: IDENTIFIANT, issue: 'confirme' },
     });
-    expect(c.ordre).toEqual(['ouvrirSession', 'aviser', 'confirmer']);
-    expect(c.dansLaTransaction).toEqual(['reconnaitre', 'confirmer']);
-    expect(c.appareils.reconnaitre).toHaveBeenCalledWith(APPAREIL, T, VU_APRES);
-    expect(c.appareils.confirmer).toHaveBeenCalledWith(APPAREIL, T);
-    // L'avis ne porte que le compte et l'instant : rien de l'appareil.
+    expect(c.journal).toEqual(PARCOURS_NEUF);
+    // L'avis ne porte que le compte et l'instant de la consommation : rien de l'appareil.
     expect(c.aviser).toHaveBeenCalledWith({ apporteurId: APPORTEUR, confirmeAt: T });
+    expect(c.appareils.confirmerSiInconnu).toHaveBeenCalledWith(APPAREIL, T2, VU_APRES_T2);
+    // La confirmation relit la session que CETTE consommation a ouverte.
+    const jetonSession = r.etat === 'ouverte' ? r.jetonSession : '';
+    expect(c.lireSession).toHaveBeenCalledWith(
+      empreinteDeSession(jetonSession, SECRET_DES_SESSIONS)
+    );
   });
 
-  it('REQ-SEC-003 : un appareil DÉJÀ CONNU de ce compte — reconnu, sa vue avance ; ni avis ni nouvelle confirmation', async () => {
+  it('REQ-SEC-003 : TÉMOIN — aucun verrou ni aucune transaction n’est tenu pendant l’appel réseau de l’avis', async () => {
+    const c = consommation({
+      aviser: async () => {
+        expect(c.enCours()).toBe('aucune');
+      },
+    });
+    await consommerLien({ jeton: JETON, ipHash: null, identifiantAppareil: IDENTIFIANT }, c.p);
+    expect(c.journal.filter((e) => e.startsWith('aviser'))).toEqual(['aviser']);
+  });
+
+  it('REQ-SEC-003 : un appareil DÉJÀ CONNU de ce compte — reconnu dans la consommation, sa vue avance ; ni avis ni transaction de confirmation', async () => {
     const c = consommation({ connus: [EMPREINTE] });
     const r = await consommerLien(
       { jeton: JETON, ipHash: null, identifiantAppareil: IDENTIFIANT },
@@ -480,36 +588,91 @@ describe('REQ-SEC-003 — SEC-55 (2) : l’appareil se confirme à la CONSOMMATI
       etat: 'ouverte',
       appareil: { identifiant: IDENTIFIANT, issue: 'connu' },
     });
+    expect(c.journal).toEqual(['ouvrirSession', 'reconnaitre', 'valider']);
     expect(c.aviser).not.toHaveBeenCalled();
-    expect(c.appareils.confirmer).not.toHaveBeenCalled();
   });
 
-  it('REQ-SEC-003 : sans identifiant, ou hors forme — un identifiant NEUF est tiré, confirmé avec son avis, et rendu à poser ; jamais le hors-forme', async () => {
+  it('REQ-SEC-003 : sans identifiant, ou hors forme — un identifiant NEUF est tiré, avisé puis confirmé, et rendu à poser ; jamais le hors-forme', async () => {
     for (const lu of [undefined, null, '', 'abc', `${IDENTIFIANT}=`, ['x']]) {
-      const c = consommation({});
+      const c = consommation();
       const r = await consommerLien({ jeton: JETON, ipHash: null, identifiantAppareil: lu }, c.p);
       expect(r.etat).toBe('ouverte');
       const appareil = r.etat === 'ouverte' ? r.appareil : undefined;
       expect(appareil?.issue).toBe('confirme');
       expect(appareil?.identifiant).toMatch(FORME_IDENTIFIANT);
       expect(appareil?.identifiant).not.toBe(lu);
-      expect(c.appareils.confirmer).toHaveBeenCalledWith(
+      expect(c.appareils.confirmerSiInconnu).toHaveBeenCalledWith(
         {
           apporteurId: APPORTEUR,
           empreinte: empreinteDAppareil(appareil?.identifiant, CLE.secret),
           kid: CLE.kid,
         },
-        T
+        T2,
+        VU_APRES_T2
       );
-      expect(c.ordre).toEqual(['ouvrirSession', 'aviser', 'confirmer']);
+      expect(c.journal).toEqual(PARCOURS_NEUF);
     }
   });
 
-  it('REQ-SEC-003 : un avis qui échoue laisse l’appareil INCONNU — la session s’ouvre, rien n’est confirmé, l’issue le dit', async () => {
+  it('REQ-SEC-003 : (3) échec fermé — un avis refusé, en échec ou au-delà du délai ne confirme RIEN : `avis_echoue`, la session ouverte, aucune transaction de confirmation', async () => {
+    for (const erreur of ['avis_refuse', 'avis_en_echec', 'delai_depasse']) {
+      const c = consommation({
+        aviser: async () => {
+          throw new Error(erreur);
+        },
+      });
+      const r = await consommerLien(
+        { jeton: JETON, ipHash: null, identifiantAppareil: IDENTIFIANT },
+        c.p
+      );
+      expect(r).toMatchObject({
+        etat: 'ouverte',
+        appareil: { identifiant: IDENTIFIANT, issue: 'avis_echoue' },
+      });
+      expect(c.journal).toEqual(['ouvrirSession', 'reconnaitre', 'valider', 'aviser']);
+      expect(c.appareils.confirmerSiInconnu).not.toHaveBeenCalled();
+    }
+  });
+
+  it('REQ-SEC-003 : (3) TÉMOIN — un arrêt du processus entre (i) et (iii) laisse l’appareil NON confirmé : la consommation est validée, l’avis en vol, aucune confirmation', async () => {
+    const c = consommation({ aviser: () => new Promise<void>(() => undefined) });
+    void consommerLien({ jeton: JETON, ipHash: null, identifiantAppareil: IDENTIFIANT }, c.p);
+    await vi.waitFor(() => expect(c.aviser).toHaveBeenCalledTimes(1));
+    expect(c.journal).toEqual(['ouvrirSession', 'reconnaitre', 'valider', 'aviser']);
+    expect(c.lireSession).not.toHaveBeenCalled();
+    expect(c.appareils.confirmerSiInconnu).not.toHaveBeenCalled();
+  });
+
+  it('REQ-SEC-003 : (2) la transaction de confirmation REJUGE la session — absente, révoquée, expirée, d’une version périmée, d’un apporteur fermé, d’un autre compte ou d’un autre lien : RIEN n’est confirmé (`non_confirme`)', async () => {
+    const cas: SessionRelue[] = [
+      null,
+      sessionRelue({ revoqueAt: T }),
+      sessionRelue({ expireAt: T2 }),
+      sessionRelue({ sessionVersion: 2 }),
+      sessionRelue({ apporteur: { statut: 'resilie', sessionVersion: 3 } }),
+      sessionRelue({ apporteurId: '00000000-0000-4000-8000-000000000000' }),
+      sessionRelue({}, 'autre-lien'),
+    ];
+    for (const session of cas) {
+      const c = consommation({ session });
+      const r = await consommerLien(
+        { jeton: JETON, ipHash: null, identifiantAppareil: IDENTIFIANT },
+        c.p
+      );
+      expect(r).toMatchObject({
+        etat: 'ouverte',
+        appareil: { identifiant: IDENTIFIANT, issue: 'non_confirme' },
+      });
+      expect(c.lireSession).toHaveBeenCalledTimes(1);
+      expect(c.appareils.confirmerSiInconnu).not.toHaveBeenCalled();
+    }
+  });
+
+  it('REQ-SEC-003 : (2) une session en LECTURE (SEC-19 : un résilié aux droits en cours) — l’avis part, RIEN n’est confirmé (`non_confirme`) : une session sans action sensible ne fait connaître aucun appareil', async () => {
     const c = consommation({
-      aviser: async () => {
-        throw new Error('envoi_impossible');
-      },
+      session: sessionRelue({
+        apporteur: { statut: 'resilie', sessionVersion: 3, droitsEnCours: true },
+      }),
     });
     const r = await consommerLien(
       { jeton: JETON, ipHash: null, identifiantAppareil: IDENTIFIANT },
@@ -517,26 +680,41 @@ describe('REQ-SEC-003 — SEC-55 (2) : l’appareil se confirme à la CONSOMMATI
     );
     expect(r).toMatchObject({
       etat: 'ouverte',
-      appareil: { identifiant: IDENTIFIANT, issue: 'avis_echoue' },
+      appareil: { identifiant: IDENTIFIANT, issue: 'non_confirme' },
     });
-    expect(c.appareils.confirmer).not.toHaveBeenCalled();
+    expect(c.aviser).toHaveBeenCalledTimes(1);
+    expect(c.lireSession).toHaveBeenCalledTimes(1);
+    expect(c.appareils.confirmerSiInconnu).not.toHaveBeenCalled();
+  });
+
+  it('REQ-SEC-003 : (2) la confirmation est idempotente — un appareil devenu connu entre-temps n’est pas confirmé deux fois, rien n’est réécrit, l’issue dit `connu`', async () => {
+    const c = consommation();
+    c.appareils.confirmerSiInconnu.mockResolvedValueOnce('deja_connu');
+    const r = await consommerLien(
+      { jeton: JETON, ipHash: null, identifiantAppareil: IDENTIFIANT },
+      c.p
+    );
+    expect(r).toMatchObject({
+      etat: 'ouverte',
+      appareil: { identifiant: IDENTIFIANT, issue: 'connu' },
+    });
+    expect(c.appareils.confirmerSiInconnu).toHaveBeenCalledTimes(1);
   });
 
   it('REQ-SEC-003 : un lien invalide ou déjà utilisé ne lit ni n’écrit aucun appareil, et n’envoie aucun avis', async () => {
-    const c = consommation({});
+    const c = consommation();
     (c.tx.consommer as ReturnType<typeof vi.fn>).mockResolvedValue(0);
     const r = await consommerLien(
       { jeton: JETON, ipHash: null, identifiantAppareil: IDENTIFIANT },
       c.p
     );
     expect(r).toEqual({ etat: 'lien_invalide' });
-    expect(c.appareils.reconnaitre).not.toHaveBeenCalled();
-    expect(c.appareils.confirmer).not.toHaveBeenCalled();
+    expect(c.journal).toEqual(['valider']);
     expect(c.aviser).not.toHaveBeenCalled();
   });
 
   it('REQ-SEC-003 : sans le port des appareils, la consommation est celle d’avant — aucune lecture, aucune écriture, aucun champ d’appareil', async () => {
-    const c = consommation({});
+    const c = consommation();
     const sansAppareils: PortsDeConsommation = { ...c.p };
     delete sansAppareils.appareils;
     const r = await consommerLien(
@@ -545,18 +723,19 @@ describe('REQ-SEC-003 — SEC-55 (2) : l’appareil se confirme à la CONSOMMATI
     );
     expect(r.etat).toBe('ouverte');
     expect(Object.keys(r).sort()).toEqual(['etat', 'jetonSession']);
-    expect(c.appareils.reconnaitre).not.toHaveBeenCalled();
+    expect(c.journal).toEqual(['ouvrirSession', 'valider']);
   });
 
   it('REQ-SEC-003 : le port branché sans dépôt dans la transaction est une faute de câblage, qui échoue fort', async () => {
-    const c = consommation({});
+    const c = consommation();
     delete (c.tx as { appareils?: unknown }).appareils;
     await expect(
       consommerLien({ jeton: JETON, ipHash: null, identifiantAppareil: IDENTIFIANT }, c.p)
     ).rejects.toThrow('depot_des_appareils_absent');
+    expect(c.aviser).not.toHaveBeenCalled();
   });
 
-  it('REQ-SEC-003 : le CODE (SEC-54) confirme l’appareil comme le clic — session, avis, confirmation, dans la transaction du code', async () => {
+  it('REQ-SEC-003 : le CODE (SEC-54) suit le même parcours que le clic — consommation validée, avis hors transaction, confirmation courte', async () => {
     const neuf = verificationDuCode();
     const r = await verifierLeCode(
       {
@@ -571,7 +750,7 @@ describe('REQ-SEC-003 — SEC-55 (2) : l’appareil se confirme à la CONSOMMATI
       etat: 'ouverte',
       appareil: { identifiant: IDENTIFIANT, issue: 'confirme' },
     });
-    expect(neuf.ordre).toEqual(['ouvrirSession', 'aviser', 'confirmer']);
+    expect(neuf.journal).toEqual(PARCOURS_NEUF);
     expect(neuf.aviser).toHaveBeenCalledWith({ apporteurId: APPORTEUR, confirmeAt: T });
 
     const connu = verificationDuCode({ connus: [EMPREINTE] });
@@ -605,17 +784,18 @@ describe('REQ-SEC-003 — SEC-55 (2) : l’appareil se confirme à la CONSOMMATI
   });
 
   it('REQ-SEC-003 : TÉMOIN DE LA LENTILLE SÉCURITÉ, de bout en bout — session fraîche + autre appareil : refusé, rien de confirmé ; le lien consommé sur CET appareil le rend connu, avec l’avis ; la garde le laisse alors passer', async () => {
-    const ordre: string[] = [];
-    const depot = depotEnMemoire(ordre);
-    const garde: PortsDAppareil = { session: portsDeSession(ligne(T)), depot, cle: CLE };
+    const c = consommation();
+    const garde: PortsDAppareil = {
+      session: portsDeSession(ligne(T)),
+      depot: c.appareils,
+      cle: CLE,
+    };
     expect(await exigerAppareilConfirme(JETON, IDENTIFIANT, garde)).toEqual({
       ok: false,
       motif: 'appareil_inconnu',
     });
-    expect(depot.confirmer).not.toHaveBeenCalled();
+    expect(c.appareils.confirmerSiInconnu).not.toHaveBeenCalled();
 
-    const c = consommation({});
-    c.tx.appareils = depot;
     const r = await consommerLien(
       { jeton: JETON, ipHash: null, identifiantAppareil: IDENTIFIANT },
       c.p
@@ -626,31 +806,292 @@ describe('REQ-SEC-003 — SEC-55 (2) : l’appareil se confirme à la CONSOMMATI
     expect((await exigerAppareilConfirme(JETON, IDENTIFIANT, garde)).ok).toBe(true);
   });
 
-  it('REQ-SEC-003 : `confirmerALaConsommation` rend l’identifiant à poser et l’issue, rien de l’empreinte', async () => {
-    const ordre: string[] = [];
-    const r = await confirmerALaConsommation(APPORTEUR, IDENTIFIANT, {
-      depot: depotEnMemoire(ordre),
-      cle: CLE,
-      aviser: async () => undefined,
-      maintenant: T,
-    });
-    expect(r).toEqual({ identifiant: IDENTIFIANT, issue: 'confirme' });
+  it('REQ-SEC-003 : la consommation rend l’identifiant à poser et l’issue, rien de l’empreinte', async () => {
+    const c = consommation();
+    const r = await consommerLien(
+      { jeton: JETON, ipHash: null, identifiantAppareil: IDENTIFIANT },
+      c.p
+    );
+    const appareil = r.etat === 'ouverte' ? r.appareil : undefined;
+    expect(appareil).toEqual({ identifiant: IDENTIFIANT, issue: 'confirme' });
     expect(JSON.stringify(r)).not.toContain(EMPREINTE);
+  });
+});
+
+// ── le BRANCHEMENT en production : l'avis « nouvel appareil » par `notifier()` (SEC-62) ─────────
+// Le port des appareils du clic et du code : l'avis part à l'adresse STOCKÉE, sous la clé de la
+// juriste, par la composition unique de `notifier()` ; seul un courriel `envoye` le laisse aboutir —
+// tout autre statut, ou un émetteur qui lève, le fait lever, et rien n'est confirmé (`avis_echoue`).
+
+const CLE_HEX = Array.from({ length: 32 }, (_, i) => i.toString(16).padStart(2, '0')).join('');
+const ENV: Record<string, string> = {
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-sec62-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: CLE_HEX,
+};
+const PRODUCTION = { ...ENV, NODE_ENV: 'production', PARTNERS_ENV: 'production' };
+const COURRIEL = 'marie@example.org';
+const SUJET_DE_L_AVIS = 'Connexion à votre espace depuis un nouvel appareil';
+/** 12:20 UTC le 4 octobre 2026 : 14 h 20 à Paris, en heure d'été. */
+const CONSOMME_ETE = new Date('2026-10-04T12:20:00.000Z');
+
+/** Les dépendances du lien en production, sur une base simulée qui ne rend que l'adresse stockée. */
+function dependancesDeProduction(statut: StatutCourriel | Error = 'envoye') {
+  const { emailChiffre } = colonnesPii(
+    { modele: MODELE_APPORTEUR, id: APPORTEUR },
+    { email: COURRIEL },
+    clesPii(ENV)
+  );
+  const findUnique = vi.fn(async () => ({ emailChiffre }));
+  const envoyerCourriel = vi.fn(async (_demande: DemandeDEnvoi): Promise<StatutCourriel> => {
+    if (statut instanceof Error) throw statut;
+    return statut;
+  });
+  const d = {
+    env: ENV,
+    prisma: { apporteur: { findUnique } } as unknown as PrismaClient,
+    horloge: horlogeFigee(T.getTime()),
+    journal: { warn: vi.fn() },
+    envoyerCourriel,
+  };
+  return { d, findUnique, envoyerCourriel };
+}
+
+describe('REQ-SEC-003 — le BRANCHEMENT en production (SEC-62) : l’avis « nouvel appareil » part par `notifier()`, et seul un courriel envoyé laisse confirmer', () => {
+  it('REQ-SEC-003 : le clic et le code de l’espace portent le port des appareils — l’avis, l’horloge, la transaction courte ; la console jamais', () => {
+    const { d } = dependancesDeProduction();
+    for (const p of [portsDeConsommation(d), portsDuCode(d)]) {
+      expect(Object.keys(p.appareils ?? {}).sort()).toEqual([
+        'aviser',
+        'maintenant',
+        'transaction',
+      ]);
+      expect(p.appareils?.maintenant()).toEqual(T);
+    }
+    expect('appareils' in portsDuCodeConsole(d)).toBe(false);
+  });
+
+  it('REQ-SEC-003 : sans émetteur des notifications, aucun port des appareils — la consommation est celle d’avant', () => {
+    const { d } = dependancesDeProduction();
+    const sans = { env: d.env, prisma: d.prisma, horloge: d.horloge, journal: d.journal };
+    expect('appareils' in portsDeConsommation(sans)).toBe(false);
+    expect('appareils' in portsDuCode(sans)).toBe(false);
+  });
+
+  it('REQ-SEC-003 : l’avis part à l’adresse STOCKÉE, sous la clé `nouvel_appareil`, au texte de la juriste ; il ne dit que l’instant, rien de l’appareil', async () => {
+    const { d, findUnique, envoyerCourriel } = dependancesDeProduction();
+    await portsDeConsommation(d).appareils?.aviser({
+      apporteurId: APPORTEUR,
+      confirmeAt: CONSOMME_ETE,
+    });
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: APPORTEUR },
+      select: { emailChiffre: true },
+    });
+    expect(envoyerCourriel).toHaveBeenCalledTimes(1);
+    const demande = envoyerCourriel.mock.calls[0]?.[0];
+    expect(demande).toEqual({
+      gabarit: 'nouvel_appareil',
+      a: COURRIEL,
+      sujet: SUJET_DE_L_AVIS,
+      corps: [
+        TEXTES_DES_NOTIFICATIONS.nouvel_appareil.corps.replace(
+          '{dateHeure}',
+          '4 octobre 2026 à 14 h 20 (heure de Paris)'
+        ),
+        `Demander un nouveau lien de connexion : https://${domaines().servi}/connexion`,
+      ].join('\n\n'),
+      apporteurId: APPORTEUR,
+    });
+    for (const secret of [IDENTIFIANT, EMPREINTE, CLE.secret]) {
+      expect(JSON.stringify(demande)).not.toContain(secret);
+    }
+  });
+
+  it('REQ-SEC-003 : l’heure dite est l’heure LÉGALE de Paris, à la minute — été, hiver, premier du mois, passage de minuit', async () => {
+    const cas: Array<[string, string]> = [
+      ['2026-10-04T12:20:00.000Z', 'le 4 octobre 2026 à 14 h 20 (heure de Paris) sur'],
+      ['2026-12-01T08:05:00.000Z', 'le 1er décembre 2026 à 9 h 05 (heure de Paris) sur'],
+      ['2026-10-04T22:30:59.999Z', 'le 5 octobre 2026 à 0 h 30 (heure de Paris) sur'],
+      ['2027-03-28T00:59:00.000Z', 'le 28 mars 2027 à 1 h 59 (heure de Paris) sur'],
+      ['2027-03-28T01:00:00.000Z', 'le 28 mars 2027 à 3 h 00 (heure de Paris) sur'],
+    ];
+    for (const [iso, attendu] of cas) {
+      const { d, envoyerCourriel } = dependancesDeProduction();
+      await portsDeConsommation(d).appareils?.aviser({
+        apporteurId: APPORTEUR,
+        confirmeAt: new Date(iso),
+      });
+      expect(envoyerCourriel.mock.calls[0]?.[0].corps, iso).toContain(attendu);
+    }
+  });
+
+  it('REQ-SEC-003 : les douze mois en toutes lettres, au jour et à l’heure de Paris (heure d’hiver jusqu’au dernier dimanche de mars, d’été jusqu’au dernier dimanche d’octobre)', () => {
+    const mois = [
+      'janvier',
+      'février',
+      'mars',
+      'avril',
+      'mai',
+      'juin',
+      'juillet',
+      'août',
+      'septembre',
+      'octobre',
+      'novembre',
+      'décembre',
+    ];
+    mois.forEach((nom, i) => {
+      const heure = i >= 3 && i <= 9 ? 12 : 11;
+      expect(dateHeureDeLAvis(new Date(Date.UTC(2027, i, 15, 10, 7)))).toBe(
+        `15 ${nom} 2027 à ${heure} h 07 (heure de Paris)`
+      );
+    });
+  });
+
+  it('REQ-SEC-003 : (3) échec fermé — un courriel qui n’est pas `envoye` (en échec, retenu), ou un émetteur qui lève, fait LEVER l’avis : rien ne sera confirmé', async () => {
+    const statuts: Array<StatutCourriel | Error> = [
+      'echec',
+      'retenu_dmarc_non_verifie',
+      'retenu_adresse_supprimee',
+      new Error('delai_depasse'),
+    ];
+    for (const statut of statuts) {
+      const { d } = dependancesDeProduction(statut);
+      await expect(
+        portsDeConsommation(d).appareils?.aviser({
+          apporteurId: APPORTEUR,
+          confirmeAt: CONSOMME_ETE,
+        }),
+        String(statut)
+      ).rejects.toThrow();
+    }
+  });
+
+  it('REQ-SEC-003 : l’émetteur des notifications du processus — en production, celui des courriels, dont le statut remonte TEL QUEL ; hors production, le puits, qui ne reçoit que le sujet et le corps', async () => {
+    const relais = vi.fn(async () => ({ messageId: 'id-relais-sec62' }));
+    const lignes: LigneCourriel[] = [];
+    const emetteur = (): DependancesDeLEmetteur => ({
+      configuration: { expediteur: `contact@${domaines().envoi}`, dmarcVerifie: false },
+      relais: { envoyer: relais },
+      depot: { estSupprimee: async () => false, consigner: async (l) => void lignes.push(l) },
+      cles: clesPii(ENV),
+      maintenant: () => T,
+      nouvelId: () => '00000000-0000-4000-8000-000000000062',
+    });
+    const notifier = vi.fn(async () => undefined);
+    const fabriques = { emetteur, notifieur: () => ({ notifier }) };
+    const demande: DemandeDEnvoi = {
+      gabarit: 'nouvel_appareil',
+      a: COURRIEL,
+      sujet: SUJET_DE_L_AVIS,
+      corps: 'le corps rendu',
+      apporteurId: APPORTEUR,
+    };
+    // Production, drapeau DMARC fermé : la ligne est consignée, retenue, le relais n'est pas appelé.
+    expect(await envoiDesNotifications(PRODUCTION, fabriques)(demande)).toBe(
+      'retenu_dmarc_non_verifie'
+    );
+    expect(lignes).toHaveLength(1);
+    expect(relais).not.toHaveBeenCalled();
+    expect(notifier).not.toHaveBeenCalled();
+    // Hors production : le puits seul.
+    expect(await envoiDesNotifications(ENV, fabriques)(demande)).toBe('envoye');
+    expect(notifier).toHaveBeenCalledWith({ sujet: SUJET_DE_L_AVIS, corps: 'le corps rendu' });
+    expect(lignes).toHaveLength(1);
+  });
+
+  it('REQ-SEC-003 : les dépendances du processus portent l’émetteur des notifications : le clic et le code de l’action de connexion avisent', () => {
+    const d = dependancesDuProcessus({
+      apres: () => undefined,
+      env: { ...ENV, NOTIFY_SINK: 'true' },
+    });
+    expect(typeof d.envoyerCourriel).toBe('function');
+    expect(portsDeConsommation(d).appareils).toBeDefined();
+    expect(portsDuCode(d).appareils).toBeDefined();
   });
 });
 
 // ── le dépôt et la purge, tels que la base les reçoit ────────────────────────────────────────────
 
-function unDouble() {
+function unDouble(o: { frais?: number } = {}) {
   const d = {
     appareilConnu: {
       updateMany: vi.fn(async () => ({ count: 1 })),
+      count: vi.fn(async () => o.frais ?? 0),
       upsert: vi.fn(async () => ({})),
       deleteMany: vi.fn(async () => ({ count: 4 })),
     },
   };
   return { d, prisma: d as unknown as PrismaClient };
 }
+
+describe('REQ-SEC-003 — la transaction COURTE de confirmation, telle que la base la reçoit', () => {
+  function base(ligneLue: Record<string, unknown> | null, figee: { id: string } | null = null) {
+    const findUnique = vi.fn(async () => ligneLue);
+    const findFirst = vi.fn(async () => figee);
+    const tx = {
+      sessionEspace: { findUnique },
+      attribution: { findFirst },
+      appareilConnu: unDouble().d.appareilConnu,
+    };
+    const $transaction = vi.fn(async (travail: (t: typeof tx) => Promise<unknown>) => travail(tx));
+    return {
+      findUnique,
+      findFirst,
+      $transaction,
+      prisma: { $transaction } as unknown as PrismaClient,
+    };
+  }
+
+  it('REQ-SEC-003 : UNE transaction relit la session par l’empreinte de son jeton — ce que juge `jugerSession`, et le lien qui l’a ouverte —, et rend la ligne séparée du lien', async () => {
+    const attendue = ligne(T);
+    const b = base({ ...attendue, lienMagiqueId: LIEN.id });
+    const lue = await transactionDeConfirmation(b.prisma)((tx) => tx.lireSession('empreinte-x'));
+    expect(b.$transaction).toHaveBeenCalledTimes(1);
+    expect(b.findUnique).toHaveBeenCalledWith({
+      where: { tokenHash: 'empreinte-x' },
+      select: {
+        id: true,
+        apporteurId: true,
+        kid: true,
+        expireAt: true,
+        revoqueAt: true,
+        sessionVersion: true,
+        lienMagiqueId: true,
+        apporteur: { select: { statut: true, sessionVersion: true } },
+        lienMagique: { select: { consommeAt: true } },
+      },
+    });
+    expect(lue).toEqual({
+      ligne: { ...attendue, apporteur: { ...attendue.apporteur, droitsEnCours: false } },
+      lienMagiqueId: LIEN.id,
+    });
+  });
+
+  it('REQ-SEC-003 : la MÊME transaction relit les droits en cours de l’apporteur (SEC-19), comme le dépôt des sessions — le juge voit la session telle qu’elle est', async () => {
+    const attendue = ligne(T);
+    const b = base({ ...attendue, lienMagiqueId: LIEN.id }, { id: 'attribution-figee' });
+    const lue = await transactionDeConfirmation(b.prisma)((tx) => tx.lireSession('empreinte-x'));
+    expect(b.$transaction).toHaveBeenCalledTimes(1);
+    expect(b.findFirst).toHaveBeenCalledWith({
+      where: { apporteurId: APPORTEUR, statut: 'figee_resiliation' },
+      select: { id: true },
+    });
+    expect(lue?.ligne.apporteur).toEqual({ ...attendue.apporteur, droitsEnCours: true });
+  });
+
+  it('REQ-SEC-003 : une session absente se lit `null` ; le dépôt des appareils est celui de la MÊME transaction', async () => {
+    const b = base(null);
+    expect(await transactionDeConfirmation(b.prisma)((tx) => tx.lireSession('x'))).toBeNull();
+    const confirme = await transactionDeConfirmation(b.prisma)((tx) =>
+      tx.appareils.confirmerSiInconnu(APPAREIL, T2, VU_APRES_T2)
+    );
+    expect(confirme).toBe('confirme');
+  });
+});
 
 describe('REQ-SEC-003 — le dépôt des appareils, tel que la base le reçoit', () => {
   it('REQ-SEC-003 : reconnaître est UNE écriture conditionnelle — ce compte, cette empreinte, cette clé, vu après la limite — qui fait avancer la dernière vue', async () => {
@@ -667,14 +1108,28 @@ describe('REQ-SEC-003 — le dépôt des appareils, tel que la base le reçoit',
     });
   });
 
-  it('REQ-SEC-003 : confirmer pose l’appareil, ou le rétablit, confirmé et vu à l’instant', async () => {
-    const { d, prisma } = unDouble();
-    await depotDAppareils(prisma).confirmer(APPAREIL, T);
+  it('REQ-SEC-003 : confirmer un appareil INCONNU le pose, ou rétablit une ligne périmée, confirmé et vu à l’instant', async () => {
+    const { d, prisma } = unDouble({ frais: 0 });
+    expect(await depotDAppareils(prisma).confirmerSiInconnu(APPAREIL, T, VU_APRES)).toBe(
+      'confirme'
+    );
+    expect(d.appareilConnu.count).toHaveBeenCalledWith({
+      where: { ...APPAREIL, derniereVueAt: { gt: VU_APRES } },
+    });
     expect(d.appareilConnu.upsert).toHaveBeenCalledWith({
       where: { apporteurId_empreinte_kid: APPAREIL },
       create: { ...APPAREIL, confirmeAt: T, derniereVueAt: T },
       update: { confirmeAt: T, derniereVueAt: T },
     });
+  });
+
+  it('REQ-SEC-003 : (2) un appareil DÉJÀ connu (vu après la limite) n’est pas confirmé deux fois — RIEN n’est réécrit', async () => {
+    const { d, prisma } = unDouble({ frais: 1 });
+    expect(await depotDAppareils(prisma).confirmerSiInconnu(APPAREIL, T, VU_APRES)).toBe(
+      'deja_connu'
+    );
+    expect(d.appareilConnu.upsert).not.toHaveBeenCalled();
+    expect(d.appareilConnu.updateMany).not.toHaveBeenCalled();
   });
 });
 
@@ -810,5 +1265,34 @@ describe('REQ-SEC-003 — l’action de connexion lit le cookie de l’appareil,
     const { verifierUnCodeDeConnexion } = await actions();
     await expect(verifierUnCodeDeConnexion(formulaire)).rejects.toThrow('NEXT_REDIRECT');
     expect(posesDeLAppareil()).toEqual([]);
+  });
+});
+
+describe('REQ-SEC-003 — la politique de l’espace nomme les deux cookies strictement nécessaires (texte de la juriste)', () => {
+  const PHRASE =
+    "pour sécuriser la connexion à l'espace, deux cookies strictement nécessaires au service demandé sont déposés : l'un, __Host-connexion_code, garde l'empreinte de l'adresse saisie le temps du lien de connexion, pour vérifier le code reçu par courriel ; l'autre, __Host-partners-appareil, porte un identifiant de l'appareil, dont la Société ne garde qu'une empreinte, effacée trente jours après la dernière utilisation de l'appareil ; ils ne servent à aucune autre fin, ne sont lus par aucun tiers et ne demandent pas de consentement (loi Informatique et Libertés, art. 82)";
+  const ligneFinalite = (): string[] => {
+    const registre = readFileSync('docs/rgpd/registre-article-30.md', 'utf8');
+    const ligne = registre
+      .split(/\r?\n/)
+      .find((l) => l.startsWith('| Finalité | Recevoir la candidature'));
+    return (ligne ?? '').split('|').map((c) => c.trim());
+  };
+
+  it('REQ-SEC-003 : la Finalité de TRT-APPORTEURS se termine par la phrase de la juriste, MOT POUR MOT, précédée de « ; »', () => {
+    expect(ligneFinalite()[2]!.endsWith(`; ${PHRASE}`)).toBe(true);
+  });
+
+  it('REQ-SEC-003 : la phrase atteint la politique de l’espace, dans la rubrique Finalité, sans « À compléter » qui la retienne', () => {
+    const lue = extrairePolitique(readFileSync('docs/rgpd/registre-article-30.md', 'utf8'));
+    expect(lue.ok).toBe(true);
+    if (!lue.ok) return;
+    const finalite = lue.politique.rubriques.find((r) => r.cle === 'finalite')!;
+    const texte = finalite.contenu.map((s) => (s.type === 'texte' ? s.texte : '')).join('');
+    expect(texte).toContain(PHRASE);
+  });
+
+  it('REQ-SEC-003 : la ligne cite ses sources — SEC-54, SEC-55 et l’art. 82 de la loi Informatique et Libertés', () => {
+    expect(ligneFinalite()[3]).toContain('SEC-54 · SEC-55 · loi Informatique et Libertés art. 82');
   });
 });

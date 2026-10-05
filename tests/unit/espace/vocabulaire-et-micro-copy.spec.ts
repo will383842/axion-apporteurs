@@ -909,6 +909,9 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › titre : {entreprise} : décision de rattachement
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › appel : Voir Mes entreprises
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › corps : {decision}. Motif : {motif}.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › nouvel_appareil › titre : Connexion à votre espace depuis un nouvel appareil
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › nouvel_appareil › appel : Demander un nouveau lien de connexion
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › nouvel_appareil › corps : Votre lien de connexion a été utilisé le {dateHeure} sur un appareil que nous ne connaissions pas encore pour votre compte. Si c'est bien vous, vous n'avez rien à faire. Sinon, ne cliquez sur aucun lien reçu que vous n'avez pas demandé, demandez un nouveau lien de connexion depuis la page de connexion, et écrivez à Axion-IA.
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure › titre : Mise en demeure de remédier à un manquement au contrat
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure › appel : Écrire à Axion-IA
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure › corps : Axion-IA vous met en demeure de remédier, dans un délai de {delaiMiseEnDemeure} à compter de l'envoi de ce message, au manquement suivant à l'article {article} du contrat : {faits}. À défaut, Axion-IA pourra résilier le contrat sans préavis, par une décision motivée (article 11.2). Cette mise en demeure n'est ni un avertissement ni une mesure disciplinaire, et elle ne constitue pas un antécédent. Vous pouvez répondre par écrit à Axion-IA.
