@@ -46,6 +46,12 @@ const CLES = clesPii({
 });
 
 const MAINTENANT = new Date('2026-10-04T08:15:00.000Z'); // 10:15 à Paris (heure d'été)
+/**
+ * JUR-T63 : une invitation n'est construite qu'à un instant où une version de « Vos données dans la
+ * console » est publiée (`VERSIONS_PUBLIEES_CONSOLE`, la première le 2026-10-04 à 17 h 59 UTC). Les
+ * témoins d'invitation partent donc du lendemain, à la même heure de Paris.
+ */
+const INVITATION = new Date('2026-10-05T08:15:00.000Z'); // 10:15 à Paris (heure d'été)
 const ADMIN: ActeurDeLaConsole = { id: '0190f0f0-0000-7000-8000-0000000000a1', role: 'admin' };
 const CIBLE = '0190f0f0-0000-7000-8000-0000000000c1';
 
@@ -381,7 +387,7 @@ describe('REQ-SEC-023 — inviter', () => {
       email: 'nouveau@exemple.test',
       role,
       cles: CLES,
-      maintenant: MAINTENANT,
+      maintenant: INVITATION,
       adresseConnexion: 'https://partners.exemple.test/console/connexion',
     });
 
@@ -400,8 +406,8 @@ describe('REQ-SEC-023 — inviter', () => {
     expect(creation.data).toMatchObject({
       id,
       role: 'lecteur',
-      creeAt: MAINTENANT,
-      inviteeAt: MAINTENANT,
+      creeAt: INVITATION,
+      inviteeAt: INVITATION,
       activeeAt: null,
     });
     expect(creation.data.emailHash).toMatch(/^[0-9a-f]{64}$/);
@@ -409,13 +415,14 @@ describe('REQ-SEC-023 — inviter', () => {
     expect(evenement().mock.calls[0]![1]).toEqual({
       ...chargeDu('inviter', null, 'lecteur'),
       agregatId: id,
+      survenuAt: INVITATION,
     });
     expect(courriels).toEqual([
       courrielDInvitation({
         a: 'nouveau@exemple.test',
         role: 'lecteur',
         adresseConnexion: 'https://partners.exemple.test/console/connexion',
-        inviteeAt: MAINTENANT,
+        inviteeAt: INVITATION,
       }),
     ]);
   });
@@ -472,9 +479,9 @@ describe('REQ-SEC-023 — les courriels et leurs dates, à l’heure de Paris', 
       a: 'x@exemple.test',
       role: 'qualifieur',
       adresseConnexion: 'https://p.exemple.test/console/connexion',
-      inviteeAt: MAINTENANT,
+      inviteeAt: INVITATION,
     });
-    const echeance = new Date(MAINTENANT.getTime() + DUREES_AUTH.invitationConsoleMs.valeur);
+    const echeance = new Date(INVITATION.getTime() + DUREES_AUTH.invitationConsoleMs.valeur);
     expect(c).toEqual({
       a: 'x@exemple.test',
       sujet: C.invitation.sujet,
