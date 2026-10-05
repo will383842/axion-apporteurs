@@ -5,12 +5,12 @@
  * 5986737725).
  *
  * La version portée par une invitation se DÉRIVE de son instant d'envoi contre
- * `VERSIONS_PUBLIEES_CONSOLE` (JUR-T63). Si une entrée était datée de la FUSION, une invitation
+ * `VERSIONS_PUBLIEES_CONSOLE`. Si une entrée était datée de la FUSION, une invitation
  * envoyée avant que le déploiement ne serve la nouvelle page serait rattachée à une version que
  * personne ne pouvait encore lire. Ce fichier garde : la version rattachée entre la fusion et le
  * déploiement vérifié est la PRÉCÉDENTE ; toute entrée nouvelle porte son déploiement vérifié (le
- * sha servi, QA-T54) et la date de celui-ci ; la première, publiée depuis la fusion de JUR-T62, est
- * la seule datée de la fusion, et elle ne change pas ; la liste du dépôt est sans faute.
+ * sha servi, constaté par `deploy:verify`) et la date de celui-ci ; la première est la seule datée
+ * de la fusion, et elle ne change pas ; la liste du dépôt est sans faute.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -99,7 +99,7 @@ describe('REQ-JUR-068 — une version nouvelle de la page « Vos données dans l
     ).toEqual([{ version: 'b'.repeat(32), faute: 'date_illisible' }]);
   });
 
-  it('REQ-JUR-068 : TÉMOIN — seule la PREMIÈRE version, publiée depuis la fusion de JUR-T62, est datée de la fusion ; elle ne change pas', () => {
+  it('REQ-JUR-068 : TÉMOIN — seule la PREMIÈRE version, publiée à la première fusion, est datée de la fusion ; elle ne change pas', () => {
     expect(PREMIERE.version).toBe(VERSION_DATEE_DE_LA_FUSION);
     expect(PREMIERE.deploiement).toBeUndefined();
     expect(fautesDeDatation([PREMIERE])).toEqual([]);
