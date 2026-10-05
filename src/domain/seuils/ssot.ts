@@ -487,11 +487,11 @@ export const PARAMETRES = {
     verifieLe: '2026-10-04',
   },
   // SEC-67 (REQ-SEC-058) : la borne d'une page du journal des accès à la console, lue par
-  // `lireLeJournalDesAcces`. Au-delà, la lecture rend le curseur de la page suivante.
+  // `lireLeJournalDesAcces`. Un PLAFOND du serveur : l'appelant ne choisit pas la taille de la page.
   JOURNAL_DES_ACCES_PAGE_MAX: {
     valeur: 50,
     unite: 'traces',
-    source: 'SEC-67 ; sécurité, #707, commentaire 5981305490 (la lecture du journal est bornée)',
+    source: 'SEC-67 ; sécurité, #707, commentaire 5981305490 ; valeur : sécurité, #563',
     verifieLe: '2026-10-05',
   },
 } as const satisfies Record<string, Parametre>;
