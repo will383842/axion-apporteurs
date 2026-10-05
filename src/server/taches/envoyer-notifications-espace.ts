@@ -147,6 +147,8 @@ export async function envoyerLesNotificationsDeLEspace(p: PortsDuPassage): Promi
 export const CLES_ENVOYEES_PAR_LE_PASSAGE = [
   'decision_attribution',
   'premier_rang_libere',
+  // DM-25 : l'annulation pour antériorité de la Société, écrite avec son événement par la transition.
+  'attribution_annulee_anteriorite',
 ] as const;
 
 /** Ce que le passage ne sait pas faire seul : l'heure, le rendu du texte, l'envoi par l'émetteur. */
