@@ -134,6 +134,9 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
   // lira y sont celles de la juriste, mot pour mot, et repassent par l'espace quand il les affichera.
   'console/conformite.ts':
     'dossier de conformité, lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
+  // UX-P1-53 : l'écran des gels du journal des accès, lu par les administrateurs de la console seuls.
+  'console/gels-journal-acces.ts':
+    'gels du journal des accès, lus par les administrateurs de la console seuls (portée dépôt, REQ-GOV-017)',
   // JUR-T61 : la page publique des données de la console, lue par ses utilisateurs avant connexion.
   'console/vos-donnees.ts':
     'page « Vos données dans la console », lue par ses utilisateurs seuls : couverte par le témoin vos-donnees-console',

@@ -90,6 +90,7 @@ encore, l'accueil montre un état vide guidant qui dit ce qui arrive et à quel 
 | `/console/grille` | Éditeur de grille : modèles, édition en masse, complétude | admin | 1 | prévue | REQ-EXT-023, REQ-UX-026 | `grille-console.html` | UX-P1-14 | non |
 | `/console/candidatures` | Saisie manuelle d'une candidature et pièce jointe | admin | 1 | prévue | REQ-EXT-011, REQ-EXT-012 | `saisie-manuelle-console.html` | EXT-T04 | non |
 | `/console/utilisateurs` | Utilisateurs : invitation qui expire, rôle expliqué, désactivation immédiate | admin | 1 | livrée | REQ-SEC-023, REQ-DM-024 | `utilisateurs-console.html` | SEC-30 | non |
+| `/console/journal-des-acces/gels` | Gels du journal des accès : poser et lever sous step-up, liste bornée et paginée, ouverte depuis l'administration ; « aucun autre administrateur » quand personne ne peut lever | admin | 1 | livrée | REQ-SEC-023, REQ-UX-047 | — | UX-P1-53 | non |
 
 ## Écrans des phases 2 et 3
 

@@ -53,7 +53,8 @@ export const GELS_JOURNAL_ACCES = {
   pages: { suivante: 'Gels plus anciens', premiere: 'Revenir aux plus récents' },
   chargement: 'Chargement des gels…',
   /** Une saisie que le serveur refuse avant tout travail : référence, identifiant ou date hors forme. */
-  saisie: 'La saisie est incomplète ou hors forme : vérifiez la référence, l’identifiant et les dates.',
+  saisie:
+    'La saisie est incomplète ou hors forme : vérifiez la référence, l’identifiant et les dates.',
   /** Les refus du module, tels que l'écran les dit. */
   refus: {
     droit_absent: 'Votre rôle ne permet pas ce geste.',

@@ -16,6 +16,8 @@
  */
 export const UTILISATEURS_CONSOLE = {
   titre: 'Utilisateurs de la console',
+  /** Le lien vers l'écran des gels du journal des accès, montré à l'administrateur validé seul. */
+  liens: { gels: 'Gels du journal des accès' },
   inviter: 'Inviter une personne',
   compte: (n: number) => `Personnes ayant accès à la console : ${n}`,
   colonnes: {

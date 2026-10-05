@@ -46,9 +46,7 @@ export function EcranDesGels(p: {
       <h1>{T.titre}</h1>
       <p>{T.intro}</p>
 
-      {refus !== null ? (
-        <p role="alert">{refus === 'saisie' ? T.saisie : T.refus[refus]}</p>
-      ) : null}
+      {refus !== null ? <p role="alert">{refus === 'saisie' ? T.saisie : T.refus[refus]}</p> : null}
 
       {droits.poser ? (
         <section aria-labelledby="poser">

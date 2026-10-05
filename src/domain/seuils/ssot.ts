@@ -612,3 +612,15 @@ export const CONTEXTE_DEPOT_CARACTERES_MAX = {
   source: 'docs/chantiers/W20-confirmation-par-email.md §2, HYP-W20-CONTEXTE',
   verifieLe: '2026-10-02',
 } as const;
+
+/**
+ * UX-P1-53 — le PLAFOND d'une page de la liste des gels du journal des accès, fixé par le serveur.
+ * Une taille demandée est ramenée sous ce plafond, jamais au-dessus ; la liste se pagine par curseur
+ * (keyset), jamais par décalage (condition de la sécurité).
+ */
+export const GELS_JOURNAL_ACCES_PAGE_MAX = {
+  valeur: 50,
+  unite: 'lignes',
+  source: 'décision de la coordination, avis conforme de la sécurité (#620)',
+  verifieLe: '2026-10-05',
+} as const;

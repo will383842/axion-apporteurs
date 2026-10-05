@@ -481,10 +481,7 @@ describe('REQ-SEC-023 — (7) l’onglet : la route est livrée, et seul l’adm
 
   it('REQ-SEC-023 — TÉMOINS : un lien ouvert sans condition, ou sous une autre condition, rougit', () => {
     const source = readFileSync(UTILISATEURS, 'utf8');
-    const sansCondition = source.replace(
-      /\{(\w+)\s*\?\s*\(?\s*<p>/,
-      '{true ? (<p>'
-    );
+    const sansCondition = source.replace(/\{(\w+)\s*\?\s*\(?\s*<p>/, '{true ? (<p>');
     expect(fautesDuLien(sansCondition)).not.toEqual([]);
     expect(
       fautesDuLien(source.replace(/await droitsDuLecteurSurLesGels\(d\.prisma, moi\)/, 'true'))
@@ -496,7 +493,9 @@ describe('REQ-SEC-023 — (7) l’onglet : la route est livrée, et seul l’adm
     expect(
       readFileSync('docs/CONSOLE-ROUTES.md', 'utf8')
         .split('\n')
-        .some((l) => /^\| `\/console\/journal-des-acces\/gels` \|.*\| admin \| 1 \| livrée \|/.test(l))
+        .some((l) =>
+          /^\| `\/console\/journal-des-acces\/gels` \|.*\| admin \| 1 \| livrée \|/.test(l)
+        )
     ).toBe(true);
   });
 });
