@@ -25844,13 +25844,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Versée au rattrapage 117 (gouvernance, d'après la coordination ; auteur A06). Elle ne retient pas la mise en service (elle n'entre pas dans la porte GOV-146), comme UX-P1-51. La maquette `docs/maquettes/contestation.html` montre les cinq états de l'écran de contestation d'UX-P1-51. [précisé au rattrapage 118 : la maquette de #761 (branche `t/ux-p1-60`, tête 51d95728) en montre six ; corps de #761, MOT POUR MOT : « - **`docs/maquettes/contestation.html`** : six états, sur le socle de l'espace (`notifications.html`, même charte, même atelier). Données fictives. » La validation de la maquette reste à Williams, en geste groupé.] Sa ligne de `docs/maquettes/VALIDATION.md` est posée avec « Validé le » et « Par » vides : la validation revient à Williams, en geste groupé. Le compte des maquettes de l'espace passe de 13 à 14 dans `charte-commune.spec.ts` et `maquettes-validees.spec.ts`. UX-P1-51 dépend de cette tâche. CHEMINS : ceux de la branche `t/maquette-contestation` (tête 1e11cfeb), d'après la coordination.\n\nNOTE D'ORDRE (rattrapage 117, gouvernance, d'après la coordination) : #748 (UX-P1-57) et la maquette d'UX-P1-51 (UX-P1-60, branche t/maquette-contestation) cumulent les comptes de maquettes ; la seconde à fusionner porte 29 maquettes, 28 lignes de `VALIDATION.md`, 14 pour l'espace et 14 pour la console.\n\nLentille : exactitude.",
       "tests": {
         "REQ-UX-047": [
           "tests/unit/espace/maquettes-validees.spec.ts"
         ]
-      }
+      },
+      "branch": "t/ux-p1-60",
+      "owner": "A06",
+      "pr": 761,
+      "attestation": {
+        "pr": 761,
+        "sha": "34d425fdab4755a48c482b8cdfa3610f3efc60ca",
+        "fusionneeAt": "2026-10-07T06:47:12Z"
+      },
+      "motif": null
     },
     {
       "id": "GOV-145",
