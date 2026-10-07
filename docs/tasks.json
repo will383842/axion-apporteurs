@@ -24215,7 +24215,9 @@
         "src/domain/seuils/retention.ts",
         "tests/integration/ajout-seul-gabarit.spec.ts",
         "docs/rgpd/registre-article-30.md",
-        "docs/GLOSSAIRE.md"
+        "docs/GLOSSAIRE.md",
+        "src/content/micro-copy/espace/issues-depot.ts",
+        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts"
       ],
       "schema": true,
       "sensible": [],
