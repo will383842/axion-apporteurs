@@ -25119,7 +25119,9 @@
         "docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md",
         "docs/runbooks/secret-desynchronise.md",
         "docs/runbooks/mise-en-service.md",
-        "src/server/integrations/axionia/attributions-dto.ts"
+        "src/server/integrations/axionia/attributions-dto.ts",
+        "tests/unit/securite/rotation-des-secrets.spec.ts",
+        "tests/unit/qualite/env-fail-fast.spec.ts"
       ],
       "schema": false,
       "sensible": [],

@@ -361,10 +361,11 @@ describe('REQ-QA-030 — le module rechargé : les listes dérivées du schéma,
       'TELEGRAM_BOT_TOKEN',
       'TELEGRAM_CHAT_ID',
     ]);
-    // Douze secrets toujours exigés, lus au schéma : leurs noms ne sont pas retapés ici.
-    expect(m.NOMS_DES_SECRETS).toHaveLength(12);
+    // Treize secrets toujours exigés (SEC-63 : APPORTEUR_REF_KEY), lus au schéma : leurs noms ne sont
+    // pas retapés ici.
+    expect(m.NOMS_DES_SECRETS).toHaveLength(13);
     expect(m.NOMS_DES_SECRETS).toContain(CLE_HEX);
-    expect(m.NOMS_DES_VARIABLES).toHaveLength(27);
+    expect(m.NOMS_DES_VARIABLES).toHaveLength(28);
     expect(m.NOMS_DES_VARIABLES).toEqual([
       ...m.NOMS_DES_SECRETS,
       ...m.NOMS_DES_SECRETS_CONDITIONNELS,

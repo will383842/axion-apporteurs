@@ -53,6 +53,22 @@ la clé. Un `kid` absent ou inconnu est refusé ; aucune clé n'est essayée au 
 
 Inverser 1 et 2 fait refuser par Partners tout envoi d'axionia, pour `kid` inconnu, jusqu'à l'étape 1.
 
+## Bascule datée d'`APPORTEUR_REF_KEY` (compromission seulement, SEC-63)
+
+`APPORTEUR_REF_KEY` dérive la référence opaque d'un porteur (`apporteurRef`) que Partners donne à
+axion-ia. Elle est **hors rotation courante** : la changer change TOUTES les références d'un coup.
+Une compromission seule n'expose que la possibilité de relier une référence à un identifiant interne,
+qui n'est jamais publié. Elle se traite ainsi, et **seulement sur une décision écrite de Williams** :
+
+1. Dater la bascule avec axion-ia : le jour et l'heure où les nouvelles références remplacent les
+   anciennes.
+2. À l'heure dite, poser la nouvelle valeur d'`APPORTEUR_REF_KEY` dans les **secrets de
+   l'environnement `production`** (au moins 32 octets, distincte de toutes les autres clés), puis
+   relancer le workflow `Provisionnement Coolify` et redéployer.
+3. axion-ia remplace les références qu'il garde par les nouvelles, à leur prochaine lecture de l'API
+   des attributions. Partners ne stocke aucune correspondance : il recalcule chaque référence.
+4. Noter la bascule ci-dessous, sans aucune valeur.
+
 ## Ce que ce runbook ne fait jamais
 
 - Aucune valeur de secret écrite dans un fichier, une PR, un journal ou une conversation.

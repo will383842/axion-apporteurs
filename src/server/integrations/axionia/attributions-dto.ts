@@ -42,6 +42,7 @@ import { API_ATTRIBUTIONS } from '../../../../packages/contracts/api';
 import { ETATS_OCCUPANTS } from '../../../domain/attribution/etats';
 import { versParis } from '../../../domain/temps/paris';
 import { clesPii, decryptPii, type ClesPii } from '../../securite/pii';
+import { formaterRefus, lireEnvironnement, type CleDesReferences } from '../../../lib/env';
 import { MODELE_APPORTEUR, MODELE_UTILISATEUR_CONSOLE } from '../../auth/lien-magique-depot';
 import type { LecteurDAttribution, ReponseAttribution } from './api-entrante';
 
@@ -49,11 +50,27 @@ import type { LecteurDAttribution, ReponseAttribution } from './api-entrante';
 export const VARIABLE_CLE_REFERENCE = 'APPORTEUR_REF_KEY';
 
 /**
- * La clé de pseudonymisation des porteurs. Elle ne sert qu'à dériver `apporteurRef` : jamais à
- * signer ni à authentifier. Ce type deviendra `Pick<Secrets, 'APPORTEUR_REF_KEY'>` quand
- * `src/lib/env.ts` la déclarera (chemin hors de cette tâche, demandé en rattrapage).
+ * La clé de pseudonymisation des porteurs, sous son type dédié de `src/lib/env.ts` (SEC-63). Elle ne
+ * sert qu'à dériver `apporteurRef` : jamais à signer ni à authentifier.
  */
-export type CleDesReferences = { readonly APPORTEUR_REF_KEY: string };
+export type { CleDesReferences };
+
+/**
+ * SEC-63 : la clé des références, tirée d'un environnement que `lireEnvironnement` a jugé en ENTIER
+ * (présence, 32 octets au moins, distincte de toutes les autres clés, préfixes refusés en production).
+ * Un refus lève en nommant les variables et leurs motifs (`formaterRefus`), jamais une valeur.
+ */
+export function cleDesReferences(
+  source: Readonly<Record<string, string | undefined>>
+): CleDesReferences {
+  const lu = lireEnvironnement(source);
+  if (!lu.ok) {
+    throw new Error(
+      `cle_reference : environnement refusé par src/lib/env.ts — ${lu.refus.map(formaterRefus).join(' ; ')}`
+    );
+  }
+  return { APPORTEUR_REF_KEY: lu.env.APPORTEUR_REF_KEY };
+}
 
 /** La population du porteur : elle entre dans la dérivation. */
 export type Population = 'apporteur' | 'console';
@@ -219,14 +236,17 @@ let client: PrismaClient | undefined;
 
 /**
  * Le lecteur de production. Les clés sont relues À CHAQUE APPEL, par le même juge que le
- * démarrage : un environnement refusé, ou une clé de référence absente, lève — la frontière rend
- * 503, jamais « libre » (échec fermé).
+ * démarrage (SEC-63 : la clé des références aussi, jamais `process.env` lu à part) : un
+ * environnement refusé, ou une clé de référence absente, lève — la frontière rend 503, jamais
+ * « libre » (échec fermé).
  */
 export const lecteurDeProduction: LecteurDAttribution = async (siren) => {
   client ??= new PrismaClient();
+  // La clé des références d'abord : son absence se nomme `cle_reference`.
+  const cleReference = cleDesReferences(process.env);
   return lecteurDeLaBase(client, {
     cles: clesPii(process.env),
-    cleReference: { APPORTEUR_REF_KEY: process.env[VARIABLE_CLE_REFERENCE] ?? '' },
+    cleReference,
     // Le canal de la frontière (son puits) : une ligne, le genre et sa charge fermée.
     signaler: (s) => {
       const { genre, ...charge } = s;
