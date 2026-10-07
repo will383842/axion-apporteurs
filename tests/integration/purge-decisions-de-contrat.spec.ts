@@ -49,6 +49,9 @@ async function unApporteur(): Promise<string> {
     await base.prisma.apporteur.create({
       data: {
         statut: 'resilie',
+        // CHECK `apporteurs_motif_si_resilie` : un apporteur résilié porte son motif, celui des faits
+        // de changement de statut de ces fixtures.
+        resiliationMotif: 'manquement_grave',
         codeParrainage: `AX${hex(3).toUpperCase()}`,
         isTest: true,
         candidatureId: randomUUID(),
