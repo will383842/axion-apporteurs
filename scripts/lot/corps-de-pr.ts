@@ -56,7 +56,7 @@ import {
   cheminsTouches,
   lireRevues,
   risqueDeLaPr,
-  tachesDeLaBase,
+  tachesDeLaBaseDeFusion,
   tachesDeLaPr,
   type EntreeDeFichier,
   type ListeDesFichiers,
@@ -329,9 +329,10 @@ function caseRevues(
     labels,
     revues,
     taches,
-    // La base de la PR, lue par `git show <sha>:docs/tasks.json`. Illisible → `null` → risque
-    // élevé : sans elle, une PR qui déclasse sa propre tâche se relirait en ordinaire.
-    tachesBase: tachesDeLaBase(baseSha),
+    // La BASE DE FUSION de la tête et de la base (GOV-152, le même lecteur que `gov:pr`), lue par
+    // `git show <sha>:docs/tasks.json`. Illisible → `null` → risque élevé : sans elle, une PR qui
+    // déclasse sa propre tâche se relirait en ordinaire.
+    tachesBase: tachesDeLaBaseDeFusion(baseSha, tete),
     tete,
     auteurPoste: /^Auteur:\s*(A\d{2})\s*$/m.exec(gabarit)?.[1] ?? null,
     auteurCompte,

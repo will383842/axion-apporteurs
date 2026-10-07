@@ -1553,7 +1553,7 @@ export function idDuTitre(titre: string | null): string | null {
  * écrit `docs/tasks.json` — et se relirait en ordinaire. Toute erreur rend `null`, jamais une
  * liste vide : l'absence est un fait que `risqueDeLaPr()` convertit en ÉLEVÉ.
  */
-export function tachesDeLaBase(ref: string): TacheDeLaPr[] | null {
+export function tachesDeLaBase(ref: string, cwd?: string): TacheDeLaPr[] | null {
   if (!/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(ref)) return null;
   try {
     const doc = JSON.parse(
@@ -1561,9 +1561,37 @@ export function tachesDeLaBase(ref: string): TacheDeLaPr[] | null {
         encoding: 'utf8',
         maxBuffer: 64e6,
         stdio: ['ignore', 'pipe', 'ignore'],
+        ...(cwd === undefined ? {} : { cwd }),
       })
     ) as { taches?: unknown };
     return Array.isArray(doc.taches) ? (doc.taches as TacheDeLaPr[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * GOV-152 — LE REGISTRE DE LA BASE DE FUSION (`git merge-base <base> <tête>`), et non celui de la
+ * base COURANTE. Une PR ne se juge que sur ce qu'ELLE change : comparée à `main` courante, elle
+ * paraissait « réécrire » toute tâche que `main` a changée depuis son départ (des chemins ajoutés par
+ * une autre PR fusionnée entre-temps), et rougissait `registre_reecrit_par_une_pr_d_auteur` et
+ * `fichier_reserve_sans_label` sans avoir rien écrit. Échec FERMÉ : une base de fusion introuvable
+ * rend `null`, que le risque et la garde des écarts lisent comme un registre illisible.
+ */
+export function tachesDeLaBaseDeFusion(
+  base: string,
+  tete: string,
+  cwd?: string
+): TacheDeLaPr[] | null {
+  const ref = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+  if (!ref.test(base) || !ref.test(tete)) return null;
+  try {
+    const fusion = execFileSync('git', ['merge-base', base, tete], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      ...(cwd === undefined ? {} : { cwd }),
+    }).trim();
+    return /^[0-9a-f]{40}$/.test(fusion) ? tachesDeLaBase(fusion, cwd) : null;
   } catch {
     return null;
   }

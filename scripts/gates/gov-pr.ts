@@ -60,6 +60,7 @@ import {
   resoudreLeLot,
   risqueDeLaPr,
   tachesDeLaBase,
+  tachesDeLaBaseDeFusion,
   segmentsNommesTouches,
   ZONES_SENSIBLES,
   touche,
@@ -1529,9 +1530,13 @@ function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant
     annoncees,
     revues,
     commentaires,
-    // Le registre de la BASE — `origin/<base>`, la même référence que le pas 8. Illisible (ref
-    // absente en local) → `null` → risque ÉLEVÉ : le sens de défaillance reste fermé.
-    tachesBase: projeter(tachesDeLaBase(refBase)),
+    // Le registre de la BASE — avant fusion, celui de la BASE DE FUSION de la tête et de
+    // `origin/<base>` (GOV-152) : la PR ne se juge que sur ce qu'elle change, pas sur ce que `main` a
+    // changé depuis son départ ; après fusion, `origin/<base>`, la référence du pas 8. Illisible →
+    // `null` → risque ÉLEVÉ : le sens de défaillance reste fermé.
+    tachesBase: projeter(
+      moment === 'apres-fusion' ? tachesDeLaBase(refBase) : tachesDeLaBaseDeFusion(refBase, 'HEAD')
+    ),
   });
   // LE JOURNAL DE LA TÊTE (GOV-052, RM-15). Avant fusion, `HEAD` vient d'être confrontée à la tête de
   // la forge : c'est la branche de la PR. Après fusion, c'est le commit de fusion qui porte le
@@ -1700,7 +1705,8 @@ function prParEvenement(): Pr | null {
   return prDepuisLEvenement(
     ev.pull_request,
     sortieDuDiff,
-    projeter(tachesDeLaBase(ev.pull_request.base.sha))
+    // GOV-152 : la base de FUSION de la tête et de la base de l'événement, pas la base courante.
+    projeter(tachesDeLaBaseDeFusion(ev.pull_request.base.sha, ev.pull_request.head.sha))
   );
 }
 
