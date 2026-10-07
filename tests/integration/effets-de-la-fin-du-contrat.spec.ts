@@ -36,7 +36,7 @@ let grilleId: string;
 
 const MAINTENANT = new Date('2026-10-04T08:00:00.000Z');
 const SECRET = 's'.repeat(48);
-const KID = 'kdm63000';
+const KID = '0d630d63';
 const hex = (octets: number) => randomBytes(octets).toString('hex');
 let sirens = 810000000;
 const unSiren = () => String((sirens += 1));
