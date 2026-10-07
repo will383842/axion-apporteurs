@@ -450,7 +450,7 @@ describe('REQ-SEC-018 — la suspension, rendue depuis sa décision (SEC-15, voi
     const [n] = await notificationsDeLEspace(c, MOI, { cles, finDUneSuspension });
     expect(n?.titre).toBe("Vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA");
     expect(n?.corps).toBe(
-      "Axion-IA a suspendu l'enregistrement de vos nouvelles déclarations du {dateDebut} au {dateFin}, le temps d'une vérification, au titre de l'article 3.7 du contrat. Le détail des faits n'est plus conservé, sa durée de conservation ayant pris fin. Cette suspension n'a eu d'effet ni sur les entreprises que vous avez déclarées, ni sur vos commandes, ni sur vos commissions, et elle ne constitue pas un antécédent."
+      "Axion-IA a suspendu l'enregistrement de vos nouveaux dépôts du {dateDebut} au {dateFin}, le temps d'une vérification, au titre de l'article 3.7 du contrat. Le détail des faits n'est plus conservé, sa durée de conservation ayant pris fin. Cette suspension n'a eu d'effet ni sur les entreprises que vous avez déposées, ni sur vos commandes, ni sur vos commissions, et elle ne constitue pas un antécédent."
         .replace('{dateDebut}', '7 octobre 2026')
         .replace('{dateFin}', '15 octobre 2026')
     );
