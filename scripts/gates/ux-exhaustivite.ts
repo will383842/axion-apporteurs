@@ -130,6 +130,9 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
   'public/confirmation-contact.ts':
     'page publique du contact, hors de l’espace : couverte par le témoin confirmation-par-courriel',
   'console/a-appeler.ts': 'lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
+  // SEC-51 : les messages des refus de la console, lus par Axion-IA seul, jamais par l'apporteur.
+  'console/refus.ts':
+    'refus de la garde de la réserve, lus par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
   // SEC-30 : l'écran des utilisateurs de la console et ses courriels, lus par ses utilisateurs seuls.
   'console/utilisateurs.ts':
     'administration des utilisateurs de la console et ses courriels, lus par ses utilisateurs seuls (portée dépôt, REQ-GOV-017)',

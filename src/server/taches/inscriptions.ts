@@ -79,6 +79,7 @@ import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
 import { purgerLesSessions } from './purger-sessions-espace';
 import { resilierALaDateDEffet } from './resilier-a-date-effet';
 import { effacerLesComptesDesactives } from './purger-utilisateurs-console';
+import { purgerLesTracesDeLaListe } from './purger-traces-liste-noire';
 import { purgerLesTextesDesDecisions } from './purger-textes-des-decisions';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import {
@@ -290,6 +291,9 @@ export function inscriptions(
     // SEC-66 (REQ-JUR-015) : la résiliation par la Société, à sa date d'effet.
     resiliations_a_date_effet: () =>
       resilierALaDateDEffet(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-65 : la trace de la liste de la Société, effacée cinq ans après le retrait.
+    traces_liste_noire_purger: () =>
+      purgerLesTracesDeLaListe(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-70 (REQ-JUR-029) : le texte d'une décision de contrat, purgé le lendemain de son échéance.
     decisions_contrat_purger: () =>
       purgerLesTextesDesDecisions(prisma, new Date(horlogeSysteme.maintenant())),

@@ -456,26 +456,28 @@ model UtilisateurConsole {
   valideAt               DateTime?            @map("valide_at") @db.Timestamptz(3)
   administrateursValides UtilisateurConsole[] @relation("ValidationDesAdministrateurs")
 
-  liensMagiques           LienMagique[]
-  sessionsEspace          SessionEspace[]
-  attributions            Attribution[]            @relation("AttributionsDuConseiller")
-  suspensionsDePeremption Attribution[]            @relation("SuspensionsDePeremption")
-  verifications           Verification[]
-  anomaliesTraitees       Anomalie[]
-  rattachementsDecides    RattachementManuel[]
-  contestationsRepondues  Contestation[]
-  qualificationsSaisies   Qualification[]
-  accesJournalises        JournalAccesConsole[]
+  liensMagiques            LienMagique[]
+  sessionsEspace           SessionEspace[]
+  attributions             Attribution[]            @relation("AttributionsDuConseiller")
+  suspensionsDePeremption  Attribution[]            @relation("SuspensionsDePeremption")
+  verifications            Verification[]
+  anomaliesTraitees        Anomalie[]
+  rattachementsDecides     RattachementManuel[]
+  contestationsRepondues   Contestation[]
+  qualificationsSaisies    Qualification[]
+  accesJournalises         JournalAccesConsole[]
   /// SEC-61 : les gels du journal des accès qui visent l'utilisateur, ceux qu'il a posés, levés.
-  gelsJournalVises        JournalAccesConsoleGel[] @relation("GelsJournalVises")
-  gelsJournalPoses        JournalAccesConsoleGel[] @relation("GelsJournalPoses")
-  gelsJournalLeves        JournalAccesConsoleGel[] @relation("GelsJournalLeves")
-  sirensListeNoireAjoutes SirenListeNoire[]
+  gelsJournalVises         JournalAccesConsoleGel[] @relation("GelsJournalVises")
+  gelsJournalPoses         JournalAccesConsoleGel[] @relation("GelsJournalPoses")
+  gelsJournalLeves         JournalAccesConsoleGel[] @relation("GelsJournalLeves")
+  sirensListeNoireAjoutes  SirenListeNoire[]
+  tracesListeNoireAjoutees SirenListeNoireTrace[]   @relation("TracesListeNoireAjoutees")
+  tracesListeNoireRetirees SirenListeNoireTrace[]   @relation("TracesListeNoireRetirees")
   /// CPL-T06 : les décisions de candidature dont l'utilisateur est l'auteur.
-  decisionsCandidature    DecisionCandidature[]
+  decisionsCandidature     DecisionCandidature[]
   /// CPL-T24 : les RIB que l'utilisateur a vérifiés, et ceux qu'il a confirmés.
-  ribsVerifies            PieceKyc[]               @relation("RibsVerifies")
-  ribsConfirmes           PieceKyc[]               @relation("RibsConfirmes")
+  ribsVerifies             PieceKyc[]               @relation("RibsVerifies")
+  ribsConfirmes            PieceKyc[]               @relation("RibsConfirmes")
 
   @@map("utilisateurs_console")
 }
@@ -1509,6 +1511,28 @@ model SirenListeNoire {
   ajouteAt    DateTime           @default(dbgenerated("clock_timestamp()")) @map("ajoute_at") @db.Timestamptz(3)
 
   @@map("sirens_liste_noire")
+}
+
+/// La trace de la liste de la Société (DM-65, REQ-DM-028) : une ligne par PÉRIODE d'inscription,
+/// ouverte par la base à l'ajout (`sirens_liste_noire_tracer_ajout`), fermée par le code avant le
+/// retrait (`sirens_liste_noire_retrait_trace` refuse un retrait non tracé), effacée par la purge cinq
+/// ans après le retrait. En SQL brut (ADR-0015) : la forme du SIREN (`sirens_liste_noire_trace_siren_forme`),
+/// une seule période ouverte par SIREN (index unique partiel `sirens_liste_noire_trace_une_ouverte`),
+/// l'index de la purge (`sirens_liste_noire_trace_retire_at_idx`) et la garde
+/// `sirens_liste_noire_trace_garde` (seule la fermeture, une fois ; seule une période fermée
+/// s'efface ; TRUNCATE refusé). L'identifiant naît dans la base (`gen_random_uuid()`), sans défaut ici.
+model SirenListeNoireTrace {
+  id          String              @id @db.Uuid
+  siren       String              @db.Char(9)
+  motif       MotifListeNoire
+  ajouteParId String              @map("ajoute_par_id") @db.Uuid
+  ajoutePar   UtilisateurConsole  @relation("TracesListeNoireAjoutees", fields: [ajouteParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  ajouteAt    DateTime            @map("ajoute_at") @db.Timestamptz(3)
+  retireParId String?             @map("retire_par_id") @db.Uuid
+  retirePar   UtilisateurConsole? @relation("TracesListeNoireRetirees", fields: [retireParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  retireAt    DateTime?           @map("retire_at") @db.Timestamptz(3)
+
+  @@map("sirens_liste_noire_trace")
 }
 
 /// La projection locale de l'antériorité (DM-10-P, REQ-DM-029) : une ligne par SIREN et par origine,

@@ -59,6 +59,8 @@ export const TACHES = {
   utilisateurs_console_effacer: { req: 'REQ-JUR-068' },
   /** SEC-66 — le passage à `resilie` d'une résiliation par la Société, à sa date d'effet. */
   resiliations_a_date_effet: { req: 'REQ-JUR-015' },
+  /** DM-65 — l'effacement, cinq ans après le retrait, de la trace de la liste tenue par la Société. */
+  traces_liste_noire_purger: { req: 'REQ-DM-028' },
   /**
    * INT-T08-P — la réconciliation quotidienne avec axion-ia : relecture de sa file depuis la plus
    * haute séquence reçue, rejeu des trous (`src/server/jobs/reconciliation.ts`).

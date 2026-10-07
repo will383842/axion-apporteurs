@@ -1079,6 +1079,7 @@
         "SEC-60",
         "UX-P1-53",
         "UX-P1-56",
+        "UX-P1-63",
         "UX-P2-03",
         "UX-P3-05"
       ]
@@ -5405,6 +5406,7 @@
         "UX-P1-60",
         "UX-P1-61",
         "UX-P1-62",
+        "UX-P1-63",
         "UX-P2-01",
         "UX-P2-02",
         "UX-P2-03",
@@ -5506,6 +5508,20 @@
       "phase": 1,
       "taches": [
         "UX-P1-05"
+      ]
+    },
+    {
+      "id": "REQ-UX-063",
+      "domaine": "produit-ux",
+      "texte": "Tous les e-mails de Partners reprennent le gabarit commun d'axion-ia, sans second système visuel. Exigence de Williams (#786, commentaire 6039806330), MOT POUR MOT :\n**EXIGENCE DE WILLIAMS (07/10/2026) : e-mails d'Axion Partners = même gabarit que le site axion-ia.com.**\n\nTous les e-mails envoyés par Axion Partners (apporteurs, entreprises, console) doivent reprendre **le gabarit commun d'axion-ia**, pour que toute la plateforme soit harmonisée :\n- même châssis que `src/lib/email/templates/_layout.tsx` d'axion-ia : fond crème `#f6f1e8`, logo `https://axion-ia.com/email/axion-ia-logo-pill.png`, boutons terracotta `#c24a1b`, carte blanche arrondie, et même pied légal (AXION IA SAS, SIREN, TVA, NDA, contact) ;\n- charte TERRACOTTA, jamais le bleu du site, sauf pour les liens ;\n- vouvoiement, signature de Williams, et les mêmes familles d'e-mails (pied d'opposition pour la famille B) ;\n- pas de second système visuel. Si le gabarit doit évoluer, il évolue des deux côtés.\n\nÀ intégrer au registre des exigences (REQ) et aux revues UX/rédaction avant tout envoi réel.",
+      "source": "exigence de Williams du 2026-10-07 (#786, 6039806330, relayée par la session axion-ia-a1) ; versée au rattrapage 124",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 12,
+      "etape": 8,
+      "phase": 1,
+      "taches": [
+        "UX-P1-64"
       ]
     },
     {
@@ -5984,6 +6000,8 @@
       "phase": 1,
       "taches": [
         "EXT-T07",
+        "INT-T82-A",
+        "INT-T82-P",
         "JUR-T54",
         "UX-P2-18",
         "UX-P2-19"
