@@ -470,6 +470,10 @@ describe('REQ-DM-027 — l’auteur de l’ouverture, relu par le module du jour
   it('REQ-DM-027 : TÉMOIN STATIQUE — rib.ts n’écrit aucun SQL sur la table du journal', () => {
     const source = readFileSync('src/server/conformite/rib.ts', 'utf8');
     expect(source).not.toMatch(/"evenements"|\$queryRaw[^`]*`[^`]*evenements/);
-    expect(source).toMatch(/acteursDUneTransition\(tx, apporteurId, 'ouvrir_kyc'\)/);
+    // Écart borné entre les arguments : la mutation enveloppe le littéral de la transition, et le
+    // témoin doit rester vrai sur la source instrumentée comme sur la source lue.
+    expect(source).toMatch(
+      /acteursDUneTransition\(\s*tx\s*,\s*apporteurId\s*,[\s\S]{0,200}?'ouvrir_kyc'/
+    );
   });
 });
