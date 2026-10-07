@@ -287,7 +287,7 @@ export const COMPTEURS = {
     surPanne: 'refuser',
     source: 'REQ-SEC-016',
     ancre: 'ecrit:session',
-    verifieLe: '2026-10-08',
+    verifieLe: '2026-10-07',
   },
   'ecrit:apporteur': {
     prefixe: 'ecrit:',
@@ -296,7 +296,7 @@ export const COMPTEURS = {
     surPanne: 'refuser',
     source: 'REQ-SEC-016',
     ancre: 'ecrit:apporteur',
-    verifieLe: '2026-10-08',
+    verifieLe: '2026-10-07',
   },
 } as const satisfies Readonly<Record<`${PrefixeDeFamille}${string}`, DeclarationDeCompteur>>;
 
