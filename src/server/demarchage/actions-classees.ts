@@ -34,6 +34,8 @@ export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction
   // UX-P1-57 : la mise en demeure est un acte du contrat envers l'apporteur, pas une prise de contact
   // commerciale d'une entreprise.
   'ecran:mise_en_demeure': 'sans_contact',
+  // CPL-T24 : la vérification d'un RIB à quatre yeux concerne le compte de l'apporteur, pas une entreprise.
+  'action:verifier_rib': 'sans_contact',
   'action:mettre_en_demeure': 'sans_contact',
   'action:rattacher_manuellement': 'sans_contact',
   'action:lire_justification_anomalie': 'sans_contact',
@@ -75,6 +77,8 @@ export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction
   'tache:anomalies_anonymiser': 'sans_contact',
   'tache:contestations_purger': 'sans_contact',
   'tache:dementis_purger': 'sans_contact',
+  // DM-70 : la purge du texte d'une décision de contrat n'est une prise de contact avec personne.
+  'tache:decisions_contrat_purger': 'sans_contact',
 };
 
 /** Les actions et tâches qui doivent appeler la garde de la réserve. */
