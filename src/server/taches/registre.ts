@@ -76,6 +76,11 @@ export const TACHES = {
   contestations_purger: { req: 'REQ-DM-043' },
   /** DM-62 — la purge dédiée du démenti d'un contact, que la purge du contact excepte. */
   dementis_purger: { req: 'REQ-DM-043' },
+  /**
+   * SEC-14 — l'ouverture DIFFÉRÉE des anomalies de sincérité, jamais dans la transaction du dépôt
+   * (`ouvrirLesAnomaliesDeSincerite`, `src/server/anomalie/sincerite.ts`).
+   */
+  sincerite_ouvrir: { req: 'REQ-SEC-017' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;

@@ -78,6 +78,7 @@ import {
 import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
 import { purgerLesSessions } from './purger-sessions-espace';
 import { effacerLesComptesDesactives } from './purger-utilisateurs-console';
+import { lireReglageDeSincerite, ouvrirLesAnomaliesDeSincerite } from '../anomalie/sincerite';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import {
   ouvrirLesAnomaliesDAutoParrainage,
@@ -276,6 +277,14 @@ export function inscriptions(
     sessions_purger: () => purgerLesSessions(prisma, new Date(horlogeSysteme.maintenant())),
     utilisateurs_console_effacer: () =>
       effacerLesComptesDesactives(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-14 (REQ-SEC-017) : les détecteurs de sincérité, en traitement DISTINCT et DIFFÉRÉ du dépôt.
+    // Le réglage vit hors du dépôt ; absent, rien n'est jugé.
+    sincerite_ouvrir: () =>
+      ouvrirLesAnomaliesDeSincerite(prisma, {
+        maintenant: new Date(horlogeSysteme.maintenant()),
+        reglage: lireReglageDeSincerite(process.env.PARTNERS_SINCERITE_REGLAGE),
+        cles: clesPii(process.env),
+      }),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>
