@@ -7,7 +7,7 @@
  * al. 3 : chacun est une exception NOMINATIVE, et chacune doit encore se trouver (une exception devenue
  * inutile rougit aussi). Tout autre écart rougit, en nommant la phrase.
  *
- * LA SOURCE est `docs/tiers/contrat-v2-axion-ia.md` : le corps et l'annexe 2 du v2, nombres
+ * LA SOURCE est `tests/fixtures/contrat/contrat-v2-axion-ia.md` : le corps et l'annexe 2 du v2, nombres
  * masqués (l'économie du réseau ne va pas dans un dépôt public). Les variables `{{X}}` et les nombres
  * valent un joker « § », des deux côtés ; l'emphase, les commentaires et les apostrophes typographiques
  * sont normalisés. L'annexe 1 et la table de correspondance des clauses sont hors du champ : propres à
@@ -18,7 +18,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 
-const FIXTURE = readFileSync('docs/tiers/contrat-v2-axion-ia.md', 'utf8');
+const FIXTURE = readFileSync('tests/fixtures/contrat/contrat-v2-axion-ia.md', 'utf8');
 const V2_CORPS = FIXTURE.slice(0, FIXTURE.indexOf('<!-- annexe 2 -->'));
 const V2_ANNEXE_2 = FIXTURE.slice(FIXTURE.indexOf('<!-- annexe 2 -->'));
 const GABARIT = readFileSync('docs/contrat/CONTRAT-APPORTEUR-V1.md', 'utf8');
