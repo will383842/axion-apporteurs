@@ -100,7 +100,8 @@ export const TEXTES_DES_NOTIFICATIONS = {
   // résiliation : `PARAGRAPHES_DE_LA_RESILIATION`, puis `PARAGRAPHE_COMMUN_DE_LA_RESILIATION`.
   resiliation: {
     titre: "Fin de votre contrat d'apporteur",
-    appel: 'Voir mes commissions',
+    // SEC-70 (juriste, #824 6043086595) : l'espace est fermé au résilié ; l'appel ouvre la demande écrite.
+    appel: 'Écrire à Axion-IA',
     corps: null,
   },
 } as const satisfies Readonly<Record<string, TexteDeNotification>>;
@@ -235,4 +236,4 @@ export const PARAGRAPHES_DE_LA_RESILIATION = {
  * courriel ET dans l'espace.
  */
 export const PARAGRAPHE_COMMUN_DE_LA_RESILIATION =
-  "Vos dépôts en cours de confirmation et vos dépôts en attente sont annulés ; vos réservations sans commande prennent fin. Les commandes signées avant la fin du contrat continuent de vous ouvrir droit à commission, au fur et à mesure de leurs encaissements, quelle qu'en soit la date. Les commissions déjà acquises vous sont payées au dernier relevé. Vous gardez l'accès en lecture à votre espace jusqu'à l'extinction de vos droits : reconnectez-vous avec votre adresse e-mail pour y accéder.";
+  "Vos dépôts en cours de confirmation et vos dépôts en attente sont annulés ; vos réservations sans commande prennent fin. Les commandes signées avant la fin du contrat, ou pendant le préavis, continuent de vous ouvrir droit à commission, même si votre dépôt n'était pas encore confirmé : la commission vous est due quand Axion-IA en a encaissé l'intégralité du prix, quelle que soit la date de cet encaissement. Les commissions déjà acquises vous sont facturées par autofacture et versées dans les conditions du contrat, sans montant minimum. Votre accès à l'espace en ligne prend fin à la date de fin du contrat. Vos autofactures, leurs décomptes et le motif de tout blocage vous sont envoyés par courrier électronique jusqu'à l'extinction de vos droits ; vous pouvez obtenir sur simple demande écrite à Axion-IA la copie de votre contrat, de vos autofactures et de vos contestations, et contester par écrit une commission ou une décision dans les délais du contrat.";

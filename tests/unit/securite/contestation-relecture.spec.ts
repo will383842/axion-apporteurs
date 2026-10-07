@@ -235,7 +235,7 @@ describe('REQ-DM-043 — l’apporteur relit SA contestation, et seulement la si
 /**
  * LA GARDE DE L'ESPACE (arbitrage de la coordination sur #775 : le contrat v2 fait foi, art. 12.3,
  * SEC-70) : « contestations » s'ouvre en PLEIN seulement ; un résilié reçoit la même page qu'une
- * contestation inconnue ; aucune action n'est ouverte en lecture.
+ * contestation inconnue ; aucune action n'est ouverte en lecture. SEC-70 : un résilié n'a plus de session.
  */
 describe('REQ-DM-043 — le segment « contestations » : ouverture pleine seulement', () => {
   const MAINTENANT = new Date('2026-10-07T10:00:00Z');
@@ -285,10 +285,10 @@ describe('REQ-DM-043 — le segment « contestations » : ouverture pleine seule
     expect(m.routeOuverte('ferme', 'contestations')).toBe(false);
   });
 
-  it('REQ-DM-043 : TÉMOIN — un résilié est refusé, et la page lui rend la MÊME réponse qu’une contestation inconnue', async () => {
+  it('REQ-DM-043 : TÉMOIN — SEC-70 : un résilié n’a plus de session (statut_ferme), même aux droits en cours ; un refus d’ouverture rend la MÊME réponse qu’une contestation inconnue', async () => {
     const { pageEspace } = await import('../../../src/server/auth/session');
     const resilie = await pageEspace('contestations', 'jeton', ports('resilie', true));
-    expect(resilie).toEqual({ ok: false, motif: 'hors_ouverture_limitee' });
+    expect(resilie).toEqual({ ok: false, motif: 'statut_ferme' });
     expect(refusRenduIndisponible('hors_ouverture_limitee')).toBe(true);
     // Les autres refus gardent leur redirection : sans session, vers la connexion.
     expect(refusRenduIndisponible('absente')).toBe(false);

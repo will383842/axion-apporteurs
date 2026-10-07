@@ -184,6 +184,10 @@ describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles'
     expect(casse('rappel_rc_pro', { route: null, routeEnAttente: null })).toContain(
       'route_absente_sans_tache'
     );
+    // SEC-70 : un appel qui mène au contact de l'entité (la demande écrite) n'a pas de route, et c'est juste.
+    expect(
+      casse('rappel_rc_pro', { route: null, routeEnAttente: null, lien: 'contact_entite' })
+    ).not.toContain('route_absente_sans_tache');
   });
 });
 
