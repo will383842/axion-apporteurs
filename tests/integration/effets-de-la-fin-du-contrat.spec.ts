@@ -251,9 +251,17 @@ describe('REQ-DM-011 — les effets de la fin du contrat, en une transaction', (
     const autre = await unApporteur();
     const { jeton } = await sessionDeConsole('admin');
     await resilierDepuisLaConsole(portsDe(), DEMANDE(apporteurId, jeton));
+    // La base ne nomme pas l'index dans le message : on prouve donc la cause par le catalogue.
+    // Le refus est une violation d'unicité sur le SIREN, et le seul index unique sur le SIREN
+    // est celui des occupants : une autre contrainte unique ne ferait pas passer ce témoin.
     await expect(uneAttribution(autre, 'provisoire', figee.siren)).rejects.toThrow(
-      /23505|already exists/
+      /23505.*\(siren\)=|\(siren\)=.*already exists/s
     );
+    const uniquesSurLeSiren = await base.prisma.$queryRawUnsafe<{ indexname: string }[]>(
+      `SELECT indexname FROM pg_indexes
+        WHERE tablename = 'attributions' AND indexdef LIKE 'CREATE UNIQUE INDEX%(siren)%'`
+    );
+    expect(uniquesSurLeSiren.map((l) => l.indexname)).toEqual(['attributions_un_occupant']);
   });
 
   it('REQ-DM-011 : TÉMOIN — la lecture est maintenue : au moins une attribution figee_resiliation, donc des droits en cours', async () => {
