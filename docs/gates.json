@@ -786,6 +786,15 @@
       "preuveRouge": "pnpm jur:aucun-agregat-reseau:prove — 3 familles sur 4 témoins, 2 contre-témoins verts. Binaire (2026-09-27) : src/app/(espace)/bac/temoin.tsx indexé portant moyenneReseau -> EXIT=1, « [agregat_reseau] … la clé « moyenneReseau » porte un agrégat (moyenne) » ; dépôt intact -> EXIT=0, 5 fichiers, 19 clés. charte-relationnelle.spec.ts vu ROUGE : Failed to load url ../../../scripts/gates/jur-aucun-agregat-reseau. Rouge constaté par: A05"
     },
     {
+      "id": "jur:date-contact-inerte",
+      "phase": 1,
+      "script": "scripts/gates/jur-date-contact-inerte.ts",
+      "tache": "JUR-T30",
+      "verifie": "AST de tout fichier suivi de src/ (.ts, .tsx, hors tests) : chaque identifiant dateContact et chaque chaîne qui nomme dateContact ou la colonne date_contact. Une mention hors de la LISTE FERMÉE LIEUX_PERMIS (l'affichage de la fiche prospect, le contrôle de sincérité humain, l'écriture au dépôt) rougit (lecture_hors_liste) ; même dans un lieu permis, un groupement (groupBy), une extraction d'heure ou de jour (getHours, getDay…) ou une troncature SQL (date_trunc, extract, to_char, date_part) qui porte sur la donnée rougit (agregation_temporelle) ; source_illisible. CE QU'ELLE NE TIENT PAS : une valeur copiée sous un autre nom puis agrégée ailleurs ; elle ne juge ni les tests, ni les migrations, ni le schéma Prisma.",
+      "fixtureRouge": "un groupBy par tranche horaire sur dateContact, dans la console",
+      "preuveRouge": "pnpm jur:date-contact-inerte:prove — 3 familles sur 5 témoins, 3 contre-témoins verts. Dépôt intact -> EXIT=0, 258 fichiers de src/, 5 mentions de dateContact. Rouge constaté par: A05"
+    },
+    {
       "id": "jur:aucune-progression",
       "phase": 0,
       "script": "scripts/gates/jur-aucune-progression.ts",

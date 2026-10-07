@@ -326,6 +326,12 @@ jobs:
         run: pnpm jur:aucun-agregat-reseau
       - name: La garde des agregats du reseau sait rougir
         run: pnpm jur:aucun-agregat-reseau:prove
+      # JUR-T30 (art. 2.7) : la date du contact ne se lit que dans ses lieux permis, sans decoupage
+      # temporel. La preuve suit, par paire.
+      - name: Charte — la date du contact reste inerte
+        run: pnpm jur:date-contact-inerte
+      - name: La garde de la date du contact sait rougir
+        run: pnpm jur:date-contact-inerte:prove
       # SEC-46 : aucun style en ligne ni HTML injecte sous src/app/ — la politique de contenu les
       # refuserait en silence. La preuve suit, par paire.
       - name: Securite — aucun style en ligne sous src/app
