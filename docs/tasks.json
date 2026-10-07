@@ -27069,36 +27069,6 @@
           "tests/unit/gouvernance/registre-de-la-base-de-fusion.spec.ts"
         ]
       }
-    },
-    {
-      "id": "QA-T74",
-      "titre": "L'installation des navigateurs attend que le verrou d'apt du runner se libère, et marque une pause entre deux tentatives",
-      "phase": 1,
-      "repo": "partners",
-      "zone": "qualite",
-      "paths": [
-        "scripts/ci/navigateurs-bornes.ts",
-        "tests/unit/qualite/navigateurs-bornes.spec.ts",
-        "config/gel-phase-1.json"
-      ],
-      "schema": false,
-      "sensible": [],
-      "deps": [
-        "QA-T59"
-      ],
-      "reqs": [
-        "REQ-QA-016"
-      ],
-      "hyp": [],
-      "externe": null,
-      "estimateDays": 0.25,
-      "statut": "a_faire",
-      "acceptance": "Versée par sa propre PR (A01), EXPRESS, sur la demande de la coordination ; EXCEPTION AU GEL de la phase 1 (GOV-150), décidée par la coordination sous la délégation d'arbitrage de Williams (#319, commentaire 6044754455). Depuis le 2026-10-07 vers 18 h 25 UTC, environ la moitié des runs tombent sur le runner : la mise à jour automatique d'apt tient /var/lib/dpkg/lock-frontend, et playwright install --with-deps sort en 100 (« Could not get lock »). Les trois tentatives de QA-T59 s'enchaînaient sans pause. QA-T74 : avant chaque tentative, sous Linux, attendre que le verrou se libère (sudo -n fuser, toutes les 5 s, borné à 75 s) ; chaque tentative tuée à 180 s (240 s avant, QA-T59) ; entre deux tentatives, une pause de 30 s puis de 60 s, aucune après la dernière ; le pire cas, attente du verrou ET tentative ADDITIONNÉES (refus de l'exactitude sur #842), vaut 3 × (75 + 180) + 90 = 855 s, sous les quinze minutes de l'étape avec 45 s de marge. Le runner n'est pas touché (unattended-upgrades n'est pas arrêté). Échec fermé inchangé : trois échecs sortent en 1, aucun test n'est sauté. TÉMOINS : une pause entre deux tentatives échouées et aucune après la dernière, le verrou attendu avant chacune ; le pire cas calculé sur la SOMME, sous quinze minutes avec une marge ; un verrou encore tenu ne saute pas la tentative et il est nommé. DETTE NOMMÉE : les commentaires de .github/workflows/ci.yml (étape « Navigateurs des passes d accessibilite », dans les deux éclats) disent encore « quatre minutes » ; ils seront corrigés par la prochaine tâche qui touche ce workflow (GOV-155), sans étape neuve. QA-T59 garde son acceptance : ses 240 s se lisent 180 s depuis QA-T74 (note au prochain rattrapage).",
-      "tests": {
-        "REQ-QA-016": [
-          "tests/unit/qualite/navigateurs-bornes.spec.ts"
-        ]
-      }
     }
   ]
 }
