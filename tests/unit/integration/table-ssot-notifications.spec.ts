@@ -77,6 +77,8 @@ describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles'
       // DM-25 : l'annulation pour antériorité de la Société (art. 3.3), clé NEUVE (coordination).
       'attribution_annulee_anteriorite',
       'attribution_liberee',
+      // EXT-T07 : la prolongation, décidée ou réputée (art. 3.4 al. 3), clé NEUVE (forme de l'émettrice).
+      'attribution_prolongee',
       'decision_attribution',
       'depot_injoignable_j5',
       'lien_magique',
@@ -144,6 +146,7 @@ describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles'
       depot_injoignable_j5: 'F/F',
       attribution_liberee: 'T/F',
       attribution_annulee_anteriorite: 'T/F',
+      attribution_prolongee: 'T/F',
       decision_attribution: 'T/F',
       premier_rang_libere: 'T/T',
       refus_declaration: 'T/F',
@@ -699,5 +702,45 @@ describe('REQ-JUR-007 — la notification de l’annulation pour antériorité (
       `${SEUILS.REPONSE_CONTESTATION_JOURS.valeur} ${SEUILS.REPONSE_CONTESTATION_JOURS.unite}`
     );
     expect(r.titre).toContain('Atelier Dupont');
+  });
+});
+
+describe('REQ-EXT-020 — la notification de la prolongation (EXT-T07, juriste)', () => {
+  it('REQ-EXT-020 : la fiche — art. 3.4 al. 3, émise par EXT-T07, événement, courriel et espace, obligatoire, non désactivable, vers Mes entreprises', () => {
+    expect(GABARITS.attribution_prolongee).toMatchObject({
+      destinataire: 'apporteur',
+      req: 'REQ-EXT-020',
+      emetteur: 'EXT-T07',
+      declencheur: 'evenement',
+      notificationObligatoire: true,
+      faitCourirUnDelai: false,
+      canaux: ['email', 'espace'],
+      desactivable: false,
+      route: '/mes-entreprises',
+      routeEnAttente: null,
+    });
+    expect(GABARITS.attribution_prolongee.fondement).toMatch(/art. 3.4 al. 3/);
+  });
+
+  it('REQ-EXT-020 : TÉMOIN — le texte de la juriste, MOT POUR MOT (#809, 6039901134 et 6040610030) : ni la condition, ni le caractère réputé', () => {
+    expect(TEXTES_DES_NOTIFICATIONS.attribution_prolongee).toEqual({
+      titre: '{entreprise} : votre dépôt est prolongé',
+      appel: 'Voir Mes entreprises',
+      corps:
+        "Votre dépôt de {entreprise} est prolongé jusqu'au {date}, une seule fois et sans démarche de votre part (contrat, article 3.4).",
+    });
+    const t = JSON.stringify(TEXTES_DES_NOTIFICATIONS.attribution_prolongee);
+    expect(t).not.toMatch(/devis|échange|financement|réputée|décidée|condition/i);
+  });
+
+  it('REQ-EXT-020 : l’entreprise et le nouveau terme sont les seuls paramètres de l’émettrice', () => {
+    expect(parametresDe('attribution_prolongee').sort()).toEqual(['date', 'entreprise']);
+    const r = rendreLaNotification('attribution_prolongee', {
+      entreprise: 'Atelier Dupont',
+      date: '2 février 2027',
+    });
+    expect(r.titre).toBe('Atelier Dupont : votre dépôt est prolongé');
+    expect(r.corps).toContain('jusqu');
+    expect(r.corps).toContain('2 février 2027');
   });
 });
