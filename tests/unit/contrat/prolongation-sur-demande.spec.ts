@@ -7,8 +7,8 @@
  * terme de la période l'une de trois conditions de la Société est remplie : (a) un devis en cours, (b) un
  * rendez-vous TENU ou un échange dans les derniers jours (`PROLONGATION_FAITS_RECENTS_JOURS`, SSOT),
  * (c) un dossier de financement en cours d'instruction. La voie « demande de l'Apporteur » du brouillon
- * est retirée : le v2 exclut toute démarche de l'Apporteur, pour écarter la requalification en agent
- * commercial. Avec elle disparaît `PROLONGATION_DEMANDE_OUVERTE_JOURS`.
+ * est retirée : le v2 exclut toute démarche de l'Apporteur. Avec elle disparaît
+ * `PROLONGATION_DEMANDE_OUVERTE_JOURS`.
  *
  * Le témoin juge le gabarit RENDU avec la valeur de la SSOT (RM-10 : le texte ne retape aucun nombre),
  * blancs et gras normalisés. Il est écrit par A06, pas par l'autrice du texte (A07), règle du
