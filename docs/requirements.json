@@ -706,7 +706,8 @@
         "DM-62",
         "DM-69",
         "DM-71",
-        "UX-P1-51"
+        "UX-P1-51",
+        "UX-P1-62"
       ]
     },
     {
@@ -945,8 +946,8 @@
     {
       "id": "REQ-SEC-016",
       "domaine": "anti-abus-securite",
-      "texte": "Le dépôt est limité par DEUX compteurs : un compteur de SESSION, OBLIGATOIRE (clé : l'empreinte de la session ou du jetonDepotId, jamais l'apporteurId), et un compteur d'IP (hash IP) ; la fenêtre et les plafonds sont lus en SSOT, avec leur source ; `surPanne: refuser` ; tout compteur sous préfixe `magic:`, `depot:`, `verif:`, `webhook:`, `auth:` déclare sa conduite sur panne. [Amendée au rattrapage 108, arbitrage de la coordination du 2026-10-04 (sécurité, juriste) : remplace « limité à 20 / 10 min par hash IP (`surPanne: laisser-passer`) ; le compteur par identité déclare `surPanne: refuser` ».]",
-      "source": "nouvelle (patron `rate-limit.spec.ts` garde de famille) ; rattrapage 108 (arbitrage de la coordination du 2026-10-04, sécurité et juriste)",
+      "texte": "Le dépôt est limité par DEUX compteurs : un compteur de SESSION, OBLIGATOIRE (clé : l'empreinte de la session ou du jetonDepotId, jamais l'apporteurId), et un compteur d'IP (hash IP) ; la fenêtre et les plafonds sont lus en SSOT, avec leur source ; `surPanne: refuser` ; tout compteur sous préfixe `magic:`, `depot:`, `verif:`, `webhook:`, `auth:`, `ecrit:` déclare sa conduite sur panne ; l'écrit de l'apporteur est limité par session (`ecrit:session`) et par apporteur (`ecrit:apporteur`), limites et fenêtres lues en configuration privée, surPanne: refuser. [AMENDÉE au rattrapage 122 (coordination, #319, commentaire 6038679021, point 1).] [Amendée au rattrapage 108, arbitrage de la coordination du 2026-10-04 (sécurité, juriste) : remplace « limité à 20 / 10 min par hash IP (`surPanne: laisser-passer`) ; le compteur par identité déclare `surPanne: refuser` ».]",
+      "source": "nouvelle (patron `rate-limit.spec.ts` garde de famille) ; rattrapage 108 (arbitrage de la coordination du 2026-10-04, sécurité et juriste) ; famille `ecrit:` ajoutée au rattrapage 122 (coordination, #319, 6038679021)",
       "statut": "active",
       "remplaceePar": null,
       "module": 9,
@@ -958,7 +959,8 @@
         "QA-T68",
         "SEC-03",
         "SEC-10",
-        "SEC-12"
+        "SEC-12",
+        "UX-P1-62"
       ]
     },
     {
@@ -997,14 +999,15 @@
     {
       "id": "REQ-SEC-019",
       "domaine": "anti-abus-securite",
-      "texte": "🔴 **Le gel est un enum à TROIS valeurs — `libre`, `gele_non_confirmation`, `gele_fraude`** — avec motif, date et auteur (réécrite le 2026-09-03, A-3 (c) : `gele_anomalie` est renommée `gele_fraude` pour porter le mot du contrat, et `gele_manuel` **est supprimée** — un gel « manuel » sans motif écrit est exactement le pouvoir discrétionnaire que l'article 3.7 exclut ; la valeur `gele_strikes` avait déjà été renommée, « strike » étant un synonyme interdit au glossaire). **Tous les chemins de gel passent par une fonction unique** dont l'entrée est typée sur ces deux motifs et que garde `jur:suspension-motifs-fermes` (REQ-SEC-038). 🔴 **Portée strictement limitée** (contrat art. 3.7 al. 3 réécrit) : le gel porte **exclusivement sur l'enregistrement de nouvelles déclarations**. Il est **sans effet** sur les attributions en cours, provisoires ou définitives, sur les commandes signées, sur les commissions acquises ou à venir, et **sur l'accès de l'apporteur à son espace** — aucun jeton n'est révoqué, `sessionVersion` n'est pas incrémenté, aucune attribution n'est annulée (c'est REQ-SEC-032 qui réserve ces effets à la **résiliation**). Les attributions `provisoire` non qualifiées **restent `provisoire`** (la valeur `suspendue` n'existe pas dans l'enum fermé de REQ-DM-006) et libèrent la file M2. La suspension de l'enregistrement des déclarations d'un apporteur ne change rien à ses attributions en cours : aucune n'est mise en vérification de ce seul fait. La Société peut placer leurs demandes de confirmation en tête de son ordre d'appel, sans effet sur elles. Une demande n'est mise en vérification que sur des éléments objectifs qui lui sont propres (art. 3.2 al. 4). 🔴 **Durée maximale de quinze jours** (`SUSPENSION_MAX_JOURS`, SSOT, contrat art. 3.7) : un cron quotidien **lève de plein droit** tout gel de plus de quinze jours à compter de sa notification, écrit l'événement et notifie l'apporteur ; la Société demeure libre de résilier selon l'article 11. Une levée avant terme reste réservée à un rôle habilité et journalisée. Tests : gel posé à J0 → levé par le cron à J+15, jamais avant ; **un gel qui survit à J+16 → rouge** ; gel posé → jeton toujours valide, session vivante, attributions inchangées, lignes de commission inchangées (quatre assertions, **vues rougir** sur l'ancien comportement) ; `gele_manuel` ou `gele_anomalie` présent dans l'enum → gate rouge.",
-      "source": "audit-outil §1.1 ; contrat art. 3.7 al. 3 ; synthèse du 2026-09-03, A-3 (c) et (e) ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
+      "texte": "🔴 **Le gel est un enum à TROIS valeurs — `libre`, `gele_non_confirmation`, `gele_fraude`** — avec motif, date et auteur (réécrite le 2026-09-03, A-3 (c) : `gele_anomalie` est renommée `gele_fraude` pour porter le mot du contrat, et `gele_manuel` **est supprimée** — un gel « manuel » sans motif écrit est exactement le pouvoir discrétionnaire que l'article 3.7 exclut ; la valeur `gele_strikes` avait déjà été renommée, « strike » étant un synonyme interdit au glossaire). **Tous les chemins de gel passent par une fonction unique** dont l'entrée est typée sur ces deux motifs et que garde `jur:suspension-motifs-fermes` (REQ-SEC-038). 🔴 **Portée strictement limitée** (contrat art. 3.7 al. 3 réécrit) : le gel porte **exclusivement sur l'enregistrement de nouvelles déclarations**. Il est **sans effet** sur les attributions en cours, provisoires ou définitives, sur les commandes signées, sur les commissions acquises ou à venir, et **sur l'accès de l'apporteur à son espace** — aucun jeton n'est révoqué, `sessionVersion` n'est pas incrémenté, aucune attribution n'est annulée (c'est REQ-SEC-032 qui réserve ces effets à la **résiliation**). Les attributions `provisoire` non qualifiées **restent `provisoire`** (la valeur `suspendue` n'existe pas dans l'enum fermé de REQ-DM-006) et libèrent la file M2. [RETIRÉ au rattrapage 122 (coordination, #319, commentaire 6039223511, point 1) : les phrases de « mise en vérification », caduques avec le contrat v2.] 🔴 **Durée maximale de quinze jours** (`SUSPENSION_MAX_JOURS`, SSOT, contrat art. 3.7) : un cron quotidien **lève de plein droit** tout gel de plus de quinze jours à compter de sa notification, écrit l'événement et notifie l'apporteur ; la Société demeure libre de résilier selon l'article 11. Une levée avant terme reste réservée à un rôle habilité et journalisée. Tests : gel posé à J0 → levé par le cron à J+15, jamais avant ; **un gel qui survit à J+16 → rouge** ; gel posé → jeton toujours valide, session vivante, attributions inchangées, lignes de commission inchangées (quatre assertions, **vues rougir** sur l'ancien comportement) ; `gele_manuel` ou `gele_anomalie` présent dans l'enum → gate rouge.",
+      "source": "audit-outil §1.1 ; contrat art. 3.7 al. 3 ; synthèse du 2026-09-03, A-3 (c) et (e) ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84) ; phrases de mise en vérification retirées au rattrapage 122 (coordination, #319, 6039223511, point 1)",
       "statut": "active",
       "remplaceePar": null,
       "module": 21,
       "etape": 12,
       "phase": 1,
       "taches": [
+        "SEC-15",
         "SEC-28"
       ]
     },
@@ -1026,7 +1029,7 @@
     {
       "id": "REQ-SEC-021",
       "domaine": "anti-abus-securite",
-      "texte": "« Vérifier une entreprise » n'est accessible qu'en session authentifiée, limité par identité et par hash IP selon la configuration [REMPLACÉ au rattrapage 120 (coordination, #319, commentaire 6036979782, point 1, qui complète la sécurité, 6036696268, et la juriste, 6036671294), MOT POUR MOT : « limité par identité, sur deux fenêtres (`verif:identite-jour`, `verif:identite-court`), et par hash IP (`verif:ip-jour`), limites et fenêtres lues en configuration privée, surPanne: refuser » ; aucune valeur n'est écrite au registre (SEC-72)], journalisé (`verification_events` [REMPLACÉ au rattrapage 95 : la table s'appelle `verifications`, livrée par DM-12]) ; aucun rythme de dépôt ne pose de signal d'anomalie (REQ-SEC-017, REQ-JUR-031 : `TypeAnomalie` n'a pas de valeur de rythme) ; la date de libération est arrondie au mois [SUSPENDU au rattrapage 96, remarque de la juriste : aucune date n'est rendue, dans aucun état, tant que Williams n'a pas tranché (juriste : non ; sécurité : oui ; décision W19), voir SEC-16] ; l'identité de l'autre apporteur n'est jamais révélée.",
+      "texte": "« Vérifier une entreprise » n'est accessible qu'en session authentifiée, limité par identité, sur deux fenêtres (`verif:identite-jour`, `verif:identite-court`), et par hash IP (`verif:ip-jour`), limites et fenêtres lues en configuration privée, surPanne: refuser [AMENDÉE au rattrapage 120 (coordination, #319, commentaire 6036979782, point 1, qui complète la sécurité, 6036696268, et la juriste, 6036671294), remplaçant « par identité et par hash IP selon la configuration » ; aucune valeur n'est écrite au registre (SEC-72) ; au rattrapage 122, le segment passe de la note au texte en vigueur, que lit `securite:rate-famille`], journalisé (`verification_events` [REMPLACÉ au rattrapage 95 : la table s'appelle `verifications`, livrée par DM-12]) ; aucun rythme de dépôt ne pose de signal d'anomalie (REQ-SEC-017, REQ-JUR-031 : `TypeAnomalie` n'a pas de valeur de rythme) ; la date de libération est arrondie au mois [SUSPENDU au rattrapage 96, remarque de la juriste : aucune date n'est rendue, dans aucun état, tant que Williams n'a pas tranché (juriste : non ; sécurité : oui ; décision W19), voir SEC-16] ; l'identité de l'autre apporteur n'est jamais révélée.",
       "source": "audit-outil §1.3 D5 (précisé) ; nom de la table aligné sur `verifications` (DM-12), rattrapage 95 ; date suspendue jusqu'à la décision de Williams, rattrapage 96 ; amendée au rattrapage 120 (coordination, #319, 6036979782, point 1 ; sécurité 6036696268 ; juriste 6036671294)",
       "statut": "active",
       "remplaceePar": null,
@@ -5401,6 +5404,7 @@
         "UX-P1-59",
         "UX-P1-60",
         "UX-P1-61",
+        "UX-P1-62",
         "UX-P2-01",
         "UX-P2-02",
         "UX-P2-03",
