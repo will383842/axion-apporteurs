@@ -1,4 +1,4 @@
-// @req REQ-JUR-031
+// @req REQ-JUR-003
 /**
  * JUR-T66 — le gabarit RECOPIE le contrat v2 d'axion-ia (décision de Williams du 2026-10-07, #474,
  * 6032680253), dans LES DEUX SENS, phrase par phrase, sur le modèle de la comparaison par programme de
@@ -166,25 +166,25 @@ function confronter(absences: readonly string[], admis: readonly Ecart[]) {
   return { orphelines, inutiles: inutiles.map((e) => `${e.debut} (${e.raison})`) };
 }
 
-describe('REQ-JUR-031 — le gabarit recopie le contrat v2 d’axion-ia, dans les deux sens (JUR-T66)', () => {
-  it('REQ-JUR-031 : TÉMOIN — du gabarit vers le v2 : toute phrase absente du v2 est l’un des écarts admis, et chaque écart admis subsiste', () => {
+describe('REQ-JUR-003 — le gabarit recopie le contrat v2 d’axion-ia, dans les deux sens (JUR-T66)', () => {
+  it('REQ-JUR-003 : TÉMOIN — du gabarit vers le v2 : toute phrase absente du v2 est l’un des écarts admis, et chaque écart admis subsiste', () => {
     const r = confronter(absentes(G_CORPS, V2_CORPS), ADMIS_GABARIT);
     expect(r.orphelines, 'phrases du gabarit absentes du v2, hors des écarts admis').toEqual([]);
     expect(r.inutiles, 'écarts admis qui ne se trouvent plus').toEqual([]);
   });
 
-  it('REQ-JUR-031 : TÉMOIN — du v2 vers le gabarit : toute phrase du v2 absente du gabarit est l’un des écarts admis, et chaque écart admis subsiste', () => {
+  it('REQ-JUR-003 : TÉMOIN — du v2 vers le gabarit : toute phrase du v2 absente du gabarit est l’un des écarts admis, et chaque écart admis subsiste', () => {
     const r = confronter(absentes(V2_CORPS, G_CORPS), ADMIS_V2);
     expect(r.orphelines, 'phrases du v2 absentes du gabarit, hors des écarts admis').toEqual([]);
     expect(r.inutiles, 'écarts admis qui ne se trouvent plus').toEqual([]);
   });
 
-  it('REQ-JUR-031 : TÉMOIN — l’annexe 2 (le mandat d’autofacturation) recopie le v2 mot pour mot, dans les deux sens', () => {
+  it('REQ-JUR-003 : TÉMOIN — l’annexe 2 (le mandat d’autofacturation) recopie le v2 mot pour mot, dans les deux sens', () => {
     expect(absentes(G_ANNEXE_2, V2_ANNEXE_2)).toEqual([]);
     expect(absentes(V2_ANNEXE_2, G_ANNEXE_2)).toEqual([]);
   });
 
-  it('REQ-JUR-031 : TÉMOIN — la comparaison sait rougir : une phrase changée dans le gabarit devient orpheline', () => {
+  it('REQ-JUR-003 : TÉMOIN — la comparaison sait rougir : une phrase changée dans le gabarit devient orpheline', () => {
     const altere = G_CORPS.replace(
       'Chaque partie peut résilier le contrat à tout moment',
       'Chaque partie peut résilier le contrat quand elle le veut'
@@ -193,7 +193,7 @@ describe('REQ-JUR-031 — le gabarit recopie le contrat v2 d’axion-ia, dans le
     expect(confronter(absentes(altere, V2_CORPS), ADMIS_GABARIT).orphelines).toHaveLength(1);
   });
 
-  it('REQ-JUR-031 : la fixture ne porte aucun nombre (l’économie du réseau reste hors du dépôt public), ni l’annexe 1', () => {
+  it('REQ-JUR-003 : la fixture ne porte aucun nombre (l’économie du réseau reste hors du dépôt public), ni l’annexe 1', () => {
     // Hors de ses commentaires (la source, sa date, le marqueur de l’annexe), le texte du v2 ne garde
     // aucun chiffre.
     expect(FIXTURE.replace(/<!--[\s\S]*?-->/g, '')).not.toMatch(/\d/);
