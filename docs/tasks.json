@@ -22970,7 +22970,8 @@
         "src/content/micro-copy/console/refus.ts",
         "tests/unit/securite/garde-reserve.spec.ts",
         "tests/unit/securite/demarchage-classe.spec.ts",
-        "tests/integration/garde-reserve.spec.ts"
+        "tests/integration/garde-reserve.spec.ts",
+        "scripts/gates/ux-exhaustivite.ts"
       ],
       "schema": false,
       "sensible": [
