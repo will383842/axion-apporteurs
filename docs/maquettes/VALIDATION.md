@@ -77,6 +77,7 @@ tableaux de l'annexe passent en cartes sous 640 px.
 | Éditeur de grille (modèle, édition en masse, complétude) | `grille-console.html` | UX-P1-14 | 2026-10-03 | Will |
 | Saisie manuelle d'une candidature et CV | `saisie-manuelle-console.html` | EXT-T04 | 2026-10-03 | Will |
 | Mise en demeure (article, faits, envoi daté) | `mise-en-demeure.html` | UX-P1-57 | 2026-10-07 | Will |
+| Accès de l'apporteur (révoquer sur signalement, renouveler) | `acces-apporteur.html` | SEC-71 | — | — |
 
 ### Refonte de la console en barre latérale (UX-P1-50)
 

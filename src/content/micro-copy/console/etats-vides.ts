@@ -14,6 +14,7 @@
  */
 import type { EtatVide } from '../types';
 import { MISE_EN_DEMEURE_CONSOLE } from './mise-en-demeure';
+import { ACCES_APPORTEUR } from './acces-apporteur';
 
 export const ETATS_VIDES_CONSOLE: Readonly<Record<string, EtatVide>> = {
   'file-qualification': {
@@ -94,5 +95,11 @@ export const ETATS_VIDES_CONSOLE: Readonly<Record<string, EtatVide>> = {
     titre: MISE_EN_DEMEURE_CONSOLE.horsContrat.titre,
     phrase: MISE_EN_DEMEURE_CONSOLE.horsContrat.phrase,
     action: { libelle: MISE_EN_DEMEURE_CONSOLE.horsContrat.action, route: null },
+  },
+  // SEC-71 : un apporteur qui n'a jamais eu d'accès : rien à révoquer.
+  'acces-apporteur': {
+    titre: ACCES_APPORTEUR.vides.sans_acces.titre,
+    phrase: ACCES_APPORTEUR.vides.sans_acces.phrase,
+    action: { libelle: ACCES_APPORTEUR.vides.sans_acces.action, route: null },
   },
 };

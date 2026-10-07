@@ -132,6 +132,10 @@ export default defineConfig({
       // processus sur des doubles — sans eux, les 94 mutants de `mise-en-demeure/actions.ts` sortaient
       // « sans couverture » (porte A de la PR 748 : 30,99 %).
       'tests/unit/console/mise-en-demeure.spec.ts',
+      // SEC-71 : les témoins de la révocation de l'accès (droit relu, motif fermé, transaction, avis) et
+      // de son écran, en processus sur des doubles.
+      'tests/unit/securite/revocation-acces-apporteur.spec.ts',
+      'tests/unit/console/acces-apporteur.spec.ts',
     ],
     exclude: [
       ...(base.test?.exclude ?? []),

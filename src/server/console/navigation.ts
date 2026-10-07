@@ -68,6 +68,8 @@ export const ROUTES_LIVREES_DE_LA_CONSOLE: readonly string[] = [
   '/console/journal-des-acces/gels',
   // UX-P1-57 : la mise en demeure d'un apporteur, ouverte depuis sa fiche (hors du menu).
   '/console/apporteurs/[id]/mise-en-demeure',
+  // SEC-71 : la révocation de l'accès d'un apporteur, ouverte depuis sa fiche (hors du menu).
+  '/console/apporteurs/[id]/acces',
 ];
 
 /** La liste de préférence de l'accueil, rôle par rôle (`docs/CONSOLE-ROUTES.md`). */
