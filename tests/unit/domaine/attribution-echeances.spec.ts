@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import {
   ETATS_QUI_EXPIRENT,
   executableAujourdHui,
+  nouveauContactManquant,
   redepotPermis,
   transitionEchue,
   type EcheancesDUneAttribution,
@@ -225,5 +226,43 @@ describe('REQ-DM-004 — la carence UNIQUE après une fin faute d’adresse vali
   it('REQ-DM-004 : la carence est UNIQUE : 30 jours, jamais davantage (aucune carence graduée)', () => {
     expect(SEUILS.CARENCE_REDEPOT_APRES_LIBERATION_JOURS.valeur).toBe(30);
     expect(redepotPermis(FIN, PERMIS + MINUTE)).toBe(true);
+  });
+});
+
+describe('REQ-DM-004 — le nouveau contact après une fin de durée (art. 3.4 bis ; juriste, 6037169174)', () => {
+  // Le terme : le 30 juin 2027, 18 h à Paris (UTC+2).
+  const TERME = Date.UTC(2027, 5, 30, 16, 0);
+
+  it('REQ-DM-004 : TÉMOIN — après une fin de durée, un dépôt sans date du contact est refusé', () => {
+    expect(nouveauContactManquant({ finDeDuree: true, termeAt: TERME }, null)).toBe(true);
+  });
+
+  it('REQ-DM-004 : TÉMOIN — une date égale au jour du terme est refusée ; le lendemain est admis', () => {
+    expect(nouveauContactManquant({ finDeDuree: true, termeAt: TERME }, '2027-06-30')).toBe(true);
+    expect(nouveauContactManquant({ finDeDuree: true, termeAt: TERME }, '2027-07-01')).toBe(false);
+  });
+
+  it('REQ-DM-004 : le jour du terme est celui de PARIS : un terme à 23 h 30 à Paris est encore ce jour-là', () => {
+    const tard = Date.UTC(2027, 5, 30, 21, 30); // 23 h 30 à Paris, déjà le 30 juin à 21 h 30 UTC
+    expect(nouveauContactManquant({ finDeDuree: true, termeAt: tard }, '2027-06-30')).toBe(true);
+    expect(nouveauContactManquant({ finDeDuree: true, termeAt: tard }, '2027-07-01')).toBe(false);
+  });
+
+  it('REQ-DM-004 : TÉMOIN — la prolongation déplace le terme : la date doit suivre le terme PROLONGÉ', () => {
+    const prolonge = Date.UTC(2027, 8, 30, 16, 0);
+    expect(nouveauContactManquant({ finDeDuree: true, termeAt: prolonge }, '2027-07-01')).toBe(
+      true
+    );
+    expect(nouveauContactManquant({ finDeDuree: true, termeAt: prolonge }, '2027-10-01')).toBe(
+      false
+    );
+  });
+
+  it('REQ-DM-004 : TÉMOIN — après une autre fin (péremption, fin sans adresse valide…), aucune date n’est exigée', () => {
+    expect(nouveauContactManquant({ finDeDuree: false, termeAt: TERME }, null)).toBe(false);
+  });
+
+  it('REQ-DM-004 : une fin de durée sans terme lisible : refusée (échec fermé)', () => {
+    expect(nouveauContactManquant({ finDeDuree: true, termeAt: null }, '2027-07-01')).toBe(true);
   });
 });

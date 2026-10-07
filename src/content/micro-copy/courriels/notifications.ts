@@ -108,16 +108,22 @@ export const TEXTES_DES_NOTIFICATIONS = {
 export type CleDeNotification = keyof typeof TEXTES_DES_NOTIFICATIONS;
 
 /**
- * Le corps d'`attribution_liberee`, choisi par la CAUSE de la fin (textes d'A07 du 2026-10-02, mot
- * pour mot ; titre et appel inchangés). Une demande vérifiée libérée ouvre une carence de redépôt
- * (art. 3.2 al. 6), seule conséquence de la libération ; une péremption ou une fin de durée
- * (art. 3.4) n'en ouvre aucune. `{dateRedepot}` est fourni par l'émettrice.
+ * Le corps d'`attribution_liberee`, choisi par la CAUSE de la fin : trois causes SÉPARÉES, recalées
+ * sur le contrat v2 (juriste, #319 6037151731, mot pour mot ; titre et appel inchangés ;
+ * le premier, sur la tournure du contrat, « à défaut d'adresse », 6037204257).
+ *   — `fin_sans_adresse_valide` (art. 3.2) : la seule à ouvrir une carence de redépôt ;
+ *     `{dateRedepot}` est fourni par l'émettrice ;
+ *   — `peremption` (art. 3.4 al. 2) : la seule à porter la phrase de la contestation, en dernier ;
+ *   — `fin_de_duree` (art. 3.4 al. 1 et 3.4 bis) : la seule à exiger un nouveau contact postérieur au
+ *     terme, jamais « y compris pour un nouveau dépôt de votre part ».
  */
 export const CORPS_DE_LA_LIBERATION = {
-  demande_verifiee:
-    "Ce dépôt a pris fin sans confirmation de l'échange. Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}. Cette fin n'emporte aucune autre conséquence pour vous.",
-  peremption_ou_fin_de_duree:
-    'Cette entreprise est de nouveau disponible, y compris pour un nouveau dépôt de votre part.',
+  fin_sans_adresse_valide:
+    "Ce dépôt a pris fin, à défaut d'adresse électronique valide pour la personne rencontrée dans le délai prévu par le contrat (article 3.2). Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}. Cette fin n'emporte aucune autre conséquence pour vous.",
+  peremption:
+    "Ce dépôt a pris fin : aucun rendez-vous, aucun devis et aucune commande dans le délai prévu par le contrat après la première réponse de l'entreprise à Axion-IA (article 3.4). Cette entreprise est de nouveau disponible, y compris pour un nouveau dépôt de votre part. Si l'absence de rendez-vous, de devis ou de commande tient à Axion-IA, l'entreprise n'aurait pas dû vous être retirée : vous pouvez le contester par écrit (contrat, article 3.4).",
+  fin_de_duree:
+    "Ce dépôt est arrivé à son terme (contrat, article 3.4). Cette entreprise est de nouveau disponible. Pour la déposer à nouveau, indiquez un nouveau contact avec l'un de ses représentants, postérieur à ce terme, avec sa date (contrat, article 3.4 bis).",
 } as const;
 
 export type CauseDeLiberation = keyof typeof CORPS_DE_LA_LIBERATION;

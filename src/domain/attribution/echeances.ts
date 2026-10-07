@@ -132,3 +132,21 @@ export function redepotPermis(finAt: Instant | null, maintenant: Instant): boole
     ajouterJoursCivilsParis(finAt, SEUILS.CARENCE_REDEPOT_APRES_LIBERATION_JOURS.valeur)
   );
 }
+
+/**
+ * L'art. 3.4 bis au dépôt (juriste, #319 6037169174) : après une FIN DE DURÉE de la dernière
+ * attribution du même apporteur sur le même SIREN, le nouveau dépôt porte la date d'un contact
+ * STRICTEMENT postérieure au jour civil de Paris du terme (prolongation comprise). Vrai : le dépôt est
+ * refusé (`nouveau_contact_requis`). Un terme illisible refuse aussi (échec fermé). Une date future
+ * relève de la validation commune du champ, pas de cette règle.
+ */
+export function nouveauContactManquant(
+  derniere: { readonly finDeDuree: boolean; readonly termeAt: Instant | null },
+  dateContact: string | null
+): boolean {
+  if (!derniere.finDeDuree) return false;
+  if (derniere.termeAt === null || dateContact === null) return true;
+  const { annee, mois, jour } = versParis(derniere.termeAt);
+  const jourDuTerme = `${annee}-${String(mois).padStart(2, '0')}-${String(jour).padStart(2, '0')}`;
+  return !(dateContact > jourDuTerme);
+}

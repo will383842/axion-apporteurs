@@ -29,7 +29,10 @@ import {
   type LigneDeNotification,
 } from '../../../src/server/notifications/table-ssot';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
-import { TEXTES_DES_NOTIFICATIONS } from '../../../src/content/micro-copy/courriels/notifications';
+import {
+  CORPS_DE_LA_LIBERATION,
+  TEXTES_DES_NOTIFICATIONS,
+} from '../../../src/content/micro-copy/courriels/notifications';
 import { CONNEXION_CONSOLE } from '../../../src/content/micro-copy/console/connexion';
 import { UTILISATEURS_CONSOLE } from '../../../src/content/micro-copy/console/utilisateurs';
 import {
@@ -296,35 +299,21 @@ describe('REQ-UX-016 — le rendu d’une notification : les paramètres de sa c
       return 'aucun_refus';
     };
     expect(motif(() => rendreLaNotification('relance_dormance', {}))).toBe('cle_inconnue');
-    expect(
-      motif(() => rendreLaNotification('attribution_liberee', {}, 'peremption_ou_fin_de_duree'))
-    ).toBe('parametre_manquant');
+    expect(motif(() => rendreLaNotification('attribution_liberee', {}, 'peremption'))).toBe(
+      'parametre_manquant'
+    );
     expect(
       motif(() =>
-        rendreLaNotification(
-          'attribution_liberee',
-          { entreprise: 'X', contact: 'Y' },
-          'peremption_ou_fin_de_duree'
-        )
+        rendreLaNotification('attribution_liberee', { entreprise: 'X', contact: 'Y' }, 'peremption')
       )
     ).toBe('parametre_en_trop');
     expect(
       motif(() =>
-        rendreLaNotification(
-          'attribution_liberee',
-          { entreprise: 'X\nBcc: y' },
-          'peremption_ou_fin_de_duree'
-        )
+        rendreLaNotification('attribution_liberee', { entreprise: 'X\nBcc: y' }, 'peremption')
       )
     ).toBe('parametre_invalide');
     expect(
-      motif(() =>
-        rendreLaNotification(
-          'attribution_liberee',
-          { entreprise: '' },
-          'peremption_ou_fin_de_duree'
-        )
-      )
+      motif(() => rendreLaNotification('attribution_liberee', { entreprise: '' }, 'peremption'))
     ).toBe('parametre_invalide');
     // Un caractère de FORMAT (\p{Cf}) retourne ou masque le sujet d'un courriel : U+202E inverse le
     // sens de lecture, U+200B à U+200F et U+2066 à U+2069 cachent ou isolent un texte.
@@ -336,7 +325,7 @@ describe('REQ-UX-016 — le rendu d’une notification : les paramètres de sa c
           rendreLaNotification(
             'attribution_liberee',
             { entreprise: `Entreprise${format}fdp.exe` },
-            'peremption_ou_fin_de_duree'
+            'peremption'
           )
         )
       ).toBe('parametre_invalide');
@@ -461,34 +450,55 @@ describe('REQ-UX-016 — la préférence s’écrit par la couche cloisonnée, e
 });
 
 describe('REQ-UX-016 — la fin d’une réservation se dit selon sa cause (A07, 2026-10-02)', () => {
-  it('REQ-UX-016 : TÉMOIN — une demande vérifiée libérée : la carence et sa date de redépôt, mot pour mot', () => {
+  it('REQ-UX-016 : TÉMOIN — fin faute d’adresse valide : la carence et sa date de redépôt, mot pour mot (juriste, 6037151731)', () => {
     const r = rendreLaNotification(
       'attribution_liberee',
       { entreprise: 'Entreprise témoin', dateRedepot: '2 novembre 2026' },
-      'demande_verifiee'
+      'fin_sans_adresse_valide'
     );
     expect(r.titre).toBe('Entreprise témoin : réservation terminée');
     expect(r.corps).toBe(
-      "Ce dépôt a pris fin sans confirmation de l'échange. Vous pourrez déposer à nouveau cette entreprise à partir du 2 novembre 2026. Cette fin n'emporte aucune autre conséquence pour vous."
+      "Ce dépôt a pris fin, à défaut d'adresse électronique valide pour la personne rencontrée dans le délai prévu par le contrat (article 3.2). Vous pourrez déposer à nouveau cette entreprise à partir du 2 novembre 2026. Cette fin n'emporte aucune autre conséquence pour vous."
     );
-    expect(parametresDe('attribution_liberee', 'demande_verifiee')).toEqual([
+    expect(parametresDe('attribution_liberee', 'fin_sans_adresse_valide')).toEqual([
       'dateRedepot',
       'entreprise',
     ]);
   });
 
-  it('REQ-UX-016 : TÉMOIN — une péremption ou une fin de durée : l’entreprise de nouveau disponible, sans date', () => {
+  it('REQ-UX-016 : TÉMOIN — la péremption : son texte, mot pour mot, et la phrase de la contestation EN DERNIER', () => {
     const r = rendreLaNotification(
       'attribution_liberee',
       { entreprise: 'Entreprise témoin' },
-      'peremption_ou_fin_de_duree'
+      'peremption'
     );
     expect(r.corps).toBe(
-      'Cette entreprise est de nouveau disponible, y compris pour un nouveau dépôt de votre part.'
+      "Ce dépôt a pris fin : aucun rendez-vous, aucun devis et aucune commande dans le délai prévu par le contrat après la première réponse de l'entreprise à Axion-IA (article 3.4). Cette entreprise est de nouveau disponible, y compris pour un nouveau dépôt de votre part. Si l'absence de rendez-vous, de devis ou de commande tient à Axion-IA, l'entreprise n'aurait pas dû vous être retirée : vous pouvez le contester par écrit (contrat, article 3.4)."
     );
-    expect(parametresDe('attribution_liberee', 'peremption_ou_fin_de_duree')).toEqual([
-      'entreprise',
-    ]);
+    expect(r.corps.endsWith('vous pouvez le contester par écrit (contrat, article 3.4).')).toBe(
+      true
+    );
+    expect(parametresDe('attribution_liberee', 'peremption')).toEqual(['entreprise']);
+  });
+
+  it('REQ-UX-016 : TÉMOIN — la fin de durée : le nouveau contact postérieur au terme, et JAMAIS « y compris pour un nouveau dépôt de votre part »', () => {
+    const r = rendreLaNotification(
+      'attribution_liberee',
+      { entreprise: 'Entreprise témoin' },
+      'fin_de_duree'
+    );
+    expect(r.corps).toBe(
+      "Ce dépôt est arrivé à son terme (contrat, article 3.4). Cette entreprise est de nouveau disponible. Pour la déposer à nouveau, indiquez un nouveau contact avec l'un de ses représentants, postérieur à ce terme, avec sa date (contrat, article 3.4 bis)."
+    );
+    expect(r.corps).not.toContain('y compris pour un nouveau dépôt de votre part');
+    expect(parametresDe('attribution_liberee', 'fin_de_duree')).toEqual(['entreprise']);
+  });
+
+  it('REQ-UX-016 : TÉMOIN — la phrase de la contestation n’est portée que par la péremption', () => {
+    const porteuses = Object.entries(CORPS_DE_LA_LIBERATION)
+      .filter(([, corps]) => corps.includes('vous pouvez le contester par écrit'))
+      .map(([cause]) => cause);
+    expect(porteuses).toEqual(['peremption']);
   });
 
   it('REQ-UX-016 : TÉMOINS — sans cause, ou une cause donnée à une autre clé : refusés, nommés', () => {
@@ -508,7 +518,7 @@ describe('REQ-UX-016 — la fin d’une réservation se dit selon sa cause (A07,
         rendreLaNotification(
           'rappel_rc_pro',
           { dateEcheance: '1er novembre 2026' },
-          'demande_verifiee'
+          'fin_sans_adresse_valide'
         )
       )
     ).toBe('cause_en_trop');
@@ -517,7 +527,7 @@ describe('REQ-UX-016 — la fin d’une réservation se dit selon sa cause (A07,
         rendreLaNotification(
           'attribution_liberee',
           { entreprise: 'E', dateRedepot: '2 novembre 2026' },
-          'peremption_ou_fin_de_duree'
+          'peremption'
         )
       )
     ).toBe('parametre_en_trop');

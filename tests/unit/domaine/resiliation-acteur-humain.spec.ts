@@ -771,7 +771,7 @@ describe('REQ-JUR-006 — le rendu de la mise en demeure et de la résiliation',
       'cause_manquante'
     );
     expect(() =>
-      rendreLaNotification('resiliation', { dateEffet: 'x' }, 'demande_verifiee' as never)
+      rendreLaNotification('resiliation', { dateEffet: 'x' }, 'fin_sans_adresse_valide' as never)
     ).toThrow('cause_manquante');
     expect(() =>
       rendreLaNotification(

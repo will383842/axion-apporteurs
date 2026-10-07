@@ -250,7 +250,7 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   // rien sur l'appareil (juriste, rattrapage 102).
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › nouvel_appareil': ['dateHeure'],
   // La fin de SA réservation, choisie par la cause (A07) : la date où il pourra redéposer.
-  'courriels/notifications.ts › CORPS_DE_LA_LIBERATION › demande_verifiee': ['dateRedepot'],
+  'courriels/notifications.ts › CORPS_DE_LA_LIBERATION › fin_sans_adresse_valide': ['dateRedepot'],
   // DM-55 : le nom de SON entreprise quand le dépôt n'a pas de raison sociale — le numéro qu'il a
   // lui-même saisi au dépôt (juriste, mot pour mot).
   'courriels/notifications.ts › ENTREPRISE_DE_REPLI': ['numeroEntreprise'],
