@@ -57,7 +57,7 @@ type Ligne = {
   repondueAt: Date | null;
   purgeeAt: Date | null;
   depotRefuse: { siren: string | null; apporteurId: string } | null;
-  attribution: { raisonSociale: string | null; siren: string; apporteurId: string } | null;
+  attribution: { raisonSociale: string | null; siren: string; apporteurId: string | null } | null;
 };
 const ligne = (o: Partial<Ligne> = {}): Ligne => ({
   id: ID,
@@ -204,6 +204,10 @@ describe('REQ-DM-043 — l’apporteur relit SA contestation, et seulement la si
     ).toBe('Entreprise n° 552100554');
     expect(
       await avec({ depotRefuse: null, attribution: attribution({ apporteurId: AUTRE_APP }) })
+    ).toBeNull();
+    // Une attribution sans apporteur (portée par un conseiller) n'est pas la sienne : échec fermé.
+    expect(
+      await avec({ depotRefuse: null, attribution: attribution({ apporteurId: null }) })
     ).toBeNull();
     expect(await avec({ depotRefuse: { siren: '732829320', apporteurId: AUTRE_APP } })).toBeNull();
     expect(await avec({ depotRefuse: { siren: null, apporteurId: APP } })).toBeNull();

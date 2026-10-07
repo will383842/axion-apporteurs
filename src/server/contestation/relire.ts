@@ -78,12 +78,17 @@ function dechiffrer(
   }
 }
 
-/** L'entreprise d'une ligne liée À CET APPORTEUR : son nom, ou son numéro au repli ; sinon `null`. */
+/**
+ * L'entreprise d'une ligne liée À CET APPORTEUR : son nom, ou son numéro au repli ; sinon `null`. Une
+ * ligne sans apporteur (portée par un conseiller, ou dont le porteur est délié) n'est pas la sienne :
+ * `null`, en échec fermé.
+ */
 function entrepriseDe(
-  lien: { raisonSociale?: string | null; siren: string | null; apporteurId: string } | null,
+  lien: { raisonSociale?: string | null; siren: string | null; apporteurId: string | null } | null,
   apporteurId: string
 ): string | null {
-  if (lien === null || lien.apporteurId !== apporteurId || lien.siren === null) return null;
+  if (lien === null || lien.apporteurId === null || lien.apporteurId !== apporteurId) return null;
+  if (lien.siren === null) return null;
   try {
     return entrepriseDeLaNotification(lien.raisonSociale ?? null, lien.siren);
   } catch {

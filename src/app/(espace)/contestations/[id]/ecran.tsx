@@ -72,7 +72,10 @@ export function EcranContestation({
         <section role="alert" className={styles.carte}>
           <h2>{e.titre}</h2>
           <p>{e.phrase}</p>
-          <a className={styles.bouton} href={`/contestations/${contestationId}`}>
+          <a
+            className={styles.bouton}
+            href={`/contestations/${encodeURIComponent(contestationId)}`}
+          >
             {e.action}
           </a>
         </section>
