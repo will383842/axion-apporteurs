@@ -54,6 +54,7 @@ export type MotifDeSuspensionRefusee =
   | 'apporteur_introuvable'
   | 'cle_idempotence_invalide'
   | 'cle_deja_employee'
+  | 'anomalie_hors_motif'
   | `faits_${string}`
   | ErreurDeSuspension['code'];
 
@@ -126,11 +127,16 @@ export async function poserUneSuspension(
     // La fraude n'est un fait qu'établie : l'anomalie est CONFIRMÉE, et elle est de CET apporteur.
     const a = await tx.anomalie.findUnique({
       where: { id: d.faits.anomalie.id },
-      select: { statut: true, apporteurId: true },
+      select: { statut: true, apporteurId: true, type: true },
     });
     if (a === null || a.statut !== 'confirmee' || a.apporteurId !== d.apporteurId) {
       throw new ErreurSuspension('anomalie_non_confirmee');
     }
+    // Seule la fabrication ou l'automatisation d'une déclaration fonde la fraude (art. 3.7 al. 3) :
+    // une anomalie de sincérité. L'auto-parrainage n'en relève jamais : son seul effet est la
+    // suspension du VERSEMENT du parrainage (art. 4.6), une tâche distincte (juriste, #474,
+    // 6036318718). L'état de l'attribution n'entre pas en compte : la suspension est sans effet sur elle.
+    if (a.type !== 'sincerite') throw new ErreurSuspension('anomalie_hors_motif');
   }
   const vers = d.faits.motif;
   const { statut: statutVers } = transitionner({

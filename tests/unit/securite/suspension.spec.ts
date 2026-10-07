@@ -37,7 +37,7 @@ type Ligne = { statut: string; etat_gel: string };
 
 function unDouble(o: {
   ligne?: Ligne | null;
-  anomalie?: { statut: string; apporteurId: string | null } | null;
+  anomalie?: { statut: string; apporteurId: string | null; type?: string } | null;
   ecrites?: number;
   echues?: { id: string; depotsGelesDepuis: Date }[];
 }) {
@@ -50,8 +50,10 @@ function unDouble(o: {
       findUnique: vi.fn(async (args: unknown) => {
         appels.push({ quoi: 'anomalie', args });
         return o.anomalie === undefined
-          ? { statut: 'confirmee', apporteurId: APPORTEUR }
-          : o.anomalie;
+          ? { statut: 'confirmee', apporteurId: APPORTEUR, type: 'sincerite' }
+          : o.anomalie === null
+            ? null
+            : { type: 'sincerite', ...o.anomalie };
       }),
     },
     decisionDeContrat: {
@@ -277,6 +279,47 @@ describe('REQ-SEC-018 — la pose : un rôle habilité, une écriture, deux fait
     ).toBe(ANOMALIE);
     // Le journal ne porte jamais l'anomalie (DM-12, décision (d)).
     expect(JSON.stringify(d.faits)).not.toContain(ANOMALIE);
+  });
+
+  it('REQ-SEC-018 : TÉMOIN À DEUX FACES — une anomalie d’AUTO-PARRAINAGE confirmée ne fonde jamais la fraude ; une anomalie de sincérité confirmée, si (juriste, #474, 6036318718)', async () => {
+    const fraude = {
+      motif: 'gele_fraude',
+      anomalie: { id: ANOMALIE, confirmeeParUnHumain: true },
+    } as const;
+    const pose = (anomalie: { statut: string; apporteurId: string; type: string }) => {
+      const d = unDouble({ anomalie });
+      return {
+        d,
+        p: poserUneSuspension(d.tx, {
+          apporteurId: APPORTEUR,
+          faits: fraude,
+          acteur: ADMIN_ROLE,
+          maintenant: MAINTENANT,
+          faitsTexte: FAITS,
+          cleIdempotence: CLE,
+          cles: CLES,
+          ecrireUnFait: d.ecrireUnFait,
+        }),
+      };
+    };
+    const parrainage = pose({
+      statut: 'confirmee',
+      apporteurId: APPORTEUR,
+      type: 'auto_parrainage',
+    });
+    expect(await motif(parrainage.p)).toBe('anomalie_hors_motif');
+    expect(parrainage.d.faits).toEqual([]);
+    // L'état de l'attribution n'entre pas en compte : une anomalie de sincérité confirmée sur une
+    // attribution signée, convertie ou figée fonde la fraude, sans effet sur l'attribution.
+    const sincerite = pose({ statut: 'confirmee', apporteurId: APPORTEUR, type: 'sincerite' });
+    await sincerite.p;
+    expect(sincerite.d.faits.map((f) => f.type)).toEqual([
+      'apporteur_statut_modifie',
+      'apporteur_gel_modifie',
+    ]);
+    expect(
+      (sincerite.d.appels.find((a) => a.quoi === 'anomalie')!.args as { select: object }).select
+    ).toEqual({ statut: true, apporteurId: true, type: true });
   });
 
   it('REQ-SEC-018 : un apporteur introuvable, déjà suspendu, ou non signé est refusé, sans écriture', async () => {
