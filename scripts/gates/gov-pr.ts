@@ -3154,12 +3154,8 @@ if (LANCE_EN_SCRIPT) {
     pr = prParEvenement();
     if (pr)
       portee += ', puis la PR de l’événement GitHub — SANS les revues, qui n’existent pas encore';
-    try {
-      depot = depotDeLaTete(depot, pr);
-    } catch (e) {
-      console.error(`❌ ${(e as Error).message}`);
-      process.exit(1);
-    }
+    // Une tête illisible LÈVE : la garde s'arrête en erreur (échec fermé), sans sortie nommée de plus.
+    depot = depotDeLaTete(depot, pr);
   }
 
   // LE RISQUE EST IMPRIMÉ DÈS QU'UNE PR EST CONNUE (GOV-077) : c'est cette ligne que l'orchestrateur

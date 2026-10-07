@@ -141,11 +141,9 @@ describe('REQ-GOV-010 — GOV-152 : le registre de la PR se juge contre la BASE 
       depot.taches.filter((t) => t.id === 'UX-P1-01')
     );
 
-  it('REQ-GOV-010 — TÉMOIN GOV-153 : le registre du commit de FUSION, apparié à la base de fusion, impute à la PR ce que main a changé', () => {
+  it('REQ-GOV-010 — GOV-153 : le registre du commit de FUSION imputerait à la PR ce que main a changé ; lu à sa TÊTE, il ne lui impute rien', () => {
+    // Le défaut, nommé : le disque de la CI (commit de fusion) apparié à la base de fusion.
     expect(ecartsCi(depotSur('fusion-ci')).join(' ')).toContain('UX-P1-02 est réécrite');
-  });
-
-  it('REQ-GOV-010 — GOV-153 : le registre lu à la TÊTE de la PR, apparié à la base de fusion, ne lui impute rien', () => {
     const pr = {
       titre: 'feat(UX-P1-01): x',
       corps: '',
