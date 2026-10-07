@@ -659,6 +659,18 @@ export const FAITS_ANOMALIE_CARACTERES_MAX = {
  * montant, ni un budget d'expérience. Condition (a) de la lentille sécurité (2026-10-02) : la ligne de
  * contexte est BORNÉE par cette constante, à la saisie comme au rendu.
  */
+/**
+ * L'écrit de l'apporteur (« Écrire à Axion-IA ») — la longueur maximale de son message, comptée en
+ * POINTS DE CODE après nettoyage. Au-delà, l'écrit est refusé, jamais tronqué. Une contestation arrive
+ * par cet écrit : la borne ne coupe pas une contestation motivée.
+ */
+export const ECRIT_CARACTERES_MAX = {
+  valeur: 5000,
+  unite: 'points_de_code',
+  source: 'arbitrage de la coordination (#319), la juriste en copie',
+  verifieLe: '2026-10-08',
+} as const;
+
 export const CONTEXTE_DEPOT_CARACTERES_MAX = {
   valeur: 140,
   unite: 'caracteres',
