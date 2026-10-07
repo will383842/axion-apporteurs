@@ -91,17 +91,32 @@ async function unApporteur(statut = 'signe'): Promise<string> {
   ).id;
 }
 
-/** Un utilisateur de la console, validé, du rôle donné, et sa session ouverte ; rend son jeton. */
-async function sessionDeConsole(role: 'admin' | 'comptable' | 'qualifieur' | 'lecteur') {
+/**
+ * L'administrateur de la console, créé UNE fois : la règle des quatre yeux
+ * (`utilisateurs_console_quatre_yeux`) refuse qu'un second administrateur soit validé sans validateur
+ * dès qu'un administrateur validé existe. Les sessions suivantes se rouvrent donc sur le même compte.
+ */
+let administrateurId: string | undefined;
+
+async function utilisateurDeConsole(role: 'admin' | 'comptable' | 'qualifieur' | 'lecteur') {
+  if (role === 'admin' && administrateurId !== undefined) return { id: administrateurId };
   const utilisateur = await base.prisma.utilisateurConsole.create({
     data: {
       role,
       creeAt: MAINTENANT,
-      valideAt: MAINTENANT,
+      // Seul un administrateur a une validation : elle fait de lui un administrateur actif.
+      valideAt: role === 'admin' ? MAINTENANT : null,
       emailChiffre: Buffer.from([1]),
       emailHash: hex(32),
     },
   });
+  if (role === 'admin') administrateurId = utilisateur.id;
+  return utilisateur;
+}
+
+/** Un utilisateur de la console du rôle donné, et sa session ouverte ; rend son jeton. */
+async function sessionDeConsole(role: 'admin' | 'comptable' | 'qualifieur' | 'lecteur') {
+  const utilisateur = await utilisateurDeConsole(role);
   const lien = await base.prisma.lienMagique.create({
     data: {
       utilisateurConsoleId: utilisateur.id,
