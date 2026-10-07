@@ -1053,8 +1053,70 @@ describe('REQ-JUR-006 — le rendu par le passage, depuis la décision', () => {
         dateEffet: true,
         evenementId: true,
         textePurgeAt: true,
+        // SEC-15 : l'instant de la décision date la levée d'une suspension.
+        creeAt: true,
       },
     });
+  });
+
+  it('REQ-SEC-018 : TÉMOIN — la suspension se rend depuis SA décision : les faits déchiffrés et échappés, la levée quinze jours civils après la pose (SEC-15)', async () => {
+    const { rendreUneDecisionDeContrat } =
+      await import('../../../src/server/apporteur/resiliation');
+    const m = await monde({
+      apporteurId: ID,
+      geste: 'suspension',
+      article: '3.7',
+      texteChiffre: await chiffre('d-1', "L'entreprise a indiqué <aucun> échange"),
+      dateReception: null,
+      dateEffet: null,
+      evenementId: 41n,
+      textePurgeAt: null,
+      creeAt: new Date('2026-10-07T07:30:00.000Z'),
+    });
+    const r = await rendreUneDecisionDeContrat(m.tx, N('suspension_declarations'), {
+      cles: m.cles,
+      composer,
+    });
+    expect((r as { sujet: string }).sujet).toContain('[suspension_declarations]');
+    expect((r as { corps: string }).corps).toContain(
+      // L'apostrophe est échappée au courriel ; le chevron aussi.
+      'L&#39;entreprise a indiqué &lt;aucun&gt; échange.'
+    );
+    expect((r as { corps: string }).corps).toContain('22 octobre 2026');
+    // Une suspension purgée ne se rend plus ; une mise en demeure citée par cette clé non plus.
+    const purgee = await monde({
+      apporteurId: ID,
+      geste: 'suspension',
+      article: '3.7',
+      texteChiffre: null,
+      dateReception: null,
+      dateEffet: null,
+      evenementId: 41n,
+      textePurgeAt: new Date('2031-10-08T00:00:00.000Z'),
+      creeAt: new Date('2026-10-07T07:30:00.000Z'),
+    });
+    expect(
+      await rendreUneDecisionDeContrat(purgee.tx, N('suspension_declarations'), {
+        cles: purgee.cles,
+        composer,
+      })
+    ).toEqual({ nonRendue: 'faits_non_conserves' });
+    const autreGeste = await monde({
+      apporteurId: ID,
+      geste: 'mise_en_demeure',
+      article: '7',
+      texteChiffre: await chiffre('d-1', 'Faits'),
+      dateReception: null,
+      dateEffet: null,
+      evenementId: 41n,
+      textePurgeAt: null,
+    });
+    expect(
+      await rendreUneDecisionDeContrat(autreGeste.tx, N('suspension_declarations'), {
+        cles: autreGeste.cles,
+        composer,
+      })
+    ).toEqual({ nonRendue: 'charge_illisible' });
   });
 
   it('REQ-DM-011 : TÉMOIN — la résiliation se rend depuis SA décision et le motif de SON événement : dates en clair, à Paris', async () => {

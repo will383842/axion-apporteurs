@@ -45,6 +45,8 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
     expect(Object.keys(CHARGES_PAR_TYPE).sort()).toEqual([
       'anomalie_gel_modifie',
       'anomalie_statut_modifie',
+      // SEC-15 (A02, #794) : la pose et la levée du gel des dépôts.
+      'apporteur_gel_modifie',
       // SEC-19 (A02, #703) : la mise en demeure datée d'un apporteur, par article.
       'apporteur_mis_en_demeure',
       'apporteur_statut_modifie',

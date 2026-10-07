@@ -83,12 +83,13 @@ export const LONGUEUR_DU_MOTIF_MAX =
 
 /**
  * SEC-19 : les `{faits}` d'une mise en demeure suivent les règles de `{faits}` de DM-55 (A02, #703) —
+ * et, SEC-15, ceux d'une suspension —
  * la même borne, `FAITS_ANOMALIE_CARACTERES_MAX`. Toute autre clé garde la borne commune.
  */
 const borneDe = (cle: GabaritDeLApporteur, parametre: string): number =>
   parametre === 'motif'
     ? LONGUEUR_DU_MOTIF_MAX
-    : cle === 'mise_en_demeure' && parametre === 'faits'
+    : (cle === 'mise_en_demeure' || cle === 'suspension_declarations') && parametre === 'faits'
       ? FAITS_ANOMALIE_CARACTERES_MAX.valeur
       : LONGUEUR_DE_VALEUR_MAX;
 
