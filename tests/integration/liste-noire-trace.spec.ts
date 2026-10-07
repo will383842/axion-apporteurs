@@ -343,7 +343,7 @@ describe('REQ-DM-028 — le report : chaque inscription existante reçoit sa pé
           'ALTER TABLE sirens_liste_noire ENABLE TRIGGER sirens_liste_noire_tracer_ajout'
         );
         const migration = (await import('node:fs')).readFileSync(
-          'prisma/migrations/20261003002900_sirens_liste_noire_trace/migration.sql',
+          'prisma/migrations/20261003004900_sirens_liste_noire_trace/migration.sql',
           'utf8'
         );
         const report = /-- \(4\)[^\n]*\n(INSERT INTO[\s\S]*?;)/.exec(migration)?.[1];
