@@ -71,6 +71,10 @@ describe('REQ-GOV-010 — GOV-152 : le registre de la PR se juge contre la BASE 
     ecrireRegistre([PR_A, { ...AUTRE, paths: ['src/b.ts', 'src/b2.ts'] }]);
     git('add', '-A');
     git('commit', '-q', '-m', 'autre PR fusionnee');
+    // GOV-153 : ce que sert `actions/checkout` sur un événement pull_request — le commit de FUSION
+    // de la PR dans main courante (refs/pull/N/merge).
+    git('checkout', '-q', '-b', 'fusion-ci', 'main');
+    git('merge', '-q', '--no-ff', '-m', 'fusion de la PR dans main courante', 'pr');
   });
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -111,6 +115,55 @@ describe('REQ-GOV-010 — GOV-152 : le registre de la PR se juge contre la BASE 
   it('REQ-GOV-010 — une référence illisible ou sans base commune rend null (échec fermé)', () => {
     expect(LECTEUR.tachesDeLaBaseDeFusion('main', 'branche-inconnue', dir)).toBeNull();
     expect(LECTEUR.tachesDeLaBaseDeFusion('-x', 'pr', dir)).toBeNull();
+  });
+
+  // ── GOV-153 : la paire CI — le disque est le commit de FUSION, la base est la base de FUSION ──
+  const depotSur = (ref: string): GARDE.Depot => ({
+    gabarit: '',
+    codeowners: '',
+    charte: '',
+    fiches: [],
+    architecte: '',
+    taches: GARDE.projeter(LECTEUR.tachesDeLaBase(ref, dir) ?? []),
+  });
+  const ecartsCi = (depot: GARDE.Depot): string[] =>
+    GARDE.ecartsDuRegistreDUnePrDAuteur(
+      depot,
+      {
+        titre: 'feat(UX-P1-01): x',
+        corps: '',
+        labels: [],
+        fichiers: ['docs/tasks.json', 'src/a2.ts'],
+        revues: null,
+        tachesBase: GARDE.projeter(LECTEUR.tachesDeLaBaseDeFusion('main', 'pr', dir) ?? []),
+      },
+      'UX-P1-01',
+      depot.taches.filter((t) => t.id === 'UX-P1-01')
+    );
+
+  it('REQ-GOV-010 — TÉMOIN GOV-153 : le registre du commit de FUSION, apparié à la base de fusion, impute à la PR ce que main a changé', () => {
+    expect(ecartsCi(depotSur('fusion-ci')).join(' ')).toContain('UX-P1-02 est réécrite');
+  });
+
+  it('REQ-GOV-010 — GOV-153 : le registre lu à la TÊTE de la PR, apparié à la base de fusion, ne lui impute rien', () => {
+    const pr = {
+      titre: 'feat(UX-P1-01): x',
+      corps: '',
+      labels: [],
+      fichiers: [],
+      revues: null,
+      tachesTete: GARDE.projeter(LECTEUR.tachesDeLaBase('pr', dir) ?? []),
+    };
+    const depot = GARDE.depotDeLaTete(depotSur('fusion-ci'), pr);
+    expect(depot.taches.find((t) => t.id === 'UX-P1-02')?.paths).toEqual(['src/b.ts']);
+    expect(ecartsCi(depot)).toEqual([]);
+  });
+
+  it('REQ-GOV-010 — GOV-153 : une tête illisible arrête la garde ; sans tête, le disque fait foi (local)', () => {
+    const base = depotSur('pr');
+    const sans = { titre: 'x', corps: '', labels: [], fichiers: [], revues: null };
+    expect(GARDE.depotDeLaTete(base, sans)).toBe(base);
+    expect(() => GARDE.depotDeLaTete(base, { ...sans, tachesTete: null })).toThrow(/illisible/);
   });
 });
 
