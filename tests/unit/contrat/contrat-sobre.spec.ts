@@ -69,11 +69,20 @@ function fautesDeSobriete(texte: string): string[] {
 /** Les clauses de protection : l'identifiant posé, et le fragment qui la porte dans son article. */
 const PROTECTIONS: readonly { objet: string; clause: string; unite: string; fragment: RegExp }[] = [
   { objet: 'clé SIREN', clause: 'CL-ATTRIBUTION', unite: '3.6', fragment: /son propre SIREN/ },
+  // Contrat v2 d'axion-ia : la fenêtre est bornée à l'art. 3.4, et l'absence de reconduction
+  // est l'art. 3.4 bis ; la note de l'art. 3.4 n'est plus dans le v2.
   {
-    objet: 'fenêtre bornée, sans reconduction',
+    objet: 'fenêtre bornée',
     clause: 'CL-DUREE',
     unite: '3.4',
-    fragment: /\{\{FENETRE_MOIS\}\} mois à compter de sa confirmation.*portefeuille permanent/,
+    fragment: /\{\{FENETRE_MOIS\}\} mois à compter de sa confirmation/,
+  },
+  {
+    objet: 'sans reconduction',
+    clause: 'CL-DUREE',
+    unite: '3.4 bis',
+    fragment:
+      /ne se renouvelle pas et ne fait l'objet d'aucune reconduction, tacite ou automatique/,
   },
   {
     objet: 'absence d’exclusivité',
