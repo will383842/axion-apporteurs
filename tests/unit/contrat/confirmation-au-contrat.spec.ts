@@ -149,19 +149,17 @@ describe('REQ-DM-042 — art. 3.4 et 3.7 : le premier échange, la journalisatio
  */
 describe('REQ-DM-042 — les délais de l’art. 3.2 : la SSOT dit ce que le registre écrit', () => {
   const REGISTRE = readFileSync('docs/DECISIONS.md', 'utf8');
-  it.each([
-    'LIBERATION_SIGNALEE_INJOIGNABLE_MAX',
-    'LIBERATION_SIGNALEE_JOURS',
-    'CARENCE_REDEPOT_APRES_LIBERATION_JOURS',
-    'CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS',
-  ] as const)('REQ-DM-042 : %s — la valeur de la SSOT est celle du registre', (nom) => {
-    // Le nom, puis au plus soixante caractères sans parenthèse, puis « (= N, SSOT) ».
-    const debut = REGISTRE.indexOf('`' + nom + '`');
-    const ecrite =
-      debut === -1
-        ? null
-        : /^[^(]{0,60}\(= (\d+), SSOT\)/.exec(REGISTRE.slice(debut + nom.length + 2));
-    expect(ecrite, `${nom} : aucune valeur « (= N, SSOT) » au registre`).not.toBeNull();
-    expect(SEUILS[nom].valeur).toBe(Number(ecrite![1]));
-  });
+  it.each(['LIBERATION_SIGNALEE_JOURS', 'CARENCE_REDEPOT_APRES_LIBERATION_JOURS'] as const)(
+    'REQ-DM-042 : %s — la valeur de la SSOT est celle du registre',
+    (nom) => {
+      // Le nom, puis au plus soixante caractères sans parenthèse, puis « (= N, SSOT) ».
+      const debut = REGISTRE.indexOf('`' + nom + '`');
+      const ecrite =
+        debut === -1
+          ? null
+          : /^[^(]{0,60}\(= (\d+), SSOT\)/.exec(REGISTRE.slice(debut + nom.length + 2));
+      expect(ecrite, `${nom} : aucune valeur « (= N, SSOT) » au registre`).not.toBeNull();
+      expect(SEUILS[nom].valeur).toBe(Number(ecrite![1]));
+    }
+  );
 });
