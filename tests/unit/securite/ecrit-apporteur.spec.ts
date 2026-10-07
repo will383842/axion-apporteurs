@@ -160,6 +160,28 @@ describe('REQ-DM-043 — l’écrivain passe par la COUCHE, en ajout seul', () =
     expect(JSON.stringify(r)).not.toContain(MARQUEUR);
   });
 
+  it('REQ-DM-043 : TÉMOIN — un identifiant FOURNI par l’appelant est ignoré : chaque écrit reçoit un id neuf, tiré par le serveur', async () => {
+    const ids: string[] = [];
+    const acces = {
+      ecritApporteur: {
+        creer: async (data: { id: string }) => (
+          ids.push(data.id),
+          { id: data.id, recuAt: new Date(0) }
+        ),
+      },
+    } as never;
+    const FORGE = '00000000-0000-4000-8000-000000000000';
+    for (let i = 0; i < 2; i += 1) {
+      await recevoirUnEcrit(acces, { texte: 'Écrit.', id: FORGE } as never, CLES);
+    }
+    expect(ids).toHaveLength(2);
+    expect(ids).not.toContain(FORGE);
+    expect(new Set(ids).size).toBe(2);
+    for (const id of ids) {
+      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    }
+  });
+
   it('REQ-DM-043 : TÉMOIN — un texte refusé n’écrit RIEN', async () => {
     const creer = vi.fn();
     await expect(
