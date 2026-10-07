@@ -443,9 +443,29 @@ describe('REQ-SEC-018 — la suspension, rendue depuis sa décision (SEC-15, voi
     expect(await notificationsDeLEspace(c, MOI, { cles })).toEqual([]);
   });
 
-  it('REQ-SEC-018 : une suspension aux faits purgés n’est pas rendue (échec fermé : aucun texte fermé de la juriste)', async () => {
+  it('REQ-SEC-018 : TÉMOIN — une suspension aux faits purgés rend le texte FERMÉ de la juriste, mot pour mot, du jour de la notification à celui de la levée', async () => {
     const { cles, decision, notification } = await suspension({ purgee: true });
     const { c } = client([notification], [decision], {});
+    const finDUneSuspension = vi.fn(async () => new Date('2026-10-15T09:00:00.000Z'));
+    const [n] = await notificationsDeLEspace(c, MOI, { cles, finDUneSuspension });
+    expect(n?.titre).toBe("Vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA");
+    expect(n?.corps).toBe(
+      "Axion-IA a suspendu l'enregistrement de vos nouvelles déclarations du {dateDebut} au {dateFin}, le temps d'une vérification, au titre de l'article 3.7 du contrat. Le détail des faits n'est plus conservé, sa durée de conservation ayant pris fin. Cette suspension n'a eu d'effet ni sur les entreprises que vous avez déclarées, ni sur vos commandes, ni sur vos commissions, et elle ne constitue pas un antécédent."
+        .replace('{dateDebut}', '7 octobre 2026')
+        .replace('{dateFin}', '15 octobre 2026')
+    );
+    // La fin se lit au journal, depuis le fait de la pose : jamais depuis le texte purgé.
+    expect(finDUneSuspension).toHaveBeenCalledWith('51');
+    // Aucun fragment de l'ancien texte des faits ne subsiste.
+    expect(n?.corps).not.toContain('aucun échange');
+  });
+
+  it('REQ-SEC-018 : TÉMOIN à deux faces — une fin illisible, ou aucun lecteur de la fin, ne rend rien (échec fermé)', async () => {
+    const { cles, decision, notification } = await suspension({ purgee: true });
+    const { c } = client([notification], [decision], {});
+    expect(
+      await notificationsDeLEspace(c, MOI, { cles, finDUneSuspension: async () => null })
+    ).toEqual([]);
     expect(await notificationsDeLEspace(c, MOI, { cles })).toEqual([]);
   });
 });

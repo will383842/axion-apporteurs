@@ -137,6 +137,11 @@ export type ClientDesNotifications = Pick<
 export type OptionsDuLecteur = {
   readonly cles?: ClesPii;
   readonly lireUnFait?: (id: string) => Promise<{ type: string; charge: unknown } | null>;
+  /**
+   * SEC-15 : la fin d'une suspension, depuis le fait de sa pose (la levée, sinon la fin du contrat),
+   * par le lecteur de l'écrivain unique (`finDUneSuspension`). `null` : en cours ou illisible.
+   */
+  readonly finDUneSuspension?: (poseEvenementId: string) => Promise<Date | null>;
 };
 
 /** Une notification du contrat, telle que le lecteur la lit. */
@@ -157,7 +162,8 @@ async function decisionDeLEspace(
   apporteurId: string,
   n: LigneDuContrat,
   cles: ClesPii,
-  lireUnFait: OptionsDuLecteur['lireUnFait']
+  lireUnFait: OptionsDuLecteur['lireUnFait'],
+  finDUneSuspension: OptionsDuLecteur['finDUneSuspension']
 ): Promise<TexteRendu | null> {
   if (n.decisionContratId === null || n.evenementId === null) return null;
   const d = await client.decisionDeContrat.findFirst({
@@ -197,10 +203,26 @@ async function decisionDeLEspace(
     faits = propre;
   }
   try {
-    // SEC-15 : la suspension, avec ses faits et sa date de levée. Purgée, elle n'est plus rendue :
-    // aucun texte fermé de la juriste n'existe pour elle (échec fermé, dette nommée).
+    // SEC-15 : la suspension, avec ses faits et sa date de levée. Purgée, le texte FERMÉ de la juriste,
+    // du jour de la notification à celui de sa fin ; une date illisible ne rend rien.
     if (d.geste === 'suspension') {
-      if (purge || faits === undefined || d.creeAt === undefined) return null;
+      if (d.creeAt === undefined) return null;
+      if (purge) {
+        const fin =
+          finDUneSuspension === undefined
+            ? null
+            : await finDUneSuspension(n.evenementId.toString());
+        if (fin === null) return null;
+        const t = TEXTES_DES_NOTIFICATIONS.suspension_declarations;
+        return {
+          titre: t.titre,
+          appel: t.appel,
+          corps: DECISIONS_PURGEES.suspension
+            .replace('{dateDebut}', dateEnClair(d.creeAt))
+            .replace('{dateFin}', dateEnClair(fin)),
+        };
+      }
+      if (faits === undefined) return null;
       return rendreLaNotification('suspension_declarations', {
         faits,
         dateLevee: dateEnClair(new Date(echeanceDeLevee(d.creeAt.getTime()))),
@@ -332,7 +354,8 @@ export async function notificationsDeLEspace(
         apporteurId,
         { cle: n.cle, evenementId, decisionContratId },
         options.cles,
-        options.lireUnFait
+        options.lireUnFait,
+        options.finDUneSuspension
       );
       if (texte === null) continue;
       rendues.push({
