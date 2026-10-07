@@ -81,6 +81,8 @@ async function verifier(siren: string, joursAvant: number, resultat: 'libre' | '
       apporteurId,
       siren,
       resultat,
+      // `verifications_ip_hash_purge_liee` : l'empreinte réseau est posée, ou sa purge datée.
+      ipHash: 'c'.repeat(16),
       verifieeAt: new Date(MAINTENANT.getTime() - joursAvant * MS_PAR_JOUR),
     },
   });
@@ -228,7 +230,13 @@ describe('REQ-SEC-042 — la garde jugée en base réelle, une cause à la fois'
       verrouPris();
       await tenu;
       await tx.verification.create({
-        data: { apporteurId, siren, resultat: 'libre', verifieeAt: MAINTENANT },
+        data: {
+          apporteurId,
+          siren,
+          resultat: 'libre',
+          ipHash: 'c'.repeat(16),
+          verifieeAt: MAINTENANT,
+        },
       });
     });
     await pris;
