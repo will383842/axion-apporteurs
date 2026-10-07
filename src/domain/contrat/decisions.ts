@@ -411,6 +411,14 @@ export const CONCORDANCES: readonly Concordance[] = [
     absents: [],
   },
   {
+    decision: 'HYP-D3',
+    article: '3.7',
+    alinea: 3,
+    registre: ["Elle n'obéit à aucun barème, à aucun compteur et à aucun seuil"],
+    gabarit: ["Elle n'obéit à aucun barème, à aucun compteur et à aucun seuil"],
+    absents: [],
+  },
+  {
     decision: 'HYP-E1-12',
     article: '3.5',
     alinea: null,
