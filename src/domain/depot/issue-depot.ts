@@ -26,6 +26,9 @@ export const ISSUES_DEPOT = [
   'gele',
   'captcha',
   'brouillon_hors_ligne',
+  // DM-13 (art. 3.4 bis ; juriste, #319 6037169174 ; A02) : un refus SANS ÉCRITURE, hors des refus
+  // de catégorie : l'apporteur corrige la date du contact et redépose.
+  'nouveau_contact_requis',
 ] as const;
 
 /** L'issue d'un dépôt — dérivée de la constante, jamais retapée. */
@@ -59,6 +62,7 @@ export const HORODATAGE_DE_L_ISSUE = {
   gele: 'rien_a_votre_nom',
   captcha: 'rien_a_votre_nom',
   brouillon_hors_ligne: 'a_la_reception',
+  nouveau_contact_requis: 'rien_a_votre_nom',
 } as const satisfies { readonly [I in IssueDepot]: Horodatage };
 
 /**
@@ -107,6 +111,11 @@ export interface FaitsDuDepot {
   readonly anteriorite: 'aucune' | 'client' | 'devis' | 'financeur';
   /** Art. 3.3 bis d. */
   readonly oppositionDemarchage: boolean;
+  /**
+   * Art. 3.4 bis (DM-13) : la dernière attribution de cet apporteur sur ce SIREN a pris fin par son
+   * terme, et la date du contact n'est pas postérieure au jour du terme (`nouveauContactManquant`).
+   */
+  readonly nouveauContactManquant: boolean;
   /** Une attribution dans un état occupant existe pour ce SIREN. */
   readonly occupee: boolean;
   /** Le nombre de déclarations déjà en attente pour ce SIREN, de 0 à `PLACES_EN_ATTENTE`. */
@@ -122,12 +131,14 @@ export type DecisionDeDepot =
     }
   | { readonly issue: 'en_attente'; readonly statut: 'en_attente'; readonly rangAttente: 1 | 2 }
   | {
-      readonly issue: (typeof ISSUES_DE_REFUS)[number] | 'gele';
+      readonly issue: (typeof ISSUES_DE_REFUS)[number] | 'gele' | 'nouveau_contact_requis';
       readonly statut: null;
       readonly rangAttente: null;
     };
 
-const REFUS = (issue: (typeof ISSUES_DE_REFUS)[number] | 'gele'): DecisionDeDepot => ({
+const REFUS = (
+  issue: (typeof ISSUES_DE_REFUS)[number] | 'gele' | 'nouveau_contact_requis'
+): DecisionDeDepot => ({
   issue,
   statut: null,
   rangAttente: null,
@@ -149,6 +160,9 @@ export function deciderDuDepot(f: FaitsDuDepot): DecisionDeDepot {
   if (f.apporteurGele) return REFUS('gele');
   if (f.etablissementCesse) return REFUS('etablissement_cesse');
   if (f.anteriorite !== 'aucune') return REFUS(ANTERIORITES[f.anteriorite]);
+  // Art. 3.4 bis : APRÈS l'antériorité (une entreprise devenue cliente reste refusée par elle), AVANT
+  // l'occupation (juriste, 6037169174).
+  if (f.nouveauContactManquant) return REFUS('nouveau_contact_requis');
   if (f.oppositionDemarchage) return REFUS('opposition_demarchage');
   if (f.occupee) {
     if (f.enAttente === PLACES_EN_ATTENTE) return REFUS('file_complete');

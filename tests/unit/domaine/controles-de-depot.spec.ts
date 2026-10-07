@@ -39,6 +39,7 @@ const LIBRE: FaitsDuDepot = {
   etablissementCesse: false,
   anteriorite: 'aucune',
   oppositionDemarchage: false,
+  nouveauContactManquant: false,
   occupee: false,
   enAttente: 0,
   verificationPrioritaire: false,
@@ -178,6 +179,8 @@ describe('REQ-SEC-022 — l’occupation et la file (art. 3.3 bis c)', () => {
       'apporteurGele',
       'enAttente',
       'etablissementCesse',
+      // DM-13 : l'historique de l'apporteur LUI-MÊME sur ce SIREN, jamais l'occupant.
+      'nouveauContactManquant',
       'occupee',
       'oppositionDemarchage',
       'verificationPrioritaire',
@@ -302,6 +305,9 @@ function transaction(regles: {
   /** DM-13 : les attributions `perimee` du couple, et l'instant de la dernière fin faute d'adresse. */
   perimees?: string[];
   finSansAdresse?: Date | null;
+  /** DM-13 (art. 3.4 bis) : la dernière attribution du couple, et la transition de sa fin. */
+  derniere?: { id: string; statut: string; fenetreFinAt: Date | null } | null;
+  transitionDeFin?: string;
 }) {
   const appels: Appel[] = [];
   const tx = {
@@ -336,14 +342,33 @@ function transaction(regles: {
         appels.push(['attribution.create', a]);
         return Promise.resolve({});
       },
+      findFirst: (a: unknown) => {
+        appels.push(['attribution.findFirst', a]);
+        return Promise.resolve(regles.derniere ?? null);
+      },
       findMany: (a: unknown) => {
         appels.push(['attribution.findMany', a]);
         return Promise.resolve((regles.perimees ?? []).map((id) => ({ id })));
       },
     },
     evenement: {
-      findFirst: (a: unknown) => {
+      findFirst: (a: { where: { agregatId: unknown } }) => {
         appels.push(['evenement.findFirst', a]);
+        // La dernière transition d'UNE attribution (art. 3.4 bis), ou la fin d'un lot (carence).
+        if (typeof a.where.agregatId === 'string') {
+          return Promise.resolve(
+            regles.transitionDeFin === undefined
+              ? null
+              : {
+                  charge: {
+                    de: 'active',
+                    vers: 'expiree',
+                    transition: regles.transitionDeFin,
+                    acteur: { par: 'systeme' },
+                  },
+                }
+          );
+        }
         const f = regles.finSansAdresse ?? null;
         return Promise.resolve(f === null ? null : { survenuAt: f });
       },
@@ -609,6 +634,84 @@ describe('REQ-DM-004 — la carence unique après une fin faute d’adresse vali
     const { tx, appels } = transaction({});
     await deposerDans(tx, demande(), ports());
     expect(noms(appels)).not.toContain('evenement.findFirst');
+  });
+});
+
+describe('REQ-DM-004 — le nouveau contact après une fin de durée (art. 3.4 bis ; juriste, 6037169174)', () => {
+  /** Le terme : le 30 septembre 2026, 18 h à Paris. */
+  const TERME = new Date('2026-09-30T16:00:00.000Z');
+  const finie = (transitionDeFin = 'expiree') => ({
+    derniere: { id: 'a-finie', statut: 'expiree', fenetreFinAt: TERME },
+    transitionDeFin,
+  });
+  const dateDuContact = (dateContact: string) => {
+    const d = demande();
+    return { ...d, saisie: { ...d.saisie, dateContact } };
+  };
+
+  it('REQ-DM-004 : la décision : APRÈS l’antériorité, AVANT l’occupation', () => {
+    expect(deciderDuDepot({ ...LIBRE, nouveauContactManquant: true })).toEqual({
+      issue: 'nouveau_contact_requis',
+      statut: null,
+      rangAttente: null,
+    });
+    expect(
+      deciderDuDepot({ ...LIBRE, nouveauContactManquant: true, anteriorite: 'client' }).issue
+    ).toBe('anteriorite_client');
+    expect(
+      deciderDuDepot({
+        ...LIBRE,
+        nouveauContactManquant: true,
+        occupee: true,
+        enAttente: PLACES_EN_ATTENTE,
+      }).issue
+    ).toBe('nouveau_contact_requis');
+  });
+
+  it('REQ-DM-004 : TÉMOIN — après une fin de durée, une date égale au jour du terme est refusée, et RIEN n’est écrit, aucune réserve', async () => {
+    const { tx, appels } = transaction(finie());
+    const r = await deposerDans(tx, dateDuContact('2026-09-30'), ports());
+    expect(r).toEqual({ issue: 'nouveau_contact_requis', attributionId: null, dateTerme: TERME });
+    expect(noms(appels)).not.toContain('depotRefuse.create');
+    expect(noms(appels)).not.toContain('attribution.create');
+  });
+
+  it('REQ-DM-004 : TÉMOIN — après une fin de durée, un dépôt sans date est refusé', async () => {
+    const { tx } = transaction(finie());
+    expect((await deposerDans(tx, dateDuContact(' '), ports())).issue).toBe(
+      'nouveau_contact_requis'
+    );
+  });
+
+  it('REQ-DM-004 : TÉMOIN à deux faces — le lendemain du terme est admis', async () => {
+    const { tx } = transaction(finie());
+    expect((await deposerDans(tx, dateDuContact('2026-10-01'), ports())).issue).toBe('enregistree');
+  });
+
+  it('REQ-DM-004 : TÉMOIN — après une autre fin (fin de contrat, péremption), aucune date n’est exigée', async () => {
+    for (const transition of ['fin_de_contrat', 'file_expiree']) {
+      const { tx } = transaction(finie(transition));
+      expect((await deposerDans(tx, dateDuContact('2026-09-01'), ports())).issue, transition).toBe(
+        'enregistree'
+      );
+    }
+    const perimee = transaction({
+      derniere: { id: 'a-finie', statut: 'perimee', fenetreFinAt: TERME },
+      transitionDeFin: 'perimee',
+    });
+    expect((await deposerDans(perimee.tx, dateDuContact('2026-09-01'), ports())).issue).toBe(
+      'enregistree'
+    );
+  });
+
+  it('REQ-DM-004 : la dernière attribution lue est celle de CE couple, la plus récente', async () => {
+    const { tx, appels } = transaction({});
+    await deposerDans(tx, demande(), ports());
+    expect(ecrit(appels, 'attribution.findFirst')).toEqual({
+      where: { apporteurId: APPORTEUR, siren: demande().saisie.siren },
+      orderBy: [{ deposeeAt: 'desc' }, { id: 'desc' }],
+      select: { id: true, statut: true, fenetreFinAt: true },
+    });
   });
 });
 

@@ -173,9 +173,23 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
       const tout = [r.pastille, r.titre, r.pourquoi, r.quoiFaire, r.horodatage].join(' ');
       expect([i, parametresDe(tout)]).toEqual([i, []]);
     }
-    for (const i of ISSUES_DEPOT.filter((x) => !estUnRefus(x))) {
+    for (const i of ISSUES_DEPOT.filter((x) => !estUnRefus(x) && x !== 'nouveau_contact_requis')) {
       expect([i, issueRendue(i).refus]).toEqual([i, null]);
     }
+  });
+
+  it('REQ-UX-002 : TÉMOIN — nouveau_contact_requis : le texte de la juriste mot pour mot, la mention du refus, AUCUN lien de contestation (6037253640)', () => {
+    const r = issueRendue('nouveau_contact_requis');
+    expect([r.pastille, r.titre, r.pourquoi, r.quoiFaire]).toEqual([
+      'Pas enregistré',
+      'Pas enregistré : un nouveau contact est nécessaire',
+      "Vous avez déjà eu cette entreprise jusqu'au {dateTerme}.",
+      "Pour la déposer à nouveau, indiquez la date d'un nouveau contact avec l'un de ses représentants, postérieure à cette date (contrat, article 3.4 bis).",
+    ]);
+    expect(r.horodatage).toBe("Rien n'est enregistré à votre nom.");
+    expect(r.refus).toEqual({ mention: MENTION_DU_REFUS, contestation: null });
+    expect(r.actionPrincipale).toEqual({ libelle: 'Corriger le dépôt', route: null });
+    expect(estUnRefus('nouveau_contact_requis')).toBe(false);
   });
 
   it('REQ-UX-002 : les deux antériorités ont le libellé unique « déjà connue de la Société »', () => {

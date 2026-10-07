@@ -50,6 +50,8 @@ const VOIR_MES_ENTREPRISES: ActionEcran = {
   route: '/mes-entreprises',
 };
 const RETOUR_ACCUEIL: ActionEcran = ACTIONS_COMMUNES.retourAccueil;
+/** Le retour au formulaire, la saisie gardée : l'action reste sur l'écran du dépôt. */
+const CORRIGER_LE_DEPOT: ActionEcran = { libelle: 'Corriger le dépôt', route: null };
 
 /** Les deux antériorités partagent UN libellé (REQ-UX-002) : l'apporteur ne sait pas laquelle. */
 const DEJA_CONNUE: TexteIssue = {
@@ -148,6 +150,16 @@ export const TEXTES_DES_ISSUES: { readonly [I in IssueDepot]: TexteIssue } = {
     actionPrincipale: ACTIONS_COMMUNES.envoyerLeDepot,
     actionSecondaire: null,
   },
+  // DM-13 (art. 3.4 bis) : la juriste, #319 6037253640, mot pour mot.
+  nouveau_contact_requis: {
+    pastille: 'Pas enregistré',
+    titre: 'Pas enregistré : un nouveau contact est nécessaire',
+    pourquoi: "Vous avez déjà eu cette entreprise jusqu'au {dateTerme}.",
+    quoiFaire:
+      "Pour la déposer à nouveau, indiquez la date d'un nouveau contact avec l'un de ses représentants, postérieure à cette date (contrat, article 3.4 bis).",
+    actionPrincipale: CORRIGER_LE_DEPOT,
+    actionSecondaire: RETOUR_ACCUEIL,
+  },
   brouillon_hors_ligne: {
     pastille: 'En attente',
     titre: 'Enregistré sur votre téléphone',
@@ -162,7 +174,7 @@ export const TEXTES_DES_ISSUES: { readonly [I in IssueDepot]: TexteIssue } = {
 /** Une issue telle qu'un écran l'affiche : son texte, sa mention d'horodatage, et le refus s'il y a lieu. */
 export type IssueRendue = TexteIssue & {
   readonly horodatage: string;
-  readonly refus: { readonly mention: string; readonly contestation: ActionEcran } | null;
+  readonly refus: { readonly mention: string; readonly contestation: ActionEcran | null } | null;
 };
 
 /** Le SEUL chemin par lequel un écran obtient le texte d'une issue. */
@@ -172,6 +184,9 @@ export function issueRendue(issue: IssueDepot): IssueRendue {
     horodatage: MENTIONS_HORODATAGE[HORODATAGE_DE_L_ISSUE[issue]],
     refus: estUnRefus(issue)
       ? { mention: MENTION_DU_REFUS, contestation: CONTESTATION_ECRITE }
-      : null,
+      : issue === 'nouveau_contact_requis'
+        ? // La mention, vraie ici, sans lien de contestation : il suffit de corriger (juriste).
+          { mention: MENTION_DU_REFUS, contestation: null }
+        : null,
   };
 }

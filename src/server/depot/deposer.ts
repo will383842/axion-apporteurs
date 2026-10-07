@@ -36,8 +36,8 @@ import {
 } from '../../domain/depot/issue-depot';
 import { niveauDAcces } from '../../domain/apporteur/acces-espace';
 import { ETATS_OCCUPANTS } from '../../domain/attribution/etats';
-import { redepotPermis } from '../../domain/attribution/echeances';
-import { derniereFinSansAdresseValide } from '../evenement/journal';
+import { nouveauContactManquant, redepotPermis } from '../../domain/attribution/echeances';
+import { derniereFinSansAdresseValide, derniereTransitionDe } from '../evenement/journal';
 import { anterioriteDe, verrouillerLesSirens } from '../entreprise-connue/projection';
 import { journaliserLaNaissance } from '../attribution/transitionner';
 import { creerLaDemande } from '../confirmation/demandes';
@@ -200,6 +200,8 @@ export async function controlerLeDebit(
 export interface IssueDuDepot {
   readonly issue: IssueDepot;
   readonly attributionId: string | null;
+  /** DM-13 : le terme de la dernière attribution, pour `nouveau_contact_requis` seul ({dateTerme}). */
+  readonly dateTerme?: Date | null;
 }
 
 export type ChampDeSaisie = keyof ContactDuDepot | 'informationTiers';
@@ -300,6 +302,17 @@ export async function deposerDans(
   }
 
   const anteriorite = await anterioriteDe(tx, siren, maintenant);
+  // DM-13 (art. 3.4 bis) : la DERNIÈRE attribution de ce couple, et si elle a pris fin par son terme.
+  const derniere = await tx.attribution.findFirst({
+    where: { apporteurId, siren },
+    orderBy: [{ deposeeAt: 'desc' }, { id: 'desc' }],
+    select: { id: true, statut: true, fenetreFinAt: true },
+  });
+  const finDeDuree =
+    derniere !== null &&
+    derniere.statut === 'expiree' &&
+    (await derniereTransitionDe(tx, derniere.id)) === 'expiree';
+  const termeAt = finDeDuree ? (derniere.fenetreFinAt?.getTime() ?? null) : null;
   const occupants = await tx.attribution.count({
     where: { siren, statut: { in: [...ETATS_OCCUPANTS] } },
   });
@@ -309,6 +322,10 @@ export async function deposerDans(
     etablissementCesse: demande.fiche.etatAdministratif === 'cesse',
     anteriorite: anteriorite.connue ? anteriorite.origine : 'aucune',
     oppositionDemarchage: await ports.oppositionDemarchage(tx, siren),
+    nouveauContactManquant: nouveauContactManquant(
+      { finDeDuree, termeAt },
+      demande.saisie.dateContact.trim() || null
+    ),
     occupee: occupants > 0,
     enAttente,
     verificationPrioritaire: false,
@@ -316,6 +333,14 @@ export async function deposerDans(
   const decision = deciderDuDepot(faits);
 
   if (decision.statut === null) {
+    // `gele` et `nouveau_contact_requis` n'écrivent RIEN : aucune ligne, aucune réserve (art. 3.5).
+    if (decision.issue === 'nouveau_contact_requis') {
+      return {
+        issue: decision.issue,
+        attributionId: null,
+        dateTerme: termeAt === null ? null : new Date(termeAt),
+      };
+    }
     if (decision.issue !== 'gele') {
       await tx.depotRefuse.create({
         data: {

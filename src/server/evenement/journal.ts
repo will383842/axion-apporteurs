@@ -212,3 +212,21 @@ export async function derniereFinSansAdresseValide(
   });
   return f?.survenuAt ?? null;
 }
+
+/**
+ * DM-13 (art. 3.4 bis du v2) — la transition du DERNIER changement d'état d'une attribution, lue au
+ * journal : elle dit COMMENT l'attribution a pris fin (`expiree` = le terme ; `fin_de_contrat`,
+ * `file_expiree`… ne le sont pas). `null` sans fait, ou sur une charge illisible (échec fermé).
+ */
+export async function derniereTransitionDe(
+  client: PrismaClient | Prisma.TransactionClient,
+  attributionId: string
+): Promise<string | null> {
+  const f = await client.evenement.findFirst({
+    where: { agregat: 'attribution', agregatId: attributionId, type: 'attribution_etat_modifie' },
+    orderBy: { id: 'desc' },
+    select: { charge: true },
+  });
+  const charge = CHARGES_PAR_TYPE.attribution_etat_modifie.safeParse(f?.charge);
+  return charge.success ? charge.data.transition : null;
+}

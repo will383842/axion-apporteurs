@@ -192,6 +192,8 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   'espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente': ['dateFin', 'delaiRedeclaration'],
   // SA propre suspension.
   'espace/issues-depot.ts › TEXTES_DES_ISSUES › gele': ['dateSuspension'],
+  // DM-13 (art. 3.4 bis) : le terme de SA propre attribution, jamais celle d'autrui (juriste).
+  'espace/issues-depot.ts › TEXTES_DES_ISSUES › nouveau_contact_requis': ['dateTerme'],
   // SON brouillon : le contact qu'il a saisi, et la date où son téléphone l'effacera.
   'espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne': [
     'contact',
