@@ -304,29 +304,49 @@ describe('REQ-SEC-042 — TÉMOIN DU DISQUE : aucune autre voie de la console ne
   const CHAMPS_DU_CONTACT =
     /\b(nomContactChiffre|prenomContactChiffre|fonctionContactChiffre|MODELE_DE_L_ATTRIBUTION)\b/;
 
+  /** La liste NOMINATIVE et fermée : chaque entrée a sa raison ; tout fichier neuf rougit et doit être examiné. */
+  const LISTE_FERMEE = [
+    // le calcul de sincérité : côté serveur, hors console
+    'src/server/anomalie/sincerite.ts',
+    // le lecteur du journal des accès, seul déchiffreur de la console (appelé par l'accesseur seul)
+    'src/server/console/journal-des-acces.ts',
+    // la table des champs chiffrés
+    'src/server/securite/pii.ts',
+    // la purge : elle met ces champs à null
+    'src/server/taches/purger-contacts.ts',
+    // la couche de l'apporteur : elle REFUSE ces champs
+    'src/server/acces/for-apporteur.ts',
+  ].sort();
+
+  /** Le filtre, PUR : les chemins dont le texte nomme un champ chiffré propre au contact, triés. */
+  const nommants = (fichiers: readonly { chemin: string; texte: string }[]): string[] =>
+    fichiers
+      .filter((f) => CHAMPS_DU_CONTACT.test(f.texte))
+      .map((f) => f.chemin)
+      .sort();
+
+  const disque = () => sources().map((chemin) => ({ chemin, texte: readFileSync(chemin, 'utf8') }));
+
   it('REQ-SEC-042 : liste NOMINATIVE et fermée des fichiers qui nomment un champ chiffré propre au contact', () => {
-    const noms = sources().filter((f) => CHAMPS_DU_CONTACT.test(readFileSync(f, 'utf8')));
-    // Chaque entrée a sa raison ; tout fichier neuf rougit et doit être examiné avant d'entrer ici.
-    expect(noms.sort()).toEqual(
-      [
-        // le calcul de sincérité : côté serveur, hors console
-        'src/server/anomalie/sincerite.ts',
-        // le lecteur du journal des accès, seul déchiffreur de la console (appelé par l'accesseur seul)
-        'src/server/console/journal-des-acces.ts',
-        // la table des champs chiffrés
-        'src/server/securite/pii.ts',
-        // la purge : elle met ces champs à null
-        'src/server/taches/purger-contacts.ts',
-        // la couche de l'apporteur : elle REFUSE ces champs
-        'src/server/acces/for-apporteur.ts',
-      ].sort()
-    );
+    expect(nommants(disque())).toEqual(LISTE_FERMEE);
   });
 
-  it('REQ-SEC-042 : preuve rouge à deux faces — une voie de la console qui sélectionne le champ et déchiffre est attrapée', () => {
-    const voieClandestine =
-      'const r = await tx.attribution.findFirst({ select: { nomContactChiffre: true } }); dechiffrer(r.nomContactChiffre);';
-    expect(CHAMPS_DU_CONTACT.test(voieClandestine)).toBe(true);
-    expect(CHAMPS_DU_CONTACT.test('emailChiffre telephoneChiffre')).toBe(false);
+  it('REQ-SEC-042 : preuve rouge à deux faces — le dépôt réel passe ; un fichier injecté qui nomme un champ fait échouer la comparaison, et la nomme', () => {
+    const reels = disque();
+    // Face verte : la liste réelle est la liste fermée.
+    expect(nommants(reels)).toEqual(LISTE_FERMEE);
+    // Face rouge : une voie de la console qui sélectionne le champ et le déchiffre.
+    const injecte = {
+      chemin: 'src/server/console/voie-clandestine.ts',
+      texte:
+        'const r = await tx.attribution.findFirst({ select: { nomContactChiffre: true } }); dechiffrer(r.nomContactChiffre);',
+    };
+    const vus = nommants([...reels, injecte]);
+    expect(vus).not.toEqual(LISTE_FERMEE);
+    expect(vus.filter((c) => !LISTE_FERMEE.includes(c))).toEqual([injecte.chemin]);
+    // Et la comparaison du témoin, jouée sur ce dépôt-là, échoue bien.
+    expect(() => expect(vus).toEqual(LISTE_FERMEE)).toThrow();
+    // Un champ partagé avec l'apporteur (courriel, téléphone) n'y entre pas.
+    expect(nommants([{ chemin: 'src/x.ts', texte: 'emailChiffre telephoneChiffre' }])).toEqual([]);
   });
 });
