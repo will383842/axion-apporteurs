@@ -304,6 +304,19 @@ describe('REQ-DM-028 — chaque ajout et chaque retrait de la liste est tracé p
     ).toContain('sirens_liste_noire_trace_siren_forme');
   });
 
+  it('REQ-DM-028 : TÉMOIN — TRUNCATE de la liste est refusé, nommé : la liste et sa trace restent intactes', async () => {
+    const siren = unSiren();
+    await inscrire(siren, await utilisateur('admin'), T0);
+    const listeAvant = await base.prisma.sirenListeNoire.count();
+    const traceAvant = await base.prisma.sirenListeNoireTrace.count();
+    expect(
+      await refus(base.prisma.$executeRawUnsafe(`TRUNCATE sirens_liste_noire CASCADE`))
+    ).toContain('sirens_liste_noire_troncature');
+    expect(await base.prisma.sirenListeNoire.count()).toBe(listeAvant);
+    expect(await base.prisma.sirenListeNoireTrace.count()).toBe(traceAvant);
+    expect(await periodes(siren)).toHaveLength(1);
+  });
+
   it('REQ-DM-028 : la migration est additive, et ne recrée aucun déclencheur existant', async () => {
     const declencheurs = await base.prisma.$queryRawUnsafe<{ t: string; tgname: string }[]>(
       `SELECT c.relname AS t, g.tgname FROM pg_trigger g JOIN pg_class c ON c.oid = g.tgrelid
@@ -313,6 +326,7 @@ describe('REQ-DM-028 — chaque ajout et chaque retrait de la liste est tracé p
     expect(declencheurs).toEqual([
       { t: 'sirens_liste_noire', tgname: 'sirens_liste_noire_retrait_trace' },
       { t: 'sirens_liste_noire', tgname: 'sirens_liste_noire_tracer_ajout' },
+      { t: 'sirens_liste_noire', tgname: 'sirens_liste_noire_troncature' },
       { t: 'sirens_liste_noire_trace', tgname: 'sirens_liste_noire_trace_garde' },
       { t: 'sirens_liste_noire_trace', tgname: 'sirens_liste_noire_trace_troncature' },
     ]);

@@ -1,7 +1,8 @@
 -- DM-65 (REQ-DM-028) : la trace de chaque ajout et de chaque retrait de la liste, conservée cinq ans après le retrait
 -- (DM-65, registre de l'article 30), puis effacée par la tâche de purge ; la durée vit dans la SSOT, jamais ici.
 -- Retour arrière (commentaire) : DROP TRIGGER sirens_liste_noire_tracer_ajout, sirens_liste_noire_retrait_trace,
--- sirens_liste_noire_trace_garde, sirens_liste_noire_trace_troncature ; DROP FUNCTION ×3 ; DROP TABLE "sirens_liste_noire_trace".
+-- sirens_liste_noire_troncature, sirens_liste_noire_trace_garde, sirens_liste_noire_trace_troncature ;
+-- DROP FUNCTION ×4 ; DROP TABLE "sirens_liste_noire_trace".
 CREATE TABLE "sirens_liste_noire_trace" (
     "id" UUID NOT NULL,
     "siren" CHAR(9) NOT NULL,
@@ -55,6 +56,16 @@ END;
 $$;
 CREATE TRIGGER sirens_liste_noire_retrait_trace BEFORE UPDATE OR DELETE ON "sirens_liste_noire"
   FOR EACH ROW EXECUTE FUNCTION sirens_liste_noire_retrait_trace();
+
+-- (2 bis) TRUNCATE, qu'aucun déclencheur de ligne ne voit, est refusé : il retirerait toute la liste sans
+--         fermer une seule période (DM-65 ; note de la sécurité sur #793).
+CREATE FUNCTION sirens_liste_noire_troncature_refusee() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'sirens_liste_noire_troncature : TRUNCATE refusé, un retrait se trace ligne à ligne';
+END;
+$$;
+CREATE TRIGGER sirens_liste_noire_troncature BEFORE TRUNCATE ON "sirens_liste_noire"
+  FOR EACH STATEMENT EXECUTE FUNCTION sirens_liste_noire_troncature_refusee();
 
 -- (3) La trace : ajout seul, sauf la fermeture (une fois) et l'effacement d'une période FERMÉE (la purge).
 CREATE FUNCTION sirens_liste_noire_trace_garde() RETURNS trigger LANGUAGE plpgsql AS $$
