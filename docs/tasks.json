@@ -26390,6 +26390,38 @@
           "tests/integration/revocation-acces-apporteur.spec.ts"
         ]
       }
+    },
+    {
+      "id": "GOV-152",
+      "titre": "gov:pr juge ce qu'une PR réécrit du registre contre la base de fusion, et non contre main courante",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/revues.ts",
+        "scripts/gates/gov-pr.ts",
+        "scripts/lot/corps-de-pr.ts",
+        "config/gel-phase-1.json",
+        "tests/unit/gouvernance/registre-de-la-base-de-fusion.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-145"
+      ],
+      "reqs": [
+        "REQ-GOV-010"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Versée par sa propre PR (A01), sur demande de la coordination ; EXCEPTION AU GEL de la phase 1 (GOV-150), décidée par la coordination sous la délégation d'arbitrage de Williams (#319, commentaire 6035611932), et inscrite dans `config/gel-phase-1.json`. Le motif, MOT POUR MOT (même commentaire) : GOV-152 corrige une garde BLOQUANTE. `gov:pr` (`registre_reecrit_par_une_pr_d_auteur`) lisait le registre de base au main COURANT, et non à la base de fusion. Chaque fusion qui ajoute des paths à SA tâche faisait donc rougir toutes les autres PR ouvertes qui touchent `docs/tasks.json`, sur « <autre tâche> est réécrite ». Le 07/10, #784, #787 et #776 ont dû intégrer main pour cette seule raison, à chaque fois avec environ 25 minutes de CI.\n\nLA RÈGLE : avant la fusion, en CI comme en local, `gov:pr` lit le registre de base à la BASE DE FUSION de la tête et de la base (`tachesDeLaBaseDeFusion`, `git merge-base`), le même point de départ que le diff à trois points ; après la fusion, `origin/<base>`, la référence du pas 8. Le composeur du corps (`corps-de-pr.ts`) lit la même base. Échec FERMÉ : sans base commune, `null`, et le risque est élevé. TÉMOIN : `tests/unit/gouvernance/registre-de-la-base-de-fusion.spec.ts`, dans un dépôt git jetable, à deux faces : une autre tâche que main a changée depuis le départ de la PR ne compte pas ; une vraie réécriture d'une autre tâche par la PR rougit toujours.\n\nCONDITION DE LA SÉCURITÉ (#797, commentaire 6036322341, retenue par la coordination) : le RISQUE de la PR lit l’UNION de la tête, de la base de fusion ET de la base courante (`tachesBaseCourante`), pour qu’une tâche rendue sensible sur la base courante après le départ de la PR élève toujours son risque ; seuls les ÉCARTS du registre se jugent sur la base de fusion. Une base courante illisible élève le risque. TÉMOIN : le même fichier, une tâche rendue sensible sur la base courante.",
+      "tests": {
+        "REQ-GOV-010": [
+          "tests/unit/gouvernance/registre-de-la-base-de-fusion.spec.ts"
+        ]
+      }
     }
   ]
 }
