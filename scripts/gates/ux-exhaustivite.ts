@@ -155,6 +155,9 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
   // est celui de SEC-19, dans `courriels/notifications.ts`, parcouru avec l'espace.
   'console/mise-en-demeure.ts':
     'geste de mise en demeure, lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
+  // EXT-T07 : les prolongations à décider et leur geste, lus par les administrateurs de la console seuls.
+  'console/prolongations.ts':
+    'prolongations à décider et leur geste, lus par les administrateurs de la console seuls (portée dépôt, REQ-GOV-017)',
 };
 
 /**
@@ -221,6 +224,12 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
     'contact',
   ],
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee': ['entreprise'],
+  // EXT-T07 : la prolongation de SON dépôt (art. 3.4 al. 3) — SON entreprise et le nouveau terme ; ni la
+  // condition, ni le caractère réputé ou décidé (juriste, #809 6039901134).
+  'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_prolongee': [
+    'entreprise',
+    'date',
+  ],
   // UX-P1-59 : les textes fermés d'une décision de SON contrat dont le texte saisi est purgé (juriste,
   // #752) — l'article de SA mise en demeure, la date de fin de SON contrat ; aucun autre apporteur.
   'espace/notifications.ts › DECISIONS_PURGEES › mise_en_demeure': ['article'],

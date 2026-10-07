@@ -14,6 +14,7 @@
  */
 import type { EtatVide } from '../types';
 import { MISE_EN_DEMEURE_CONSOLE } from './mise-en-demeure';
+import { PROLONGATIONS_CONSOLE } from './prolongations';
 
 export const ETATS_VIDES_CONSOLE: Readonly<Record<string, EtatVide>> = {
   'file-qualification': {
@@ -94,5 +95,11 @@ export const ETATS_VIDES_CONSOLE: Readonly<Record<string, EtatVide>> = {
     titre: MISE_EN_DEMEURE_CONSOLE.horsContrat.titre,
     phrase: MISE_EN_DEMEURE_CONSOLE.horsContrat.phrase,
     action: { libelle: MISE_EN_DEMEURE_CONSOLE.horsContrat.action, route: null },
+  },
+  // EXT-T07 : aucune prolongation à décider ; textes de l'écran (juriste), le geste suivant est l'accueil.
+  prolongation: {
+    titre: PROLONGATIONS_CONSOLE.vide.titre,
+    phrase: PROLONGATIONS_CONSOLE.liste.intro,
+    action: { libelle: PROLONGATIONS_CONSOLE.vide.action, route: '/console' },
   },
 };

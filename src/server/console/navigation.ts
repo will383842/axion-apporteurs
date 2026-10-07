@@ -68,6 +68,9 @@ export const ROUTES_LIVREES_DE_LA_CONSOLE: readonly string[] = [
   '/console/journal-des-acces/gels',
   // UX-P1-57 : la mise en demeure d'un apporteur, ouverte depuis sa fiche (hors du menu).
   '/console/apporteurs/[id]/mise-en-demeure',
+  // EXT-T07 : les prolongations à décider, et le geste sur une attribution (hors du menu).
+  '/console/prolongations',
+  '/console/prolongations/[id]',
 ];
 
 /** La liste de préférence de l'accueil, rôle par rôle (`docs/CONSOLE-ROUTES.md`). */

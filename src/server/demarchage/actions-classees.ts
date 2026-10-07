@@ -55,6 +55,9 @@ export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction
   'action:poser_gel_journal_acces': 'sans_contact',
   'action:lever_gel_journal_acces': 'sans_contact',
   'ecran:gels_journal_acces': 'sans_contact',
+  // EXT-T07 : décider de la prolongation (art. 3.4 al. 3) informe l'apporteur d'un fait de son contrat, et aucune entreprise n'est contactée : ce n'est pas un démarchage.
+  'ecran:prolongations': 'sans_contact',
+  'action:decider_prolongation': 'sans_contact',
   'tache:evenements_recus': 'sans_contact',
   'tache:minimiser_candidatures': 'sans_contact',
   'tache:journal_verifier': 'sans_contact',
