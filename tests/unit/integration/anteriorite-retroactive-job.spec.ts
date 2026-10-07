@@ -199,14 +199,14 @@ function base(o: {
     },
     attribution: {
       findMany: async (q: {
-        where: { siren: { in: string[] }; statut: { in: string[] }; id?: { gt: string } };
+        where: { siren: { in: string[] }; statut: string; id?: { gt: string } };
         take: number;
       }) =>
         o.attributions
           .filter(
             (a) =>
               q.where.siren.in.includes(a.siren) &&
-              q.where.statut.in.includes(a.statut) &&
+              a.statut === q.where.statut &&
               (q.where.id === undefined || a.id > q.where.id.gt)
           )
           .sort((a, b) => a.id.localeCompare(b.id))
@@ -235,13 +235,16 @@ const MAINTENANT = new Date('2027-06-01T00:00:00.000Z');
 describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fois', () => {
   beforeEach(() => {
     transitionner.transitionnerUneAttribution.mockReset();
-    transitionner.transitionnerUneAttribution.mockResolvedValue({ de: 'active', vers: 'annulee' });
+    transitionner.transitionnerUneAttribution.mockResolvedValue({
+      de: 'provisoire',
+      vers: 'annulee',
+    });
   });
 
   it('REQ-JUR-007 : TÉMOIN — une facture antérieure au dépôt annule, par anteriorite_etablie, critère cliente', async () => {
     const prisma = base({
       connues: [{ siren: SIREN, origine: 'client', connueDepuisAt: avant(30 * JOUR) }],
-      attributions: [{ id: 'a-1', siren: SIREN, statut: 'active', deposeeAt: DEPOT }],
+      attributions: [{ id: 'a-1', siren: SIREN, statut: 'provisoire', deposeeAt: DEPOT }],
       recus: [facture(U('f-1'), 100, avant(30 * JOUR))],
     });
     expect(await rapprocherLesAnteriorites(prisma, MAINTENANT)).toEqual({
@@ -267,7 +270,7 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
   it('REQ-JUR-007 : TÉMOIN — un fait POSTÉRIEUR au dépôt n’annule rien', async () => {
     const prisma = base({
       connues: [{ siren: SIREN, origine: 'client', connueDepuisAt: avant(30 * JOUR) }],
-      attributions: [{ id: 'a-1', siren: SIREN, statut: 'active', deposeeAt: DEPOT }],
+      attributions: [{ id: 'a-1', siren: SIREN, statut: 'provisoire', deposeeAt: DEPOT }],
       recus: [facture(U('f-1'), 100, apres(JOUR))],
     });
     expect(await rapprocherLesAnteriorites(prisma, MAINTENANT)).toEqual({
@@ -280,7 +283,7 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
   it('REQ-JUR-007 : connue APRÈS le dépôt (première date de l’origine) : l’attribution n’est même pas examinée', async () => {
     const prisma = base({
       connues: [{ siren: SIREN, origine: 'devis', connueDepuisAt: apres(JOUR) }],
-      attributions: [{ id: 'a-1', siren: SIREN, statut: 'active', deposeeAt: DEPOT }],
+      attributions: [{ id: 'a-1', siren: SIREN, statut: 'provisoire', deposeeAt: DEPOT }],
       recus: [],
     });
     expect(await rapprocherLesAnteriorites(prisma, MAINTENANT)).toEqual({
@@ -289,10 +292,14 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
     });
   });
 
-  it('REQ-JUR-007 : seules les attributions OCCUPANTES sont lues ; une annulée n’est pas rejouée', async () => {
+  it('REQ-JUR-007 : TÉMOIN — seules les attributions NON CONFIRMÉES sont lues (DM-71) ; une confirmée ou une annulée ne l’est jamais', async () => {
     const prisma = base({
       connues: [{ siren: SIREN, origine: 'client', connueDepuisAt: avant(30 * JOUR) }],
-      attributions: [{ id: 'a-1', siren: SIREN, statut: 'annulee', deposeeAt: DEPOT }],
+      attributions: [
+        { id: 'a-1', siren: SIREN, statut: 'annulee', deposeeAt: DEPOT },
+        { id: 'a-2', siren: SIREN, statut: 'active', deposeeAt: DEPOT },
+        { id: 'a-3', siren: SIREN, statut: 'signee', deposeeAt: DEPOT },
+      ],
       recus: [facture(U('f-1'), 100, avant(30 * JOUR))],
     });
     expect(await rapprocherLesAnteriorites(prisma, MAINTENANT)).toEqual({
@@ -304,7 +311,7 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
   it('REQ-JUR-007 : la liste de la Société n’est pas une origine lue ici', async () => {
     const prisma = base({
       connues: [{ siren: SIREN, origine: 'financeur', connueDepuisAt: avant(30 * JOUR) }],
-      attributions: [{ id: 'a-1', siren: SIREN, statut: 'active', deposeeAt: DEPOT }],
+      attributions: [{ id: 'a-1', siren: SIREN, statut: 'provisoire', deposeeAt: DEPOT }],
       recus: [facture(U('f-1'), 100, avant(30 * JOUR))],
     });
     expect(await rapprocherLesAnteriorites(prisma, MAINTENANT)).toEqual({
@@ -323,8 +330,8 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
     const prisma = base({
       connues: [{ siren: SIREN, origine: 'client', connueDepuisAt: avant(30 * JOUR) }],
       attributions: [
-        { id: 'a-1', siren: SIREN, statut: 'active', deposeeAt: DEPOT },
-        { id: 'a-2', siren: SIREN, statut: 'signee', deposeeAt: DEPOT },
+        { id: 'a-1', siren: SIREN, statut: 'provisoire', deposeeAt: DEPOT },
+        { id: 'a-2', siren: SIREN, statut: 'provisoire', deposeeAt: DEPOT },
       ],
       recus: [facture(U('f-1'), 100, avant(30 * JOUR))],
     });
@@ -352,7 +359,7 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
     ];
     const prisma = base({
       connues: [{ siren: SIREN, origine: 'devis', connueDepuisAt: vieux }],
-      attributions: [{ id: 'a-1', siren: SIREN, statut: 'active', deposeeAt: DEPOT }],
+      attributions: [{ id: 'a-1', siren: SIREN, statut: 'provisoire', deposeeAt: DEPOT }],
       recus,
     });
     // la base rend des COPIES à chaque lecture : l'identité d'objet ne dédoublonne rien.
@@ -372,7 +379,7 @@ describe('REQ-JUR-007 — le job annule par la machine, avec le critère, une fo
     transitionner.transitionnerUneAttribution.mockRejectedValueOnce(new Error('base indisponible'));
     const prisma = base({
       connues: [{ siren: SIREN, origine: 'client', connueDepuisAt: avant(30 * JOUR) }],
-      attributions: [{ id: 'a-1', siren: SIREN, statut: 'active', deposeeAt: DEPOT }],
+      attributions: [{ id: 'a-1', siren: SIREN, statut: 'provisoire', deposeeAt: DEPOT }],
       recus: [facture(U('f-1'), 100, avant(30 * JOUR))],
     });
     await expect(rapprocherLesAnteriorites(prisma, MAINTENANT)).rejects.toThrow(
@@ -410,7 +417,7 @@ describe('REQ-JUR-007 — un identifiant d’axion-ia hors forme arrête le pass
     transitionner.transitionnerUneAttribution.mockReset();
     const prisma = base({
       connues: [{ siren: SIREN, origine: 'client', connueDepuisAt: avant(30 * JOUR) }],
-      attributions: [{ id: 'a-1', siren: SIREN, statut: 'active', deposeeAt: DEPOT }],
+      attributions: [{ id: 'a-1', siren: SIREN, statut: 'provisoire', deposeeAt: DEPOT }],
       recus: [facture('FAC-2026-0001', 100, avant(30 * JOUR))],
     });
     await expect(rapprocherLesAnteriorites(prisma, MAINTENANT)).rejects.toThrow(
