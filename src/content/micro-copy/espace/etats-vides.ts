@@ -13,7 +13,7 @@
  */
 import { TERMES_CANONIQUES } from '../../../domain/lexique/lexique-interdit';
 import type { EtatVide } from '../types';
-import { ACTIONS_COMMUNES } from './vocabulaire';
+import { ACTIONS_COMMUNES, CONTESTATION } from './vocabulaire';
 
 const RETOUR_ACCUEIL = ACTIONS_COMMUNES.retourAccueil;
 
@@ -126,6 +126,12 @@ export const ETATS_VIDES_ESPACE: Readonly<Record<string, EtatVide>> = {
     phrase:
       'Il est préparé quand vos pièces sont vérifiées. Vous le lirez ici avant de le signer ; rien n’est à faire d’ici là.',
     action: { libelle: 'Voir mes vérifications', route: '/conformite' },
+  },
+  // UX-P1-51 : une contestation qui n'est pas (ou plus) la sienne ; le geste suivant, ses entreprises.
+  '/contestations/[id]': {
+    titre: CONTESTATION.indisponible.titre,
+    phrase: CONTESTATION.indisponible.phrase,
+    action: CONTESTATION.indisponible.action,
   },
   '/notifications': {
     titre: 'Aucune notification',
