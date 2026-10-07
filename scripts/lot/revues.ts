@@ -1464,6 +1464,9 @@ export const RACINES_A_UNE_LENTILLE: readonly string[] = [
  * sans `securite`. Un chemin égal, ou un préfixe qui finit par `/`.
  */
 export const EXCLUS_D_UNE_LENTILLE: readonly string[] = [
+  // La relecture proportionnée (#319, 6032068586) n'affaiblit pas « les maquettes validées par
+  // Williams » : la fiche de validation reste à deux lentilles, même dans une PR de maquette.
+  'docs/maquettes/VALIDATION.md',
   'docs/tasks.json',
   'docs/requirements.json',
   'docs/DECISIONS.md',
@@ -1489,35 +1492,30 @@ export const EXCLUS_D_UNE_LENTILLE: readonly string[] = [
 ];
 
 /**
- * LA RELECTURE PROPORTIONNÉE (décision de Williams du 2026-10-05, #319, 5988252245, point 2) : les
- * écrans, les textes et les maquettes n'ont plus qu'une lentille, l'exactitude. Ces racines ne
- * valent une lentille que pour une tâche des zones `espace` ou `console` sans `sensible` : l'argent,
- * la sécurité, les données personnelles et le schéma restent élevés par `risqueDeLaPr` avant même
- * que cette liste soit lue. Une route, une action serveur ou un intergiciel n'est jamais un écran.
+ * LA RELECTURE PROPORTIONNÉE (décision de Williams du 2026-10-05, #319, 5988252245, point 2, AMENDÉE
+ * le 2026-10-07, #319, 6032068586) : UNE lentille, l'exactitude, pour ce qui n'affiche aucune
+ * donnée — maquettes (`docs/maquettes/`, déjà sous `docs/`), textes et micro-copy. Tout écran qui
+ * AFFICHE ou MODIFIE des données (`src/app/`, `src/components/`, une action, une lecture serveur)
+ * reste à DEUX lentilles, exactitude et sécurité : ces racines ne sont PAS ici. Le critère est
+ * mécanique : une PR d'`espace` ou de `console` ne vaut une lentille que si TOUS ses fichiers sont
+ * sous `docs/` ou sous ces racines ; l'argent, la sécurité, les données personnelles et le schéma
+ * restent élevés par `risqueDeLaPr` avant même que cette liste soit lue.
  */
-export const RACINES_DES_ECRANS: readonly string[] = [
-  'src/app/',
-  'src/components/',
-  'src/content/micro-copy/',
-  'tests/unit/espace/',
-  'tests/unit/console/',
-];
-const PAS_UN_ECRAN = /(^|\/)(route|actions|middleware)\.tsx?$/;
+export const RACINES_SANS_DONNEES: readonly string[] = ['src/content/micro-copy/'];
 
 /** GOV-124 — un fichier qu'une seule lentille peut relire : autorisé, et jamais exclu. */
 export function fichierAUneLentille(f: string): boolean {
   const exclu = EXCLUS_D_UNE_LENTILLE.some((x) => (x.endsWith('/') ? f.startsWith(x) : f === x));
-  if (exclu) return false;
-  if (RACINES_A_UNE_LENTILLE.some((r) => f.startsWith(r))) return true;
-  return RACINES_DES_ECRANS.some((r) => f.startsWith(r)) && !PAS_UN_ECRAN.test(f);
+  return !exclu && [...RACINES_A_UNE_LENTILLE, ...RACINES_SANS_DONNEES].some((r) => f.startsWith(r));
 }
 
 /**
  * GOV-124 — LES ZONES DE TÂCHE qu'une seule lentille peut relire. Fermée : l'argent, la sécurité,
  * le juridique, les données du domaine, l'intégration et le déploiement restent à deux lentilles,
  * comme une zone absente ou inconnue. L'espace et la console y entrent par la relecture
- * proportionnée (décision de Williams du 2026-10-05, #319, 5988252245, point 2) : leurs fichiers
- * d'écran seulement (`RACINES_DES_ECRANS`), et jamais une tâche `sensible`.
+ * proportionnée (décision de Williams du 2026-10-05, #319, 5988252245, point 2, amendée le
+ * 2026-10-07, 6032068586) : pour les fichiers sans données seulement (`docs/`,
+ * `RACINES_SANS_DONNEES`), et jamais pour une tâche `sensible`.
  */
 export const ZONES_A_UNE_LENTILLE: readonly string[] = ['gouvernance', 'qualite', 'espace', 'console'];
 

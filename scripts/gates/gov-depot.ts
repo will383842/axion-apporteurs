@@ -165,6 +165,59 @@ export function checksProduits(yml: string): string[] {
   return noms;
 }
 
+/**
+ * GOV-151 — LES CHECKS QU'UN CHECK REQUIS COUVRE PAR SES `needs:`. Depuis GOV-142 (#579), `gate-a` est
+ * le seul check requis, et son étape exige `success` de CHAQUE job de ses `needs:` : un job cité là
+ * bloque la fusion aussi sûrement que s'il était requis lui-même. Le découpage est celui de
+ * `checksProduits` (deux niveaux d'indentation) ; `needs:` se lit en ligne (`[a, b]` ou `a`) ou en
+ * bloc (`- a`). Les noms rendus sont ceux des checks (le `name:` du job, sinon son identifiant). Une
+ * clé mal lue rend un ensemble PLUS PETIT, donc un rouge, jamais un vert silencieux.
+ */
+export function checksCouvertsParLesRequis(yml: string, requis: readonly string[]): Set<string> {
+  const lignes = yml.split(/\r?\n/);
+  const iJobs = lignes.findIndex((l) => /^jobs:\s*$/.test(l));
+  const jobs = new Map<string, { nom: string; besoins: string[] }>();
+  if (iJobs < 0) return new Set();
+  let courant: { nom: string; besoins: string[] } | null = null;
+  let enBloc = false;
+  for (let i = iJobs + 1; i < lignes.length; i++) {
+    const l = lignes[i] as string;
+    if (/^[A-Za-z_]/.test(l)) break;
+    const idJob = /^ {2}([A-Za-z0-9_-]+):\s*$/.exec(l);
+    if (idJob) {
+      courant = { nom: idJob[1] as string, besoins: [] };
+      jobs.set(idJob[1] as string, courant);
+      enBloc = false;
+      continue;
+    }
+    if (courant === null) continue;
+    const nom = /^ {4}name:\s*(.+?)\s*$/.exec(l);
+    if (nom) courant.nom = (nom[1] as string).replace(/^["']|["']$/g, '');
+    const besoins = /^ {4}needs:\s*(.*?)\s*$/.exec(l);
+    if (besoins) {
+      const v = besoins[1] as string;
+      enBloc = v === '';
+      if (!enBloc) courant.besoins.push(...v.replace(/^\[|\]$/g, '').split(',').map((x) => x.trim()).filter(Boolean));
+      continue;
+    }
+    const item = /^ {6}- *([A-Za-z0-9_-]+)\s*$/.exec(l);
+    if (enBloc && item) {
+      courant.besoins.push(item[1] as string);
+      continue;
+    }
+    if (/^ {4}\S/.test(l)) enBloc = false;
+  }
+  const couverts = new Set<string>();
+  for (const job of jobs.values()) {
+    if (!requis.includes(job.nom)) continue;
+    for (const b of job.besoins) {
+      const cite = jobs.get(b);
+      if (cite !== undefined) couverts.add(cite.nom);
+    }
+  }
+  return couverts;
+}
+
 // ── ce que les workflows font ────────────────────────────────────────────────
 
 type Analyse = { jugerPush: (ligne: string) => { refuse: boolean; motif: string | null } };
@@ -317,8 +370,10 @@ export function controler(vue: Vue): Faute[] {
       ...new Set([...(src?.contexts ?? []), ...(src?.checks ?? []).map((c) => c.context)]),
     ];
 
+    // GOV-151 : un job cité dans les `needs:` d'un check requis est couvert par lui (gate-a, GOV-142).
+    const couverts = checksCouvertsParLesRequis(vue.ci, requis);
     for (const attendu of produits) {
-      if (!requis.includes(attendu)) {
+      if (!requis.includes(attendu) && !couverts.has(attendu)) {
         rouge(
           'check_requis_absent',
           `la protection de \`main\` n'exige pas le check \`${attendu}\`, que \`${CHEMIN_CI}\` ` +
@@ -449,7 +504,11 @@ export const VUE_CONFORME: Vue = {
     'on:',
     '  pull_request:',
     'jobs:',
+    // GOV-151 : un job cité par les `needs:` de gate-a est couvert, sans être requis lui-même.
+    '  forge:',
+    '    runs-on: ubuntu-latest',
     '  gate-a:',
+    '    needs: [forge]',
     '    runs-on: ubuntu-latest',
     '',
   ].join('\n'),
@@ -538,6 +597,11 @@ function prouver(): number {
     {
       famille: 'check_requis_absent',
       vue: { ...VUE_CONFORME, protection: { ...p(), required_status_checks: { contexts: [] } } },
+    },
+    {
+      // GOV-151 : un job HORS des `needs:` de gate-a, et non requis, ne bloque personne.
+      famille: 'check_requis_absent',
+      vue: { ...VUE_CONFORME, ci: VUE_CONFORME.ci + '  hors:\n    runs-on: ubuntu-latest\n' },
     },
     {
       famille: 'check_jamais_produit',
