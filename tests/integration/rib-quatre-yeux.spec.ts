@@ -361,7 +361,7 @@ describe('REQ-DM-027 — la base refuse, contre tout appelant (garde et CHECK)',
     );
     expect(
       await refus(ecrire(`UPDATE pieces_kyc SET statut = 'valide' WHERE id = $1::uuid`, id))
-    ).toContain('ne devient valide que par sa confirmation');
+    ).toContain('ne devient valide que depuis a_verifier, par sa confirmation, une fois');
   });
 
   it('REQ-DM-027 : TÉMOIN — un INSERT qui pose un regard est refusé (garde, à l’INSERT)', async () => {
@@ -388,7 +388,7 @@ describe('REQ-DM-027 — la base refuse, contre tout appelant (garde et CHECK)',
     await ecrire(`UPDATE pieces_kyc SET statut = 'perimee' WHERE id = $1::uuid`, rib);
     expect(
       await refus(ecrire(`UPDATE pieces_kyc SET statut = 'valide' WHERE id = $1::uuid`, rib))
-    ).toContain('ne devient valide que par sa confirmation');
+    ).toContain('ne devient valide que depuis a_verifier, par sa confirmation, une fois');
     const identite = randomUUID();
     await ecrire(
       `INSERT INTO pieces_kyc (id, apporteur_id, type, statut) VALUES ($1::uuid, $2::uuid, 'identite', 'valide')`,
