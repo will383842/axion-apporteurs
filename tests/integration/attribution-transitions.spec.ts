@@ -253,7 +253,7 @@ describe('REQ-DM-022 — la commande reçue pendant provisoire (avis d’A07)', 
     await base.prisma.$transaction((tx) =>
       transitionnerUneAttribution(tx, {
         attributionId: id,
-        transition: 'liberee_sans_confirmation',
+        transition: 'fin_sans_adresse_valide',
         acteur: SYSTEME,
         maintenant: MAINTENANT,
       })

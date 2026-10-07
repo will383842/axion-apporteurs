@@ -62,7 +62,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     anomalie_confirmee: 'invalidee',
     annulee_par_apporteur: 'annulee',
     annulee_par_la_console: 'annulee',
-    liberee_sans_confirmation: 'perimee',
+    fin_sans_adresse_valide: 'perimee',
     fin_de_contrat: 'annulee',
     anteriorite_etablie: 'annulee',
   },
@@ -547,7 +547,7 @@ describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
       'anomalie_confirmee',
       'annulee_par_apporteur',
       'annulee_par_la_console',
-      'liberee_sans_confirmation',
+      'fin_sans_adresse_valide',
       'figee',
       'rdv_pris',
       'devis_envoye',
@@ -1197,7 +1197,7 @@ describe('REQ-DM-007 — les confirmations et la charge d’apporteur, rechargé
 
   it('REQ-DM-007 : une transition qui ne confirme pas laisse la fenêtre fermée', async () => {
     const m = await machineRechargee();
-    const t = m.effetsDeTransition(AVANT, 'liberee_sans_confirmation', 'perimee', T);
+    const t = m.effetsDeTransition(AVANT, 'fin_sans_adresse_valide', 'perimee', T);
     expect(t.confirmeeAt).toBeNull();
     expect(t.fenetreFinAt).toBeNull();
   });

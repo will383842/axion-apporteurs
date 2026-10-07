@@ -18,6 +18,7 @@ import {
   TRANSITIONS_ATTRIBUTION,
 } from '../../../src/domain/attribution/machine';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
+import { ajouterJoursCivilsParis } from '../../../src/domain/temps/sla';
 
 const T = Date.UTC(2027, 5, 1, 8, 0);
 const MINUTE = 60_000;
@@ -28,6 +29,7 @@ const e = (o: Partial<EcheancesDUneAttribution>): EcheancesDUneAttribution => ({
   porteur: 'apporteur',
   deposeeAt: T - 400 * JOUR,
   peremptionSuspendue: false,
+  etatDeLaDemande: 'envoyee',
   peremptionAt: null,
   fenetreFinAt: null,
   fenetreRedeclarationFinAt: null,
@@ -171,5 +173,37 @@ describe('REQ-DM-007 — les échecs fermés, en faveur de l’apporteur (jurist
   it('REQ-DM-007 : TÉMOIN à deux faces — la péremption d’une prise en charge, sans exception imputable, s’exécute ; la file aussi', () => {
     expect(executableAujourdHui('perimee', 'conseiller')).toBe(true);
     expect(executableAujourdHui('file_expiree', 'apporteur')).toBe(true);
+  });
+});
+
+describe('REQ-DM-006 — la fin faute d’adresse valide, 45 jours après la DÉCLARATION (v2, art. 3.2 ; arbitrage 6036991499)', () => {
+  const DEPOT = Date.UTC(2027, 1, 1, 9, 0);
+  const FIN = ajouterJoursCivilsParis(DEPOT, SEUILS.LIBERATION_SIGNALEE_JOURS.valeur);
+  const p = (o: Partial<EcheancesDUneAttribution> = {}) =>
+    e({ statut: 'provisoire', deposeeAt: DEPOT, etatDeLaDemande: 'rebond', ...o });
+
+  it('REQ-DM-006 : TÉMOIN — message en erreur sans adresse corrigée : à J+45 moins une minute, rien ; à J+45, `fin_sans_adresse_valide`', () => {
+    expect(transitionEchue(p(), FIN - MINUTE)).toBeNull();
+    expect(transitionEchue(p(), FIN)).toBe('fin_sans_adresse_valide');
+  });
+
+  it('REQ-DM-006 : TÉMOIN — une adresse corrigée est une adresse valide : aucune fin, à J+45 ni après', () => {
+    expect(transitionEchue(p({ etatDeLaDemande: 'envoyee' }), FIN + 90 * JOUR)).toBeNull();
+  });
+
+  it('REQ-DM-006 : le silence n’éteint jamais : sans erreur, sans demande, ou pour un conseiller, aucune fin', () => {
+    expect(transitionEchue(p({ etatDeLaDemande: null }), FIN)).toBeNull();
+    expect(transitionEchue(p({ etatDeLaDemande: 'planifiee' }), FIN)).toBeNull();
+    expect(transitionEchue(p({ porteur: 'conseiller', etatDeLaDemande: null }), FIN)).toBeNull();
+  });
+
+  it('REQ-DM-006 : seule une attribution provisoire prend fin ainsi', () => {
+    expect(
+      transitionEchue(p({ statut: 'active', fenetreFinAt: FIN + 400 * JOUR }), FIN)
+    ).toBeNull();
+  });
+
+  it('REQ-DM-006 : la fin s’exécute normalement (aucun échec fermé)', () => {
+    expect(executableAujourdHui('fin_sans_adresse_valide', 'apporteur')).toBe(true);
   });
 });

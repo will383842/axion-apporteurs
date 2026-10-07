@@ -14,9 +14,14 @@
  *   — `file_expiree` (art. 3.5) : le délai de redéclaration ouvert au premier rang est écoulé, ou la
  *     déclaration en attente atteint le lendemain du `FILE_EXPIRATION_MOIS`-ième mois de son
  *     enregistrement, à 0 h, heure de Paris (juriste, 6037008645).
+ *   — `fin_sans_adresse_valide` (art. 3.2) : une attribution provisoire dont le message est EN ERREUR,
+ *     sans adresse corrigée, `LIBERATION_SIGNALEE_JOURS` jours civils après la DÉCLARATION. Une adresse
+ *     corrigée est une adresse valide : la confirmation tacite court alors, et aucune fin n'est due.
  * Les deux premières échues, la PREMIÈRE l'emporte ; à égalité, l'expiration.
  */
 import type { Instant } from '../temps/horloge';
+import type { EtatDemandeConfirmation } from '../confirmation/demande';
+import { ajouterJoursCivilsParis } from '../temps/sla';
 import { SEUILS } from '../seuils/ssot';
 import { MS_PAR_JOUR, dateDepuisJours, joursDeLaDate } from '../temps/calendrier-civil';
 import { depuisParis, versParis } from '../temps/paris';
@@ -33,6 +38,8 @@ export type EcheancesDUneAttribution = {
    * écarte la péremption de l'apporteur, qui ne va plus qu'au terme de la fenêtre.
    */
   readonly peremptionSuspendue: boolean;
+  /** L'état de la demande de confirmation ; `null` sans demande (un conseiller n'en a jamais). */
+  readonly etatDeLaDemande: EtatDemandeConfirmation | null;
   readonly peremptionAt: Instant | null;
   readonly fenetreFinAt: Instant | null;
   readonly fenetreRedeclarationFinAt: Instant | null;
@@ -71,10 +78,17 @@ function extinctionDeLAttente(enregistreeAt: Instant): Instant {
   });
 }
 
+/** Les transitions qu'une échéance rend dues. */
+export type TransitionEchue = 'perimee' | 'expiree' | 'file_expiree' | 'fin_sans_adresse_valide';
+
 export function transitionEchue(
   e: EcheancesDUneAttribution,
   maintenant: Instant
-): 'perimee' | 'expiree' | 'file_expiree' | null {
+): TransitionEchue | null {
+  if (e.statut === 'provisoire') {
+    const fin = ajouterJoursCivilsParis(e.deposeeAt, SEUILS.LIBERATION_SIGNALEE_JOURS.valeur);
+    return e.etatDeLaDemande === 'rebond' && maintenant >= fin ? 'fin_sans_adresse_valide' : null;
+  }
   if (e.statut === 'en_attente') {
     const eteinte =
       atteinte(e.fenetreRedeclarationFinAt, maintenant) ||
@@ -100,10 +114,7 @@ export function transitionEchue(
  *     ne peut pas encore se poser en console. La prise en charge d'un conseiller n'a pas cette
  *     exception : sa péremption s'exécute.
  */
-export function executableAujourdHui(
-  transition: 'perimee' | 'expiree' | 'file_expiree',
-  porteur: TypePorteur
-): boolean {
+export function executableAujourdHui(transition: TransitionEchue, porteur: TypePorteur): boolean {
   if (transition === 'expiree') return false;
   if (transition === 'perimee') return porteur === 'conseiller';
   return true;
