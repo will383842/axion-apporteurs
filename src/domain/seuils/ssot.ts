@@ -668,7 +668,7 @@ export const ECRIT_CARACTERES_MAX = {
   valeur: 5000,
   unite: 'points_de_code',
   source: 'arbitrage de la coordination (#319), la juriste en copie',
-  verifieLe: '2026-10-08',
+  verifieLe: '2026-10-07',
 } as const;
 
 export const CONTEXTE_DEPOT_CARACTERES_MAX = {

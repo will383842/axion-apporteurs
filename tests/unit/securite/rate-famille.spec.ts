@@ -247,7 +247,7 @@ function substituer(texte: string, avant: string, apres: string): string {
 // ── REQ-SEC-016 : le registre ───────────────────────────────────────────────────────────────────
 
 describe('REQ-SEC-016 — le registre des compteurs', () => {
-  it('REQ-SEC-016 — chaque compteur vit sous l’un des cinq préfixes et déclare sa conduite sur panne', () => {
+  it('REQ-SEC-016 — chaque compteur vit sous l’un des six préfixes et déclare sa conduite sur panne', () => {
     expect(NOMS.length).toBeGreaterThan(0);
     expect([...PREFIXES_DE_FAMILLE]).toEqual([
       'magic:',
