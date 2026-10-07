@@ -113,8 +113,7 @@
       déploiement de la version qui l'exige** (SEC-63) : sans elle, le provisionnement échoue en la
       nommant, et le serveur refuserait de démarrer. Ordre : poser APPORTEUR_REF_KEY par
       POSER-SECRETS-PRODUCTION.bat avant le déploiement (13e secret du script, au coffre), relancer le
-      provisionnement,
-      puis déployer. _Porteur : Williams (`poser-secrets-production.ps1`)._
+      provisionnement, puis déployer. _Porteur : Williams (`poser-secrets-production.ps1`)._
 
 - [ ] Les **six clés du coffre** sont régénérées : `PII_HASH_KEY`, `PII_ENCRYPTION_KEY`,
       `AXIONIA_WEBHOOK_SECRET`, `AXIONIA_API_TOKEN`, `AXIONIA_RELECTURE_SECRET` et
