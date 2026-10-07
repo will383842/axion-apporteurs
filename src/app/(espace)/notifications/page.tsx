@@ -4,6 +4,7 @@
  * La garde de l'espace est le PREMIER acte : la session pour ce segment, puis l'acceptation de la
  * politique (SEC-43, SEC-53). L'apporteur est celui de la session, jamais une entrée de la requête.
  * Le lecteur dédié rend des textes déjà résolus ; la page n'écrit rien, et aucune date de lecture.
+ * Elle y rend aussi, pour un résilié en `lecture`, sa notification de résiliation (UX-P1-59).
  */
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -12,8 +13,8 @@ import { portsDeLaGarde as portsDeLAcceptation } from '../../../server/auth/gard
 import { dependancesDuProcessus } from '../../../server/auth/lien-magique-production';
 import { COOKIE_DE_SESSION, pageEspace, type PortsDeSession } from '../../../server/auth/session';
 import { notificationsDeLEspace } from '../../../server/notifications/notifications-de-l-espace';
-import { clesPii } from '../../../server/securite/pii';
 import { lireLaChargeDUnFait } from '../../../server/evenement/journal';
+import { clesPii } from '../../../server/securite/pii';
 import {
   ROUTE_CONFIDENTIALITE,
   ROUTE_INDISPONIBLE,
@@ -52,11 +53,11 @@ export default async function PageNotifications() {
   const verdict = await pageEspace('notifications', jeton, portsDeLaGarde());
   if (!verdict.ok) redirect(destinationDuRefus(verdict.motif));
   const { prisma } = dependancesDuProcessus({ apres: after, env: process.env });
-  // UX-P1-58 : le fait d'une décision, lu par l'écrivain unique du journal ; les clés ne servent qu'à
-  // ses faits, lus par le lecteur dédié de l'espace.
+  // Les clés des faits d'une décision du contrat (UX-P1-59) ou d'une anomalie (UX-P1-58), et la lecture
+  // d'un fait par l'écrivain unique du journal : les lecteurs réservés ne lisent que l'apporteur de la session.
   const notifications = await notificationsDeLEspace(prisma, verdict.session.apporteurId, {
-    chargeDuFait: (evenementId) => lireLaChargeDUnFait(prisma, evenementId),
     cles: clesPii(process.env),
+    lireUnFait: (id) => lireLaChargeDUnFait(prisma, id),
   });
   return <EcranNotifications notifications={notifications} />;
 }

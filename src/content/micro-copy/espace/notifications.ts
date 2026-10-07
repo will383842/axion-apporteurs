@@ -25,3 +25,18 @@ export const NOTIFICATIONS = {
     action: 'Réessayer',
   },
 } as const;
+
+/**
+ * Les textes FERMÉS d'une décision du contrat dont le texte saisi est purgé (`textePurgeAt` posé) :
+ * juriste, #752, 5986987052, MOT POUR MOT. La notification reste dans la liste ; le serveur rend ces
+ * textes, l'écran ne recompose rien. `{article}` et `{dateEffet}` viennent de la ligne nue de la
+ * décision, qui reste.
+ */
+export const DECISIONS_PURGEES = {
+  /** Le corps ENTIER de la mise en demeure, remplacé ; le titre est inchangé. */
+  mise_en_demeure:
+    "Axion-IA vous a adressé une mise en demeure au titre de l'article {article} du contrat. Le détail des faits n'est plus conservé, sa durée de conservation ayant pris fin. Cette mise en demeure n'est ni un avertissement ni une mesure disciplinaire, et elle ne constitue pas un antécédent.",
+  /** Le seul paragraphe de résiliation qui porte un texte saisi ; le paragraphe commun suit. */
+  manquement_grave:
+    "Axion-IA a résilié votre contrat d'apporteur sans préavis, par une décision motivée, en application de l'article 11.2 ; le détail du motif n'est plus conservé, sa durée de conservation ayant pris fin. Le contrat a pris fin le {dateEffet}.",
+} as const;

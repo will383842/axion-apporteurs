@@ -46,6 +46,12 @@ const CLES = clesPii({
 });
 
 const MAINTENANT = new Date('2026-10-04T08:15:00.000Z'); // 10:15 à Paris (heure d'été)
+/**
+ * JUR-T63 : une invitation n'est construite qu'à un instant où une version de « Vos données dans la
+ * console » est publiée (`VERSIONS_PUBLIEES_CONSOLE`, la première le 2026-10-04 à 17 h 59 UTC). Les
+ * témoins d'invitation partent donc du lendemain, à la même heure de Paris.
+ */
+const INVITATION = new Date('2026-10-05T08:15:00.000Z'); // 10:15 à Paris (heure d'été)
 const ADMIN: ActeurDeLaConsole = { id: '0190f0f0-0000-7000-8000-0000000000a1', role: 'admin' };
 const CIBLE = '0190f0f0-0000-7000-8000-0000000000c1';
 
@@ -381,9 +387,30 @@ describe('REQ-SEC-023 — inviter', () => {
       email: 'nouveau@exemple.test',
       role,
       cles: CLES,
-      maintenant: MAINTENANT,
+      maintenant: INVITATION,
       adresseConnexion: 'https://partners.exemple.test/console/connexion',
     });
+
+  it('REQ-JUR-068 : TÉMOIN — une invitation à un instant sans version publiée de « Vos données dans la console » est refusée DANS la transaction, et aucun courriel ne part', async () => {
+    // JUR-T63 (note de la sécurité sur #745) : MAINTENANT précède la première publication de la page.
+    const u = univers([]);
+    const refus = await inviter(u.client, {
+      acteur: ADMIN,
+      email: 'nouveau@exemple.test',
+      role: 'lecteur',
+      cles: CLES,
+      maintenant: MAINTENANT,
+      adresseConnexion: 'https://partners.exemple.test/console/connexion',
+    }).then(
+      () => null,
+      (e: unknown) => e
+    );
+    expect(String(refus)).toMatch(/invitation_sans_version_de_la_page/);
+    // Le refus est levé à l'intérieur de la transaction : la base y annule la création du compte et
+    // son événement (le faux client ne simule pas cette annulation). Aucun courriel n'est rendu, donc
+    // aucun ne part : l'envoi suit la réponse de l'action.
+    expect(u.appels[0]).toEqual({ quoi: '$transaction', args: null });
+  });
 
   it('REQ-SEC-023 : TÉMOIN — un rôle autre qu’admin n’invite pas, sans transaction', async () => {
     const u = univers([]);
@@ -400,8 +427,8 @@ describe('REQ-SEC-023 — inviter', () => {
     expect(creation.data).toMatchObject({
       id,
       role: 'lecteur',
-      creeAt: MAINTENANT,
-      inviteeAt: MAINTENANT,
+      creeAt: INVITATION,
+      inviteeAt: INVITATION,
       activeeAt: null,
     });
     expect(creation.data.emailHash).toMatch(/^[0-9a-f]{64}$/);
@@ -409,13 +436,14 @@ describe('REQ-SEC-023 — inviter', () => {
     expect(evenement().mock.calls[0]![1]).toEqual({
       ...chargeDu('inviter', null, 'lecteur'),
       agregatId: id,
+      survenuAt: INVITATION,
     });
     expect(courriels).toEqual([
       courrielDInvitation({
         a: 'nouveau@exemple.test',
         role: 'lecteur',
         adresseConnexion: 'https://partners.exemple.test/console/connexion',
-        inviteeAt: MAINTENANT,
+        inviteeAt: INVITATION,
       }),
     ]);
   });
@@ -472,9 +500,9 @@ describe('REQ-SEC-023 — les courriels et leurs dates, à l’heure de Paris', 
       a: 'x@exemple.test',
       role: 'qualifieur',
       adresseConnexion: 'https://p.exemple.test/console/connexion',
-      inviteeAt: MAINTENANT,
+      inviteeAt: INVITATION,
     });
-    const echeance = new Date(MAINTENANT.getTime() + DUREES_AUTH.invitationConsoleMs.valeur);
+    const echeance = new Date(INVITATION.getTime() + DUREES_AUTH.invitationConsoleMs.valeur);
     expect(c).toEqual({
       a: 'x@exemple.test',
       sujet: C.invitation.sujet,

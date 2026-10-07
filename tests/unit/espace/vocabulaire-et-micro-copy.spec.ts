@@ -355,6 +355,8 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
     'espace/confirmation-du-depot.ts': ['FORMULAIRE_DU_CONTACT', 'titre'],
     // UX-P0-01b : le module n'exporte que ses libellés ; le contexte étranger est un export témoin.
     'espace/etats-attribution.ts': ['EXPORT_TEMOIN', 'phrase'],
+    // UX-P1-59 : les textes fermés d'une décision purgée ; le contexte étranger est le titre de l'écran.
+    'espace/notifications.ts': ['NOTIFICATIONS', 'titre'],
   };
 
   it('REQ-UX-002 : chaque paramètre permis rougit HORS de son contexte, dans le même fichier', () => {
@@ -850,6 +852,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › reservationTerminee : Réservation terminée · l'entreprise est de nouveau disponible
       espace/confirmation-du-depot.ts › AIDE_DU_BADGE : Sans réponse de votre contact, votre dépôt est confirmé {delaiTacite} après la réception de notre e-mail.
       espace/confirmation-du-depot.ts › CARENCE_DU_REDEPOT : Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}.
+      espace/information-tiers.ts › CASE_INFORMATION_TIERS : Cette personne sait qu'Axion-IA va la contacter.
       espace/etats-attribution.ts › LIBELLES_DES_ETATS › en_attente › libelle : En attente
       espace/etats-attribution.ts › LIBELLES_DES_ETATS › en_attente › phrase : Cette entreprise est déjà réservée. Votre dépôt attend, avec son heure d’envoi.
       espace/etats-attribution.ts › LIBELLES_DES_ETATS › provisoire › libelle : En cours de confirmation
@@ -882,6 +885,8 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/notifications.ts › NOTIFICATIONS › erreur › titre : Les notifications n’ont pas pu être chargées
       espace/notifications.ts › NOTIFICATIONS › erreur › phrase : Rien n’est perdu : elles s’afficheront au prochain essai.
       espace/notifications.ts › NOTIFICATIONS › erreur › action : Réessayer
+      espace/notifications.ts › DECISIONS_PURGEES › mise_en_demeure : Axion-IA vous a adressé une mise en demeure au titre de l'article {article} du contrat. Le détail des faits n'est plus conservé, sa durée de conservation ayant pris fin. Cette mise en demeure n'est ni un avertissement ni une mesure disciplinaire, et elle ne constitue pas un antécédent.
+      espace/notifications.ts › DECISIONS_PURGEES › manquement_grave : Axion-IA a résilié votre contrat d'apporteur sans préavis, par une décision motivée, en application de l'article 11.2 ; le détail du motif n'est plus conservé, sa durée de conservation ayant pris fin. Le contrat a pris fin le {dateEffet}.
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › titre : Votre lien de connexion à votre espace
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › appel : Ouvrir mon espace
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › titre : {entreprise} : la confirmation de l'échange est en cours
@@ -909,6 +914,9 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › titre : {entreprise} : décision de rattachement
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › appel : Voir Mes entreprises
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › corps : {decision}. Motif : {motif}.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › nouvel_appareil › titre : Connexion à votre espace depuis un nouvel appareil
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › nouvel_appareil › appel : Demander un nouveau lien de connexion
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › nouvel_appareil › corps : Votre lien de connexion a été utilisé le {dateHeure} sur un appareil que nous ne connaissions pas encore pour votre compte. Si c'est bien vous, vous n'avez rien à faire. Sinon, ne cliquez sur aucun lien reçu que vous n'avez pas demandé, demandez un nouveau lien de connexion depuis la page de connexion, et écrivez à Axion-IA.
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure › titre : Mise en demeure de remédier à un manquement au contrat
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure › appel : Écrire à Axion-IA
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure › corps : Axion-IA vous met en demeure de remédier, dans un délai de {delaiMiseEnDemeure} à compter de l'envoi de ce message, au manquement suivant à l'article {article} du contrat : {faits}. À défaut, Axion-IA pourra résilier le contrat sans préavis, par une décision motivée (article 11.2). Cette mise en demeure n'est ni un avertissement ni une mesure disciplinaire, et elle ne constitue pas un antécédent. Vous pouvez répondre par écrit à Axion-IA.

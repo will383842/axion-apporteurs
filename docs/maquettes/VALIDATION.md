@@ -24,6 +24,7 @@
 | Personnes qui agissent pour l'apporteur | `personnes.html` | UX-P1-15 | 2026-10-03 | Will |
 | Dépôt par lien privé | `depot-lien-prive.html` | UX-P1-03 | 2026-10-03 | Will |
 | Notifications | `notifications.html` | UX-P1-08 · UX-P1-54 | 2026-10-03 | Will |
+| Ma contestation (relire son écrit et la réponse de la Société) | `contestation.html` | UX-P1-51 | | |
 
 ### Séance de validation W20 (confirmation par e-mail)
 

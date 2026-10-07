@@ -408,7 +408,7 @@ describe('REQ-UX-047 — la liste de l’espace porte la décision, pour l’app
   it('REQ-UX-047 : TÉMOIN — la décision de l’apporteur est rendue, avec le motif et ses faits, par le lecteur dédié', async () => {
     const rendues = await notificationsDeLEspace(clientDeLaListe([ligne()], anomalie()), APP, {
       cles: CLES,
-      chargeDuFait: async () => ({
+      lireUnFait: async () => ({
         type: 'attribution_etat_modifie',
         charge: charge('anomalie_confirmee'),
       }),
@@ -424,7 +424,7 @@ describe('REQ-UX-047 — la liste de l’espace porte la décision, pour l’app
       APP,
       {
         cles: CLES,
-        chargeDuFait: async () => ({
+        lireUnFait: async () => ({
           type: 'attribution_etat_modifie',
           charge: charge('anomalie_confirmee'),
         }),
@@ -436,7 +436,7 @@ describe('REQ-UX-047 — la liste de l’espace porte la décision, pour l’app
       APP,
       {
         cles: CLES,
-        chargeDuFait: async () => ({
+        lireUnFait: async () => ({
           type: 'attribution_etat_modifie',
           charge: charge('anomalie_confirmee'),
         }),
@@ -452,7 +452,7 @@ describe('REQ-UX-047 — la liste de l’espace porte la décision, pour l’app
       APP,
       {
         cles: CLES,
-        chargeDuFait: async () => ({
+        lireUnFait: async () => ({
           type: 'attribution_etat_modifie',
           charge: charge('non_confirmee'),
         }),
@@ -467,7 +467,7 @@ describe('REQ-UX-047 — la liste de l’espace porte la décision, pour l’app
       vi.spyOn(console, m).mockImplementation((...a: unknown[]) => void sorties.push(a));
     await notificationsDeLEspace(clientDeLaListe([ligne()], anomalie()), APP, {
       cles: CLES,
-      chargeDuFait: async () => ({
+      lireUnFait: async () => ({
         type: 'attribution_etat_modifie',
         charge: charge('anomalie_confirmee'),
       }),

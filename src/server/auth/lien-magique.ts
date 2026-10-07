@@ -20,11 +20,13 @@ import { createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto
 import { DUREES_AUTH } from './durees';
 import { peutOuvrirLEspace } from '../../domain/apporteur/acces-espace';
 import {
+  aviserPuisConfirmer,
   cleDesAppareils,
-  confirmerALaConsommation,
+  reconnaitreALaConsommation,
   type AppareilDeLaConnexion,
-  type AvisDAppareil,
+  type AppareilEnAttente,
   type DepotDAppareils,
+  type PortsDesAppareils,
 } from './appareil';
 
 // ── le jeton et son empreinte ────────────────────────────────────────────────────────────────────
@@ -122,8 +124,8 @@ export function etatLu<E extends string>(liste: readonly E[], valeur: unknown): 
   return (liste as readonly unknown[]).includes(valeur) ? (valeur as E) : null;
 }
 /**
- * `appareil` (SEC-55) : présent quand la consommation confirme l'appareil — l'identifiant à POSER
- * dans `__Host-partners-appareil` et l'issue (`connu`, `confirme`, `avis_echoue`).
+ * `appareil` (SEC-55) : présent quand le port des appareils est branché — l'identifiant à POSER dans
+ * `__Host-partners-appareil` et l'issue (`connu`, `confirme`, `avis_echoue`, `non_confirme`).
  */
 export type ResultatDeConsommation =
   | { etat: 'ouverte'; jetonSession: string; appareil?: AppareilDeLaConnexion }
@@ -454,17 +456,11 @@ export interface TransactionDeConsommation {
   droitsEnCours?(apporteurId: string): Promise<boolean>;
   /** Enregistre une session neuve. */
   ouvrirSession(s: NouvelleSession): Promise<void>;
-  /** SEC-55 : le dépôt des appareils DANS la transaction ; exigé quand le port `appareils` est branché. */
+  /**
+   * SEC-55 : le dépôt des appareils DANS la transaction, qui RECONNAÎT l'appareil connu et ne
+   * confirme jamais ; exigé quand le port `appareils` est branché.
+   */
   appareils?: DepotDAppareils;
-}
-
-/**
- * SEC-55 : la confirmation de l'appareil à la consommation. Branché, il fait confirmer l'appareil qui
- * consomme, dans la transaction ; absent, la consommation est celle d'avant (aucun appareil lu).
- */
-export interface PortsDesAppareils {
-  /** L'avis à l'adresse vérifiée : le compte et l'instant, rien de l'appareil. */
-  aviser(avis: AvisDAppareil): Promise<void>;
 }
 
 export interface PortsDeConsommation {
@@ -507,21 +503,53 @@ interface OuvertureDeSession {
   maintenant: Date;
   ipHash: string | null;
   configuration: ConfigurationDuLien;
-  /** SEC-55, espace seulement : l'identifiant lu sur la requête et l'avis, quand le port est branché. */
-  appareil?: { identifiantLu: unknown; aviser(avis: AvisDAppareil): Promise<void> };
+  /** SEC-55, espace seulement : l'identifiant lu sur la requête, quand le port est branché. */
+  appareil?: { identifiantLu: unknown };
 }
 
-/** Une session ouverte : son jeton, et l'appareil quand la consommation l'a confirmé. */
+/**
+ * Une session ouverte : son jeton, et l'appareil — reconnu (`appareil`), ou à confirmer APRÈS la
+ * validation de la transaction (`enAttente`, qui ne sort jamais du noyau : il porte l'empreinte).
+ */
 interface SessionOuverteParLeLien {
   jetonSession: string;
   appareil?: AppareilDeLaConnexion;
+  enAttente?: AppareilEnAttente;
+}
+
+/** SEC-55 : l'appareil lu sur la requête, et les ports qui le feront confirmer après la validation. */
+interface AppareilDeLaRequete {
+  identifiantLu: unknown;
+  ports: PortsDesAppareils;
 }
 
 /** Le résultat « ouverte », sans champ d'appareil quand aucun appareil n'a été jugé. */
-function ouverte(o: SessionOuverteParLeLien): { etat: 'ouverte' } & SessionOuverteParLeLien {
+function ouverte(o: { jetonSession: string; appareil?: AppareilDeLaConnexion }): {
+  etat: 'ouverte';
+  jetonSession: string;
+  appareil?: AppareilDeLaConnexion;
+} {
   return o.appareil === undefined
     ? { etat: 'ouverte', jetonSession: o.jetonSession }
     : { etat: 'ouverte', jetonSession: o.jetonSession, appareil: o.appareil };
+}
+
+/**
+ * SEC-55, APRÈS la validation de la transaction de la consommation (voie (b) de la lentille
+ * sécurité) : l'appareil à confirmer est avisé HORS de toute transaction, puis confirmé par une
+ * transaction courte (`aviserPuisConfirmer`). Rien ne se passe ici tant que la consommation n'a pas
+ * été validée : une transaction annulée ne laisse partir aucun avis.
+ */
+async function apresLaValidation(
+  o: SessionOuverteParLeLien,
+  appareil: AppareilDeLaRequete | undefined,
+  kidDeSession: string
+): Promise<{ etat: 'ouverte'; jetonSession: string; appareil?: AppareilDeLaConnexion }> {
+  if (o.enAttente === undefined || appareil === undefined) return ouverte(o);
+  return ouverte({
+    jetonSession: o.jetonSession,
+    appareil: await aviserPuisConfirmer(o.enAttente, kidDeSession, appareil.ports),
+  });
 }
 
 /**
@@ -545,36 +573,39 @@ async function consommer<Tx>(
       o: OuvertureDeSession
     ): Promise<SessionOuverteParLeLien | null>;
   },
-  appareil?: OuvertureDeSession['appareil']
+  appareil?: AppareilDeLaRequete
 ): Promise<ResultatDeConsommation> {
   if (!aLaFormeDUnJeton(entree.jeton)) return INVALIDE;
   const tokenHash = empreinteDuJeton(entree.jeton, ports.configuration.secret);
   const maintenant = ports.maintenant();
-  return ports.transaction(async (tx) => {
+  const issue = await ports.transaction(async (tx) => {
     if ((await population.ecrire(tx, tokenHash, maintenant)) !== 1) {
       // SEC-54 : un lien DÉJÀ CONSOMMÉ (par le clic ou par le code) se dit comme tel ; tout autre
       // échec (inconnu, expiré, annulé, autre clé, autre population) reste « invalide ». Le jeton
       // est un secret de 256 bits : le dire déjà utilisé n'apprend rien d'un compte.
       const dejaUtilise =
         (await population.dejaConsomme(tx, tokenHash, ports.configuration.kid)) === true;
-      return dejaUtilise ? { etat: 'deja_utilise' } : INVALIDE;
+      return dejaUtilise ? ({ etat: 'deja_utilise' } as const) : INVALIDE;
     }
     const ouverture = await population.ouvrir(tx, tokenHash, {
       maintenant,
       ipHash: entree.ipHash,
       configuration: ports.configuration,
-      appareil,
+      appareil: appareil === undefined ? undefined : { identifiantLu: appareil.identifiantLu },
     });
-    return ouverture === null ? INVALIDE : ouverte(ouverture);
+    return ouverture ?? INVALIDE;
   });
+  return 'etat' in issue
+    ? issue
+    : apresLaValidation(issue, appareil, ports.configuration.session.kid);
 }
 
-/** L'appareil à confirmer, quand le port est branché : l'identifiant lu et l'avis. */
-function appareilAConfirmer(
+/** L'appareil de la requête, quand le port est branché : l'identifiant lu et les ports. */
+function appareilDeLaRequete(
   identifiantLu: unknown,
   appareils: PortsDesAppareils | undefined
-): OuvertureDeSession['appareil'] {
-  return appareils === undefined ? undefined : { identifiantLu, aviser: appareils.aviser };
+): AppareilDeLaRequete | undefined {
+  return appareils === undefined ? undefined : { identifiantLu, ports: appareils };
 }
 
 export function consommerLien(
@@ -597,7 +628,7 @@ export function consommerLien(
         return ouvrirLaSession(tx, { id: lien.id, apporteurId: lien.apporteurId }, o);
       },
     },
-    appareilAConfirmer(entree.identifiantAppareil, ports.appareils)
+    appareilDeLaRequete(entree.identifiantAppareil, ports.appareils)
   );
 }
 
@@ -654,16 +685,26 @@ async function ouvrirLaSession(
     expireAt: new Date(o.maintenant.getTime() + DUREES_AUTH.sessionMs.valeur),
   });
   if (o.appareil === undefined) return { jetonSession };
-  // SEC-55 : l'appareil qui consomme se confirme DANS cette transaction ; le port branché sans
-  // dépôt est une faute de câblage, qui échoue fort plutôt que de laisser croire à une confirmation.
+  // SEC-55, (i) : l'appareil qui consomme est RECONNU dans cette transaction s'il est connu ; sinon
+  // il reste non confirmé, à aviser puis confirmer après la validation. Le port branché sans dépôt
+  // est une faute de câblage, qui échoue fort plutôt que de laisser croire à une confirmation.
   if (tx.appareils === undefined) throw new Error('depot_des_appareils_absent');
-  const appareil = await confirmerALaConsommation(lien.apporteurId, o.appareil.identifiantLu, {
+  const lu = await reconnaitreALaConsommation(lien.apporteurId, o.appareil.identifiantLu, {
     depot: tx.appareils,
-    cle: cleDesAppareils(o.configuration.session.secret),
-    aviser: o.appareil.aviser,
+    cle: cleDesAppareils(secret),
     maintenant: o.maintenant,
   });
-  return { jetonSession, appareil };
+  if ('issue' in lu) return { jetonSession, appareil: lu };
+  return {
+    jetonSession,
+    enAttente: {
+      identifiant: lu.identifiant,
+      appareil: lu.aConfirmer,
+      lienMagiqueId: lien.id,
+      sessionTokenHash: empreinteDeSession(jetonSession, secret),
+      consommeAt: o.maintenant,
+    },
+  };
 }
 
 /**
@@ -798,7 +839,7 @@ export function verifierLeCode(
       lienActif: (tx, emailHash, maintenant) => tx.lienActifDe(emailHash, maintenant),
       ouvrir: (tx, lien, o) => ouvrirLaSession(tx, lien, o),
     },
-    appareilAConfirmer(requete.identifiantAppareil, ports.appareils)
+    appareilDeLaRequete(requete.identifiantAppareil, ports.appareils)
   );
 }
 
@@ -829,7 +870,7 @@ async function verifier<
     lienActif(tx: Tx, emailHash: string, maintenant: Date): Promise<Lien | null>;
     ouvrir(tx: Tx, lien: Lien, o: OuvertureDeSession): Promise<SessionOuverteParLeLien | null>;
   },
-  appareil?: OuvertureDeSession['appareil']
+  appareil?: AppareilDeLaRequete
 ): Promise<ResultatDuCode> {
   const maintenant = ports.maintenant();
   const debit = (): ResultatDuCode => {
@@ -855,7 +896,7 @@ async function verifier<
     return refuse();
   }
   const calculee = empreinteDuCode(requete.code, ports.configuration.secret);
-  return ports.transaction(async (tx) => {
+  const issue = await ports.transaction(async (tx) => {
     const lien = await population.lienActif(tx, emailHash, maintenant);
     // L'essai part dans TOUS les cas, pour que l'aller-retour en base ne dise rien de l'existence du
     // lien (lentille sécurité, 2026-10-03) : sur un identifiant FACTICE quand aucun lien valide
@@ -884,10 +925,13 @@ async function verifier<
       maintenant,
       ipHash: ports.empreinteAdresseReseau(adresse),
       configuration: ports.configuration,
-      appareil,
+      appareil: appareil === undefined ? undefined : { identifiantLu: appareil.identifiantLu },
     });
-    return ouverture === null ? refuse() : ouverte(ouverture);
+    return ouverture ?? refuse();
   });
+  return 'etat' in issue
+    ? issue
+    : apresLaValidation(issue, appareil, ports.configuration.session.kid);
 }
 
 /**
