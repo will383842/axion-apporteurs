@@ -58,7 +58,7 @@ function unClient(lues: Ligne[], sousLeVerrou: Record<string, Ligne> = {}) {
       }),
     },
   };
-  const findMany = vi.fn(async () => lues.map((l) => ({ id: l.id })));
+  const findMany = vi.fn(async (_args: unknown) => lues.map((l) => ({ id: l.id })));
   const prisma = {
     attribution: { findMany },
     $transaction: vi.fn(async (fn: (t: typeof tx) => Promise<unknown>) => {
