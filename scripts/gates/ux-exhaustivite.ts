@@ -208,6 +208,10 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
     'contact',
   ],
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee': ['entreprise'],
+  // UX-P1-59 : les textes fermés d'une décision de SON contrat dont le texte saisi est purgé (juriste,
+  // #752) — l'article de SA mise en demeure, la date de fin de SON contrat ; aucun autre apporteur.
+  'espace/notifications.ts › DECISIONS_PURGEES › mise_en_demeure': ['article'],
+  'espace/notifications.ts › DECISIONS_PURGEES › manquement_grave': ['dateEffet'],
   // DM-25 : l'annulation de SON dépôt pour antériorité de la Société (art. 3.3) — SON entreprise, et le
   // délai de réponse à SA contestation, venu de la SSOT. Aucun critère d'antériorité (règle de SEC-12).
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_annulee_anteriorite': [
