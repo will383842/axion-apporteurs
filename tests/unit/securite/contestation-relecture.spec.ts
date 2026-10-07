@@ -47,6 +47,8 @@ type Ligne = {
   reponseChiffre: Uint8Array | null;
   repondueAt: Date | null;
   purgeeAt: Date | null;
+  depotRefuse: { siren: string | null; apporteurId: string } | null;
+  attribution: { raisonSociale: string | null; siren: string; apporteurId: string } | null;
 };
 const ligne = (o: Partial<Ligne> = {}): Ligne => ({
   id: ID,
@@ -57,8 +59,12 @@ const ligne = (o: Partial<Ligne> = {}): Ligne => ({
   reponseChiffre: chiffre('reponseChiffre', ID, `Le refus est maintenu. ${MARQUEUR}`),
   repondueAt: REPONDUE,
   purgeeAt: null,
+  depotRefuse: { siren: '732829320', apporteurId: APP },
+  attribution: null,
   ...o,
 });
+/** L'entreprise du dépôt refusé par défaut : son numéro, au repli de la juriste. */
+const ENTREPRISE = 'Entreprise n° 732829320';
 
 /** Un faux client qui filtre comme la base : par l'identifiant ET par l'apporteur du `where`. */
 function client(lignes: Ligne[]) {
@@ -95,6 +101,8 @@ describe('REQ-DM-043 — l’apporteur relit SA contestation, et seulement la si
           reponseChiffre: true,
           repondueAt: true,
           purgeeAt: true,
+          depotRefuse: { select: { siren: true, apporteurId: true } },
+          attribution: { select: { raisonSociale: true, siren: true, apporteurId: true } },
         },
       },
     ]);
@@ -111,6 +119,7 @@ describe('REQ-DM-043 — l’apporteur relit SA contestation, et seulement la si
     expect(await relire([ligne()])).toEqual({
       etat: 'repondue',
       objet: 'refus_depot',
+      entreprise: ENTREPRISE,
       recueAt: RECUE,
       texte: `Je conteste ce refus. ${MARQUEUR}`,
       reponse: `Le refus est maintenu. ${MARQUEUR}`,
@@ -122,6 +131,7 @@ describe('REQ-DM-043 — l’apporteur relit SA contestation, et seulement la si
     expect(await relire([ligne({ reponseChiffre: null, repondueAt: null })])).toEqual({
       etat: 'en_attente',
       objet: 'refus_depot',
+      entreprise: ENTREPRISE,
       recueAt: RECUE,
       texte: `Je conteste ce refus. ${MARQUEUR}`,
       echeance: new Date(echeanceDeReponse(RECUE.getTime())),
@@ -157,6 +167,7 @@ describe('REQ-DM-043 — l’apporteur relit SA contestation, et seulement la si
     expect(await relire([piegee({})])).toEqual({
       etat: 'purgee',
       objet: 'refus_depot',
+      entreprise: ENTREPRISE,
       recueAt: RECUE,
       repondue: true,
     });
@@ -165,6 +176,29 @@ describe('REQ-DM-043 — l’apporteur relit SA contestation, et seulement la si
       repondue: false,
     });
     expect(lu).toBe(false);
+  });
+
+  it('REQ-DM-043 : TÉMOIN — l’entreprise : sa raison sociale, ou son numéro au repli ; jamais celle d’un lien d’autrui, ni un numéro purgé', async () => {
+    const attribution = (o: Partial<NonNullable<Ligne['attribution']>> = {}) => ({
+      raisonSociale: 'Boulangerie Démo du Lac',
+      siren: '552100554',
+      apporteurId: APP,
+      ...o,
+    });
+    const avec = async (o: Partial<Ligne>) =>
+      ((await relire([ligne(o)])) as { entreprise?: string | null }).entreprise;
+    expect(
+      await avec({ objet: 'annulation_attribution', depotRefuse: null, attribution: attribution() })
+    ).toBe('Boulangerie Démo du Lac');
+    expect(
+      await avec({ depotRefuse: null, attribution: attribution({ raisonSociale: null }) })
+    ).toBe('Entreprise n° 552100554');
+    expect(
+      await avec({ depotRefuse: null, attribution: attribution({ apporteurId: AUTRE_APP }) })
+    ).toBeNull();
+    expect(await avec({ depotRefuse: { siren: '732829320', apporteurId: AUTRE_APP } })).toBeNull();
+    expect(await avec({ depotRefuse: { siren: null, apporteurId: APP } })).toBeNull();
+    expect(await avec({ depotRefuse: null, attribution: null })).toBeNull();
   });
 
   it('REQ-DM-043 : un texte absent hors d’une purge n’est pas rendu à moitié : la contestation est illisible', async () => {
