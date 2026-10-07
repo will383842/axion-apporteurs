@@ -8,7 +8,7 @@
  *
  *   (1) LE BLOC IDENTIQUE. Il n'existe ni feuille de style commune ni jetons séparés : la charte est
  *       un bloc `charte:debut … charte:fin` recopié dans chaque maquette. Une copie qui dérive est une
- *       charte qui ment. Le bloc est le MÊME dans les treize maquettes de l'espace, et le même dans
+ *       charte qui ment. Le bloc est le MÊME dans les quatorze maquettes de l'espace, et le même dans
  *       les quatorze de la console (la console a ses jetons propres, REQ-UX-034, et sa barre latérale
  *       viendra avec sa propre refonte).
  *
@@ -96,8 +96,8 @@ const COMPOSANTS: [string, string][] = [
 ];
 
 describe('REQ-UX-017 — la charte commune, un seul bloc par famille', () => {
-  it('REQ-UX-017 — le bloc charte est IDENTIQUE dans les treize maquettes de l’espace', () => {
-    expect(ESPACE).toHaveLength(13);
+  it('REQ-UX-017 — le bloc charte est IDENTIQUE dans les quatorze maquettes de l’espace', () => {
+    expect(ESPACE).toHaveLength(14);
     const reference = charte(lire(ESPACE[0]!));
     expect(reference.length).toBeGreaterThan(1000);
     for (const f of ESPACE) expect(charte(lire(f)), f).toBe(reference);
@@ -169,7 +169,7 @@ describe('REQ-UX-017 — le contraste AA, recalculé dans chaque maquette de l�
         }
       }
     }
-    expect(mesures).toBe(13 * 2 * (TEXTES.length + COMPOSANTS.length));
+    expect(mesures).toBe(14 * 2 * (TEXTES.length + COMPOSANTS.length));
   });
 
   it('REQ-UX-017 — TÉMOIN : un texte doux éclairci sous le seuil rougit', () => {
