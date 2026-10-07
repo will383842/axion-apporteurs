@@ -43,6 +43,8 @@ describe('REQ-DM-024 — les formes admises dans une charge', () => {
 describe('REQ-DM-024 — une charge par type, fermée', () => {
   it('REQ-DM-024 : les types du journal sont exactement ceux-ci', () => {
     expect(Object.keys(CHARGES_PAR_TYPE).sort()).toEqual([
+      // SEC-52 : un accès de la console aux coordonnées du contact d'une entreprise réservée.
+      'acces_coordonnees_reservee',
       'anomalie_gel_modifie',
       'anomalie_statut_modifie',
       // SEC-15 (A02, #794) : la pose et la levée du gel des dépôts.
@@ -439,5 +441,33 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
     expect(
       refus('apporteur_mis_en_demeure', { article: '6', acteur: { par: 'apporteur', id: ID } })
     ).toEqual(['acteur:acteur_console_attendu']);
+  });
+
+  it('REQ-SEC-042 : un accès aux coordonnées d’une entreprise réservée ne porte que l’acteur de la console, par identifiant', () => {
+    passe('acces_coordonnees_reservee', { acteur: CONSOLE });
+    // Qui a lu : un utilisateur de la console, jamais le système ni l'apporteur.
+    expect(refus('acces_coordonnees_reservee', { acteur: { par: 'systeme' } })).toEqual([
+      'acteur:acteur_console_attendu',
+    ]);
+    expect(refus('acces_coordonnees_reservee', { acteur: { par: 'apporteur', id: ID } })).toEqual([
+      'acteur:acteur_console_attendu',
+    ]);
+    // L'acteur est obligatoire.
+    expect(refus('acces_coordonnees_reservee', {})).toHaveLength(1);
+    // La charge est FERMÉE : ni les coordonnées, ni le SIREN, ni l'apporteur, ni la cause ou la date de la réserve.
+    for (const intrus of [
+      'nom',
+      'email',
+      'telephone',
+      'siren',
+      'apporteurId',
+      'cause',
+      'reserveJusqua',
+    ]) {
+      expect(
+        refus('acces_coordonnees_reservee', { acteur: CONSOLE, [intrus]: 'x' }),
+        intrus
+      ).toHaveLength(1);
+    }
   });
 });

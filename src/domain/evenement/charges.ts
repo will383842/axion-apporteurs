@@ -113,7 +113,8 @@ export type TypeEvenementJournal =
   | 'utilisateur_console_modifie'
   | 'journal_acces_gel_modifie'
   | 'apporteur_mis_en_demeure'
-  | 'apporteur_gel_modifie';
+  | 'apporteur_gel_modifie'
+  | 'acces_coordonnees_reservee';
 
 /**
  * SEC-61 : le gel du journal des accès à la console — ses gestes, ses motifs (les valeurs de
@@ -458,6 +459,20 @@ export const CHARGES_PAR_TYPE = {
   apporteur_mis_en_demeure: z
     .object({
       article: z.enum(ARTICLES_MISE_EN_DEMEURE),
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
+    })
+    .strict(),
+  /**
+   * SEC-52 (REQ-SEC-042, forme d'A02 sur #786) : un accès de la console aux coordonnées du contact d'une
+   * entreprise RÉSERVÉE, agrégat `attribution` (l'id de l'attribution est `agregatId`, la date celle de
+   * l'événement). Par identifiants SEULS : QUI a lu (un utilisateur de la console, HYP-A02-ACTEUR-JOURNAL),
+   * et rien d'autre — ni nom, ni adresse, ni téléphone, ni SIREN, ni apporteur, ni cause ni date de la
+   * réserve. C'est la seule trace qui permette de constater un démarchage hors outil pendant la réserve.
+   */
+  acces_coordonnees_reservee: z
+    .object({
       acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
         message: 'acteur_console_attendu',
       }),

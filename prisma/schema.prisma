@@ -85,6 +85,7 @@ enum TypeEvenementJournal {
   apporteur_mis_en_demeure
   /// SEC-15 : la pose et la levée du gel des dépôts (migration 004920), en fin d'enum comme en base.
   apporteur_gel_modifie
+  acces_coordonnees_reservee
 
   @@map("type_evenement_journal")
 }
