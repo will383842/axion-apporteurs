@@ -461,6 +461,8 @@ export const CHAMPS_TUS = {
     'peremptionSuspendueAt',
     'peremptionSuspendueParId',
     'peremptionSuspendueJustification',
+    // UX-P1-61 : le motif de la suspension de péremption est TU (juriste, relayée par A02).
+    'peremptionSuspendueMotif',
     'purgeContactAt',
     'contactPurgeAt',
     'versionQualification',
