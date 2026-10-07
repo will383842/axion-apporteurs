@@ -53,6 +53,8 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
       'attribution_peremption_suspendue',
       'attribution_porteur_reaffecte',
       'contestation_modifiee',
+      // JUR-T64 (A02, #703) : l'ouverture et la clôture d'un litige sur une décision de contrat.
+      'decision_contrat_litige_modifie',
       'demande_confirmation_etat_modifie',
       // SEC-61 : la pose et la levée d'un gel du journal des accès à la console.
       'journal_acces_gel_modifie',
@@ -213,6 +215,14 @@ describe('REQ-DM-033 REQ-DM-043 — le gel pour litige au journal : le geste, ja
           const z = champ as { safeParse: (v: unknown) => { success: boolean } };
           expect(z.safeParse('INC-0001').success, `${type}.${cle}`).toBe(false);
           expect(z.safeParse('a'.repeat(64)).success, `${type}.${cle}`).toBe(true);
+          continue;
+        }
+        // JUR-T64 (forme d'A02, #703 6041868006) : `litigeId` est l'IDENTIFIANT de la ligne du litige,
+        // jamais sa référence : une clé suffixée `Id` refuse une référence en clair et n'admet qu'un UUID.
+        if (cle.endsWith('Id')) {
+          const z = champ as { safeParse: (v: unknown) => { success: boolean } };
+          expect(z.safeParse('RG-24/01234').success, `${type}.${cle}`).toBe(false);
+          expect(z.safeParse(ID).success, `${type}.${cle}`).toBe(true);
           continue;
         }
         // CPL-T07 : « refus » n'est pas une référence — le motif FERMÉ d'un refus de pièce
@@ -416,6 +426,49 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
       expect(u(geste, null, null), geste).toEqual([]);
     expect(u('desactiver', 'lecteur', null)).toEqual(['vers:roles_incoherents_avec_le_geste']);
     expect(u('desactiver', null, 'lecteur')).toEqual(['vers:roles_incoherents_avec_le_geste']);
+  });
+
+  it('REQ-JUR-029 : TÉMOIN — JUR-T64 : le litige d’une décision porte son geste, ses deux identifiants, un motif FERMÉ de SON geste et l’acteur de la console, rien d’autre', () => {
+    const base = { litigeId: ID, decisionContratId: ID, acteur: CONSOLE };
+    for (const motif of [
+      'contestation_ecrite',
+      'reclamation_formelle',
+      'mediation',
+      'action_en_justice',
+    ]) {
+      passe('decision_contrat_litige_modifie', { ...base, geste: 'ouvrir', motif });
+    }
+    for (const motif of ['reponse_donnee', 'accord', 'decision_definitive', 'desistement']) {
+      passe('decision_contrat_litige_modifie', { ...base, geste: 'clore', motif });
+    }
+    // Un motif de clôture à l'ouverture, ou l'inverse : refusé, nommé.
+    expect(
+      refus('decision_contrat_litige_modifie', { ...base, geste: 'ouvrir', motif: 'accord' })
+    ).toEqual(['motif:motif_hors_du_geste']);
+    expect(
+      refus('decision_contrat_litige_modifie', { ...base, geste: 'clore', motif: 'mediation' })
+    ).toEqual(['motif:motif_hors_du_geste']);
+    expect(
+      refus('decision_contrat_litige_modifie', { ...base, geste: 'ouvrir', motif: 'autre' })
+    ).toHaveLength(1);
+    // NI texte NI référence : la charge est fermée.
+    expect(
+      refus('decision_contrat_litige_modifie', {
+        ...base,
+        geste: 'ouvrir',
+        motif: 'mediation',
+        reference: 'RG-2027-1',
+      })
+    ).toHaveLength(1);
+    // Un utilisateur de la console, jamais le système.
+    expect(
+      refus('decision_contrat_litige_modifie', {
+        ...base,
+        geste: 'ouvrir',
+        motif: 'mediation',
+        acteur: { par: 'systeme' },
+      })
+    ).toEqual(['acteur:acteur_console_attendu']);
   });
 
   it('REQ-JUR-006 : la mise en demeure ne porte que l’article, pris dans la liste FERMÉE de l’art. 11.2, et l’acteur de la console', () => {

@@ -25587,7 +25587,17 @@
         "prisma/schema.prisma",
         "prisma/migrations/",
         "src/server/taches/purger-decisions-de-contrat.ts",
-        "tests/integration/gel-litige-decisions-de-contrat.spec.ts"
+        "tests/integration/gel-litige-decisions-de-contrat.spec.ts",
+        "src/domain/evenement/charges.ts",
+        "src/domain/seuils/ssot.ts",
+        "src/server/console/litiges-des-decisions.ts",
+        "src/server/roles/matrice.ts",
+        "src/server/taches/purger-textes-des-decisions.ts",
+        "tests/unit/domaine/journal-charges.spec.ts",
+        "tests/unit/integration/gel-litige-decisions-de-contrat.spec.ts",
+        "tests/unit/integration/purge-decisions-de-contrat.spec.ts",
+        "tests/unit/securite/litiges-decisions-de-contrat.spec.ts",
+        "src/server/demarchage/actions-classees.ts"
       ],
       "schema": true,
       "sensible": [],

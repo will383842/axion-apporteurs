@@ -109,7 +109,8 @@ export type TypeEvenementJournal =
   | 'anomalie_gel_modifie'
   | 'utilisateur_console_modifie'
   | 'journal_acces_gel_modifie'
-  | 'apporteur_mis_en_demeure';
+  | 'apporteur_mis_en_demeure'
+  | 'decision_contrat_litige_modifie';
 
 /**
  * SEC-61 : le gel du journal des accès à la console — ses gestes, ses motifs (les valeurs de
@@ -118,6 +119,25 @@ export type TypeEvenementJournal =
 export const GESTES_GEL_JOURNAL = ['poser', 'lever'] as const;
 export const MOTIFS_GEL_JOURNAL = ['incident', 'litige'] as const;
 export const PORTEES_GEL_JOURNAL = ['utilisateur', 'cible'] as const;
+
+/**
+ * JUR-T64 (juriste, #703 6041829569 ; forme d'A02, #703 6041868006) : les gestes d'un litige sur une
+ * décision de contrat et leurs motifs FERMÉS — les valeurs de `MotifOuvertureLitige` et
+ * `MotifClotureLitige`, confrontées au schéma par la garde des énumérations.
+ */
+export const GESTES_LITIGE = ['ouvrir', 'clore'] as const;
+export const MOTIFS_OUVERTURE_LITIGE = [
+  'contestation_ecrite',
+  'reclamation_formelle',
+  'mediation',
+  'action_en_justice',
+] as const;
+export const MOTIFS_CLOTURE_LITIGE = [
+  'reponse_donnee',
+  'accord',
+  'decision_definitive',
+  'desistement',
+] as const;
 
 /** DM-08 : le porteur d'une attribution, une forme UNIQUE — sa population et son identifiant. */
 const PORTEUR = () =>
@@ -418,6 +438,32 @@ export const CHARGES_PAR_TYPE = {
       }),
     })
     .strict(),
+  /**
+   * JUR-T64 (forme d'A02, #703 6041868006) : l'ouverture ou la clôture d'un litige sur une décision de
+   * contrat, agrégat `apporteur`. Le motif est celui de SON geste ; NI texte NI référence. La table
+   * `litiges_decisions_de_contrat` est l'ÉTAT, ce fait daté en est la trace.
+   */
+  decision_contrat_litige_modifie: z
+    .object({
+      geste: z.enum(GESTES_LITIGE),
+      litigeId: FORMES.identifiant(),
+      decisionContratId: FORMES.identifiant(),
+      motif: z.enum([...MOTIFS_OUVERTURE_LITIGE, ...MOTIFS_CLOTURE_LITIGE]),
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
+    })
+    .strict()
+    .superRefine((c, ctx) => {
+      const permis: readonly string[] =
+        c.geste === 'ouvrir' ? MOTIFS_OUVERTURE_LITIGE : MOTIFS_CLOTURE_LITIGE;
+      if (!permis.includes(c.motif))
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['motif'],
+          message: 'motif_hors_du_geste',
+        });
+    }),
 } satisfies Record<TypeEvenementJournal, z.ZodTypeAny>;
 
 /**

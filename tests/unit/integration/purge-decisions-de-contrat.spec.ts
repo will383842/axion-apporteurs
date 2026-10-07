@@ -37,6 +37,7 @@ describe('REQ-JUR-029 — le point de départ, aux trois cas de la juriste', () 
           geste: 'resiliation',
           dateEffet: jour('2026-11-30'),
           creeAt: new Date('2026-10-04T08:00:00Z'),
+          litiges: [],
         },
         null
       )
@@ -111,6 +112,8 @@ type Candidate = {
   geste: 'mise_en_demeure' | 'resiliation';
   dateEffet: Date | null;
   creeAt: Date;
+  /** JUR-T64 : la dernière clôture de litige lue par le passage. */
+  litiges: { closAt: Date | null }[];
 };
 
 /** Une résiliation du double : son fait fondateur est un changement de statut, sauf `fait` contraire. */
@@ -141,6 +144,8 @@ function unDouble(lots: Candidate[][], resiliations: Resiliation[]) {
   const prisma = {
     decisionDeContrat: { findMany, updateMany },
     evenement: { findUnique },
+    // JUR-T64 : l'alerte des litiges ouverts trop longtemps compte ; ici, aucun.
+    litigeDecisionDeContrat: { findMany: vi.fn(async () => []) },
   } as unknown as PrismaClient;
   return { prisma, findMany, updateMany, findUnique };
 }
@@ -160,6 +165,7 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
             geste: 'mise_en_demeure',
             dateEffet: null,
             creeAt: new Date('2026-09-01T08:00:00Z'),
+            litiges: [],
           },
         ],
       ],
@@ -191,6 +197,7 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
             geste: 'resiliation',
             dateEffet: jour('2026-10-01'),
             creeAt: new Date('2026-10-01T08:00:00Z'),
+            litiges: [],
           },
           // Non échue : résiliation au 2026-10-07.
           {
@@ -199,6 +206,7 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
             geste: 'resiliation',
             dateEffet: jour('2026-10-07'),
             creeAt: new Date('2026-10-01T08:00:00Z'),
+            litiges: [],
           },
           // Mise en demeure de A, avant sa résiliation du 2026-10-01 : échue avec elle.
           {
@@ -207,6 +215,7 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
             geste: 'mise_en_demeure',
             dateEffet: null,
             creeAt: new Date('2026-09-01T08:00:00Z'),
+            litiges: [],
           },
           // Mise en demeure de B, suivie de sa résiliation au 2026-10-07 : gardée comme elle.
           {
@@ -215,6 +224,7 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
             geste: 'mise_en_demeure',
             dateEffet: null,
             creeAt: new Date('2026-09-01T08:00:00Z'),
+            litiges: [],
           },
         ],
       ],
@@ -226,7 +236,12 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
     expect(await purgerLesTextesDesDecisions(d.prisma, MAINTENANT)).toEqual({ textesPurges: 2 });
     expect(d.updateMany).toHaveBeenCalledTimes(1);
     expect(d.updateMany).toHaveBeenCalledWith({
-      where: { id: { in: ['r1', 'm1'] }, textePurgeAt: null, NOT: { texteChiffre: null } },
+      where: {
+        id: { in: ['r1', 'm1'] },
+        textePurgeAt: null,
+        NOT: { texteChiffre: null },
+        litiges: { none: { closAt: null } },
+      },
       data: { texteChiffre: null, faitsEmpreinte: null, textePurgeAt: MAINTENANT },
     });
   });
@@ -241,6 +256,7 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
             geste: 'mise_en_demeure',
             dateEffet: null,
             creeAt: new Date('2026-09-01T08:00:00Z'),
+            litiges: [],
           },
         ],
       ],
@@ -266,6 +282,7 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
             geste: 'mise_en_demeure',
             dateEffet: null,
             creeAt: new Date('2026-10-06T08:00:00Z'),
+            litiges: [],
           },
         ],
       ],
@@ -283,6 +300,7 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
             geste: 'mise_en_demeure',
             dateEffet: null,
             creeAt: new Date('2026-10-05T08:00:00Z'),
+            litiges: [],
           },
         ],
       ],
@@ -301,6 +319,7 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
       geste: 'resiliation',
       dateEffet: jour('2026-10-01'),
       creeAt: new Date('2026-10-01T08:00:00Z'),
+      litiges: [],
     }));
     const court: Candidate[] = [
       {
@@ -309,6 +328,7 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
         geste: 'resiliation',
         dateEffet: jour('2026-10-02'),
         creeAt: new Date('2026-10-01T08:00:00Z'),
+        litiges: [],
       },
     ];
     const d = unDouble([plein, court], []);
@@ -319,8 +339,25 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
     // Cinq ans avant l'instant, plus deux jours de marge.
     const borne = new Date('2026-10-08T09:00:00.000Z');
     expect(lectures[0]).toEqual({
-      where: { textePurgeAt: null, NOT: { texteChiffre: null }, creeAt: { lte: borne } },
-      select: { id: true, apporteurId: true, geste: true, dateEffet: true, creeAt: true },
+      where: {
+        textePurgeAt: null,
+        NOT: { texteChiffre: null },
+        creeAt: { lte: borne },
+        litiges: { none: { closAt: null } },
+      },
+      select: {
+        id: true,
+        apporteurId: true,
+        geste: true,
+        dateEffet: true,
+        creeAt: true,
+        litiges: {
+          where: { NOT: { closAt: null } },
+          select: { closAt: true },
+          orderBy: { closAt: 'desc' },
+          take: 1,
+        },
+      },
       orderBy: { id: 'asc' },
       take: LOT_DE_PURGE_DES_DECISIONS,
     });
@@ -350,6 +387,7 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
             geste: 'resiliation',
             dateEffet: jour('2026-10-01'),
             creeAt: new Date('2026-10-01T08:00:00Z'),
+            litiges: [],
           },
         ],
       ],
@@ -369,6 +407,7 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
             geste: 'mise_en_demeure',
             dateEffet: null,
             creeAt: new Date('2026-09-01T08:00:00Z'),
+            litiges: [],
           },
           {
             id: 'm2',
@@ -376,6 +415,7 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
             geste: 'mise_en_demeure',
             dateEffet: null,
             creeAt: new Date('2026-09-02T08:00:00Z'),
+            litiges: [],
           },
         ],
       ],

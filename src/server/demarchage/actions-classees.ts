@@ -86,6 +86,10 @@ export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction
   'tache:traces_liste_noire_purger': 'sans_contact',
   // SEC-14 : l'ouverture d'un signalement de sincérité est un passage interne, qui ne contacte aucune entreprise.
   'tache:sincerite_ouvrir': 'sans_contact',
+  // JUR-T64 (confirmé par la sécurité) : ouvrir et clore un litige sur une décision de contrat est une mesure
+  // de conservation interne ; ni l'apporteur ni aucune entreprise ne sont contactés.
+  'action:ouvrir_litige_decision': 'sans_contact',
+  'action:clore_litige_decision': 'sans_contact',
 };
 
 /** Les actions et tâches qui doivent appeler la garde de la réserve. */

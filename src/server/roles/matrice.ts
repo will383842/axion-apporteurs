@@ -108,6 +108,10 @@ export const MATRICE_DES_ROLES = {
   // relèvement est exigé par le geste, que l'action rejuge.
   'ecran:mise_en_demeure': { roles: ['admin'], stepUp: false },
   'action:mettre_en_demeure': { roles: ['admin'], stepUp: true },
+  // JUR-T64 (code civil art. 2241) : ouvrir et clore un litige sur une décision de contrat ; la clôture
+  // fait repartir la conservation du texte, l'ouverture la suspend : l'administrateur seul, sous step-up.
+  'action:ouvrir_litige_decision': { roles: ['admin'], stepUp: true },
+  'action:clore_litige_decision': { roles: ['admin'], stepUp: true },
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, EntreeDeLaMatrice>>;
 
 /**
