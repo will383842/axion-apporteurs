@@ -252,16 +252,17 @@ describe('REQ-EXT-006 — « Déjà déposée par le passé », lu sur la base',
     });
   });
 
-  it('REQ-EXT-006 : TÉMOIN — une attribution non terminée ne compte pas, et la console ne reçoit jamais le signal', async () => {
+  // La console ne reçoit jamais le signal : c'est jugé par le témoin unitaire
+  // (`verification-non-oracle.spec.ts`). En base, une vérification portée par la console exige un
+  // conseiller salarié actif (W19), rôle que `console_role` ne porte pas encore (SEC-31).
+  it('REQ-EXT-006 : TÉMOIN — une attribution non terminée ne compte pas', async () => {
     const siren = unSiren();
     const fin = await inserer(apporteurA, siren, 'perdue', null);
     await terminer(fin, 40);
-    expect(
-      await verifierUneEntreprise(ports(), {
-        ...demande(siren),
-        porteur: { utilisateurConsoleId: utilisateurConsole },
-      })
-    ).toEqual({ ok: true, dto: { etat: 'libre', dejaDeclaree: false } });
+    expect(await verifierUneEntreprise(ports(), demande(siren))).toEqual({
+      ok: true,
+      dto: { etat: 'libre', dejaDeclaree: true },
+    });
     await inserer(apporteurB, siren, 'active', null);
     expect(await verifierUneEntreprise(ports(), demande(siren))).toEqual({
       ok: true,

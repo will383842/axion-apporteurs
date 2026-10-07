@@ -13,6 +13,10 @@
  * dépôt n'a aucun champ qui le porte, aucun de ses signaux ne le nomme, et un dépôt sur une entreprise
  * déjà travaillée rend EXACTEMENT les mêmes signaux et le même score qu'un dépôt sur une entreprise
  * neuve.
+ *
+ * @no-red-first: propriété d'ABSENCE, déjà vraie sur main depuis les détecteurs de sincérité (#787) : leur juge
+ * n'a jamais lu le passé de l'entreprise ; ce témoin la fige pour qu'EXT-T06, qui calcule ce passé
+ * pour l'affichage, ne le fasse jamais entrer dans la sincérité.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
