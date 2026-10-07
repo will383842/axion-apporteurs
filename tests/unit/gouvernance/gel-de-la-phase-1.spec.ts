@@ -12,25 +12,25 @@ import { horsDuGel, lireGel } from '../../../scripts/gates/gov-tasks';
 type T = Parameters<typeof horsDuGel>[0][number];
 const tache = (id: string, champs: Record<string, unknown> = {}): T =>
   ({ id, phase: 1, zone: 'espace', sensible: [], statut: 'a_faire', ...champs }) as unknown as T;
-const GELEES = new Set(['UX-P1-01']);
+const GELEES = new Set(['TACHE-GELEE']);
 
 describe('REQ-GOV-027 — GOV-150 : la phase 1 est gelée', () => {
   it('REQ-GOV-027 — une tâche NEUVE de phase 1 sans argent, sécurité ni légal rougit `gel_phase_1`', () => {
-    const f = horsDuGel([tache('UX-P1-99')], GELEES);
+    const f = horsDuGel([tache('TACHE-NEUVE')], GELEES);
     expect(f.map((x) => x.famille)).toEqual(['gel_phase_1']);
     expect(f[0]!.message).toContain('5988252245');
   });
 
   it('REQ-GOV-027 — une tâche neuve qui porte un `sensible`, ou de la zone juridique ou sécurité, reste en phase 1', () => {
-    expect(horsDuGel([tache('DM-99', { sensible: ['argent'] })], GELEES)).toEqual([]);
-    expect(horsDuGel([tache('JUR-T99', { zone: 'juridique' })], GELEES)).toEqual([]);
-    expect(horsDuGel([tache('SEC-99', { zone: 'securite' })], GELEES)).toEqual([]);
+    expect(horsDuGel([tache('TACHE-ARGENT', { sensible: ['argent'] })], GELEES)).toEqual([]);
+    expect(horsDuGel([tache('TACHE-JURIDIQUE', { zone: 'juridique' })], GELEES)).toEqual([]);
+    expect(horsDuGel([tache('TACHE-SECURITE', { zone: 'securite' })], GELEES)).toEqual([]);
   });
 
   it('REQ-GOV-027 — une tâche gelée, une tâche de phase 2 ou une tâche livrée ne sont pas jugées', () => {
-    expect(horsDuGel([tache('UX-P1-01')], GELEES)).toEqual([]);
-    expect(horsDuGel([tache('UX-P2-99', { phase: 2 })], GELEES)).toEqual([]);
-    expect(horsDuGel([tache('UX-P1-98', { statut: 'fusionnee' })], GELEES)).toEqual([]);
+    expect(horsDuGel([tache('TACHE-GELEE')], GELEES)).toEqual([]);
+    expect(horsDuGel([tache('TACHE-PHASE-DEUX', { phase: 2 })], GELEES)).toEqual([]);
+    expect(horsDuGel([tache('TACHE-LIVREE', { statut: 'fusionnee' })], GELEES)).toEqual([]);
   });
 
   it('REQ-GOV-027 — la liste du gel est lue au dépôt, et chaque tâche de phase 1 du registre y figure ou est hors du gel', () => {

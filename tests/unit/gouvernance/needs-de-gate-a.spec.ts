@@ -1,7 +1,7 @@
 // @req REQ-GOV-014
 /**
  * needs-de-gate-a.spec.ts — GOV-151 : `gov:depot-visibilite` lit les `needs:` du check requis.
- * Depuis GOV-142 (#579), `gate-a` est le seul check requis et son étape exige `success` de chaque
+ * Depuis la PR #579, `gate-a` est le seul check requis et son étape exige `success` de chaque
  * job de ses `needs:` : ces jobs sont couverts. Un job HORS de ses `needs:`, et non requis, reste
  * un rouge `check_requis_absent`.
  */
