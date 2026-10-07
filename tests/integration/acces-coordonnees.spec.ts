@@ -16,7 +16,8 @@ import {
   provisionnerRoleDExecution,
 } from '../../src/server/deploiement/role-d-execution';
 import { NOMS_DES_SECRETS } from '../../src/lib/env';
-import { clesPii } from '../../src/server/securite/pii';
+import { clesPii, colonnesPii } from '../../src/server/securite/pii';
+import { MODELE_UTILISATEUR_CONSOLE } from '../../prisma/seed/06-console';
 import { lireLesCoordonneesDuContactDeLaConsole } from '../../src/server/securite/acces-coordonnees';
 import { MS_PAR_JOUR } from '../../src/domain/temps/calendrier-civil';
 import { SEUILS } from '../../src/domain/seuils/ssot';
@@ -71,9 +72,23 @@ beforeAll(async () => {
       },
     })
   ).id;
+  // `utilisateurs_console_adresse_si_actif` : un utilisateur actif porte son adresse chiffrée et son empreinte.
+  const id = randomUUID();
+  const { emailChiffre, emailHash } = colonnesPii(
+    { modele: MODELE_UTILISATEUR_CONSOLE, id },
+    { email: `console-${id}@exemple.invalid`, nom: null },
+    CLES
+  );
+  if (!emailChiffre || !emailHash) throw new Error('colonnes de courriel absentes');
   consoleId = (
     await base.prisma.utilisateurConsole.create({
-      data: { role: 'qualifieur', creeAt: new Date('2026-01-01T00:00:00.000Z') },
+      data: {
+        id,
+        role: 'qualifieur',
+        creeAt: new Date('2026-01-01T00:00:00.000Z'),
+        emailChiffre: Buffer.from(emailChiffre),
+        emailHash,
+      },
     })
   ).id;
 }, 180_000);
