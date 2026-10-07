@@ -25,6 +25,7 @@
 | Dépôt par lien privé | `depot-lien-prive.html` | UX-P1-03 | 2026-10-03 | Will |
 | Notifications | `notifications.html` | UX-P1-08 · UX-P1-54 | 2026-10-03 | Will |
 | Ma contestation (relire son écrit et la réponse de la Société) | `contestation.html` | UX-P1-51 | 2026-10-07 | Will |
+| Écrire à Axion-IA (l'écrit de l'apporteur, daté à sa réception) | `aide.html` | UX-P1-62 | — | — |
 
 ### Séance de validation W20 (confirmation par e-mail)
 

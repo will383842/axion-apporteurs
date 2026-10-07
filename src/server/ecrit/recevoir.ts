@@ -15,7 +15,9 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { ECRIT_CARACTERES_MAX } from '../../domain/seuils/ssot';
-import { encryptPii, nettoyerUnTexteSaisi, type ClesPii } from '../securite/pii';
+import { versParis } from '../../domain/temps/paris';
+import { dateEnClair } from '../attribution/notifications';
+import { colonnesPii, nettoyerUnTexteSaisi, type ClesPii } from '../securite/pii';
 import type { AccesApporteur } from '../acces/for-apporteur';
 
 /** Le modèle de l'AAD du texte d'un écrit. */
@@ -29,6 +31,18 @@ export class ErreurEcrit extends Error {
     super(`écrit : ${motif}`);
     this.name = 'ErreurEcrit';
   }
+}
+
+/**
+ * `{heure}` de la confirmation (juriste, 6038148824) : l'heure de la réception POSÉE PAR LA BASE, à
+ * l'heure légale de Paris, à la minute — « 14 h 32 ». `{date}` est le formateur commun (`dateEnClair`).
+ */
+/** `{date}` de la confirmation : le formateur commun, au jour civil de Paris. */
+export const dateDeLaReception = dateEnClair;
+
+export function heureDeLaReception(recuAt: Date): string {
+  const p = versParis(recuAt.getTime());
+  return `${p.heure} h ${String(p.minute).padStart(2, '0')}`;
 }
 
 /** Le texte saisi, jugé AVANT toute écriture : un refus n'écrit rien. */
@@ -69,12 +83,15 @@ export async function recevoirUnEcrit(
   if (existant !== undefined) return { ecritId: existant.id, recuAt: existant.recuAt };
   const id = randomUUID();
   try {
+    // Le bloc chiffré vient de la primitive des colonnes de personne : l'id et `texteChiffre`, sous
+    // l'AAD de SON écrit, jamais un clair (`securite:schema-pii`). Prisma 5 accepte un Uint8Array là
+    // où il type Buffer (même forme que `confirmation/demandes.ts`).
     const ecrit = await acces.ecritApporteur.creer({
-      id,
+      ...(colonnesPii({ modele: MODELE_DE_L_ECRIT, id }, { texte }, cles) as unknown as {
+        id: string;
+        texteChiffre: Buffer;
+      }),
       cleIdempotence,
-      texteChiffre: Buffer.from(
-        encryptPii({ modele: MODELE_DE_L_ECRIT, champ: 'texteChiffre', id }, texte, cles)
-      ),
     });
     return { ecritId: ecrit.id, recuAt: ecrit.recuAt };
   } catch (e) {

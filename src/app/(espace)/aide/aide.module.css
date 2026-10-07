@@ -1,0 +1,80 @@
+/*
+ * « Écrire à Axion-IA » (UX-P1-62) : mobile d'abord, une colonne, des cartes lisibles. Une FEUILLE servie
+ * par la même origine, et non des styles en ligne : `style-src 'self'` l'admet sans nonce, là où un
+ * attribut `style` serait refusé par la politique de contenu (garde `csp:inline`).
+ */
+.page {
+  font-size: 1.125rem;
+  line-height: 1.5;
+  max-width: 40rem;
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.carte {
+  display: block;
+  padding: 0.75rem 1rem;
+  border: 1px solid currentColor;
+  border-radius: 0.5rem;
+  color: inherit;
+}
+
+/* L'attente de la réponse : une information, pas une alerte. */
+.encart {
+  padding: 0.75rem 1rem;
+  border-left: 0.375rem solid currentColor;
+  border-radius: 0.5rem;
+}
+
+.fort {
+  font-weight: 600;
+}
+
+.doux {
+  opacity: 0.85;
+}
+
+.texte {
+  white-space: pre-line;
+}
+
+/* Une cible de 48 px au moins (3 rem). */
+.bouton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 3rem;
+  min-width: 3rem;
+  font-size: 1.125rem;
+}
+
+/* La hauteur réservée du chargement : la page ne saute pas quand le formulaire arrive. */
+.squelette {
+  height: 4.5rem;
+  border-radius: 0.5rem;
+  background: currentColor;
+  opacity: 0.08;
+}
+
+.pile {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.champ {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.champ textarea {
+  font: inherit;
+  min-height: 12rem;
+  padding: 0.5rem;
+}
+
+/* Un refus de l'envoi : annoncé, en gras, sans couleur écrite ici. */
+.alerte {
+  font-weight: 600;
+  border-left: 0.375rem solid currentColor;
+  padding-left: 0.75rem;
+}

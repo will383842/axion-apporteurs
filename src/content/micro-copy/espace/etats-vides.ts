@@ -14,6 +14,7 @@
 import { TERMES_CANONIQUES } from '../../../domain/lexique/lexique-interdit';
 import type { EtatVide } from '../types';
 import { ACTIONS_COMMUNES, CONTESTATION } from './vocabulaire';
+import { ECRIRE_A_AXION_IA } from './aide';
 
 const RETOUR_ACCUEIL = ACTIONS_COMMUNES.retourAccueil;
 
@@ -92,11 +93,12 @@ export const ETATS_VIDES_ESPACE: Readonly<Record<string, EtatVide>> = {
     phrase: 'Des documents mis à votre disposition, à consulter librement, apparaîtront ici.',
     action: RETOUR_ACCUEIL,
   },
+  // UX-P1-62 : le premier écrit. L'ancien texte promettait un délai chiffré ; la juriste le REMPLACE
+  // (#319, 6038148824) : aucun délai n'est promis, la consigne de l'écran tient lieu d'état vide.
   '/aide': {
-    titre: 'Aucune conversation',
-    phrase:
-      'Vous pouvez écrire à Axion-IA quand vous le souhaitez. Axion-IA vous répond sous {delaiDeReponse}.',
-    action: { ...ACTIONS_COMMUNES.ecrireAAxionIA, route: null },
+    titre: ECRIRE_A_AXION_IA.titre,
+    phrase: ECRIRE_A_AXION_IA.consigne,
+    action: { libelle: ECRIRE_A_AXION_IA.bouton, route: null },
   },
   '/connexion': {
     titre: 'Se connecter',
