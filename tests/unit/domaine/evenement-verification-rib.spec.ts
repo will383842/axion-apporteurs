@@ -49,13 +49,13 @@ function fauxClient(o: { compte?: number }) {
 }
 
 describe('REQ-UX-027 — SEC-69 : la charge du premier regard', () => {
-  it('passe avec l’acteur de la console, et rien d’autre', () => {
+  it('REQ-UX-027 : la charge passe avec l’acteur de la console, et rien d’autre', () => {
     expect(charge.safeParse({ type: 'rib', acteur: CONSOLE }).success).toBe(true);
     expect(charge.safeParse({ type: 'rib', acteur: CONSOLE, iban: 'x' }).success).toBe(false);
     expect(charge.safeParse({ type: 'rib', acteur: CONSOLE, empreinte: 'x' }).success).toBe(false);
   });
 
-  it('refuse le système, l’apporteur, un autre type de pièce et l’absence d’acteur', () => {
+  it('REQ-UX-027 : la charge refuse le système, l’apporteur, un autre type de pièce et l’absence d’acteur', () => {
     expect(charge.safeParse({ type: 'rib', acteur: { par: 'systeme' } }).success).toBe(false);
     expect(
       charge.safeParse({ type: 'rib', acteur: { par: 'apporteur', id: ADMIN.id } }).success
@@ -66,7 +66,7 @@ describe('REQ-UX-027 — SEC-69 : la charge du premier regard', () => {
 });
 
 describe('REQ-UX-027 — SEC-69 : le premier regard écrit son événement chaîné', () => {
-  it('TÉMOIN — la vérification écrit `piece_kyc_rib_verifie` sur la pièce, APRÈS la ligne, sans IBAN', async () => {
+  it('REQ-UX-027 : TÉMOIN — la vérification écrit `piece_kyc_rib_verifie` sur la pièce, APRÈS la ligne, sans IBAN', async () => {
     const f = fauxClient({});
     const evenements: unknown[] = [];
     await verifierUnRib(f.client, {
@@ -91,7 +91,7 @@ describe('REQ-UX-027 — SEC-69 : le premier regard écrit son événement chaî
     expect(JSON.stringify(evenements)).not.toMatch(/iban|bic|hash|empreinte/i);
   });
 
-  it('une écriture qui ne touche rien (concurrence) n’écrit AUCUN événement', async () => {
+  it('REQ-UX-027 : une écriture qui ne touche rien (concurrence) n’écrit AUCUN événement', async () => {
     const f = fauxClient({ compte: 0 });
     const evenements: unknown[] = [];
     await expect(
