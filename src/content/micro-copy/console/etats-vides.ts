@@ -14,6 +14,7 @@
  */
 import type { EtatVide } from '../types';
 import { MISE_EN_DEMEURE_CONSOLE } from './mise-en-demeure';
+import { ANNULATION_APRES_CONFIRMATION_CONSOLE } from './annulation-apres-confirmation';
 
 export const ETATS_VIDES_CONSOLE: Readonly<Record<string, EtatVide>> = {
   'file-qualification': {
@@ -94,5 +95,11 @@ export const ETATS_VIDES_CONSOLE: Readonly<Record<string, EtatVide>> = {
     titre: MISE_EN_DEMEURE_CONSOLE.horsContrat.titre,
     phrase: MISE_EN_DEMEURE_CONSOLE.horsContrat.phrase,
     action: { libelle: MISE_EN_DEMEURE_CONSOLE.horsContrat.action, route: null },
+  },
+  // UX-P1-63 : l'attribution introuvable ; textes de l'écran (juriste), le geste suivant est la fiche.
+  'annulation-apres-confirmation': {
+    titre: ANNULATION_APRES_CONFIRMATION_CONSOLE.refus.attribution_introuvable,
+    phrase: ANNULATION_APRES_CONFIRMATION_CONSOLE.phrase,
+    action: { libelle: ANNULATION_APRES_CONFIRMATION_CONSOLE.revenir, route: null },
   },
 };

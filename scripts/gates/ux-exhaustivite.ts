@@ -152,6 +152,9 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
   // est celui de SEC-19, dans `courriels/notifications.ts`, parcouru avec l'espace.
   'console/mise-en-demeure.ts':
     'geste de mise en demeure, lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
+  // UX-P1-63 : l'annulation d'une attribution confirmée, lue par les administrateurs de la console seuls.
+  'console/annulation-apres-confirmation.ts':
+    'annulation d’une attribution confirmée, lue par les administrateurs de la console seuls (portée dépôt, REQ-GOV-017)',
 };
 
 /**
