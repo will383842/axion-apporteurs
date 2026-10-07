@@ -539,6 +539,14 @@ export const CHAMPS_TUS = {
   // SEC-47 : les secrets, le jugement de la candidature (seuil, score, parts, réponses, barème),
   // les traces d'acquisition et de parrainage, le marqueur de test, la version de session.
   apporteur: [
+    // SEC-15 : le gel est une mesure de la console. L'apporteur voit son statut `suspendu`, et les
+    // faits et la date de levée lui arrivent par la notification ; la nature du gel, l'anomalie,
+    // l'auteur et la décision citée restent tus (échec fermé).
+    'etatGel',
+    'depotsGelesDepuis',
+    'gelAnomalieId',
+    'gelPoseParId',
+    'gelDecisionContratId',
     'isTest',
     'seuilVerificationPrioritaire',
     'seuilVerificationPrioritaireAt',

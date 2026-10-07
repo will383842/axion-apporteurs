@@ -22,7 +22,7 @@ import { domaines } from '../../config/entite';
 import { horlogeSysteme } from '../../lib/horloge';
 import { lireLesFaitsPourLaNotification } from '../anomalie/justification';
 import { rendreDepuisLaBase } from '../attribution/notifications';
-import { rendreUneDecisionDeContrat } from '../apporteur/resiliation';
+import { GESTE_DE_LA_CLE_DU_CONTRAT, rendreUneDecisionDeContrat } from '../apporteur/resiliation';
 import { MODELE_APPORTEUR } from '../auth/lien-magique-depot';
 import { lireLaChargeDUnFait } from '../evenement/journal';
 import { configurationDeLEmetteur } from '../integrations/zeptomail/emetteur';
@@ -154,12 +154,14 @@ export const CLES_ENVOYEES_PAR_LE_PASSAGE = [
   // courriel fait courir un délai (la mise en demeure, le préavis), compté de `envoye_at`.
   'mise_en_demeure',
   'resiliation',
+  // SEC-15 : la suspension, rendue depuis sa décision ; ses quinze jours courent de la pose.
+  'suspension_declarations',
   // DM-25 : l'annulation pour antériorité de la Société, écrite avec son événement par la transition.
   'attribution_annulee_anteriorite',
 ] as const;
 
 /** Les clés du contrat : leur texte se rend depuis la décision liée, jamais depuis une attribution. */
-const CLES_DU_CONTRAT: readonly string[] = ['mise_en_demeure', 'resiliation'];
+const CLES_DU_CONTRAT: readonly string[] = Object.keys(GESTE_DE_LA_CLE_DU_CONTRAT);
 
 /** Ce que le passage ne sait pas faire seul : l'heure, le rendu du texte, l'envoi par l'émetteur. */
 export type GestesExternes = {
