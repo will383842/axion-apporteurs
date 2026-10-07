@@ -8,6 +8,8 @@ import {
   DELAI_PAR_TENTATIVE_MS,
   TENTATIVES,
   installerBorne,
+  PAUSES_MS,
+  ATTENTE_VERROU_MS,
 } from '../../../scripts/ci/navigateurs-bornes';
 
 const suite = (...issues: boolean[]) => {
@@ -34,5 +36,40 @@ describe('REQ-QA-016 — les navigateurs installés en trois tentatives bornées
     expect(r.code).toBe(1);
     expect(s.appels).toHaveLength(3);
     expect(r.lignes.at(-1)).toContain('3 tentatives échouées');
+  });
+});
+
+describe('REQ-QA-016 — QA-T74 : le verrou d’apt du runner ne brûle plus les trois tentatives', () => {
+  it('REQ-QA-016 — une PAUSE sépare deux tentatives échouées, aucune après la dernière ; le verrou est attendu avant chacune', () => {
+    const s = suite(false, false, false);
+    const pauses: number[] = [];
+    let verrous = 0;
+    const r = installerBorne(s.tenter, TENTATIVES, DELAI_PAR_TENTATIVE_MS, {
+      attendre: (ms) => pauses.push(ms),
+      attendreLeVerrou: () => (verrous++, true),
+    });
+    expect(r.code).toBe(1);
+    expect(pauses).toEqual([...PAUSES_MS]);
+    expect(verrous).toBe(3);
+  });
+
+  it('REQ-QA-016 — le pire cas tient sous les quinze minutes de l’étape', () => {
+    // Un verrou tenu fait échouer vite la tentative qui suit son attente ; une tentative qui télécharge
+    // n'attend aucun verrou. Le pire cas est donc, par tentative, le plus long des deux.
+    const pire =
+      TENTATIVES * Math.max(DELAI_PAR_TENTATIVE_MS, ATTENTE_VERROU_MS) +
+      PAUSES_MS.reduce((a, b) => a + b, 0);
+    expect(pire).toBeLessThanOrEqual(15 * 60_000);
+  });
+
+  it('REQ-QA-016 — un verrou encore tenu ne saute pas la tentative : il est NOMMÉ, et l’échec reste fermé', () => {
+    const s = suite(false, false, false);
+    const r = installerBorne(s.tenter, TENTATIVES, DELAI_PAR_TENTATIVE_MS, {
+      attendre: () => undefined,
+      attendreLeVerrou: () => false,
+    });
+    expect(s.appels).toHaveLength(3);
+    expect(r.code).toBe(1);
+    expect(r.lignes.join('\n')).toContain('verrou d');
   });
 });
