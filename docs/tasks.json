@@ -5439,7 +5439,12 @@
         "src/lib/env.ts",
         "docs/env.md",
         "tests/unit/securite/signaux-de-sincerite.spec.ts",
-        "tests/integration/anomalie-sincerite.spec.ts"
+        "tests/integration/anomalie-sincerite.spec.ts",
+        "src/server/taches/inscriptions.ts",
+        "src/server/taches/registre.ts",
+        "tests/unit/integration/inscriptions-des-taches.spec.ts",
+        "tests/unit/qualite/env-fail-fast.spec.ts",
+        ".env.example"
       ],
       "schema": false,
       "sensible": [

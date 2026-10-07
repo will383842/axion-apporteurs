@@ -83,6 +83,7 @@ import {
   ouvrirLesAnomaliesDAutoParrainage,
   precedentDuBattement,
 } from './ouvrir-anomalies-auto-parrainage';
+import { lireReglageDeSincerite, ouvrirLesAnomaliesDeSincerite } from '../anomalie/sincerite';
 import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
 import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
 import { clientDuTiers } from '../integrations/recherche-entreprises/tiers';
@@ -257,6 +258,14 @@ export function inscriptions(
       ouvrirLesAnomaliesDAutoParrainage(prisma, {
         maintenant: () => new Date(horlogeSysteme.maintenant()),
         precedent: precedentDuBattement(prisma),
+      }),
+    // SEC-14 (REQ-SEC-017) : les détecteurs de sincérité, en traitement DISTINCT et DIFFÉRÉ du dépôt.
+    // Le réglage vit hors du dépôt ; absent, rien n'est jugé.
+    sincerite_ouvrir: () =>
+      ouvrirLesAnomaliesDeSincerite(prisma, {
+        maintenant: new Date(horlogeSysteme.maintenant()),
+        reglage: lireReglageDeSincerite(process.env.PARTNERS_SINCERITE_REGLAGE),
+        cles: clesPii(process.env),
       }),
     // DM-62 (REQ-DM-033, REQ-DM-043) : les anomalies, les contestations et le démenti d'un contact,
     // chacun à son échéance, à l'heure du système. Le passage des anomalies ne rend qu'un NOMBRE de
