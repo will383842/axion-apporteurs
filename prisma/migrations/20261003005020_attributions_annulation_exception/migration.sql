@@ -1,6 +1,7 @@
 -- DM-71 (contrat v2, art. 3.3) — après la confirmation, une attribution ne s'annule plus pour antériorité :
 -- seul un geste HUMAIN, pour erreur d'identification ou pour fraude, l'annule, et il le DIT en base.
--- Retour arrière (commentaire) : DROP TRIGGER attributions_annulation_apres_confirmation ; DROP FUNCTION
+-- Retour arrière (commentaire) : DROP TRIGGER attributions_annulation_naissance ON attributions ; DROP FUNCTION
+-- attributions_annulation_naissance() ; DROP TRIGGER attributions_annulation_apres_confirmation ; DROP FUNCTION
 -- attributions_annulation_apres_confirmation() ; DROP CONSTRAINT ×3 ; DROP COLUMN ×2 ; DROP TYPE "exception_annulation".
 -- Complément d'A02 (#806, 6039777605) : la troisième valeur, posée au rétablissement d'un apporteur
 -- (UX-P1-61), entre dans le CREATE TYPE : la migration n'est pas encore fusionnée.
@@ -41,3 +42,20 @@ $$;
 CREATE TRIGGER attributions_annulation_apres_confirmation
   BEFORE UPDATE OF "statut", "annulation_exception", "annulation_par_id" ON "attributions"
   FOR EACH ROW EXECUTE FUNCTION attributions_annulation_apres_confirmation();
+
+-- La naissance (sécurité, #815 ; forme d'A02, #806) : la garde de l'UPDATE ne voit pas l'INSERT. Une
+-- attribution ne naît jamais avec une exception, ni confirmée et annulée ; une reprise passe par les
+-- transitions, donc par la garde ci-dessus.
+CREATE FUNCTION attributions_annulation_naissance() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW."annulation_exception" IS NOT NULL OR NEW."annulation_par_id" IS NOT NULL THEN
+    RAISE EXCEPTION 'attributions_annulation_naissance : l''exception se pose avec l''annulation, jamais à la naissance';
+  END IF;
+  IF NEW."statut" = 'annulee' AND NEW."confirmee_at" IS NOT NULL THEN
+    RAISE EXCEPTION 'attributions_annulation_naissance : une attribution confirmée ne naît pas annulée (contrat art. 3.3)';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER attributions_annulation_naissance BEFORE INSERT ON "attributions"
+  FOR EACH ROW EXECUTE FUNCTION attributions_annulation_naissance();

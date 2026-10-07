@@ -73,7 +73,11 @@ afterAll(async () => {
 });
 
 /** Une attribution d'apporteur, `statut` donné, CONFIRMÉE (`confirmee_at`) ou non. */
-async function uneAttribution(statut: string, confirmee: boolean): Promise<string> {
+async function uneAttribution(
+  statut: string,
+  confirmee: boolean,
+  exception: { exception: string; parId: string } | null = null
+): Promise<string> {
   const id = randomUUID();
   const bloc = () => randomBytes(40);
   await base.prisma.$executeRawUnsafe(
@@ -81,9 +85,10 @@ async function uneAttribution(statut: string, confirmee: boolean): Promise<strin
        date_contact, verification_prioritaire, entreprise_a_verifier,
        nom_contact_chiffre, prenom_contact_chiffre, email_chiffre, email_hash, telephone_chiffre,
        phone_hash, fonction_contact_chiffre, contexte_chiffre, lien_interet_declare, confirmee_at,
-       fenetre_fin_at)
+       fenetre_fin_at, annulation_exception, annulation_par_id)
      VALUES ($1::uuid, $2::uuid, $3::etat_attribution, $4, 'espace', $5::uuid, '2026-10-01',
-       false, false, $6, $7, $8, $9, $10, $11, $12, $13, false, $14, $15)`,
+       false, false, $6, $7, $8, $9, $10, $11, $12, $13, false, $14, $15,
+       $16::exception_annulation, $17::uuid)`,
     id,
     apporteurId,
     statut,
@@ -98,7 +103,9 @@ async function uneAttribution(statut: string, confirmee: boolean): Promise<strin
     bloc(),
     bloc(),
     confirmee ? MAINTENANT : null,
-    confirmee ? new Date('2027-04-08T09:00:00.000Z') : null
+    confirmee ? new Date('2027-04-08T09:00:00.000Z') : null,
+    exception?.exception ?? null,
+    exception?.parId ?? null
   );
   return id;
 }
@@ -179,5 +186,26 @@ describe('REQ-JUR-007 — après la confirmation, seule une exception humaine an
         )
       )
     ).toContain('ne se réécrit pas');
+  });
+});
+
+describe('REQ-JUR-007 — la NAISSANCE ne contourne pas la garde (sécurité, #815 ; forme d’A02, #806)', () => {
+  it('REQ-JUR-007 : TÉMOIN — une naissance AVEC une exception est refusée', async () => {
+    expect(
+      await refus(uneAttribution('annulee', false, { exception: 'fraude', parId: adminId }))
+    ).toContain('attributions_annulation_naissance');
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — une attribution CONFIRMÉE ne naît pas annulée', async () => {
+    expect(await refus(uneAttribution('annulee', true))).toContain(
+      'attributions_annulation_naissance'
+    );
+  });
+
+  it('REQ-JUR-007 : TÉMOIN (face admise) — une naissance provisoire, sans exception, passe', async () => {
+    const id = await uneAttribution('provisoire', false);
+    expect((await base.prisma.attribution.findUniqueOrThrow({ where: { id } })).statut).toBe(
+      'provisoire'
+    );
   });
 });
