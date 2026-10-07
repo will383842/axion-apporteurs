@@ -588,7 +588,7 @@ enum SourceEvenementRecu {
 /// Les quatre derniers sont entrés en `schema_version` 2, par ajout en fin d'enum (migration
 /// `20260927000300_types_evenement_recu_v2`), le douzième en `schema_version` 3 (migration
 /// `20261003000900_type_evenement_recu_devis_emis`), le treizième en `schema_version` 4 (migration
-/// `20261003004800_type_evenement_recu_financement_etape`) ; INT-T12 y ajoutera les types DocuSeal.
+/// `20261003004990_type_evenement_recu_financement_etape`) ; INT-T12 y ajoutera les types DocuSeal.
 enum TypeEvenementRecu {
   client_cree
   client_mis_a_jour
