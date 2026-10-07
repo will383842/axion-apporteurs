@@ -38,14 +38,15 @@ CREATE INDEX "apporteurs_gel_pose_idx" ON "apporteurs" ("depots_geles_depuis") W
 
 -- SEC-15, voie (a) (A02, #794, 6036131730) : la suspension est une décision de contrat.
 -- La mise en demeure vise un article et n'a pas de dates ; la résiliation n'a pas d'article et a ses deux
--- dates ; la SUSPENSION (art. 3.7 al. 3) n'a ni article ni dates : son instant est celui de sa ligne
+-- dates ; la SUSPENSION (art. 3.7 al. 3) cite l'article 3.7 et n'a pas de dates (amendement d'A02, 6036174464,
+-- d'après la juriste, 6036161128) : son instant est celui de sa ligne
 -- (`cree_at`), et sa levée se lit sur l'apporteur et au journal.
 ALTER TABLE "decisions_de_contrat" DROP CONSTRAINT "decisions_de_contrat_forme_du_geste";
 ALTER TABLE "decisions_de_contrat" ADD CONSTRAINT "decisions_de_contrat_forme_du_geste"
   CHECK (CASE "geste"
            WHEN 'mise_en_demeure' THEN "article" IS NOT NULL AND "date_reception" IS NULL AND "date_effet" IS NULL
            WHEN 'resiliation'     THEN "article" IS NULL AND "date_reception" IS NOT NULL AND "date_effet" IS NOT NULL
-           WHEN 'suspension'      THEN "article" IS NULL AND "date_reception" IS NULL AND "date_effet" IS NULL
+           WHEN 'suspension'      THEN "article" = '3.7' AND "date_reception" IS NULL AND "date_effet" IS NULL
          END) NOT VALID;
 
 -- La suspension NAÎT avec ses faits (« notifiée avec les faits qui la motivent ») ; seule la purge les retire.
