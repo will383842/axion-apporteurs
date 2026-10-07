@@ -960,6 +960,8 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       courriels/notifications.ts › MOTIFS_DES_DECISIONS › non_confirmee : L'entreprise a indiqué expressément n'avoir eu aucun échange avec vous (contrat, article 3.7) ; vous pouvez demander à Axion-IA l'extrait de sa réponse
       courriels/notifications.ts › MOTIFS_DES_DECISIONS › non_confirmee_par_courriel : L'entreprise a indiqué expressément n'avoir eu aucun échange avec vous (contrat, article 3.7) ; vous pouvez demander à Axion-IA l'extrait de sa réponse
       courriels/notifications.ts › MOTIFS_DES_DECISIONS › annulee_par_la_console : Axion-IA a annulé ce dépôt avant sa confirmation, pour la raison suivante : {raison}
+      courriels/notifications.ts › MOTIFS_DES_DECISIONS › annulee_erreur_identification : Ce dépôt est annulé : l'entreprise a été identifiée par erreur (contrat, article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues
+      courriels/notifications.ts › MOTIFS_DES_DECISIONS › fraude_etablie : À la vérification, ce dépôt ne remplit pas les conditions de l'article 3.7 du contrat et il est annulé (article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues. Faits retenus : {faits}
       courriels/notifications.ts › RAISONS_D_ANNULATION › demande_de_l_apporteur : à votre demande
       courriels/notifications.ts › RAISONS_D_ANNULATION › declaration_en_double : vous aviez déjà déposé cette entreprise, et ce dépôt faisait double emploi avec le premier
       courriels/notifications.ts › RAISONS_D_ANNULATION › entreprise_relevant_de_l_article_3_3_bis : {categorie} (contrat, article 3.3 bis), situation qui existait déjà à la date de votre dépôt

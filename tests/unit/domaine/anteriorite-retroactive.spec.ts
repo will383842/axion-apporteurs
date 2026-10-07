@@ -16,7 +16,6 @@
 import { describe, it, expect } from 'vitest';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
 import { ETATS_ATTRIBUTION, ajouterMoisParis } from '../../../src/domain/attribution/machine';
-import { ETATS_OCCUPANTS } from '../../../src/domain/attribution/etats';
 import {
   CRITERES_D_ANTERIORITE,
   canalDInformation,
@@ -125,25 +124,22 @@ describe('REQ-JUR-007 — RÈGLE IMPÉRATIVE : un fait daté après le dépôt n
   });
 });
 
-describe('REQ-JUR-007 — qui est annulé : tout état occupant, seulement s’il occupe', () => {
+describe('REQ-JUR-007 — qui est annulé : une attribution NON CONFIRMÉE (DM-71, art. 3.3 du v2)', () => {
   const PREUVE: FaitsDatesDeLEntreprise = { facturesAt: [ms(DEPOT, -1)], devis: [] };
 
-  it.each(ETATS_OCCUPANTS)(
-    'REQ-JUR-007 : TÉMOIN — %s, un fait antérieur au dépôt : annulée',
-    (statut) => {
-      expect(doitEtreAnnulee({ statut, deposeeAt: DEPOT }, PREUVE)).toBe('cliente');
-    }
-  );
+  it('REQ-JUR-007 : TÉMOIN — provisoire, un fait antérieur au dépôt : annulée', () => {
+    expect(doitEtreAnnulee({ statut: 'provisoire', deposeeAt: DEPOT }, PREUVE)).toBe('cliente');
+  });
 
-  it.each(ETATS_ATTRIBUTION.filter((e) => !(ETATS_OCCUPANTS as readonly string[]).includes(e)))(
-    'REQ-JUR-007 : une attribution qui n’occupe plus (%s) n’est pas annulée',
+  it.each(ETATS_ATTRIBUTION.filter((e) => e !== 'provisoire'))(
+    'REQ-JUR-007 : TÉMOIN — %s (confirmée, ou qui n’occupe plus) n’est pas annulée pour antériorité',
     (statut) => {
       expect(doitEtreAnnulee({ statut, deposeeAt: DEPOT }, PREUVE)).toBeNull();
     }
   );
 
-  it('REQ-JUR-007 : un état occupant sans fait antérieur : rien', () => {
-    expect(doitEtreAnnulee({ statut: 'active', deposeeAt: DEPOT }, RIEN)).toBeNull();
+  it('REQ-JUR-007 : une provisoire sans fait antérieur : rien', () => {
+    expect(doitEtreAnnulee({ statut: 'provisoire', deposeeAt: DEPOT }, RIEN)).toBeNull();
   });
 });
 

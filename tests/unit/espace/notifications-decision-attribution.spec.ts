@@ -418,6 +418,19 @@ describe('REQ-UX-047 — la liste de l’espace porte la décision, pour l’app
     expect(rendues[0]!.route).toBe(GABARITS.decision_attribution.route);
   });
 
+  it('REQ-JUR-007 : TÉMOIN — DM-71 : une FRAUDE établie va chercher les faits de SON anomalie, comme anomalie_confirmee', async () => {
+    const rendues = await notificationsDeLEspace(clientDeLaListe([ligne()], anomalie()), APP, {
+      cles: CLES,
+      lireUnFait: async () => ({
+        type: 'attribution_etat_modifie',
+        charge: { ...charge('fraude_etablie'), exception: 'fraude' },
+      }),
+    });
+    expect(rendues).toHaveLength(1);
+    expect(rendues[0]!.corps).toContain(`deux dépôts le même jour ${MARQUEUR}`);
+    expect(rendues[0]!.corps).toContain('il est annulé (article 3.3)');
+  });
+
   it('REQ-UX-047 : TÉMOIN — purgée, la décision reste affichée avec le texte fermé ; refusée, elle est écartée', async () => {
     const purgee = await notificationsDeLEspace(
       clientDeLaListe([ligne()], anomalie({ justificationChiffre: null })),
@@ -473,5 +486,52 @@ describe('REQ-UX-047 — la liste de l’espace porte la décision, pour l’app
       }),
     });
     expect(JSON.stringify(sorties)).not.toContain(MARQUEUR);
+  });
+});
+
+describe('REQ-JUR-007 — DM-71 : les deux exceptions de l’art. 3.3 se rendent comme des décisions (juriste, #806)', () => {
+  /** La charge d'une exception humaine porte SA valeur (DM-71). */
+  const chargeDeLException = (transition: 'fraude_etablie' | 'annulee_erreur_identification') => ({
+    ...charge(transition),
+    exception: transition === 'fraude_etablie' ? 'fraude' : 'erreur_identification',
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — la fraude rend SON motif, avec la mention de ce qui reste dû, et ses faits', () => {
+    const t = texteDeLaDecisionDansLEspace(entreprise, chargeDeLException('fraude_etablie'), {
+      faits: 'deux dépôts fabriqués',
+    });
+    expect(t!.corps).toContain(
+      "À la vérification, ce dépôt ne remplit pas les conditions de l'article 3.7 du contrat et il est annulé (article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues." +
+        ' Faits retenus : deux dépôts fabriqués'
+    );
+    expect(t!.corps).toContain(
+      'les commandes signées et les commissions acquises avant cette annulation restent dues'
+    );
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — la fraude aux faits PURGÉS rend le texte fermé de la juriste, comme anomalie_confirmee', () => {
+    const t = texteDeLaDecisionDansLEspace(
+      entreprise,
+      chargeDeLException('fraude_etablie'),
+      'purgee'
+    );
+    expect(t!.corps).toContain(
+      "À la vérification, ce dépôt ne remplit pas les conditions de l'article 3.7 du contrat et il est annulé (article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues." +
+        ' ' +
+        NOTIFICATIONS.faitsNonConserves
+    );
+    expect(t!.corps).not.toContain('{faits}');
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — l’erreur d’identification rend son motif SANS faits, mot pour mot (6039942821)', () => {
+    const t = texteDeLaDecisionDansLEspace(
+      entreprise,
+      chargeDeLException('annulee_erreur_identification'),
+      null
+    );
+    expect(t!.corps).toContain(
+      "Ce dépôt est annulé : l'entreprise a été identifiée par erreur (contrat, article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues"
+    );
+    expect(t!.corps).not.toContain('Faits retenus');
   });
 });
