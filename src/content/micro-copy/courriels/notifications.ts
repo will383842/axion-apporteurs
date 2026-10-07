@@ -46,7 +46,7 @@ export const TEXTES_DES_NOTIFICATIONS = {
   /**
    * EXT-T07 (art. 3.4 al. 3) : la prolongation, décidée ou réputée. Le corps est celui de la juriste
    * (#809, 6039901134), mot pour mot : il ne dit ni la condition, ni si la prolongation est réputée.
-   * {date} : le nouveau terme, posé par l'émettrice. Titre et appel PROPOSÉS, à relire par la juriste.
+   * {date} : le nouveau terme, posé par l'émettrice. Titre et appel retenus par la juriste (#809, 6040610030).
    */
   attribution_prolongee: {
     titre: '{entreprise} : votre dépôt est prolongé',
