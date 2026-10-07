@@ -3,13 +3,15 @@
 // @req REQ-DM-033
 /**
  * UX-P1-56 — confirmer une anomalie de sincérité depuis la console, avec ses faits retenus (conditions
- * de la sécurité et de la juriste, relayées par la coordination ; contrat v2, juriste, #474, 6036318718).
- * EN PROCESSUS : le geste sur un faux client (droit relu, anomalie verrouillée, clôture chiffrée en une
- * écriture, événement sans identité ni faits, transition de l'attribution seulement si son état
- * l'admet) ; l'action avec des doubles de Next et du juge des rôles ; l'écran rendu en HTML statique.
- * Aucun gel n'est posé : l'effet relève du gel pour fraude, ailleurs.
+ * de la sécurité et de la juriste, relayées par la coordination ; contrat v2, juriste, #474, 6037559862 ;
+ * arbitrage, #319, 6037567525). EN PROCESSUS : le geste sur un faux client (droit relu, anomalie
+ * verrouillée, clôture chiffrée en une écriture, événement sans identité ni faits, et RIEN d'autre : la
+ * confirmation ne fait que CLORE) ; l'action avec des doubles de Next et du juge des rôles ; l'écran rendu
+ * en HTML statique. Aucun effet n'est écrit ici : l'annulation pour fabrication et la suspension sont des
+ * décisions distinctes, dans leur propre transaction.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { PrismaClient } from '@prisma/client';
@@ -74,7 +76,6 @@ import { MODELE_DE_LA_JUSTIFICATION } from '../../../src/server/anomalie/justifi
 import {
   confirmerUneAnomalie as confirmerDouble,
   ErreurConfirmationAnomalie,
-  transitionAdmise,
   type AnomalieAConfirmer,
   type RefusDeConfirmation,
 } from '../../../src/server/console/anomalies/confirmer';
@@ -269,15 +270,14 @@ describe('REQ-DM-033 — la confirmation : une transaction, la clôture chiffré
     }
   });
 
-  it('REQ-DM-033 : TÉMOIN — une attribution provisoire : UNE transaction, l’anomalie verrouillée, la clôture en UNE écriture, l’événement sans identité ni faits, puis la transition', async () => {
+  it('REQ-DM-033 : TÉMOIN — UNE transaction, l’anomalie verrouillée, la clôture en UNE écriture, l’événement sans identité ni faits, et RIEN d’autre : ni lecture ni transition de l’attribution', async () => {
     const { client, appels } = univers();
-    expect(await confirmer(client)).toEqual({ transition: true });
+    expect(await confirmer(client)).toBeUndefined();
     expect(appels.map((a) => a.quoi)).toEqual([
       '$transaction',
       'utilisateurConsole.findUnique',
       'lire anomalie',
       'anomalie.update',
-      'lire attribution',
     ]);
     const lecture = appels.find((a) => a.quoi === 'lire anomalie')!.args as {
       sql: string;
@@ -309,30 +309,24 @@ describe('REQ-DM-033 — la confirmation : une transaction, la clôture chiffré
       charge: { de: 'ouverte', vers: 'confirmee', acteur: { par: 'utilisateur_console' } },
     });
     expect(JSON.stringify(vi.mocked(ajouterEvenement).mock.calls)).not.toContain('apporteur');
-    expect(vi.mocked(transitionnerUneAttribution).mock.calls[0]![1]).toEqual({
-      attributionId: ATTRIBUTION,
-      transition: 'anomalie_confirmee',
-      acteur: { par: 'utilisateur_console', id: ADMIN.id },
-      maintenant: MAINTENANT,
-      anomalieId: ANOMALIE,
-    });
+    expect(transitionnerUneAttribution).not.toHaveBeenCalled();
   });
 
-  it.each(['signee', 'convertie', 'figee_resiliation'])(
-    'REQ-DM-033 : TÉMOIN — une attribution %s : la confirmation est ADMISE, sans transition ni notification (contrat v2, juriste 6036318718)',
+  it.each(['provisoire', 'active', 'signee', 'convertie', 'figee_resiliation'])(
+    'REQ-DM-033 : TÉMOIN — une attribution %s : la confirmation clôt, sans transition ni notification (juriste 6037559862)',
     async (etat) => {
       const { client, appels } = univers({ etatAttribution: etat });
-      expect(await confirmer(client)).toEqual({ transition: false });
+      expect(await confirmer(client)).toBeUndefined();
       expect(appels.map((a) => a.quoi)).toContain('anomalie.update');
+      expect(appels.map((a) => a.quoi)).not.toContain('lire attribution');
       expect(transitionnerUneAttribution).not.toHaveBeenCalled();
     }
   );
 
-  it('REQ-DM-033 : les états de la machine : la transition est admise depuis provisoire, active, rdv_pris et proposition seulement', () => {
-    for (const e of ['provisoire', 'active', 'rdv_pris', 'proposition'] as const)
-      expect(transitionAdmise(e)).toBe(true);
-    for (const e of ['signee', 'convertie', 'figee_resiliation'] as const)
-      expect(transitionAdmise(e)).toBe(false);
+  it('REQ-DM-033 : TÉMOIN statique — le module de la confirmation ne transitionne, ne lit ni n’écrit aucune attribution (l’effet n’est jamais écrit avec la clôture)', () => {
+    const source = readFileSync('src/server/console/anomalies/confirmer.ts', 'utf8');
+    const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    expect(code).not.toMatch(/transitionnerUneAttribution|FROM attributions|notificationEspace/);
   });
 
   it('REQ-DM-033 : TÉMOIN — une seconde confirmation est refusée (deja_traitee), un autre type aussi (type_non_traite), une inconnue aussi : rien n’est écrit', async () => {
@@ -353,7 +347,7 @@ describe('REQ-DM-033 — la confirmation : une transaction, la clôture chiffré
     const { client, appels } = univers({
       anomalie: { statut: 'ouverte', type: 'sincerite', attribution_id: null },
     });
-    expect(await confirmer(client)).toEqual({ transition: false });
+    expect(await confirmer(client)).toBeUndefined();
     expect(appels.map((a) => a.quoi)).not.toContain('lire attribution');
   });
 
@@ -388,13 +382,11 @@ describe('REQ-SEC-023 — l’action de l’écran : le droit d’abord, les ref
   const refuse = (motif: MotifDeRefusConsole) =>
     vi.mocked(requireRole).mockResolvedValue({ ok: false, motif });
 
-  it('REQ-SEC-023 : TÉMOIN — le droit est posé AVANT tout travail ; le retour dit si l’attribution a bougé', async () => {
+  it('REQ-SEC-023 : TÉMOIN — le droit est posé AVANT tout travail ; le retour dit que l’anomalie est close', async () => {
     accorde();
-    vi.mocked(confirmerDouble).mockResolvedValue({ transition: true });
-    expect(await destination(formulaire())).toBe(`${ECRAN}?fait=transition`);
+    vi.mocked(confirmerDouble).mockResolvedValue(undefined);
+    expect(await destination(formulaire())).toBe(`${ECRAN}?fait=confirmee`);
     expect(vi.mocked(requireRole).mock.calls[0]![0]).toBe('action:confirmer_anomalie');
-    vi.mocked(confirmerDouble).mockResolvedValue({ transition: false });
-    expect(await destination(formulaire())).toBe(`${ECRAN}?fait=intacte`);
   });
 
   it('REQ-SEC-023 : TÉMOIN — une session trop ancienne revient à la connexion ; tout autre refus de rôle, à l’accès refusé ; rien n’est confirmé', async () => {
@@ -438,17 +430,16 @@ describe('REQ-UX-047 — les écrans « Anomalies » : la liste sans score, la c
     id: ANOMALIE,
     ouverteAt: MAINTENANT,
     entreprise: 'Garage de la Démo',
-    attributionIntacte: false,
   };
   const confirmerRendu = (
     lecture: AnomalieAConfirmer,
-    o: { refus?: RefusDeConfirmation | null; fait?: 'transition' | 'intacte' | null } = {}
+    o: { refus?: RefusDeConfirmation | null; fait?: boolean } = {}
   ) =>
     renderToStaticMarkup(
       createElement(ConfirmerLAnomalie, {
         lecture,
         refus: o.refus ?? null,
-        fait: o.fait ?? null,
+        fait: o.fait ?? false,
         cleIdempotence: CLE,
         date,
         action: async () => {},
@@ -468,18 +459,14 @@ describe('REQ-UX-047 — les écrans « Anomalies » : la liste sans score, la c
     expect(vide).toContain(T.vide.titre);
   });
 
-  it('REQ-UX-047 : TÉMOIN — le formulaire : les faits, la consigne avec la borne LUE dans la SSOT, la clé tirée au rendu, et l’effet selon l’attribution', () => {
+  it('REQ-UX-047 : TÉMOIN — le formulaire : les faits, la consigne avec la borne LUE dans la SSOT, la clé tirée au rendu, et le texte de la juriste : la clôture seule', () => {
     const html = confirmerRendu({ etat: 'a_confirmer', anomalie: A });
     expect(html).toContain('name="faits"');
     expect(html).toContain(`name="cleIdempotence" value="${CLE}"`);
     expect(texteDe(html)).toContain(T.confirmer.borne(MAX));
-    expect(texteDe(html)).toContain(T.confirmer.effet.transition);
+    expect(texteDe(html)).toContain(T.confirmer.effet);
     expect(texteDe(html)).toContain(T.confirmer.sansGel);
-    const intacte = confirmerRendu({
-      etat: 'a_confirmer',
-      anomalie: { ...A, attributionIntacte: true },
-    });
-    expect(texteDe(intacte)).toContain(T.confirmer.effet.intacte);
+    expect(texteDe(html)).not.toMatch(/invalidée|intacte/);
   });
 
   it('REQ-UX-047 : TÉMOIN — chaque refus nommé s’affiche en alerte ; le retour du geste prime sur l’état relu', () => {
@@ -488,11 +475,8 @@ describe('REQ-UX-047 — les écrans « Anomalies » : la liste sans score, la c
       expect(html).toContain('role="alert"');
       expect(texteDe(html)).toContain(T.refus[r]);
     }
-    expect(texteDe(confirmerRendu({ etat: 'deja_traitee' }, { fait: 'transition' }))).toContain(
-      T.confirmee.transition
-    );
-    expect(texteDe(confirmerRendu({ etat: 'deja_traitee' }, { fait: 'intacte' }))).toContain(
-      T.confirmee.intacte
+    expect(texteDe(confirmerRendu({ etat: 'deja_traitee' }, { fait: true }))).toContain(
+      T.confirmee
     );
   });
 

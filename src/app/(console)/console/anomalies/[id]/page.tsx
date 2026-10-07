@@ -43,8 +43,8 @@ function refusLu(valeur: unknown): RefusDeConfirmation | null {
     : null;
 }
 /** Le retour du geste, s'il est l'un des deux connus. */
-function faitLu(valeur: unknown): 'transition' | 'intacte' | null {
-  return valeur === 'transition' || valeur === 'intacte' ? valeur : null;
+function faitLu(valeur: unknown): boolean {
+  return valeur === 'confirmee';
 }
 
 /** « 4 octobre 2026 », à Paris. */

@@ -78,8 +78,8 @@ export function ConfirmerLAnomalie({
 }: {
   lecture: AnomalieAConfirmer;
   refus: RefusDeConfirmation | null;
-  /** Le retour du geste : la transition a eu lieu, ou l'attribution est restée intacte. */
-  fait: 'transition' | 'intacte' | null;
+  /** Le retour du geste : l'anomalie est close. */
+  fait: boolean;
   cleIdempotence: string;
   date: (d: Date) => string;
   action: (formData: FormData) => Promise<void>;
@@ -89,12 +89,12 @@ export function ConfirmerLAnomalie({
       <a href={LISTE}>{T.confirmer.retour}</a>
     </p>
   );
-  if (fait !== null)
+  if (fait)
     return (
       <main>
         {retour}
         <h1>{T.confirmer.titre}</h1>
-        <p role="status">{T.confirmee[fait]}</p>
+        <p role="status">{T.confirmee}</p>
       </main>
     );
   if (lecture.etat !== 'a_confirmer') {
@@ -113,18 +113,16 @@ export function ConfirmerLAnomalie({
     );
   }
   const a = lecture.anomalie;
-  const intacte = a.attributionIntacte;
   return (
     <main>
       {retour}
       <h1>{T.confirmer.titre}</h1>
       <p>
         {T.liste.nature} · {a.entreprise ?? T.liste.entrepriseInconnue} ·{' '}
-        {intacte ? T.confirmer.attribution.intacte : T.confirmer.attribution.transition} ·{' '}
         {T.confirmer.ouverteLe(date(a.ouverteAt))}
       </p>
       <p>
-        {intacte ? T.confirmer.effet.intacte : T.confirmer.effet.transition} {T.confirmer.sansGel}
+        {T.confirmer.effet} {T.confirmer.sansGel}
       </p>
       {refus === null ? null : <p role="alert">{T.refus[refus]}</p>}
       <form action={action}>

@@ -16,10 +16,10 @@
  *   — la clôture est UNE écriture (statut, `traite_at`, `traite_par_id` et la justification CHIFFRÉE
  *     ensemble, comme l'exige la garde de la table), sous l'AAD de la ligne et du champ ;
  *   — l'événement `anomalie_statut_modifie` ne porte que `{ de, vers, acteur }`, sans identité ni faits ;
- *   — l'attribution liée : si son état admet `anomalie_confirmee` (contrat v2, juriste, #474,
- *     6036318718), la transition a lieu dans la MÊME transaction et écrit la notification de DM-55 ;
- *     sinon (signée, convertie, figée), AUCUNE transition, aucune notification, rien sur la commande ni
- *     la commission : la confirmation est consignée.
+ *   — la confirmation ne fait que CLORE (juriste, #474, 6037559862 ; arbitrage, #319, 6037567525) :
+ *     elle ne touche ni l'attribution, ni la commande, ni la commission, et n'écrit aucune notification.
+ *     Un effet sur l'apporteur (l'annulation pour fabrication, la suspension) est une décision DISTINCTE,
+ *     dans SA transaction (JUR-T58 ; règle du rattrapage 85 : l'effet n'est jamais écrit avec la clôture).
  * Les faits ne sortent jamais : ni l'adresse, ni le journal, ni l'événement, ni un message d'erreur.
  */
 import type { ConsoleRole, Prisma, PrismaClient } from '@prisma/client';
@@ -28,8 +28,6 @@ import { ajouterEvenement } from '../../evenement/journal';
 import { colonnesPii, nettoyerUnTexteSaisi, type ClesPii } from '../../securite/pii';
 import { jugerLesFaitsSaisis, type RefusDesFaits } from '../../attribution/notifications';
 import { MODELE_DE_LA_JUSTIFICATION } from '../../anomalie/justification';
-import { transitionnerUneAttribution } from '../../attribution/transitionner';
-import { TRANSITIONS_ATTRIBUTION, type EtatAttribution } from '../../../domain/attribution/machine';
 
 const DROIT = 'action:confirmer_anomalie';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -72,14 +70,6 @@ async function exigerUnAdministrateurValide(tx: Tx, acteur: ActeurDeLaConfirmati
     throw new ErreurConfirmationAnomalie('droit_absent');
 }
 
-/** L'état d'une attribution admet-il la transition `anomalie_confirmee` ? La machine le dit, seule. */
-export function transitionAdmise(etat: EtatAttribution): boolean {
-  return TRANSITIONS_ATTRIBUTION[etat].anomalie_confirmee !== undefined;
-}
-
-/** Ce que la confirmation a fait de l'attribution liée : une transition, ou rien. */
-export type IssueDeLaConfirmation = { readonly transition: boolean };
-
 export async function confirmerUneAnomalie(
   prisma: PrismaClient,
   d: {
@@ -90,7 +80,7 @@ export async function confirmerUneAnomalie(
     maintenant: Date;
   },
   cles: ClesPii
-): Promise<IssueDeLaConfirmation> {
+): Promise<void> {
   // À LA SAISIE, par le juge commun des faits (règle de SEC-12, borne de la SSOT) : rien n'est écrit.
   const juges = jugerLesFaitsSaisis(d.faits);
   if (!juges.ok) throw new ErreurConfirmationAnomalie(juges.motif);
@@ -100,10 +90,8 @@ export async function confirmerUneAnomalie(
 
   return prisma.$transaction(async (tx) => {
     await exigerUnAdministrateurValide(tx, d.acteur);
-    const lignes = await tx.$queryRaw<
-      { statut: string; type: string; attribution_id: string | null }[]
-    >`
-      SELECT statut::text AS statut, type::text AS type, attribution_id::text AS attribution_id
+    const lignes = await tx.$queryRaw<{ statut: string; type: string }[]>`
+      SELECT statut::text AS statut, type::text AS type
       FROM anomalies WHERE id = ${d.anomalieId}::uuid FOR UPDATE`;
     const a = lignes[0];
     if (a === undefined) throw new ErreurConfirmationAnomalie('anomalie_inconnue');
@@ -133,20 +121,6 @@ export async function confirmerUneAnomalie(
       survenuAt: d.maintenant,
       charge: { de: 'ouverte', vers: 'confirmee', acteur: { par: 'utilisateur_console' } },
     });
-
-    if (a.attribution_id === null) return { transition: false };
-    const att = await tx.$queryRaw<{ statut: string }[]>`
-      SELECT statut::text AS statut FROM attributions WHERE id = ${a.attribution_id}::uuid FOR UPDATE`;
-    const etat = att[0]?.statut as EtatAttribution | undefined;
-    if (etat === undefined || !transitionAdmise(etat)) return { transition: false };
-    await transitionnerUneAttribution(tx, {
-      attributionId: a.attribution_id,
-      transition: 'anomalie_confirmee',
-      acteur: { par: 'utilisateur_console', id: d.acteur.id },
-      maintenant: d.maintenant,
-      anomalieId: d.anomalieId,
-    });
-    return { transition: true };
   });
 }
 
@@ -161,8 +135,6 @@ export type AnomalieALaConsole = {
   readonly ouverteAt: Date;
   /** La raison sociale, ou le repli « Entreprise n° … » ; `null` sans attribution lisible. */
   readonly entreprise: string | null;
-  /** L'attribution ne bougera pas (signée, convertie, figée) : la confirmation sera consignée seule. */
-  readonly attributionIntacte: boolean;
 };
 
 const entrepriseDe = (
@@ -189,14 +161,13 @@ export async function lireLesAnomaliesOuvertes(
     select: {
       id: true,
       ouverteAt: true,
-      attribution: { select: { raisonSociale: true, siren: true, statut: true } },
+      attribution: { select: { raisonSociale: true, siren: true } },
     },
   });
   return lignes.map((l) => ({
     id: l.id,
     ouverteAt: l.ouverteAt,
     entreprise: entrepriseDe(l.attribution, nommer),
-    attributionIntacte: l.attribution !== null && !transitionAdmise(l.attribution.statut),
   }));
 }
 
@@ -219,7 +190,7 @@ export async function lireUneAnomalie(
       statut: true,
       ouverteAt: true,
       anonymiseeAt: true,
-      attribution: { select: { raisonSociale: true, siren: true, statut: true } },
+      attribution: { select: { raisonSociale: true, siren: true } },
     },
   });
   if (l === null || l.anonymiseeAt !== null) return { etat: 'introuvable' };
@@ -231,7 +202,6 @@ export async function lireUneAnomalie(
       id: l.id,
       ouverteAt: l.ouverteAt,
       entreprise: entrepriseDe(l.attribution, nommer),
-      attributionIntacte: l.attribution !== null && !transitionAdmise(l.attribution.statut),
     },
   };
 }

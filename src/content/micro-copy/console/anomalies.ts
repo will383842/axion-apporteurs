@@ -32,14 +32,10 @@ export const ANOMALIES_CONSOLE = {
   confirmer: {
     retour: '← Anomalies ouvertes',
     titre: 'Confirmer l’anomalie',
-    attribution: { intacte: 'attribution signée', transition: 'attribution provisoire' },
     ouverteLe: (date: string) => `ouverte le ${date}`,
-    effet: {
-      transition:
-        'Confirmer, c’est constater que la déclaration ne remplit pas les conditions de l’article 3.7 du contrat. L’attribution en cause est invalidée, et l’apporteur reçoit la décision avec les faits retenus.',
-      intacte:
-        'Confirmer, c’est constater les faits. L’attribution est déjà signée : elle reste intacte, comme la commande et la commission, et aucune décision ne part ; la confirmation est consignée.',
-    },
+    // Texte de la juriste, MOT POUR MOT (#474, 6037585182).
+    effet:
+      "Confirmer, c'est constater, avec les faits retenus, que la déclaration ne remplit pas les conditions de l'article 3.7 du contrat. La confirmation clôt l'anomalie : elle ne change ni l'attribution, ni la commande, ni la commission. Un effet sur l'apporteur, une annulation pour fabrication (article 3.3) ou une suspension de ses nouvelles déclarations (article 3.7), est une décision distincte, prise ensuite et notifiée avec son motif.",
     sansGel:
       'Ce geste ne pose aucun gel. Ni score ni seuil ne le fondent : seuls les faits que vous écrivez.',
     faits: 'Les faits retenus',
@@ -49,12 +45,8 @@ export const ANOMALIES_CONSOLE = {
     confirmer: 'Confirmer l’anomalie',
     annuler: 'Annuler',
   },
-  confirmee: {
-    transition:
-      'L’anomalie est confirmée. La décision part à l’apporteur au prochain envoi, avec les faits retenus.',
-    intacte:
-      'L’anomalie est confirmée, sans effet sur l’attribution, la commande ni la commission.',
-  },
+  // Texte de la juriste, MOT POUR MOT (#474, 6037585182).
+  confirmee: "L'anomalie est confirmée. Un effet sur l'apporteur se décide à part.",
   refus: {
     faits_vides: 'Écrivez les faits retenus avant de confirmer.',
     faits_trop_longs:

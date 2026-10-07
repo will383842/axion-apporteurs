@@ -52,9 +52,8 @@ export async function confirmerLAnomalie(formData: FormData): Promise<void> {
     await requireRole('action:confirmer_anomalie', jeton, portsDeRoleConsole(d)),
     ecran
   );
-  let issue: Awaited<ReturnType<typeof confirmerUneAnomalie>>;
   try {
-    issue = await confirmerUneAnomalie(
+    await confirmerUneAnomalie(
       d.prisma,
       {
         acteur,
@@ -69,5 +68,5 @@ export async function confirmerLAnomalie(formData: FormData): Promise<void> {
     if (e instanceof ErreurConfirmationAnomalie) redirect(`${ecran}?refus=${e.motif}`);
     throw e;
   }
-  redirect(`${ecran}?fait=${issue.transition ? 'transition' : 'intacte'}`);
+  redirect(`${ecran}?fait=confirmee`);
 }
