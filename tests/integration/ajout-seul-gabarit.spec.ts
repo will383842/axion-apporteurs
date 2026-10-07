@@ -15,6 +15,9 @@
  *     une valeur est refusé, `une_fois` réécrit est refusé ;
  *   — DELETE et TRUNCATE sont refusés partout ;
  *   — chaque argument de `pg_trigger.tgargs` nomme une colonne qui existe (`information_schema`) ;
+ *   — une table dont le gabarit a reçu une fonction DÉDIÉE, au préfixe du gabarit, reste comptée :
+ *     `demandes_droits_contact` et `refuser_modification_sauf_droits_contact()`, sans argument
+ *     (DM-68, partners/ADR-0032) ;
  *   — un modèle cloisonné est dans `MODELES_EN_AJOUT_SEUL` si et seulement si sa table est
  *     branchée sur le gabarit (décision A02 : l'égalité porte sur l'intersection, d'autres tables
  *     non cloisonnées s'y brancheront) ;
@@ -255,7 +258,7 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
       FROM pg_trigger t
       JOIN pg_class c ON c.oid = t.tgrelid
       JOIN pg_proc p ON p.oid = t.tgfoid
-      WHERE p.proname = 'refuser_modification_sauf' AND NOT t.tgisinternal
+      WHERE p.proname LIKE 'refuser\\_modification\\_sauf%' AND NOT t.tgisinternal
         AND c.relpersistence = 'p'`;
     const tables = new Set(branchements.map((b) => b.table));
     expect([...tables].sort()).toEqual([
@@ -332,7 +335,7 @@ describe('REQ-DM-031 — la liste des modèles en ajout seul égale, sur les mod
           FROM pg_trigger t
           JOIN pg_class c ON c.oid = t.tgrelid
           JOIN pg_proc p ON p.oid = t.tgfoid
-          WHERE p.proname = 'refuser_modification_sauf' AND NOT t.tgisinternal
+          WHERE p.proname LIKE 'refuser\\_modification\\_sauf%' AND NOT t.tgisinternal
             AND c.relpersistence = 'p'`
       ).map((l) => l.table)
     );

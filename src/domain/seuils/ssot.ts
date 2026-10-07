@@ -345,6 +345,15 @@ export const SEUILS = {
     renvois: [{ document: 'annexe-2', unite: '2.5' }],
     verifieLe: LE,
   },
+  // SEC-19 (juriste, #703, 5982101876) : le texte chiffré d'une décision de contrat (decisions_de_contrat).
+  DECISION_CONTRAT_TEXTE_CONSERVATION_ANS: {
+    valeur: 5,
+    unite: 'ans',
+    source:
+      "code civil art. 2224 (prescription de l'action, cinq ans) ; RGPD art. 5.1.e ; décision de la juriste (SEC-19, #703) — À RELIRE, non encore confronté : code civil art. 2224",
+    renvois: [],
+    verifieLe: LE,
+  },
   CONSERVATION_PIECES_ANS: {
     valeur: 10,
     unite: 'ans',
@@ -481,7 +490,7 @@ export const FUSEAU_DES_DELAIS = 'Europe/Paris' as const;
  */
 export type Parametre = {
   readonly valeur: number;
-  readonly unite: 'points_de_base' | 'pages';
+  readonly unite: 'points_de_base' | 'pages' | 'traces';
   readonly source: string;
   readonly verifieLe: string;
 };
@@ -502,6 +511,14 @@ export const PARAMETRES = {
     unite: 'pages',
     source: 'INT-T73-P, borne acceptée par la lentille schema (A02) le 2026-10-04',
     verifieLe: '2026-10-04',
+  },
+  // SEC-67 (REQ-SEC-058) : la borne d'une page du journal des accès à la console, lue par
+  // `lireLeJournalDesAcces`. Un PLAFOND du serveur : l'appelant ne choisit pas la taille de la page.
+  JOURNAL_DES_ACCES_PAGE_MAX: {
+    valeur: 50,
+    unite: 'traces',
+    source: 'SEC-67 ; sécurité, #707, commentaire 5981305490 ; valeur : sécurité, #563',
+    verifieLe: '2026-10-05',
   },
 } as const satisfies Record<string, Parametre>;
 

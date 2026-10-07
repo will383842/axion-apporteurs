@@ -9,6 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import type { PrismaClient } from '@prisma/client';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
+import { PARAMETRES } from '../../../src/domain/seuils/ssot';
 import { clesPii, empreinteAdresseReseau } from '../../../src/server/securite/pii';
 import {
   CibleInconnue,
@@ -72,8 +73,9 @@ const lire = (u: ReturnType<typeof univers>, adresse: string | null = ADRESSE) =
 describe('REQ-SEC-058 — lire le journal des accès, en processus', () => {
   it('REQ-SEC-058 : TÉMOIN — l’admin validé et actif lit : le lecteur relu, la cible vérifiée, SA ligne écrite AVANT la lecture, la lecture exacte', async () => {
     const u = univers();
-    const traces = await lire(u);
-    expect(traces).toBe(u.TRACES);
+    const page = await lire(u);
+    expect(page.traces).toBe(u.TRACES);
+    expect(page.suivant).toBeNull();
     expect(u.appels.map((a) => a.quoi)).toEqual([
       'utilisateur.findUnique',
       'utilisateur.findUnique',
@@ -97,6 +99,8 @@ describe('REQ-SEC-058 — lire le journal des accès, en processus', () => {
       where: { utilisateurConsoleId: CIBLE },
       select: { id: true, nature: true, cibleId: true, survenuAt: true },
       orderBy: [{ survenuAt: 'desc' }, { id: 'desc' }],
+      // SEC-67 : la page est bornée par la SSOT ; la première n'a pas de clause de reprise.
+      take: PARAMETRES.JOURNAL_DES_ACCES_PAGE_MAX.valeur,
     });
   });
 
