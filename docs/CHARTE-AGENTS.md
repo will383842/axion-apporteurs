@@ -439,7 +439,7 @@ le 2026-10-07, #319, 6032068586).** `risqueDeLaPr` et `lentillesExigees` (`scrip
 - Aucune garde « mobile first » n'est affaiblie : ses fichiers ne sont jamais à une lentille.
 
 **Le gel de la phase 1 (décision de Williams du 2026-10-05, #319, 5988252245, point 1 ; tri validé le
-2026-10-07, #319, 6032205185, et corrigé par la coordination sous délégation, 6032408699).** Toute tâche neuve née d'une relecture part « après la mise en service »
+2026-10-07, #319, 6032205185, et corrigé par la coordination sous délégation, 6032408699 et 6032997495).** Toute tâche neuve née d'une relecture part « après la mise en service »
 (phase 2), sauf si elle touche l'argent, la sécurité ou une obligation légale : son `sensible`, ou sa zone
 juridique ou sécurité, le dit. `config/gel-phase-1.json` porte la liste des tâches de phase 1 au jour du gel ;
 `gov:tasks` refuse une tâche de phase 1 qui n'y figure pas et ne remplit pas la condition (`gel_phase_1`).
