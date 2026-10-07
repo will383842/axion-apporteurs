@@ -1,6 +1,6 @@
 /**
  * SEC-72 (REQ-SEC-021) — le refus d'une vérification par le plafond. Texte NEUTRE de la juriste (#474,
- * 6036797355, qui remplace 6036719265), MOT POUR MOT : ni chiffre, ni durée, ni « trop », ni « limite »,
+ * 6036797355, point 4 ; source publique #319, 6039077581), MOT POUR MOT : ni chiffre, ni durée, ni « trop », ni « limite »,
  * ni « seuil ». Il est le MÊME pour les trois fenêtres et ne dit pas laquelle a joué. Sa seconde phrase
  * est VRAIE et doit le rester : le dépôt ne passe jamais par la vérification. L'écran n'écrit rien et
  * n'ouvre aucune réserve de l'art. 3.5.
