@@ -1332,6 +1332,8 @@ describe('REQ-DM-006 — l’écrivain porte le motif, et écrit la notification
     ligne: LigneSimulee,
     anomalie: {
       statut: string;
+      /** DM-71 (sécurité, #815) : l'écrivain lit aussi le type, pour la fraude. */
+      type?: 'sincerite' | 'auto_parrainage';
       attributionId: string | null;
       apporteurId: string | null;
     } | null = null,

@@ -107,6 +107,11 @@ export function calculerCommission(e: EntreeCalcul): VerdictCommission {
  * le premier jour, crédits et avoirs confondus, où le cumul encaissé atteint le prix moins les avoirs
  * connus ce jour-là ; un crédit et un avoir du même jour se comptent ensemble.
  *
+ * TOUT EN TTC (A15, #815) : le prix facturé, les avoirs et les encaissements sont des montants TOUTES TAXES
+ * COMPRISES, de même nature ; le cumul encaissé TTC se compare au prix facturé TTC net des avoirs TTC.
+ * Une projection de prix HORS TAXES (`DevisConnu.factureHtCents`) n'entre jamais ici : comparer un
+ * cumul TTC à un prix HT acquerrait trop tôt.
+ *
  * TOUT EN ENTIERS : le cumul et le prix se comparent en `BigInt`, exactement ; un centime manquant
  * ne rend rien acquis. Un encaissement NUL n'ajoute rien ; un montant négatif ou non entier, un avoir
  * négatif ou un prix net nul ou négatif LÈVENT, nommés : une donnée fausse n'a pas de valeur par défaut.
@@ -119,7 +124,7 @@ export function calculerCommission(e: EntreeCalcul): VerdictCommission {
 export type Payeur = 'client' | 'opco' | 'autre_financeur';
 
 export type EncaissementRecu = {
-  readonly montantCents: number;
+  readonly montantTtcCents: number;
   readonly payeur: Payeur;
   /** Le jour du crédit effectif des fonds (art. 4.0). */
   readonly creditLe: DateCivile;
@@ -127,7 +132,7 @@ export type EncaissementRecu = {
 
 /** Un avoir émis sur la facture de la commande, et son jour d'émission. */
 export type AvoirEmis = {
-  readonly montantCents: number;
+  readonly montantTtcCents: number;
   readonly le: DateCivile;
 };
 
@@ -138,24 +143,24 @@ const entierPositifOuNul = (v: number) => Number.isSafeInteger(v) && v >= 0;
 const ordreDuJour = (d: DateCivile) => d.annee * 10_000 + d.mois * 100 + d.jour;
 
 export function acquisitionAuPaiementIntegral(
-  commande: { readonly prixFactureCents: number; readonly avoirs: readonly AvoirEmis[] },
+  commande: { readonly prixFactureTtcCents: number; readonly avoirs: readonly AvoirEmis[] },
   encaissements: readonly EncaissementRecu[]
 ): Acquisition {
-  if (!entierPositifOuNul(commande.prixFactureCents)) {
-    throw new RangeError('acquisition : le prix facturé doit être un entier de centimes ≥ 0');
+  if (!entierPositifOuNul(commande.prixFactureTtcCents)) {
+    throw new RangeError('acquisition : le prix facturé TTC doit être un entier de centimes ≥ 0');
   }
   let totalAvoirs = 0n;
   commande.avoirs.forEach((a, i) => {
-    if (!entierPositifOuNul(a.montantCents)) {
+    if (!entierPositifOuNul(a.montantTtcCents)) {
       throw new RangeError(`acquisition : l'avoir ${i} doit être un entier de centimes ≥ 0`);
     }
-    totalAvoirs += BigInt(a.montantCents);
+    totalAvoirs += BigInt(a.montantTtcCents);
   });
-  if (BigInt(commande.prixFactureCents) - totalAvoirs <= 0n) {
-    throw new RangeError('acquisition : le prix net des avoirs doit être > 0');
+  if (BigInt(commande.prixFactureTtcCents) - totalAvoirs <= 0n) {
+    throw new RangeError('acquisition : le prix TTC net des avoirs doit être > 0');
   }
   encaissements.forEach((e, i) => {
-    if (!entierPositifOuNul(e.montantCents)) {
+    if (!entierPositifOuNul(e.montantTtcCents)) {
       throw new RangeError(`acquisition : l'encaissement ${i} doit être un entier de centimes ≥ 0`);
     }
   });
@@ -167,10 +172,10 @@ export function acquisitionAuPaiementIntegral(
     jours.set(k, j);
     return j;
   };
-  for (const e of encaissements) jour(e.creditLe).credits += BigInt(e.montantCents);
-  for (const a of commande.avoirs) jour(a.le).avoirs += BigInt(a.montantCents);
+  for (const e of encaissements) jour(e.creditLe).credits += BigInt(e.montantTtcCents);
+  for (const a of commande.avoirs) jour(a.le).avoirs += BigInt(a.montantTtcCents);
   let cumul = 0n;
-  let net = BigInt(commande.prixFactureCents);
+  let net = BigInt(commande.prixFactureTtcCents);
   for (const k of [...jours.keys()].sort((a, b) => a - b)) {
     const j = jours.get(k)!;
     cumul += j.credits;
