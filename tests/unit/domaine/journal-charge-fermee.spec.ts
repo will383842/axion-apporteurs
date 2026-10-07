@@ -20,7 +20,12 @@ import {
   segmentsDuNom,
   segmentsPersonnels,
 } from '../../../src/domain/donnees-personnelles/champs';
-import { CHARGES_PAR_TYPE, FORMES, HASH_HEX_64 } from '../../../src/domain/evenement/charges';
+import {
+  CHARGES_PAR_TYPE,
+  FORMES,
+  HASH_HEX_64,
+  JOUR_UTC,
+} from '../../../src/domain/evenement/charges';
 import {
   controler,
   decider,
@@ -153,6 +158,53 @@ describe('REQ-DM-041 — la garde `journal:sans-pii` refuse toute feuille hors d
     expect(ou(conforme({ bac: z.object(shape).strict() }))).toContain(
       `feuille_hors_liste ${chemin}`
     );
+  });
+
+  // SEC-59 (A02 rattrapage 104, condition de la sécurité 5978535484) : un compte, un jour en UTC.
+  it.each([
+    [
+      'un entier négatif',
+      { lignesNombre: z.number().int().min(-1).max(2147483647) },
+      'lignesNombre',
+    ],
+    ['un entier sans borne haute', { lignesNombre: z.number().int().min(0) }, 'lignesNombre'],
+    [
+      'un entier sans borne basse',
+      { lignesNombre: z.number().int().max(2147483647) },
+      'lignesNombre',
+    ],
+    [
+      'un entier hors borne (2 147 483 648)',
+      { lignesNombre: z.number().int().min(0).max(2147483648) },
+      'lignesNombre',
+    ],
+    ['un décimal', { lignesNombre: z.number().min(0).max(2147483647) }, 'lignesNombre'],
+    ['un entier borné SANS le suffixe Nombre', { lignes: FORMES.compte() }, 'lignes'],
+    [
+      'un jour sur une AUTRE expression',
+      { jourUtc: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) },
+      'jourUtc',
+    ],
+    ['un jour en date-heure', { jourUtc: z.string().date() }, 'jourUtc'],
+  ])('REQ-SEC-058 : SEC-59 — %s rougit en feuille_hors_liste', (_quoi, shape, champ) => {
+    const fautes = ou(conforme({ bac: z.object(shape).strict() }));
+    expect(fautes).toContain(`feuille_hors_liste bac.${champ}`);
+  });
+
+  it('REQ-SEC-058 : SEC-59 — contre-témoin : FORMES.compte() sur un champ …Nombre et FORMES.jourUtc() passent', () => {
+    const verdict = controler(
+      conforme({
+        bac: z
+          .object({
+            lignesNombre: FORMES.compte(),
+            essaisNombre: FORMES.compte().optional(),
+            jourUtc: FORMES.jourUtc(),
+            reference: z.string().regex(JOUR_UTC).optional(),
+          })
+          .strict(),
+      })
+    );
+    expect(verdict.fautes).toEqual([]);
   });
 
   it('REQ-DM-041 : une valeur d’enum sans charge, et une charge sans valeur d’enum, rougissent chacune', () => {

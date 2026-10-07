@@ -12,6 +12,7 @@ import {
   CHARGES_PAR_TYPE,
   FORMES,
   HASH_HEX_64,
+  JOUR_UTC,
   naissanceDApporteur,
 } from '../../../src/domain/evenement/charges';
 import { ALGORITHME } from '../../../src/domain/evenement/journal';
@@ -54,6 +55,8 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
       'attribution_porteur_reaffecte',
       'contestation_modifiee',
       'demande_confirmation_etat_modifie',
+      // SEC-59 : le résumé quotidien du journal des accès, sans agrégat.
+      'journal_acces_console_resume',
       // SEC-61 : la pose et la levée d'un gel du journal des accès à la console.
       'journal_acces_gel_modifie',
       'journal_ouvert',
@@ -437,5 +440,57 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
     expect(
       refus('apporteur_mis_en_demeure', { article: '6', acteur: { par: 'apporteur', id: ID } })
     ).toEqual(['acteur:acteur_console_attendu']);
+  });
+
+  it('REQ-SEC-058 : SEC-59 — le résumé du jour porte cinq clés, fermées, sans aucune donnée de personne', () => {
+    const juste = {
+      acteur: { par: 'systeme' },
+      jourUtc: '2027-01-10',
+      lignesNombre: 3,
+      empreinteComplete: H,
+      empreinteSurvivante: H,
+    };
+    passe('journal_acces_console_resume', juste);
+    passe('journal_acces_console_resume', { ...juste, lignesNombre: 0 });
+    passe('journal_acces_console_resume', { ...juste, lignesNombre: 2147483647 });
+    // Un acteur autre que le système, avec ou sans identifiant, est refusé.
+    expect(
+      refus('journal_acces_console_resume', { ...juste, acteur: { par: 'utilisateur_console' } })
+    ).toEqual(['acteur:acteur_systeme_attendu']);
+    expect(refus('journal_acces_console_resume', { ...juste, acteur: CONSOLE })).toHaveLength(1);
+    // Une clé en trop (un identifiant d'employé, une cible), une clé en moins : refusées.
+    expect(
+      refus('journal_acces_console_resume', { ...juste, utilisateurConsoleId: ID })
+    ).toHaveLength(1);
+    const { empreinteSurvivante: _s, ...sans } = juste;
+    expect(refus('journal_acces_console_resume', sans)).toHaveLength(1);
+    // La clé du jour est `jourUtc` : l'ancien nom `jour` est refusé.
+    const { jourUtc, ...sansJour } = juste;
+    expect(refus('journal_acces_console_resume', { ...sansJour, jour: jourUtc })).toHaveLength(2);
+  });
+
+  it('REQ-SEC-058 : SEC-59 — FORMES.compte() : un entier de 0 à 2 147 483 647, rien d’autre', () => {
+    const c = FORMES.compte();
+    for (const ok of [0, 1, 2147483647]) expect(c.safeParse(ok).success, String(ok)).toBe(true);
+    for (const ko of [-1, 1.5, 2147483648, Number.NaN, '3', null]) {
+      expect(c.safeParse(ko).success, String(ko)).toBe(false);
+    }
+  });
+
+  it('REQ-SEC-058 : SEC-59 — FORMES.jourUtc() : AAAA-MM-JJ, ancré aux deux bouts, sans heure', () => {
+    const j = FORMES.jourUtc();
+    expect(j.safeParse('2027-01-10').success).toBe(true);
+    for (const ko of [
+      '2027-1-10',
+      '27-01-10',
+      '2027-01-10T00:00:00.000Z',
+      ' 2027-01-10',
+      '2027-01-10\n',
+      '',
+    ]) {
+      expect(j.safeParse(ko).success, ko).toBe(false);
+    }
+    expect(JOUR_UTC.test('2027-01-10')).toBe(true);
+    expect(JOUR_UTC.test('x2027-01-10')).toBe(false);
   });
 });
