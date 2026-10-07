@@ -231,3 +231,32 @@ export async function corrigerLeContact(
     },
   });
 }
+
+/**
+ * DM-13 (art. 3.2 du v2) — la demande d'une attribution qui prend fin faute d'adresse valide passe
+ * `expiree`, dans la transaction de cette fin, avec son événement. Les jetons de l'émission active
+ * sont VIDÉS, sans poser `revoquee_at` : cet instant reste celui d'une adresse corrigée (DM-24).
+ * Une attribution sans demande, ou une demande déjà éteinte, n'a rien à expirer.
+ */
+export async function expirerLaDemandeDe(
+  tx: Tx,
+  attributionId: string,
+  maintenant: Date
+): Promise<void> {
+  const [d] = await tx.$queryRaw<{ id: string; etat: EtatDemandeConfirmation }[]>`
+    SELECT id::text AS id, etat::text AS etat FROM demandes_confirmation
+    WHERE attribution_id = ${attributionId}::uuid FOR UPDATE`;
+  if (!d || d.etat === 'expiree') return;
+  await tx.demandeConfirmation.update({ where: { id: d.id }, data: { etat: 'expiree' } });
+  await tx.emissionDemandeConfirmation.updateMany({
+    where: { demandeId: d.id, revoqueeAt: null },
+    data: { jetonOuiHash: null, jetonNonHash: null },
+  });
+  await journaliser(tx, {
+    demandeId: d.id,
+    de: d.etat,
+    vers: 'expiree',
+    acteur: { par: 'systeme' },
+    survenuAt: maintenant,
+  });
+}
