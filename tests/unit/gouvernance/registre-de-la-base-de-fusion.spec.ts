@@ -74,7 +74,8 @@ describe('REQ-GOV-010 — GOV-152 : le registre de la PR se juge contre la BASE 
   });
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-  const juger = (tete: string, base: Brute[] | null): string[] => {
+  // Le registre lu par `tachesDeLaBase` ou `tachesDeLaBaseDeFusion` : le type de ces lecteurs, pas `Brute`.
+  const juger = (tete: string, base: ReturnType<typeof LECTEUR.tachesDeLaBase>): string[] => {
     const taches = GARDE.projeter(LECTEUR.tachesDeLaBase(tete, dir) ?? []);
     return GARDE.ecartsDuRegistreDUnePrDAuteur(
       { gabarit: '', codeowners: '', charte: '', fiches: [], architecte: '', taches },
