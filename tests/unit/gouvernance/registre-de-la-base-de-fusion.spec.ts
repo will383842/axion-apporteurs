@@ -112,3 +112,34 @@ describe('REQ-GOV-010 — GOV-152 : le registre de la PR se juge contre la BASE 
     expect(LECTEUR.tachesDeLaBaseDeFusion('-x', 'pr', dir)).toBeNull();
   });
 });
+
+describe('REQ-GOV-010 — GOV-152, condition de la sécurité : le RISQUE lit aussi la base courante', () => {
+  type TacheDuRisque = Parameters<typeof LECTEUR.risqueDeLaPr>[0]['taches'][number];
+  const tache = (sensible: string[]): TacheDuRisque => {
+    const t: TacheDuRisque = {
+      ...brute('UX-P1-01', 'espace', ['docs/maquettes/x.html']),
+      sensible,
+    };
+    return t;
+  };
+  const risque = (courante?: TacheDuRisque[] | null) =>
+    LECTEUR.risqueDeLaPr({
+      titre: 'docs(UX-P1-01): une maquette',
+      pr: null,
+      taches: [tache([])],
+      tachesBase: [tache([])],
+      ...(courante === undefined ? {} : { tachesBaseCourante: courante }),
+      fichiers: ['docs/maquettes/x.html'],
+      labels: [],
+      liste: { source: 'complete' },
+    });
+
+  it('REQ-GOV-010 — TÉMOIN : une tâche rendue sensible sur la base COURANTE après le départ de la PR élève son risque', () => {
+    expect(risque().niveau).toBe('ordinaire');
+    expect(risque([tache(['argent'])]).niveau).toBe('eleve');
+  });
+
+  it('REQ-GOV-010 — la base courante illisible élève le risque (échec fermé)', () => {
+    expect(risque(null).niveau).toBe('eleve');
+  });
+});

@@ -1819,6 +1819,13 @@ export type EntreeDuRisque = {
   taches: readonly TacheDeLaPr[];
   /** Le registre de la BASE — `null` s'il est illisible, et c'est un risque élevé. */
   tachesBase: readonly TacheDeLaPr[] | null;
+  /**
+   * GOV-152, condition de la sécurité (6036322341) : le registre de la base COURANTE, quand `tachesBase`
+   * est celui de la base de FUSION. Le risque lit l'UNION des trois registres : une tâche rendue
+   * sensible sur la base courante après le départ de la PR élève toujours son risque (aucun
+   * contournement par ancienneté). Absent : non fourni ; `null` : illisible, donc risque élevé.
+   */
+  tachesBaseCourante?: readonly TacheDeLaPr[] | null;
   fichiers: readonly string[];
   /** D'où vient `fichiers`, et si la liste est complète — `null` : inconnu, donc ÉLEVÉ. */
   liste: ListeDesFichiers | null;
@@ -1851,6 +1858,7 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
       [
         ...tachesDeLaPr(e.taches, e.pr, id, e.idsDuLot ?? []),
         ...tachesDeLaPr(e.tachesBase ?? [], e.pr, id, e.idsDuLot ?? []),
+        ...tachesDeLaPr(e.tachesBaseCourante ?? [], e.pr, id, e.idsDuLot ?? []),
       ].map((t) => t.id)
     ),
   ];
@@ -1858,6 +1866,7 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
     raisons.push('aucune tâche résolue (ni par le titre, ni par le champ `pr`, ni par `Lot:`)');
   }
   if (e.tachesBase === null) raisons.push('registre de base illisible');
+  if (e.tachesBaseCourante === null) raisons.push('registre de la base courante illisible');
 
   let tachesSchema = false;
   const prouvees: string[] = [];
@@ -1869,6 +1878,7 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
     const versions: [string, TacheDeLaPr | undefined][] = [
       ['tête', surLaTete],
       ['base', surLaBase],
+      ['base courante', e.tachesBaseCourante?.find((t) => t.id === idT)],
     ];
     let ordinaire = true;
     for (const [ou, t] of versions) {
@@ -1897,6 +1907,7 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
   }
   const declares = fichiersDesTachesAElever(e.fichiers, [
     { ou: 'base', taches: e.tachesBase ?? [] },
+    { ou: 'base courante', taches: e.tachesBaseCourante ?? [] },
     { ou: 'tête', taches: e.taches },
   ]);
   if (declares.length > 0) {
