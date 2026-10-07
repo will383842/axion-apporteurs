@@ -48,6 +48,8 @@ export const MATRICE_DES_ROLES = {
   'action:lever_gel': { roles: ['admin'], stepUp: true },
   'action:suspendre_apporteur': { roles: ['admin'], stepUp: false },
   'action:resilier_apporteur': { roles: ['admin'], stepUp: false },
+  // UX-P1-61 (art. 3.4 al. 2) : poser l'absence d'échange imputable à la Société, sous step-up.
+  'action:poser_absence_imputable': { roles: ['admin'], stepUp: true },
   'action:exporter_das2': { roles: ['admin'], stepUp: true },
   // DM-12 (REQ-DM-034, amendement A1-01) : le rattachement manuel motivé, au qualifieur (glossaire §7)
   // et à l'admin ; jamais au comptable ni au lecteur.
