@@ -71,13 +71,15 @@ afterAll(async () => {
 
 const unSiren = () => String(randomInt(100_000_000, 999_999_999));
 
-async function utilisateur(role: ConsoleRole, desactive = false): Promise<string> {
+async function utilisateur(role: ConsoleRole, desactive = false, valide = true): Promise<string> {
   const u = await base.prisma.utilisateurConsole.create({
     // Un utilisateur actif porte son adresse, chiffrée et en empreinte (`utilisateurs_console_adresse_si_actif`).
     data: {
       role,
       creeAt: T0,
       desactiveAt: desactive ? T0 : null,
+      // Un administrateur n'a de droit qu'une fois validé (quatre yeux) ; `valideParId` reste nul.
+      valideAt: role === 'admin' && valide ? T0 : null,
       emailChiffre: randomBytes(48),
       emailHash: randomBytes(32).toString('hex'),
     },
@@ -376,6 +378,8 @@ describe('REQ-DM-028 — ajouter et retirer sont réservés au rôle que la matr
   it('REQ-DM-028 : la matrice nomme le droit de tenir la liste, et le réserve à l’administrateur', () => {
     expect(DROIT_DE_TENIR_LA_LISTE).toBe('action:tenir_liste_noire');
     expect(MATRICE_DES_ROLES[DROIT_DE_TENIR_LA_LISTE].roles).toEqual(['admin']);
+    // Retirer un SIREN le rend déclarable : geste à effet d'argent, sous step-up (condition de la sécurité).
+    expect(MATRICE_DES_ROLES[DROIT_DE_TENIR_LA_LISTE].stepUp).toBe(true);
   });
 
   it('REQ-DM-028 : l’administrateur ajoute puis retire ; la période porte l’auteur et la date de chacun', async () => {
@@ -402,13 +406,14 @@ describe('REQ-DM-028 — ajouter et retirer sont réservés au rôle que la matr
     ]);
   });
 
-  it('REQ-DM-028 : TÉMOIN — tout autre rôle, et un administrateur désactivé, sont refusés sans rien écrire', async () => {
+  it('REQ-DM-028 : TÉMOIN — tout autre rôle, un administrateur désactivé et un administrateur NON VALIDÉ sont refusés sans rien écrire', async () => {
     const autres = ROLES_CONSOLE.filter((r) => r !== 'admin');
     expect(autres.length).toBeGreaterThan(0);
     const siren = unSiren();
     const auteurs = [
       ...(await Promise.all(autres.map((r) => utilisateur(r)))),
       await utilisateur('admin', true),
+      await utilisateur('admin', false, false),
     ];
     for (const auteurId of auteurs) {
       const e = await refus(

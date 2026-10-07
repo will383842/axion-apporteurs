@@ -27,15 +27,19 @@ export class ErreurListeNoire extends Error {
   }
 }
 
-/** L'auteur relu dans la transaction : son rôle et sa désactivation, tels que la base les porte. */
+/**
+ * L'auteur relu dans la transaction : son rôle, sa désactivation et sa validation, tels que la base les
+ * porte. Un administrateur non encore validé n'a aucun droit d'administrateur (quatre yeux, SEC-30).
+ */
 async function exigerLeRole(tx: Prisma.TransactionClient, auteurId: string): Promise<void> {
   const auteur = await tx.utilisateurConsole.findUnique({
     where: { id: auteurId },
-    select: { role: true, desactiveAt: true },
+    select: { role: true, desactiveAt: true, valideAt: true },
   });
   if (
     auteur === null ||
     auteur.desactiveAt !== null ||
+    auteur.valideAt === null ||
     !roleAutorise(DROIT_DE_TENIR_LA_LISTE, auteur.role)
   ) {
     throw new ErreurListeNoire('role_refuse');
