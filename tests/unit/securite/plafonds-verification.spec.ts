@@ -15,6 +15,7 @@
  * Toutes les valeurs ci-dessous sont FACTICES : aucune vraie valeur n'est au dépôt.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import {
   CLES_DES_PLAFONDS,
@@ -33,6 +34,10 @@ import {
   type PortsDeVerification,
 } from '../../../src/server/verification/verifier';
 import { VERIFICATION_INDISPONIBLE } from '../../../src/content/micro-copy/espace/verification';
+
+// Le source se lit à la RACINE DU DÉPÔT, pas dans le répertoire courant : le bac à sable de Stryker
+// (sous `.stryker-tmp/`) instrumente sa copie, et une lecture textuelle n'y trouverait plus l'appel.
+const RACINE = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
 
 const FACTICES =
   'identite_jour=7;identite_court=2;ip_jour=9;fenetre_jour_minutes=600;fenetre_court_minutes=5';
@@ -192,7 +197,7 @@ describe('REQ-SEC-021 — le secret n’est jamais journalisé', () => {
       /PARTNERS_VERIFICATION_PLAFONDS|VARIABLE_DES_PLAFONDS/.test(readFileSync(c, 'utf8'))
     );
     expect(nommants.sort()).toEqual(['src/lib/env.ts', 'src/server/securite/rate-limit.ts']);
-    const rl = readFileSync('src/server/securite/rate-limit.ts', 'utf8');
+    const rl = readFileSync(`${RACINE}/src/server/securite/rate-limit.ts`, 'utf8');
     const lectures = rl.match(/process\.env\[VARIABLE_DES_PLAFONDS\][^\n]*/g) ?? [];
     expect(lectures).toEqual(['process.env[VARIABLE_DES_PLAFONDS]);']);
     expect(rl).toMatch(/lirePlafondsHorsDepot\(process\.env\[VARIABLE_DES_PLAFONDS\]\)/);

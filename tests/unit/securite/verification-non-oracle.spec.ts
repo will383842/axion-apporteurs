@@ -15,6 +15,7 @@
  * registre REFUSE la vérification — « aucun chiffre » ne devient jamais « pas de limite ».
  */
 import { describe, it, expect, vi } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import {
   ETATS_VERIFICATION,
@@ -48,6 +49,10 @@ import type {
   IssueDeFiche,
 } from '../../../src/server/integrations/recherche-entreprises/autocompletion';
 import { MOTIFS_DE_SAISIE_MANUELLE } from '../../../src/server/integrations/recherche-entreprises/schemas';
+
+// Le source se lit à la RACINE DU DÉPÔT, pas dans le répertoire courant : le bac à sable de Stryker
+// (sous `.stryker-tmp/`) instrumente sa copie, et une lecture textuelle n'y trouverait plus l'appel.
+const RACINE = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
 
 const SIREN = '100000001';
 const LIBRE: FaitsDeVerification = {
@@ -263,7 +268,7 @@ describe('REQ-SEC-021 — limitée par identité et par empreinte d’adresse, �
   it('REQ-SEC-021 : CLIQUET — les TROIS compteurs de la famille sont au registre (SEC-72), et le port de production les appelle par leurs noms littéraux', () => {
     const noms = Object.keys(COMPTEURS).filter((n) => n.startsWith(FAMILLE));
     expect(noms).toEqual(['verif:identite-jour', 'verif:identite-court', 'verif:ip-jour']);
-    const port = readFileSync('src/server/verification/ports-prisma.ts', 'utf8');
+    const port = readFileSync(`${RACINE}/src/server/verification/ports-prisma.ts`, 'utf8');
     for (const n of noms) expect(port).toContain(`limiter('${n}', sujet, maintenant)`);
   });
 
