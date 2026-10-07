@@ -92,6 +92,10 @@ export const MATRICE_DES_ROLES = {
   // VALIDÉ, sous step-up ; la levée par un AUTRE que l'auteur et que la personne visée (CHECK).
   'action:poser_gel_journal_acces': { roles: ['admin'], stepUp: true },
   'action:lever_gel_journal_acces': { roles: ['admin'], stepUp: true },
+  // UX-P1-53 (validé par la sécurité) : l'écran des gels, un seul droit pour l'onglet et la lecture,
+  // à admin seul et sans step-up (lire ne change rien, chaque page se trace) ; l'administrateur
+  // VALIDÉ est relu en base par la lecture elle-même.
+  'ecran:gels_journal_acces': { roles: ['admin'], stepUp: false },
   // UX-P1-57 (conditions de la sécurité, #703) : la mise en demeure est un acte juridique qui ouvre la
   // voie à la résiliation sans préavis ; à l'admin seul, sous step-up. Son écran, à l'admin seul : le
   // relèvement est exigé par le geste, que l'action rejuge.

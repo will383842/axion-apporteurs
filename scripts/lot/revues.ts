@@ -359,6 +359,8 @@ export type Survivance = {
   regle: 'journal' | 'patch';
   /** Règle `patch` : l'empreinte du diff propre à la PR, égale sur les deux têtes. */
   empreinte?: string;
+  /** Règle `patch` : l'entrée de journal de la PR jugée était hors de l'empreinte (GOV-145). */
+  journalExclu?: boolean;
 };
 
 /** Un accord périmé, avec le motif et les fichiers qui l'ont périmé (`null` : diff incalculable). */
@@ -575,9 +577,36 @@ export function fichiersEntre(accord: string, tete: string, cwd?: string): strin
  */
 export const BASE_DE_L_EMPREINTE = 'origin/main';
 
+/**
+ * ═══ L'ENTRÉE DE JOURNAL DE LA PR JUGÉE SORT DE L'EMPREINTE (GOV-145, décision orale de Williams du
+ * 2026-10-04, #319, 6032352874, point 3) ═════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 LE DÉFAUT MESURÉ : chaque tête neuve d'une PR porte une ligne de plus dans SON entrée de
+ * journal (`docs/journal/AAAA-MM-pr-<n>.md`, RM-15) — c'est même le geste prescrit pour relancer
+ * un run. Cette entrée est DANS le diff propre : l'empreinte changeait, et TOUS les accords
+ * périmaient, `exactitude` comprise, sur un code identique au bit près.
+ *
+ * LA RÈGLE. Quand le numéro de la PR jugée est connu, l'empreinte se calcule SANS son entrée — la
+ * forme exacte d'`ENTREE_DU_JOURNAL` pour CE numéro, au premier niveau du dossier, rien d'autre.
+ * L'entrée d'une AUTRE PR reste dans l'empreinte : la réécrire périme. Et `lireRevues` ne demande
+ * cette exclusion que si chaque titre que l'entrée porte À LA TÊTE ouvre SON entrée (`defautDEntree`,
+ * le troisième tour `securite` de GOV-095) : un titre d'une autre PR glissé dans la sienne attesterait
+ * un autre lot, et l'empreinte complète le fait alors périmer.
+ *
+ * ⚠️ CE QUE LA RÈGLE RELÂCHE, DIT EN CLAIR : la prose de cette entrée n'est plus relue après
+ * l'accord. C'est la décision de Williams (#319, 6032352874) — l'entrée ne porte que le récit de la PR, et les gardes du
+ * journal (`gov:attributions`, `gov:etat`, `journal:sans-pii`) la jugent à chaque tête, en porte A.
+ */
+export function motifDExclusionDuJournal(numero: number): string {
+  if (!Number.isInteger(numero) || numero <= 0) {
+    throw new Error(`numéro de PR invalide pour l’exclusion du journal : ${numero}`);
+  }
+  return `:(top,exclude,glob)${CHEMIN_DU_JOURNAL}[0-9][0-9][0-9][0-9]-[0-9][0-9]-pr-${numero}.md`;
+}
+
 export function empreinteDuPatch(
   sha: string,
-  o: { base?: string; cwd?: string } = {}
+  o: { base?: string; cwd?: string; journalExcluDeLaPr?: number | null } = {}
 ): string | null {
   const t = sha.trim();
   const base = o.base ?? BASE_DE_L_EMPREINTE;
@@ -596,7 +625,13 @@ export function empreinteDuPatch(
   try {
     const mb = lire(['merge-base', base, t]).trim();
     if (!/^[0-9a-f]{40}$/.test(mb)) return null;
-    const perimetre = ['--', ':(top)', ...VUES_DERIVEES.map((v) => `:(top,exclude)${v.chemin}`)];
+    const exclu = o.journalExcluDeLaPr ?? null;
+    const perimetre = [
+      '--',
+      ':(top)',
+      ...VUES_DERIVEES.map((v) => `:(top,exclude)${v.chemin}`),
+      ...(exclu === null ? [] : [motifDExclusionDuJournal(exclu)]),
+    ];
     const options = [
       '-c',
       'core.quotePath=false',
@@ -629,8 +664,12 @@ export function direLaSurvivance(s: Survivance): string {
     return (
       debut +
       `le diff propre à la PR est identique sur les deux têtes (empreinte ` +
-      `${(s.empreinte ?? '').slice(0, 12)}, vues dérivées exclues) ; les ${s.fichiers.length} ` +
-      `fichier(s) qui les séparent viennent de la base fusionnée`
+      `${(s.empreinte ?? '').slice(0, 12)}, vues dérivées exclues` +
+      (s.journalExclu === true
+        ? `, et l'entrée de journal de la PR jugée exclue — GOV-145, ses titres n'ouvrent que son entrée`
+        : '') +
+      `) ; les ${s.fichiers.length} fichier(s) qui les séparent viennent de la base fusionnée` +
+      (s.journalExclu === true ? ` ou de cette entrée` : '')
     );
   }
   return (
@@ -716,8 +755,10 @@ export type Entree = {
   /**
    * L'EMPREINTE DU DIFF PROPRE À LA PR sur un commit (GOV-101) — `empreinteDuPatch` par défaut,
    * contre `origin/main`. Injectable pour que les témoins fassent varier l'empreinte SEULE.
+   * Le second argument est le numéro dont l'entrée de journal sort de l'empreinte (GOV-145), ou
+   * `null` : l'empreinte est alors complète.
    */
-  empreinteDuPatch?: (sha: string) => string | null;
+  empreinteDuPatch?: (sha: string, journalExcluDeLaPr: number | null) => string | null;
 };
 
 let codesEnCache: ReadonlySet<string> | null = null;
@@ -1423,6 +1464,18 @@ export const RACINES_A_UNE_LENTILLE: readonly string[] = [
  * sans `securite`. Un chemin égal, ou un préfixe qui finit par `/`.
  */
 export const EXCLUS_D_UNE_LENTILLE: readonly string[] = [
+  // La relecture proportionnée (#319, 6032068586) n'affaiblit pas « les maquettes validées par
+  // Williams » : la fiche de validation reste à deux lentilles, même dans une PR de maquette.
+  'docs/maquettes/VALIDATION.md',
+  // Relevés de la lentille `securite` en pré-relecture du lot GOV-150 : les courriels portent le lien
+  // magique, l'avis « nouvel appareil », la mise en demeure et la résiliation ; les cartes des routes
+  // et de leurs rôles sont LUES par `src/` et par les gardes de navigation ; l'audit de sécurité et
+  // les procédures d'exploitation (secrets, restauration) ne se relisent pas à une lentille.
+  'src/content/micro-copy/courriels/',
+  'docs/CONSOLE-ROUTES.md',
+  'docs/ESPACE-ROUTES.md',
+  'docs/securite/',
+  'docs/runbooks/',
   'docs/tasks.json',
   'docs/requirements.json',
   'docs/DECISIONS.md',
@@ -1447,18 +1500,40 @@ export const EXCLUS_D_UNE_LENTILLE: readonly string[] = [
   'scripts/lot/requirements.schema.json',
 ];
 
+/**
+ * LA RELECTURE PROPORTIONNÉE (décision de Williams du 2026-10-05, #319, 5988252245, point 2, AMENDÉE
+ * le 2026-10-07, #319, 6032068586) : UNE lentille, l'exactitude, pour ce qui n'affiche aucune
+ * donnée — maquettes (`docs/maquettes/`, déjà sous `docs/`), textes et micro-copy. Tout écran qui
+ * AFFICHE ou MODIFIE des données (`src/app/`, `src/components/`, une action, une lecture serveur)
+ * reste à DEUX lentilles, exactitude et sécurité : ces racines ne sont PAS ici. Le critère est
+ * mécanique : une PR d'`espace` ou de `console` ne vaut une lentille que si TOUS ses fichiers sont
+ * sous `docs/` ou sous ces racines ; l'argent, la sécurité, les données personnelles et le schéma
+ * restent élevés par `risqueDeLaPr` avant même que cette liste soit lue.
+ */
+export const RACINES_SANS_DONNEES: readonly string[] = ['src/content/micro-copy/'];
+
 /** GOV-124 — un fichier qu'une seule lentille peut relire : autorisé, et jamais exclu. */
 export function fichierAUneLentille(f: string): boolean {
   const exclu = EXCLUS_D_UNE_LENTILLE.some((x) => (x.endsWith('/') ? f.startsWith(x) : f === x));
-  return !exclu && RACINES_A_UNE_LENTILLE.some((r) => f.startsWith(r));
+  return (
+    !exclu && [...RACINES_A_UNE_LENTILLE, ...RACINES_SANS_DONNEES].some((r) => f.startsWith(r))
+  );
 }
 
 /**
  * GOV-124 — LES ZONES DE TÂCHE qu'une seule lentille peut relire. Fermée : l'argent, la sécurité,
- * le juridique, les données du domaine, l'espace, la console, l'intégration et le déploiement
- * restent à deux lentilles, comme une zone absente ou inconnue.
+ * le juridique, les données du domaine, l'intégration et le déploiement restent à deux lentilles,
+ * comme une zone absente ou inconnue. L'espace et la console y entrent par la relecture
+ * proportionnée (décision de Williams du 2026-10-05, #319, 5988252245, point 2, amendée le
+ * 2026-10-07, 6032068586) : pour les fichiers sans données seulement (`docs/`,
+ * `RACINES_SANS_DONNEES`), et jamais pour une tâche `sensible`.
  */
-export const ZONES_A_UNE_LENTILLE: readonly string[] = ['gouvernance', 'qualite'];
+export const ZONES_A_UNE_LENTILLE: readonly string[] = [
+  'gouvernance',
+  'qualite',
+  'espace',
+  'console',
+];
 
 /**
  * LE TITRE D'UNE PR : `<type>(<ID-TÂCHE>): <titre>` (`docs/CONVENTIONS.md` §5). Écrit UNE fois :
@@ -1956,19 +2031,36 @@ export function lireRevues(entree: Entree): Lecture {
     const deja = new Map<string, string[] | null>();
     // L'empreinte d'un commit ne dépend que de lui : mesurée une fois, et seulement si la règle du
     // journal n'a pas suffi — la plupart des lectures n'appellent jamais `git patch-id`.
-    const mesurerLEmpreinte = entree.empreinteDuPatch ?? ((sha: string) => empreinteDuPatch(sha));
+    const mesurerLEmpreinte =
+      entree.empreinteDuPatch ??
+      ((sha: string, journalExcluDeLaPr: number | null) =>
+        empreinteDuPatch(sha, { journalExcluDeLaPr }));
     const empreintes = new Map<string, string | null>();
-    const empreinte = (sha: string): string | null => {
-      if (!empreintes.has(sha)) empreintes.set(sha, mesurerLEmpreinte(sha));
-      return empreintes.get(sha) ?? null;
+    const empreinte = (sha: string, exclu: number | null): string | null => {
+      const cle = `${sha}|${exclu ?? ''}`;
+      if (!empreintes.has(cle)) empreintes.set(cle, mesurerLEmpreinte(sha, exclu));
+      return empreintes.get(cle) ?? null;
+    };
+    const prJugee: PrJugee = {
+      numero: entree.numero ?? null,
+      lire: (f) => (entree.lireALaTete ?? contenuALaTete)(tete, f),
+    };
+    /**
+     * GOV-145 (point 3) : l'entrée de journal de la PR jugée sort de l'empreinte SEULEMENT si le
+     * delta est mesuré et si chaque fichier du delta qui EST son entrée ne porte, à la tête, que
+     * ses propres titres. Delta incalculable, numéro inconnu ou titre étranger : `null`, et
+     * l'empreinte reste complète — le sens de défaillance FERMÉ de GOV-095.
+     */
+    const journalExclu = (fichiers: readonly string[] | null): number | null => {
+      const n = prJugee.numero;
+      if (n === null || fichiers === null) return null;
+      const siens = fichiers.filter((f) => Number(ENTREE_DU_JOURNAL.exec(f)?.[1]) === n);
+      return siens.every((f) => defautDEntree(f, prJugee) === null) ? n : null;
     };
     for (const x of accords) {
       if (!exigees.includes(x.lentille) || x.commit === tete) continue;
       if (!deja.has(x.commit)) deja.set(x.commit, mesurer(x.commit, tete));
-      const survie = accordSurvit(x.lentille, deja.get(x.commit) ?? null, {
-        numero: entree.numero ?? null,
-        lire: (f) => (entree.lireALaTete ?? contenuALaTete)(tete, f),
-      });
+      const survie = accordSurvit(x.lentille, deja.get(x.commit) ?? null, prJugee);
       if (survie.survit) {
         survivantes.push({
           code: x.code,
@@ -1981,8 +2073,9 @@ export function lireRevues(entree: Entree): Lecture {
         continue;
       }
       // GOV-101 : la seconde chance, et la seule. Le diff PROPRE à la PR est-il le même ?
-      const avant = empreinte(x.commit);
-      const apres = avant === null ? null : empreinte(tete);
+      const exclu = journalExclu(survie.fichiers);
+      const avant = empreinte(x.commit, exclu);
+      const apres = avant === null ? null : empreinte(tete, exclu);
       if (avant !== null && avant === apres) {
         survivantes.push({
           code: x.code,
@@ -1992,6 +2085,7 @@ export function lireRevues(entree: Entree): Lecture {
           fichiers: survie.fichiers ?? [],
           regle: 'patch',
           empreinte: avant,
+          journalExclu: exclu !== null,
         });
         continue;
       }
