@@ -65,6 +65,7 @@
     "GOV-149",
     "GOV-150",
     "GOV-151",
+    "GOV-152",
     "INT-T07-A",
     "INT-T07-P",
     "INT-T08-A",
@@ -245,5 +246,8 @@
     "UX-P1-58",
     "UX-P1-59",
     "UX-P1-60"
-  ]
+  ],
+  "exceptions": {
+    "GOV-152": "Exception au gel : garde bloquante de gov:pr, décision de la coordination sous délégation de Williams, #319, 6035611932."
+  }
 }

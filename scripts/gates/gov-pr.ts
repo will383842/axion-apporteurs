@@ -60,6 +60,7 @@ import {
   resoudreLeLot,
   risqueDeLaPr,
   tachesDeLaBase,
+  tachesDeLaBaseDeFusion,
   segmentsNommesTouches,
   ZONES_SENSIBLES,
   touche,
@@ -420,6 +421,8 @@ export type Pr = {
    * fixture.
    */
   tachesBase?: Tache[] | null;
+  /** GOV-152 : le registre de la base COURANTE, pour le seul risque (union monotone). */
+  tachesBaseCourante?: Tache[] | null;
   /** Les commentaires d'issue de la PR, sous `--pr <n>` : un avis posté là ne compte pour rien. */
   commentaires?: CommentaireBrut[] | null;
   /**
@@ -716,6 +719,7 @@ function risqueDePr(depot: Depot, pr: Pr): Risque {
     pr: pr.numero ?? null,
     taches: depot.taches,
     tachesBase: pr.tachesBase ?? null,
+    ...(pr.tachesBaseCourante === undefined ? {} : { tachesBaseCourante: pr.tachesBaseCourante }),
     liste: pr.liste ?? null,
     fichiers: pr.fichiers,
     labels: pr.labels,
@@ -1529,10 +1533,17 @@ function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant
     annoncees,
     revues,
     commentaires,
-    // Le registre de la BASE — `origin/<base>`, la même référence que le pas 8. Illisible (ref
-    // absente en local) → `null` → risque ÉLEVÉ : le sens de défaillance reste fermé.
-    tachesBase: projeter(tachesDeLaBase(refBase)),
+    // Le registre de la BASE — avant fusion, celui de la BASE DE FUSION de la tête et de
+    // `origin/<base>` (GOV-152) : la PR ne se juge que sur ce qu'elle change, pas sur ce que `main` a
+    // changé depuis son départ ; après fusion, `origin/<base>`, la référence du pas 8. Illisible →
+    // `null` → risque ÉLEVÉ : le sens de défaillance reste fermé.
+    tachesBase: projeter(
+      moment === 'apres-fusion' ? tachesDeLaBase(refBase) : tachesDeLaBaseDeFusion(refBase, 'HEAD')
+    ),
   });
+  // GOV-152, condition de la sécurité (6036322341) : le risque lit AUSSI la base courante (union
+  // monotone) ; seuls les écarts du registre se jugent sur la base de fusion.
+  pr.tachesBaseCourante = projeter(tachesDeLaBase(refBase));
   // LE JOURNAL DE LA TÊTE (GOV-052, RM-15). Avant fusion, `HEAD` vient d'être confrontée à la tête de
   // la forge : c'est la branche de la PR. Après fusion, c'est le commit de fusion qui porte le
   // journal atterri. Illisible → `null` → la famille rougit (échec fermé).
@@ -1697,11 +1708,15 @@ function prParEvenement(): Pr | null {
     process.exit(1);
   }
   // La base de l'événement est un sha : `fetch-depth: 0` le rend lisible (voir ci-dessus).
-  return prDepuisLEvenement(
+  const pr = prDepuisLEvenement(
     ev.pull_request,
     sortieDuDiff,
-    projeter(tachesDeLaBase(ev.pull_request.base.sha))
+    // GOV-152 : la base de FUSION de la tête et de la base de l'événement, pas la base courante.
+    projeter(tachesDeLaBaseDeFusion(ev.pull_request.base.sha, ev.pull_request.head.sha))
   );
+  // GOV-152, condition de la sécurité (6036322341) : le risque lit AUSSI la base courante.
+  pr.tachesBaseCourante = projeter(tachesDeLaBase(ev.pull_request.base.sha));
+  return pr;
 }
 
 /** La PR telle que l'événement `pull_request` la sert. */
