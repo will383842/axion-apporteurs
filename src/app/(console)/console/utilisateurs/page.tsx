@@ -18,6 +18,7 @@ import { ROLES_CONSOLE } from '../../../../server/roles/matrice';
 import { clesPii } from '../../../../server/securite/pii';
 import { identiteDeLUtilisateurConsole } from '../../../../server/auth/lien-magique-depot';
 import { DUREES_AUTH } from '../../../../server/auth/durees';
+import { droitsDuLecteurSurLesGels } from '../../../../server/console/gels-journal-acces';
 import { invitationOuverte } from '../../../../server/console/utilisateurs/regles';
 import { jourDeParis, jourEtHeureDeParis } from '../../../../server/console/utilisateurs/dates';
 import {
@@ -86,10 +87,17 @@ export default async function PageUtilisateursConsole() {
   };
 
   const autres = lignes.filter((l) => l.id !== moi);
+  // Le lien vers les gels : sous le droit RELU de l'écran des gels (un admin validé, actif).
+  const gels = (await droitsDuLecteurSurLesGels(d.prisma, moi)) !== null;
 
   return (
     <main>
       <h1>{T.titre}</h1>
+      {gels ? (
+        <p>
+          <a href="/console/journal-des-acces/gels">{T.liens.gels}</a>
+        </p>
+      ) : null}
       <section aria-labelledby="inviter">
         <h2 id="inviter">{T.invitation.titre}</h2>
         <FormulaireDInvitation action={inviterUnePersonne} />
