@@ -140,6 +140,9 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
   // UX-P1-53 : l'écran des gels du journal des accès, lu par les administrateurs de la console seuls.
   'console/gels-journal-acces.ts':
     'gels du journal des accès, lus par les administrateurs de la console seuls (portée dépôt, REQ-GOV-017)',
+  // SEC-71 : l'écran « Accès de l'apporteur » (art. 3.8), lu par les administrateurs de la console seuls.
+  'console/acces-apporteur.ts':
+    'révocation et renouvellement de l’accès d’un apporteur, lus par les administrateurs de la console seuls (portée dépôt, REQ-GOV-017)',
   // JUR-T61 : la page publique des données de la console, lue par ses utilisateurs avant connexion.
   'console/vos-donnees.ts':
     'page « Vos données dans la console », lue par ses utilisateurs seuls : couverte par le témoin vos-donnees-console',

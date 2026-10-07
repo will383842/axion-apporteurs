@@ -146,3 +146,29 @@ export async function revoquerLAccesDUnApporteur(
     };
   });
 }
+
+/** L'état de l'accès d'un apporteur, tel que l'écran le montre : la MÊME règle que le geste. */
+export type EtatDeLAcces =
+  'introuvable' | 'contrat_termine' | 'sans_acces' | 'avant_signature' | 'sous_contrat';
+
+/** Les statuts d'avant la signature : ni attribution ni commission (juriste, #474, 6034733889, f). */
+const AVANT_LA_SIGNATURE: readonly string[] = ['kyc_en_cours', 'pret_a_signer'];
+
+export function etatDuStatut(statut: string | null): EtatDeLAcces {
+  if (statut === null) return 'introuvable';
+  if (statut === 'resilie') return 'contrat_termine';
+  if (!(STATUTS_DU_GESTE as readonly string[]).includes(statut)) return 'sans_acces';
+  return AVANT_LA_SIGNATURE.includes(statut) ? 'avant_signature' : 'sous_contrat';
+}
+
+/** L'état de l'accès, lu en base : le statut seul, aucune autre donnée de l'apporteur. */
+export async function etatDeLAcces(
+  prisma: Pick<PrismaClient, 'apporteur'>,
+  apporteurId: string
+): Promise<EtatDeLAcces> {
+  const a = await prisma.apporteur.findUnique({
+    where: { id: apporteurId },
+    select: { statut: true },
+  });
+  return etatDuStatut(a?.statut ?? null);
+}
