@@ -46,7 +46,7 @@
 | `/contestations/[id]` | Ma contestation : relire son écrit et la réponse d'Axion-IA, et seulement les siens ; en ouverture pleine seulement (un résilié reçoit la réponse d'une contestation inconnue), sans aucune action | REQ-DM-043, REQ-UX-047 | `contestation.html` | UX-P1-51 | non |
 | `/activite` | Mon activité — ses chiffres, son palier, **aucun objectif, aucun classement** | REQ-UX-029 | — | UX-P3-02 | non |
 | `/ressources` | Kit, grille de sa version de contrat, FAQ, replay, argumentaires par palier | REQ-CPL-023 | — | UX-P3-02 | non |
-| `/aide` | Fil de conversation avec Axion-IA, FAQ d'abord, engagement 2 jours ouvrés | REQ-UX-028 | — | UX-P3-03 | non |
+| `/aide` | Écrire à Axion-IA : un écrit, daté à sa réception par la base, sans délai chiffré promis (phase 1) ; le fil de conversation, la FAQ et l'engagement de réponse viennent en phase 3 (UX-P3-03) | REQ-DM-043, REQ-UX-047, REQ-UX-028 | `aide.html` | UX-P1-62 | non |
 
 ## Connexion
 

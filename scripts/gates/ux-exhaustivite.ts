@@ -73,6 +73,7 @@ import * as INFORMATION_DES_TIERS from '../../src/content/micro-copy/espace/info
 import * as ETATS_DES_DEPOTS from '../../src/content/micro-copy/espace/etats-attribution';
 import * as NOTIFICATIONS_DE_L_ESPACE from '../../src/content/micro-copy/espace/notifications';
 import * as VERIFICATION_DE_L_ESPACE from '../../src/content/micro-copy/espace/verification';
+import * as ECRIT_DE_L_ESPACE from '../../src/content/micro-copy/espace/aide';
 import { ETATS_VIDES_CONSOLE } from '../../src/content/micro-copy/console/etats-vides';
 import { GABARITS } from '../../src/server/notifications/table-ssot';
 import type { ActionEcran, EtatVide, TexteIssue } from '../../src/content/micro-copy/types';
@@ -109,6 +110,8 @@ const MICRO_COPIE_DE_L_ESPACE: Readonly<Record<string, unknown>> = {
   // UX-P1-54 : l'écran des notifications de l'espace.
   'espace/notifications.ts': NOTIFICATIONS_DE_L_ESPACE,
   'espace/verification.ts': VERIFICATION_DE_L_ESPACE,
+  // UX-P1-62 : « Écrire à Axion-IA », l'écrit de l'apporteur.
+  'espace/aide.ts': ECRIT_DE_L_ESPACE,
   // Hors d'`espace/`, mais importé par chaque module de l'espace : parcouru comme eux.
   'types.ts': TYPES_DE_LA_MICRO_COPIE,
   // UX-P1-10 : les notifications de l'apporteur (e-mail et espace), lues par lui : parcourues aussi.
@@ -204,8 +207,11 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   ],
   // Le reflet de SA saisie — rendu en nœud texte seulement (famille `html_brut`).
   'espace/etats-vides.ts › ETATS_VIDES_ESPACE › /entreprise?q=': ['recherche'],
-  // Un délai, venu de sa source unique (RM-10).
-  'espace/etats-vides.ts › ETATS_VIDES_ESPACE › /aide': ['delaiDeReponse'],
+  // UX-P1-62 : la borne de SON écrit, de la SSOT (RM-10), et la date et l'heure de SA réception, posées
+  // par la base (juriste, 6038148824).
+  'espace/aide.ts › ECRIRE_A_AXION_IA › borne': ['max'],
+  'espace/aide.ts › ECRIRE_A_AXION_IA › erreurs › tropLong': ['max'],
+  'espace/aide.ts › ECRIRE_A_AXION_IA › confirmation': ['date', 'heure'],
   'espace/vocabulaire.ts › FORMULES › droitACommissionJusquau': ['dateFin'],
   'espace/vocabulaire.ts › FORMULES › courrierDeSuspension': ['dateCourrier'],
   'espace/vocabulaire.ts › FORMULES › limiteDeVerification': ['limiteParJour'],

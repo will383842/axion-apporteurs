@@ -357,6 +357,8 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
     'espace/etats-attribution.ts': ['EXPORT_TEMOIN', 'phrase'],
     // UX-P1-59 : les textes fermés d'une décision purgée ; le contexte étranger est le titre de l'écran.
     'espace/notifications.ts': ['NOTIFICATIONS', 'titre'],
+    // UX-P1-62 : l'écrit de l'apporteur ; le contexte étranger est le libellé du champ.
+    'espace/aide.ts': ['ECRIRE_A_AXION_IA', 'champ'],
   };
 
   it('REQ-UX-002 : chaque paramètre permis rougit HORS de son contexte, dans le même fichier', () => {
@@ -728,9 +730,9 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /ressources › phrase : Des documents mis à votre disposition, à consulter librement, apparaîtront ici.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /ressources › action › libelle : Retour à l'accueil
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /ressources › action › route : /
-      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /aide › titre : Aucune conversation
-      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /aide › phrase : Vous pouvez écrire à Axion-IA quand vous le souhaitez. Axion-IA vous répond sous {delaiDeReponse}.
-      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /aide › action › libelle : Écrire à Axion-IA
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /aide › titre : Écrire à Axion-IA
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /aide › phrase : Votre écrit est enregistré à la date de sa réception par Axion-IA. Pour contester une décision, dites laquelle et pourquoi. N'y indiquez ni mot de passe ni coordonnées bancaires.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /aide › action › libelle : Envoyer
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion › titre : Se connecter
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion › phrase : Votre adresse électronique suffit : si elle est connue, un lien de connexion vous est envoyé.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion › action › libelle : Recevoir un lien de connexion
@@ -922,6 +924,20 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/verification.ts › VERIFICATION_INDISPONIBLE › phrase : Vous pourrez vérifier cette entreprise un peu plus tard. Vous pouvez aussi la déposer dès maintenant, sans la vérifier.
       espace/verification.ts › VERIFICATION_INDISPONIBLE › action › libelle : Déposer une entreprise
       espace/verification.ts › VERIFICATION_INDISPONIBLE › action › route : /deposer
+      espace/aide.ts › ECRIRE_A_AXION_IA › titre : Écrire à Axion-IA
+      espace/aide.ts › ECRIRE_A_AXION_IA › consigne : Votre écrit est enregistré à la date de sa réception par Axion-IA. Pour contester une décision, dites laquelle et pourquoi. N'y indiquez ni mot de passe ni coordonnées bancaires.
+      espace/aide.ts › ECRIRE_A_AXION_IA › champ : Votre message
+      espace/aide.ts › ECRIRE_A_AXION_IA › borne : {max} caractères au plus.
+      espace/aide.ts › ECRIRE_A_AXION_IA › bouton : Envoyer
+      espace/aide.ts › ECRIRE_A_AXION_IA › enCours : Envoi…
+      espace/aide.ts › ECRIRE_A_AXION_IA › confirmation : Votre écrit a été reçu le {date} à {heure}. Axion-IA vous répond par courrier électronique ; si vous contestez une décision, la réponse est motivée et vous parvient dans les délais prévus par le contrat.
+      espace/aide.ts › ECRIRE_A_AXION_IA › erreurs › messageVide : Écrivez votre message avant de l'envoyer.
+      espace/aide.ts › ECRIRE_A_AXION_IA › erreurs › tropLong : Votre message dépasse {max} caractères : raccourcissez-le.
+      espace/aide.ts › ECRIRE_A_AXION_IA › erreurs › envoiEnEchec : Votre écrit n'est pas parti et rien n'est enregistré : réessayez.
+      espace/aide.ts › ECRIRE_A_AXION_IA › chargement : Chargement…
+      espace/aide.ts › ECRIRE_A_AXION_IA › retour › libelle : Retour à l'accueil
+      espace/aide.ts › ECRIRE_A_AXION_IA › retour › route : /
+      espace/aide.ts › ECRIRE_A_AXION_IA › reessayer : Écrire à Axion-IA
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › titre : Votre lien de connexion à votre espace
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › appel : Ouvrir mon espace
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › titre : {entreprise} : la confirmation de l'échange est en cours

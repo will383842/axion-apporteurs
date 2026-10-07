@@ -21,6 +21,8 @@ import {
 import {
   ErreurEcrit,
   MODELE_DE_L_ECRIT,
+  dateDeLaReception,
+  heureDeLaReception,
   jugerLEcrit,
   recevoirUnEcrit,
 } from '../../../src/server/ecrit/recevoir';
@@ -319,5 +321,36 @@ describe('REQ-DM-043 — la clé d’idempotence : un envoi rejoué ne crée pas
       CLES
     );
     await expect(refus).rejects.toThrow(/^écrit : cle_deja_employee$/);
+  });
+});
+
+describe('REQ-DM-043 — l’écran « Écrire à Axion-IA » : la confirmation et l’ordre de l’action', () => {
+  it('REQ-DM-043 : TÉMOIN — la date et l’heure de la confirmation sont celles de la réception, à l’heure de Paris, à la minute', () => {
+    // 12 h 32 en temps universel, le 8 octobre 2026 : 14 h 32 à Paris (heure d’été).
+    const recu = new Date(Date.UTC(2026, 9, 8, 12, 32, 59));
+    expect(dateDeLaReception(recu)).toBe('8 octobre 2026');
+    expect(heureDeLaReception(recu)).toBe('14 h 32');
+    // L’hiver, la minute sur deux chiffres : 8 h 05 en temps universel, 9 h 05 à Paris.
+    expect(heureDeLaReception(new Date(Date.UTC(2026, 11, 1, 8, 5)))).toBe('9 h 05');
+  });
+
+  it('REQ-DM-043 REQ-SEC-016 : TÉMOIN statique — l’action juge le texte, compte la session puis l’apporteur, et seulement ensuite écrit ; l’apporteur est celui de la session', () => {
+    const action = readFileSync('src/app/(espace)/aide/actions.ts', 'utf8');
+    const position = (motif: string) => {
+      const i = action.indexOf(motif);
+      expect([motif, i >= 0]).toEqual([motif, true]);
+      return i;
+    };
+    const juge = position('jugerLEcrit(texte)');
+    const session = position("limiter('ecrit:session'");
+    const apporteur = position("limiter('ecrit:apporteur'");
+    const ecrit = position('recevoirUnEcrit(');
+    expect(juge < session && session < apporteur && apporteur < ecrit).toBe(true);
+    // La session pour le segment `aide` d’abord ; l’apporteur de la couche est celui de la session.
+    position("actionEspace('aide'");
+    position('forApporteur(dependances.prisma, s.apporteurId)');
+    // Le formulaire ne porte que le message et la clé : aucun identifiant n’en est lu.
+    const lus = [...action.matchAll(/formulaire\.get\('([^']+)'\)/g)].map((m) => m[1]);
+    expect(lus.sort()).toEqual(['cle', 'message']);
   });
 });
