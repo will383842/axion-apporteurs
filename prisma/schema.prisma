@@ -83,6 +83,7 @@ enum TypeEvenementJournal {
   utilisateur_console_modifie
   journal_acces_gel_modifie
   apporteur_mis_en_demeure
+  piece_kyc_rib_verifie
 
   @@map("type_evenement_journal")
 }
