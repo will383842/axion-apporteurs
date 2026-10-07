@@ -10032,7 +10032,11 @@
         "docs/gates.json",
         "src/domain/lexique/lexique-interdit.ts",
         "docs/GLOSSAIRE.md",
-        "tests/unit/juridique/gardes-article-2-7.spec.ts"
+        "tests/unit/juridique/gardes-article-2-7.spec.ts",
+        ".github/workflows/ci.yml",
+        "package.json",
+        "scripts/gates/lexique-apporteurs.ts",
+        "tests/unit/gouvernance/lexique.spec.ts"
       ],
       "schema": false,
       "sensible": [
