@@ -71,11 +71,12 @@ async function unApporteur(): Promise<string> {
 async function unEcritBrut(apporteurId: string, recuAt = new Date('2020-01-01T00:00:00.000Z')) {
   const id = randomUUID();
   await app.$executeRawUnsafe(
-    `INSERT INTO ecrits_apporteur (id, apporteur_id, recu_at, texte_chiffre)
-     VALUES ($1::uuid, $2::uuid, $3, '\\x01'::bytea)`,
+    `INSERT INTO ecrits_apporteur (id, apporteur_id, recu_at, texte_chiffre, cle_idempotence)
+     VALUES ($1::uuid, $2::uuid, $3, '\\x01'::bytea, $4::uuid)`,
     id,
     apporteurId,
-    recuAt
+    recuAt,
+    randomUUID()
   );
   return id;
 }
@@ -137,12 +138,35 @@ describe('REQ-DM-043 — l’écrit : la date de la base, en ajout seul', () => 
     const avant = new Date();
     const { ecritId, recuAt } = await recevoirUnEcrit(
       forApporteur(app, apporteurId),
-      { texte: 'Je conteste la suspension.' },
+      { cleIdempotence: randomUUID(), texte: 'Je conteste la suspension.' },
       CLES
     );
     const e = await base.prisma.ecritApporteur.findUniqueOrThrow({ where: { id: ecritId } });
     expect(e.apporteurId).toBe(apporteurId);
     expect(e.recuAt).toEqual(recuAt);
     expect(recuAt.getTime()).toBeGreaterThanOrEqual(avant.getTime() - 5_000);
+  });
+});
+
+describe('REQ-DM-043 — la clé d’idempotence, sur la base (forme d’A02, #319 6039339072)', () => {
+  it('REQ-DM-043 : TÉMOIN — deux envois CONCURRENTS avec la même clé donnent UN écrit, et la même date', async () => {
+    const apporteurId = await unApporteur();
+    const cleIdempotence = randomUUID();
+    const envoyer = () =>
+      recevoirUnEcrit(forApporteur(app, apporteurId), { cleIdempotence, texte: 'Écrit.' }, CLES);
+    const [a, b] = await Promise.all([envoyer(), envoyer()]);
+    expect(a).toEqual(b);
+    expect(await base.prisma.ecritApporteur.count({ where: { apporteurId } })).toBe(1);
+  });
+
+  it('REQ-DM-043 : TÉMOIN — la clé d’un AUTRE apporteur est refusée, sans second écrit', async () => {
+    const moi = await unApporteur();
+    const autre = await unApporteur();
+    const cleIdempotence = randomUUID();
+    await recevoirUnEcrit(forApporteur(app, autre), { cleIdempotence, texte: 'Écrit.' }, CLES);
+    await expect(
+      recevoirUnEcrit(forApporteur(app, moi), { cleIdempotence, texte: 'Écrit.' }, CLES)
+    ).rejects.toThrow(/cle_deja_employee/);
+    expect(await base.prisma.ecritApporteur.count({ where: { apporteurId: moi } })).toBe(0);
   });
 });
