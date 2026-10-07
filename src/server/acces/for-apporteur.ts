@@ -628,6 +628,12 @@ function selectionDe(modele: ModeleRendu): Selection {
 }
 
 type SansProprietaire<C> = Omit<C, 'id' | 'apporteurId' | 'apporteur'>;
+/**
+ * UX-P1-62 : l'écrit garde son identifiant à la création — tiré par l'ÉCRIVAIN serveur (randomUUID),
+ * il fonde l'AAD du texte chiffré avant l'insertion ; il n'est jamais lu dans la requête. Le
+ * propriétaire, lui, reste posé par la couche.
+ */
+type SansProprietaireAvecId<C> = Omit<C, 'apporteurId' | 'apporteur'>;
 
 // Les types du schéma généré, par alias : un argument de type ne commence jamais par le namespace.
 type WAttribution = Prisma.AttributionWhereInput;
@@ -812,7 +818,7 @@ export interface AccesApporteur {
   ecritApporteur: VueCloisonnee<
     Rendu<EcritApporteur, 'ecritApporteur'>,
     WEcrit,
-    SansProprietaire<CEcrit>,
+    SansProprietaireAvecId<CEcrit>,
     UEcrit,
     OEcrit
   >;
