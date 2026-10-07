@@ -69,7 +69,13 @@ const geste = (d: ReturnType<typeof unDouble>, exception: 'erreur_identification
   annulerApresConfirmation(
     d.tx,
     exception === 'fraude'
-      ? { attributionId: ATTRIBUTION, exception, anomalieId: ANOMALIE, acteur: { id: ADMIN }, maintenant: MAINTENANT }
+      ? {
+          attributionId: ATTRIBUTION,
+          exception,
+          anomalieId: ANOMALIE,
+          acteur: { id: ADMIN },
+          maintenant: MAINTENANT,
+        }
       : { attributionId: ATTRIBUTION, exception, acteur: { id: ADMIN }, maintenant: MAINTENANT },
     { transitionner: d.transitionner }
   );
@@ -88,11 +94,14 @@ describe('REQ-JUR-007 — le droit du geste (sécurité, condition 2)', () => {
     ['désactivé', { role: 'admin', desactiveAt: T, valideAt: T }],
     ['rôle retiré', { role: 'qualifieur', desactiveAt: null, valideAt: T }],
     ['administrateur non validé', { role: 'admin', desactiveAt: null, valideAt: null }],
-  ] as const)('REQ-JUR-007 : TÉMOIN — un compte %s est refusé, sans verrou ni écriture', async (_c, utilisateur) => {
-    const d = unDouble({ utilisateur });
-    expect(await motif(geste(d, 'erreur_identification'))).toBe('droit_absent');
-    expect(d.appels).toEqual([]);
-  });
+  ] as const)(
+    'REQ-JUR-007 : TÉMOIN — un compte %s est refusé, sans verrou ni écriture',
+    async (_c, utilisateur) => {
+      const d = unDouble({ utilisateur });
+      expect(await motif(geste(d, 'erreur_identification'))).toBe('droit_absent');
+      expect(d.appels).toEqual([]);
+    }
+  );
 });
 
 describe('REQ-JUR-007 — le geste, après la confirmation seulement', () => {
@@ -116,7 +125,9 @@ describe('REQ-JUR-007 — le geste, après la confirmation seulement', () => {
   });
 
   it('REQ-JUR-007 : TÉMOIN — une attribution NON confirmée est refusée, rien n’est écrit', async () => {
-    const d = unDouble({ ligne: { statut: 'provisoire', confirmee_at: null, annulation_exception: null } });
+    const d = unDouble({
+      ligne: { statut: 'provisoire', confirmee_at: null, annulation_exception: null },
+    });
     expect(await motif(geste(d, 'fraude'))).toBe('non_confirmee');
     expect(d.transitionner).not.toHaveBeenCalled();
   });

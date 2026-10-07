@@ -487,13 +487,26 @@ describe('REQ-JUR-007 — DM-71 : les deux exceptions de l’art. 3.3 se rendent
     const t = texteDeLaDecisionDansLEspace(entreprise, chargeDeLException('fraude_etablie'), {
       faits: 'deux dépôts fabriqués',
     });
-    expect(t!.corps).toContain("À la vérification, ce dépôt ne remplit pas les conditions de l'article 3.7 du contrat et il est annulé (article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues." + ' Faits retenus : deux dépôts fabriqués');
-    expect(t!.corps).toContain('les commandes signées et les commissions acquises avant cette annulation restent dues');
+    expect(t!.corps).toContain(
+      "À la vérification, ce dépôt ne remplit pas les conditions de l'article 3.7 du contrat et il est annulé (article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues." +
+        ' Faits retenus : deux dépôts fabriqués'
+    );
+    expect(t!.corps).toContain(
+      'les commandes signées et les commissions acquises avant cette annulation restent dues'
+    );
   });
 
   it('REQ-JUR-007 : TÉMOIN — la fraude aux faits PURGÉS rend le texte fermé de la juriste, comme anomalie_confirmee', () => {
-    const t = texteDeLaDecisionDansLEspace(entreprise, chargeDeLException('fraude_etablie'), 'purgee');
-    expect(t!.corps).toContain("À la vérification, ce dépôt ne remplit pas les conditions de l'article 3.7 du contrat et il est annulé (article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues." + ' ' + NOTIFICATIONS.faitsNonConserves);
+    const t = texteDeLaDecisionDansLEspace(
+      entreprise,
+      chargeDeLException('fraude_etablie'),
+      'purgee'
+    );
+    expect(t!.corps).toContain(
+      "À la vérification, ce dépôt ne remplit pas les conditions de l'article 3.7 du contrat et il est annulé (article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues." +
+        ' ' +
+        NOTIFICATIONS.faitsNonConserves
+    );
     expect(t!.corps).not.toContain('{faits}');
   });
 
@@ -503,7 +516,9 @@ describe('REQ-JUR-007 — DM-71 : les deux exceptions de l’art. 3.3 se rendent
       chargeDeLException('annulee_erreur_identification'),
       null
     );
-    expect(t!.corps).toContain("Ce dépôt est annulé : l'entreprise a été identifiée par erreur (contrat, article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues");
+    expect(t!.corps).toContain(
+      "Ce dépôt est annulé : l'entreprise a été identifiée par erreur (contrat, article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues"
+    );
     expect(t!.corps).not.toContain('Faits retenus');
   });
 });

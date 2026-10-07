@@ -129,7 +129,9 @@ describe('REQ-JUR-007 — la charge porte l’exception, pour la transition huma
       charge({ transition: 'annulee_erreur_identification', exception: 'erreur_identification' })
     ).toBe(true);
     expect(charge({ transition: 'annulee_erreur_identification' })).toBe(false);
-    expect(charge({ transition: 'annulee_erreur_identification', exception: 'fraude' })).toBe(false);
+    expect(charge({ transition: 'annulee_erreur_identification', exception: 'fraude' })).toBe(
+      false
+    );
   });
 
   it('REQ-JUR-007 : TÉMOIN — une autre transition ne porte JAMAIS d’exception', () => {
@@ -148,12 +150,20 @@ describe('REQ-JUR-007 — l’exception humaine : la fraude de l’apporteur (co
   it('REQ-JUR-007 : TÉMOIN — jamais depuis `provisoire`, jamais par un conseiller', () => {
     expect(
       code(() =>
-        transitionnerAttribution({ de: 'provisoire', transition: 'fraude_etablie', porteur: 'apporteur' })
+        transitionnerAttribution({
+          de: 'provisoire',
+          transition: 'fraude_etablie',
+          porteur: 'apporteur',
+        })
       )
     ).toBe('transition_refusee');
     expect(
       code(() =>
-        transitionnerAttribution({ de: 'signee', transition: 'fraude_etablie', porteur: 'conseiller' })
+        transitionnerAttribution({
+          de: 'signee',
+          transition: 'fraude_etablie',
+          porteur: 'conseiller',
+        })
       )
     ).toBe('refusee_au_porteur');
   });

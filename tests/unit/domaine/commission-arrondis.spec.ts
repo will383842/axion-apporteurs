@@ -16,10 +16,7 @@
  *   s'acquiert au paiement intégral ; leurs témoins sont dans acquisition-au-paiement-integral.spec.ts).
  */
 import { describe, it, expect } from 'vitest';
-import {
-  calculerCommission,
-  type EntreeCalcul,
-} from '../../../src/domain/commission/calcul';
+import { calculerCommission, type EntreeCalcul } from '../../../src/domain/commission/calcul';
 import { BPS_MAX, type ContenuGrille } from '../../../src/domain/commission/grille';
 
 /** Une grille SYNTHÉTIQUE : deux taux ronds, aucune valeur réelle. */

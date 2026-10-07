@@ -120,7 +120,8 @@ export type EncaissementRecu = {
   readonly creditLe: DateCivile;
 };
 
-export type Acquisition = { readonly acquise: false } | { readonly acquise: true; readonly le: DateCivile };
+export type Acquisition =
+  { readonly acquise: false } | { readonly acquise: true; readonly le: DateCivile };
 
 const entierPositifOuNul = (v: number) => Number.isSafeInteger(v) && v >= 0;
 const ordreDuJour = (d: DateCivile) => d.annee * 10_000 + d.mois * 100 + d.jour;
@@ -145,7 +146,9 @@ export function acquisitionAuPaiementIntegral(
       throw new RangeError(`acquisition : l'encaissement ${i} doit être un entier de centimes ≥ 0`);
     }
   });
-  const parDate = [...encaissements].sort((a, b) => ordreDuJour(a.creditLe) - ordreDuJour(b.creditLe));
+  const parDate = [...encaissements].sort(
+    (a, b) => ordreDuJour(a.creditLe) - ordreDuJour(b.creditLe)
+  );
   let cumul = 0n;
   for (const e of parDate) {
     cumul += BigInt(e.montantCents);

@@ -1,31 +1,35 @@
 // @req REQ-ARG-004
 // @req REQ-DM-017
 /**
- * Le prorata entier d'une commission sur les encaissements — DM-04 (REQ-ARG-004, REQ-DM-017).
+ * L'acquisition d'une commission au PAIEMENT INTÉGRAL — T-ARG-044 (contrat v2, art. 4.0, 4.2 et 4.3 ;
+ * REQ-ARG-004, REQ-DM-017). Le prorata est retiré : aucune part n'est due au titre d'un paiement
+ * partiel.
  *
- * part acquise au i-ème encaissement = ⌊ commission × cumul encaissé TTC / TTC net de la facture ⌋
- *                                      − Σ des parts déjà acquises
+ * LES INVARIANTS SONT PROUVÉS, PAS POSTULÉS, sur 500 tirages DÉTERMINISTES (graine fixe : un rouge se
+ * rejoue), par un juge qui ne connaît que le résultat rendu :
+ *   1. TOUT OU RIEN : le résultat n'est jamais un montant ni une part ;
+ *   2. acquise SI ET SEULEMENT SI le cumul des encaissements atteint le prix NET des avoirs, au
+ *      centime près : jamais avant le solde ;
+ *   3. acquise au jour du crédit qui SOLDE, les crédits pris dans l'ordre de leur date ;
+ *   4. MONOTONE : un encaissement de plus ne retire jamais l'acquisition ;
+ *   5. l'ordre de réception ne change rien.
  *
- * LES INVARIANTS SONT PROUVÉS, PAS POSTULÉS : à facture soldée la somme des parts vaut la commission
- * au centime ; aucune part n'est négative ; aucune ne dépasse la commission ; l'ordre des
- * encaissements ne change pas l'état final. Ils sont jugés sur des tirages DÉTERMINISTES (graine
- * fixe : un rouge se rejoue), par un juge qui ne connaît que les parts rendues.
- *
- * TÉMOIN À DEUX FACES (acceptation 7) : une implémentation qui arrondit en flottant chaque part, puis
- * une qui divise un cumul TTC par un montant HT, font rougir le juge, qui NOMME l'invariant rompu et
- * l'écart en centimes ; l'implémentation du dépôt passe sur les MÊMES tirages.
+ * TÉMOIN À DEUX FACES : une implémentation qui acquiert à 99 %, puis une qui ignore les avoirs, font
+ * rougir le juge, qui NOMME l'invariant rompu ; l'implémentation du dépôt passe sur les MÊMES tirages.
  */
 import { describe, expect, it } from 'vitest';
-import { partsDuProrata } from '../../../src/domain/commission/calcul';
+import {
+  acquisitionAuPaiementIntegral,
+  type Acquisition,
+  type EncaissementRecu,
+} from '../../../src/domain/commission/calcul';
 
 type Scenario = {
-  aRepartirCents: number;
-  factureTtcNetCents: number;
-  factureHtCents: number;
-  encaissementsTtcCents: number[];
+  prixFactureCents: number;
+  avoirsCents: number[];
+  encaissements: EncaissementRecu[];
 };
-type Prorata = (s: Scenario) => number[];
-type Violation = { invariant: string; ecartCents: number };
+type Implementation = (s: Scenario) => Acquisition;
 
 /** Générateur à graine fixe (Mulberry32) : un tirage rouge se rejoue à l'identique. */
 function tirage(graine: number): () => number {
@@ -39,147 +43,150 @@ function tirage(graine: number): () => number {
   };
 }
 
-/** Des factures soldées en 1 à 6 encaissements, TVA de 20 % (HT = TTC / 1,2, arrondi). */
+const PAYEURS = ['client', 'opco', 'autre_financeur'] as const;
+const r = tirage(0x7a44);
+const entier = (max: number) => Math.floor(r() * max);
+const unJour = () => ({ annee: 2027, mois: 1 + entier(12), jour: 1 + entier(28) });
+
 function scenarios(n: number): Scenario[] {
-  const alea = tirage(20260929);
-  const entier = (max: number) => 1 + Math.floor(alea() * max);
   return Array.from({ length: n }, () => {
-    const factureTtcNetCents = entier(5_000_000);
-    const nb = Math.min(entier(6), factureTtcNetCents);
-    const coupures = new Set<number>();
-    while (coupures.size < nb - 1) coupures.add(entier(factureTtcNetCents - 1));
-    const bornes = [0, ...[...coupures].sort((x, y) => x - y), factureTtcNetCents];
+    const prixFactureCents = 1 + entier(5_000_000);
+    const avoirsCents = Array.from({ length: entier(3) }, () => entier(prixFactureCents / 4));
+    const net = prixFactureCents - avoirsCents.reduce((a, b) => a + b, 0);
+    // Un tiers solde exactement, un tiers reste en deçà (un centime au moins), un tiers dépasse.
+    const cible = [net, Math.max(0, net - 1 - entier(net)), net + entier(net)][entier(3)]!;
+    const nb = 1 + entier(4);
+    const montants: number[] = [];
+    let reste = cible;
+    for (let i = 0; i < nb - 1; i += 1) {
+      const m = entier(reste + 1);
+      montants.push(m);
+      reste -= m;
+    }
+    montants.push(reste);
     return {
-      aRepartirCents: entier(1_000_000),
-      factureTtcNetCents,
-      factureHtCents: Math.round((factureTtcNetCents * 5) / 6),
-      encaissementsTtcCents: bornes.slice(1).map((b, i) => b - bornes[i]!),
+      prixFactureCents,
+      avoirsCents,
+      encaissements: montants.map((montantCents) => ({
+        montantCents,
+        payeur: PAYEURS[entier(3)]!,
+        creditLe: unJour(),
+      })),
     };
   });
 }
 
-/** Le juge : il ne voit que les parts rendues, jamais l'implémentation. */
-function violations(prorata: Prorata, s: Scenario): Violation[] {
-  const v: Violation[] = [];
-  const parts = prorata(s);
-  const somme = parts.reduce((x, y) => x + y, 0);
-  if (somme !== s.aRepartirCents)
-    v.push({
-      invariant: 'somme_des_parts_egale_la_commission',
-      ecartCents: somme - s.aRepartirCents,
+const ordre = (d: EncaissementRecu['creditLe']) => d.annee * 10_000 + d.mois * 100 + d.jour;
+
+/** Le juge : les invariants, nommés. Il ne lit QUE le résultat de l'implémentation. */
+function violations(impl: Implementation, s: Scenario): string[] {
+  const v: string[] = [];
+  const res = impl(s);
+  const net = BigInt(s.prixFactureCents) - s.avoirsCents.reduce((a, b) => a + BigInt(b), 0n);
+  const total = s.encaissements.reduce((a, e) => a + BigInt(e.montantCents), 0n);
+  if (Object.keys(res).some((k) => k !== 'acquise' && k !== 'le')) v.push('tout_ou_rien');
+  if (res.acquise !== total >= net) v.push('si_et_seulement_si_solde');
+  if (res.acquise) {
+    // Le premier jour, dans l'ordre des dates, où le cumul atteint le prix net.
+    let cumul = 0n;
+    let attendu: number | null = null;
+    for (const e of [...s.encaissements].sort((a, b) => ordre(a.creditLe) - ordre(b.creditLe))) {
+      cumul += BigInt(e.montantCents);
+      if (cumul >= net) {
+        attendu = ordre(e.creditLe);
+        break;
+      }
+    }
+    if (ordre(res.le) !== attendu) v.push('au_jour_du_solde');
+    // Monotone : un encaissement de plus, à n'importe quelle date, ne retire jamais l'acquisition.
+    const plus = impl({
+      ...s,
+      encaissements: [
+        ...s.encaissements,
+        { montantCents: 1, payeur: 'client', creditLe: unJour() },
+      ],
     });
-  for (const p of parts) {
-    if (p < 0) v.push({ invariant: 'aucune_part_negative', ecartCents: p });
-    if (p > s.aRepartirCents)
-      v.push({
-        invariant: 'aucune_part_au_dela_de_la_commission',
-        ecartCents: p - s.aRepartirCents,
-      });
-    if (!Number.isSafeInteger(p))
-      v.push({ invariant: 'parts_entieres', ecartCents: p - Math.trunc(p) });
+    if (!plus.acquise) v.push('monotone');
   }
-  const renverse = prorata({ ...s, encaissementsTtcCents: [...s.encaissementsTtcCents].reverse() });
-  const sommeRenversee = renverse.reduce((x, y) => x + y, 0);
-  if (sommeRenversee !== somme)
-    v.push({
-      invariant: 'ordre_des_encaissements_indifferent',
-      ecartCents: sommeRenversee - somme,
-    });
+  const inverse = impl({ ...s, encaissements: [...s.encaissements].reverse() });
+  if (JSON.stringify(inverse) !== JSON.stringify(res)) v.push('ordre_de_reception');
   return v;
 }
 
-const depot: Prorata = (s) =>
-  partsDuProrata(s.aRepartirCents, s.factureTtcNetCents, s.encaissementsTtcCents);
+const depot: Implementation = (s) =>
+  acquisitionAuPaiementIntegral(
+    { prixFactureCents: s.prixFactureCents, avoirsCents: s.avoirsCents },
+    s.encaissements
+  );
 
-/** Défaut 1 : chaque part arrondie en flottant, sans cumul — la somme dérive. */
-const flottant: Prorata = (s) =>
-  s.encaissementsTtcCents.map((e) => Math.round((s.aRepartirCents * e) / s.factureTtcNetCents));
-
-/** Défaut 2 : le cumul TTC divisé par le HT — deux natures différentes, la commission gonfle. */
-const denominateurHt: Prorata = (s) => {
-  let cumul = 0;
-  let deja = 0;
-  return s.encaissementsTtcCents.map((e) => {
-    cumul += e;
-    const part = Math.floor((s.aRepartirCents * cumul) / s.factureHtCents) - deja;
-    deja += part;
-    return part;
-  });
+/** Faute 1 : acquise dès 99 % du prix net. */
+const a99pourcent: Implementation = (s) => {
+  const net = s.prixFactureCents - s.avoirsCents.reduce((a, b) => a + b, 0);
+  const total = s.encaissements.reduce((a, e) => a + e.montantCents, 0);
+  return total >= 0.99 * net && total < net
+    ? { acquise: true, le: s.encaissements[0]!.creditLe }
+    : depot(s);
 };
 
+/** Faute 2 : le solde jugé sur le prix FACTURÉ, avoirs ignorés. */
+const sansAvoirs: Implementation = (s) => depot({ ...s, avoirsCents: [] });
+
 const TIRAGES = scenarios(500);
+const MARS = { annee: 2027, mois: 3, jour: 5 };
 
-describe('REQ-ARG-004, REQ-DM-017 — le prorata entier, invariants prouvés sur 500 tirages', () => {
-  it('REQ-ARG-004, REQ-DM-017 : l’implémentation du dépôt tient les quatre invariants sur chaque tirage', () => {
-    const rompus = TIRAGES.flatMap((s, i) =>
-      violations(depot, s).map((x) => ({ tirage: i, ...x }))
-    );
-    expect(rompus).toEqual([]);
+describe('REQ-ARG-004, REQ-DM-017 — l’acquisition au paiement intégral, invariants prouvés sur 500 tirages', () => {
+  it('REQ-ARG-004, REQ-DM-017 : l’implémentation du dépôt tient les cinq invariants sur chaque tirage', () => {
+    expect(TIRAGES).toHaveLength(500);
+    const fautes = TIRAGES.flatMap((s, i) => violations(depot, s).map((v) => `${i}:${v}`));
+    expect(fautes).toEqual([]);
   });
 
-  it('REQ-ARG-004, REQ-DM-017 — TÉMOIN : un arrondi en flottant est pris, invariant et écart nommés', () => {
-    const rompus = TIRAGES.flatMap((s) => violations(flottant, s));
-    expect(rompus.length).toBeGreaterThan(0);
-    expect(rompus[0]).toMatchObject({ invariant: 'somme_des_parts_egale_la_commission' });
-    expect(rompus[0]!.ecartCents).not.toBe(0);
-  });
-
-  it('REQ-ARG-004, REQ-DM-017 — TÉMOIN : un dénominateur HT sous un numérateur TTC est pris, invariant et écart nommés', () => {
-    const rompus = TIRAGES.flatMap((s) => violations(denominateurHt, s));
-    const noms = new Set(rompus.map((r) => r.invariant));
-    expect(noms.has('somme_des_parts_egale_la_commission')).toBe(true);
-    expect(
-      rompus.find((r) => r.invariant === 'somme_des_parts_egale_la_commission')!.ecartCents
-    ).toBeGreaterThan(0);
-  });
-
-  it('REQ-DM-017 : le cas frontière de l’exigence — 14 400 TTC, 12 000 HT, trois encaissements de 4 800', () => {
+  it('REQ-ARG-004 — TÉMOIN : une acquisition à 99 % est prise, invariant nommé', () => {
     const s: Scenario = {
-      aRepartirCents: 120_000,
-      factureTtcNetCents: 1_440_000,
-      factureHtCents: 1_200_000,
-      encaissementsTtcCents: [480_000, 480_000, 480_000],
+      prixFactureCents: 100_000,
+      avoirsCents: [],
+      encaissements: [{ montantCents: 99_500, payeur: 'client', creditLe: MARS }],
     };
-    expect(depot(s)).toEqual([40_000, 40_000, 40_000]);
-    expect(violations(denominateurHt, s)[0]).toMatchObject({
-      invariant: 'somme_des_parts_egale_la_commission',
-    });
+    expect(violations(a99pourcent, s)).toContain('si_et_seulement_si_solde');
+    expect(violations(depot, s)).toEqual([]);
   });
 
-  it('REQ-ARG-004 : une facture non soldée n’a pas encore acquis toute la commission, et jamais plus', () => {
-    const s = TIRAGES.find((x) => x.encaissementsTtcCents.length > 1)!;
-    const partiel = partsDuProrata(
-      s.aRepartirCents,
-      s.factureTtcNetCents,
-      s.encaissementsTtcCents.slice(0, -1)
+  it('REQ-ARG-004 — TÉMOIN : un solde jugé sans les avoirs est pris, invariant nommé', () => {
+    const s: Scenario = {
+      prixFactureCents: 100_000,
+      avoirsCents: [20_000],
+      encaissements: [{ montantCents: 80_000, payeur: 'opco', creditLe: MARS }],
+    };
+    expect(violations(sansAvoirs, s)).toContain('si_et_seulement_si_solde');
+    expect(violations(depot, s)).toEqual([]);
+  });
+
+  it('REQ-DM-017 : les tirages couvrent les trois cas : soldé exactement, en deçà, au-delà', () => {
+    const cas = new Set(
+      TIRAGES.map((s) => {
+        const net = s.prixFactureCents - s.avoirsCents.reduce((a, b) => a + b, 0);
+        const total = s.encaissements.reduce((a, e) => a + e.montantCents, 0);
+        return total === net ? 'exact' : total < net ? 'en_deca' : 'au_dela';
+      })
     );
-    const somme = partiel.reduce((x, y) => x + y, 0);
-    expect(somme).toBeLessThanOrEqual(s.aRepartirCents);
-    expect(partiel.every((p) => p >= 0)).toBe(true);
-  });
-
-  it('REQ-ARG-004 : un encaissement au-delà du TTC net n’acquiert rien de plus que la commission', () => {
-    expect(partsDuProrata(100, 1_000, [600, 600])).toEqual([60, 40]);
+    expect([...cas].sort()).toEqual(['au_dela', 'en_deca', 'exact']);
   });
 });
 
-describe('REQ-DM-017 — un prorata sur une donnée fausse n’a pas de valeur par défaut', () => {
-  it('REQ-DM-017 : une commission négative ou non entière, un TTC net nul, un encaissement négatif lèvent, nommés ; un encaissement NUL est écarté (DM-46)', () => {
-    expect(() => partsDuProrata(-1, 1_000, [1_000])).toThrow(
-      new RangeError('prorata : la commission totale doit être un entier de centimes ≥ 0')
-    );
-    expect(() => partsDuProrata(1.5, 1_000, [1_000])).toThrow(RangeError);
-    expect(() => partsDuProrata(100, 0, [1_000])).toThrow(
-      new RangeError('prorata : le TTC net de la facture doit être un entier de centimes > 0')
-    );
-    expect(() => partsDuProrata(100, 1_000, [500, -1])).toThrow(
-      new RangeError("prorata : l'encaissement 1 doit être un entier de centimes ≥ 0")
-    );
-    // DM-46 : le nul n'acquiert rien et ne lève plus — il est rapporté par `prorataDesEncaissements`.
-    expect(partsDuProrata(100, 1_000, [500, 0])).toEqual([50, 0]);
+describe('REQ-DM-017 — une donnée fausse n’a pas de valeur par défaut', () => {
+  it('REQ-DM-017 : TÉMOIN — un prix facturé négatif ou non entier lève, nommé', () => {
+    for (const prixFactureCents of [-1, 10.5, Number.NaN]) {
+      expect(() =>
+        acquisitionAuPaiementIntegral({ prixFactureCents, avoirsCents: [] }, [])
+      ).toThrow(/prix facturé/);
+    }
   });
 
-  it('REQ-DM-017 : une commission nulle se répartit en parts nulles, jamais négatives', () => {
-    expect(partsDuProrata(0, 1_000, [400, 600])).toEqual([0, 0]);
+  it('REQ-DM-017 : un encaissement NUL n’acquiert rien et ne lève pas', () => {
+    expect(
+      acquisitionAuPaiementIntegral({ prixFactureCents: 100, avoirsCents: [] }, [
+        { montantCents: 0, payeur: 'client', creditLe: MARS },
+      ])
+    ).toEqual({ acquise: false });
   });
 });

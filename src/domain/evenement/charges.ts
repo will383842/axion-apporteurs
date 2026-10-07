@@ -218,58 +218,59 @@ export const CHARGES_PAR_TYPE = {
     .strict()
     .superRefine(
       ({ de, transition, critere, fait, motifAnnulation, categorieRelation, exception }, ctx) => {
-      if ((de === null) !== NAISSANCES.includes(transition)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['de'],
-          message: 'naissance_incoherente',
-        });
+        if ((de === null) !== NAISSANCES.includes(transition)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['de'],
+            message: 'naissance_incoherente',
+          });
+        }
+        if ((transition === 'anteriorite_etablie') !== (critere !== undefined)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['critere'],
+            message: 'critere_incoherent',
+          });
+        }
+        // Le fait fondateur accompagne le critère, et sa nature est celle que le critère nomme.
+        const natureAttendue =
+          critere === undefined ? undefined : critere === 'cliente' ? 'facture' : 'devis';
+        const exceptionAttendue = (EXCEPTION_DE_LA_TRANSITION as Partial<Record<string, string>>)[
+          transition
+        ];
+        if (exception !== exceptionAttendue) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['exception'],
+            message: 'exception_incoherente',
+          });
+        }
+        if ((transition === 'annulee_par_la_console') !== (motifAnnulation !== undefined)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['motifAnnulation'],
+            message: 'motif_annulation_incoherent',
+          });
+        }
+        if (
+          (motifAnnulation === 'entreprise_relevant_de_l_article_3_3_bis') !==
+          (categorieRelation !== undefined)
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['categorieRelation'],
+            message: 'categorie_incoherente',
+          });
+        }
+        if (fait?.nature !== natureAttendue) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['fait'],
+            message: 'fait_incoherent',
+          });
+        }
       }
-      if ((transition === 'anteriorite_etablie') !== (critere !== undefined)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['critere'],
-          message: 'critere_incoherent',
-        });
-      }
-      // Le fait fondateur accompagne le critère, et sa nature est celle que le critère nomme.
-      const natureAttendue =
-        critere === undefined ? undefined : critere === 'cliente' ? 'facture' : 'devis';
-      const exceptionAttendue = (
-        EXCEPTION_DE_LA_TRANSITION as Partial<Record<string, string>>
-      )[transition];
-      if (exception !== exceptionAttendue) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['exception'],
-          message: 'exception_incoherente',
-        });
-      }
-      if ((transition === 'annulee_par_la_console') !== (motifAnnulation !== undefined)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['motifAnnulation'],
-          message: 'motif_annulation_incoherent',
-        });
-      }
-      if (
-        (motifAnnulation === 'entreprise_relevant_de_l_article_3_3_bis') !==
-        (categorieRelation !== undefined)
-      ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['categorieRelation'],
-          message: 'categorie_incoherente',
-        });
-      }
-      if (fait?.nature !== natureAttendue) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['fait'],
-          message: 'fait_incoherent',
-        });
-      }
-    }),
+    ),
   /** DM-08 (REQ-DM-007) : le marqueur qui suspend la péremption, posé par un rôle habilité. */
   attribution_peremption_suspendue: z
     .object({ acteur: FORMES.acteur(), suspendueAt: FORMES.horodatage() })

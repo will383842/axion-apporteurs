@@ -75,7 +75,8 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
     fin_de_contrat: 'expiree',
-    anteriorite_etablie: 'annulee',
+    annulee_erreur_identification: 'annulee',
+    fraude_etablie: 'annulee',
   },
   rdv_pris: {
     devis_envoye: 'proposition',
@@ -84,7 +85,8 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
     fin_de_contrat: 'expiree',
-    anteriorite_etablie: 'annulee',
+    annulee_erreur_identification: 'annulee',
+    fraude_etablie: 'annulee',
   },
   proposition: {
     devis_signe: 'signee',
@@ -92,7 +94,8 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
     fin_de_contrat: 'expiree',
-    anteriorite_etablie: 'annulee',
+    annulee_erreur_identification: 'annulee',
+    fraude_etablie: 'annulee',
   },
   signee: {
     paiement_recu: 'convertie',
@@ -100,10 +103,21 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     figee: 'figee_resiliation',
     commande_caduque: 'active',
     commande_caduque_hors_fenetre: 'expiree',
-    anteriorite_etablie: 'annulee',
+    annulee_erreur_identification: 'annulee',
+    fraude_etablie: 'annulee',
   },
-  convertie: { expiree: 'expiree', figee: 'figee_resiliation', anteriorite_etablie: 'annulee' },
-  figee_resiliation: { expiree: 'expiree', anteriorite_etablie: 'annulee' },
+  // DM-71 : après la confirmation, seules les deux exceptions humaines de l'art. 3.3 annulent.
+  convertie: {
+    expiree: 'expiree',
+    figee: 'figee_resiliation',
+    annulee_erreur_identification: 'annulee',
+    fraude_etablie: 'annulee',
+  },
+  figee_resiliation: {
+    expiree: 'expiree',
+    annulee_erreur_identification: 'annulee',
+    fraude_etablie: 'annulee',
+  },
   invalidee: {},
   perdue: {},
   perimee: {},
@@ -120,6 +134,9 @@ const REFUS_CONSEILLER = [
   'anomalie_confirmee',
   'figee',
   'fin_de_contrat',
+  // DM-71
+  'annulee_erreur_identification',
+  'fraude_etablie',
   'retiree',
   'file_expiree',
   'redeclaree',
@@ -222,22 +239,17 @@ describe('REQ-DM-006 — un couple absent lève une erreur typée qui le nomme, 
   });
 });
 
-describe('REQ-DM-006 — l’antériorité établie après coup annule, depuis chaque état occupant', () => {
-  it.each(ETATS_OCCUPANTS)(
-    'REQ-DM-006 : TÉMOIN — %s × anteriorite_etablie → annulee, pour un apporteur comme pour un conseiller',
-    (de) => {
-      for (const porteur of PORTEURS) {
-        expect(transitionnerAttribution({ de, transition: 'anteriorite_etablie', porteur })).toBe(
-          'annulee'
-        );
-      }
+describe('REQ-DM-006 — l’antériorité établie après coup annule une attribution NON CONFIRMÉE (DM-71, art. 3.3 du v2)', () => {
+  it('REQ-DM-006 : TÉMOIN — provisoire × anteriorite_etablie → annulee, pour un apporteur comme pour un conseiller', () => {
+    for (const porteur of PORTEURS) {
+      expect(
+        transitionnerAttribution({ de: 'provisoire', transition: 'anteriorite_etablie', porteur })
+      ).toBe('annulee');
     }
-  );
+  });
 
-  it('REQ-DM-006 : un état qui n’occupe plus ne s’annule pas pour antériorité', () => {
-    for (const de of ETATS_ATTRIBUTION.filter(
-      (e) => !(ETATS_OCCUPANTS as readonly string[]).includes(e)
-    )) {
+  it('REQ-DM-006 : TÉMOIN — tout autre état, confirmé compris, ne s’annule plus pour antériorité', () => {
+    for (const de of ETATS_ATTRIBUTION.filter((e) => e !== 'provisoire')) {
       expect(() =>
         transitionnerAttribution({ de, transition: 'anteriorite_etablie', porteur: 'apporteur' })
       ).toThrow(ErreurTransitionAttribution);
@@ -379,7 +391,12 @@ describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
           ? { critere: 'cliente', fait: FACTURE }
           : transition === 'annulee_par_la_console'
             ? { motifAnnulation: 'declaration_en_double' }
-            : {};
+            : // DM-71 : les deux exceptions humaines portent LEUR exception.
+              transition === 'annulee_erreur_identification'
+              ? { exception: 'erreur_identification' }
+              : transition === 'fraude_etablie'
+                ? { exception: 'fraude' }
+                : {};
       expect(
         charge.safeParse({ de, vers: 'active', transition, acteur, ...critere }).success,
         transition
@@ -515,7 +532,7 @@ async function chargesRechargees(): Promise<ModuleCharges> {
 }
 
 describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
-  it('REQ-QA-004 : les treize états, les vingt-sept transitions et les naissances, dans cet ordre', async () => {
+  it('REQ-QA-004 : les treize états, les vingt-neuf transitions et les naissances, dans cet ordre', async () => {
     const m = await machineRechargee();
     expect(m.ETATS_ATTRIBUTION).toEqual([
       'en_attente',
@@ -560,6 +577,8 @@ describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
       'commande_caduque_hors_fenetre',
       'anteriorite_etablie',
       'fin_de_contrat',
+      'annulee_erreur_identification',
+      'fraude_etablie',
     ]);
     expect(m.NAISSANCES_ATTRIBUTION).toEqual(NAISSANCES);
   });
@@ -583,6 +602,8 @@ describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
       'anomalie_confirmee',
       'figee',
       'fin_de_contrat',
+      'annulee_erreur_identification',
+      'fraude_etablie',
     ]);
   });
 
@@ -891,7 +912,7 @@ describe('REQ-DM-006 — l’écrivain des transitions, en processus (client sim
 
   it('REQ-DM-006 : TÉMOIN — anteriorite_etablie, par le SYSTÈME : annulee, et l’événement porte le critère et le fait fondateur', async () => {
     const { transitionnerUneAttribution } = await ecrivain();
-    const { tx, mises } = txSimule([ligneDe({ statut: 'signee' })]);
+    const { tx, mises } = txSimule([ligneDe({ statut: 'provisoire' })]);
     const r = await transitionnerUneAttribution(tx, {
       attributionId: ID,
       transition: 'anteriorite_etablie',
@@ -900,10 +921,10 @@ describe('REQ-DM-006 — l’écrivain des transitions, en processus (client sim
       acteur: { par: 'systeme' },
       maintenant: MAINTENANT,
     });
-    expect(r).toStrictEqual({ de: 'signee', vers: 'annulee' });
+    expect(r).toStrictEqual({ de: 'provisoire', vers: 'annulee' });
     expect((mises[0] as { data: { statut: string } }).data.statut).toBe('annulee');
     expect(evenementsEcrits()[0]!.charge).toMatchObject({
-      de: 'signee',
+      de: 'provisoire',
       vers: 'annulee',
       transition: 'anteriorite_etablie',
       critere: 'devis_signe',
@@ -1697,7 +1718,7 @@ describe('REQ-DM-006 — l’antériorité ne se fonde que sur un fait ANTÉRIEU
     'REQ-DM-006 : TÉMOIN — un fait fondateur %s : refus nommé, et RIEN n’est écrit',
     async (_, delta) => {
       const { transitionnerUneAttribution } = await ecrivain();
-      const { tx, mises } = txSimule([ligneDe({ statut: 'signee' })]);
+      const { tx, mises } = txSimule([ligneDe({ statut: 'provisoire' })]);
       const e = await refusDe(
         transitionnerUneAttribution(tx, {
           attributionId: ID,
@@ -1716,7 +1737,7 @@ describe('REQ-DM-006 — l’antériorité ne se fonde que sur un fait ANTÉRIEU
 
   it('REQ-DM-006 : TÉMOIN — un fait une milliseconde AVANT le dépôt fonde l’antériorité', async () => {
     const { transitionnerUneAttribution } = await ecrivain();
-    const { tx } = txSimule([ligneDe({ statut: 'signee' })]);
+    const { tx } = txSimule([ligneDe({ statut: 'provisoire' })]);
     const r = await transitionnerUneAttribution(tx, {
       attributionId: ID,
       transition: 'anteriorite_etablie',
@@ -1725,7 +1746,7 @@ describe('REQ-DM-006 — l’antériorité ne se fonde que sur un fait ANTÉRIEU
       acteur: { par: 'systeme' },
       maintenant: MAINTENANT,
     });
-    expect(r).toStrictEqual({ de: 'signee', vers: 'annulee' });
+    expect(r).toStrictEqual({ de: 'provisoire', vers: 'annulee' });
   });
 });
 
@@ -1763,7 +1784,7 @@ describe('REQ-JUR-007 — l’antériorité établie notifie l’apporteur (DM-2
 
   it('REQ-JUR-007 : TÉMOIN — l’apporteur reçoit attribution_annulee_anteriorite, UNE fois, avec l’événement de l’annulation', async () => {
     const { transitionnerUneAttribution } = await ecrivain();
-    const t = txNotifiant(ligneDe({ statut: 'signee' }));
+    const t = txNotifiant(ligneDe({ statut: 'provisoire' }));
     await transitionnerUneAttribution(t.tx, {
       attributionId: ID,
       transition: 'anteriorite_etablie',
@@ -1786,7 +1807,7 @@ describe('REQ-JUR-007 — l’antériorité établie notifie l’apporteur (DM-2
 
   it('REQ-JUR-007 : TÉMOIN — pour un conseiller, aucune notification : la console seule', async () => {
     const { transitionnerUneAttribution } = await ecrivain();
-    const t = txNotifiant(ligneDe({ statut: 'signee', apporteur_id: null }));
+    const t = txNotifiant(ligneDe({ statut: 'provisoire', apporteur_id: null }));
     await transitionnerUneAttribution(t.tx, {
       attributionId: ID,
       transition: 'anteriorite_etablie',
@@ -1806,7 +1827,7 @@ describe('REQ-JUR-007 — l’antériorité établie notifie l’apporteur (DM-2
  * droit sans changer l'état figé : c'est une ligne de commission (phase 2), pas une flèche.
  */
 describe('REQ-DM-011 — une attribution figée par la résiliation ne reçoit plus de commande', () => {
-  it('REQ-DM-011 : TÉMOIN — figee_resiliation refuse devis_envoye, devis_signe et rdv_pris ; elle ne sort que par expiree ou anteriorite_etablie', () => {
+  it('REQ-DM-011 : TÉMOIN — figee_resiliation refuse devis_envoye, devis_signe et rdv_pris ; elle ne sort que par expiree ou les deux exceptions humaines (DM-71)', () => {
     for (const transition of [
       'devis_envoye',
       'devis_signe',
@@ -1820,8 +1841,9 @@ describe('REQ-DM-011 — une attribution figée par la résiliation ne reçoit p
       ).toThrow(`transition_refusee : figee_resiliation × ${transition}`);
     }
     expect(Object.keys(TRANSITIONS_ATTRIBUTION.figee_resiliation).sort()).toEqual([
-      'anteriorite_etablie',
+      'annulee_erreur_identification',
       'expiree',
+      'fraude_etablie',
     ]);
   });
 });

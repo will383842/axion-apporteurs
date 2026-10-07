@@ -61,9 +61,7 @@ export function doitEtreAnnulee(
   faits: FaitsDatesDeLEntreprise
 ): CritereDAnteriorite | null {
   // DM-71 (art. 3.3 du v2) : seule une attribution NON CONFIRMÉE s'annule pour antériorité.
-  return attribution.statut === 'provisoire'
-    ? critereAuDepot(faits, attribution.deposeeAt)
-    : null;
+  return attribution.statut === 'provisoire' ? critereAuDepot(faits, attribution.deposeeAt) : null;
 }
 
 /** Où l'annulation est dite : l'apporteur dans son espace ; un conseiller, en console seulement (W19). */

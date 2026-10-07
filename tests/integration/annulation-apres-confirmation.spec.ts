@@ -33,7 +33,13 @@ beforeAll(async () => {
   app = new PrismaClient({ datasourceUrl: u.toString() });
   grilleId = (
     await base.prisma.grilleCommission.create({
-      data: { version: 1, hash: hex(32), contenuJson: { essai: true }, publieeAt: MAINTENANT, importeeAt: MAINTENANT },
+      data: {
+        version: 1,
+        hash: hex(32),
+        contenuJson: { essai: true },
+        publieeAt: MAINTENANT,
+        importeeAt: MAINTENANT,
+      },
     })
   ).id;
   apporteurId = (

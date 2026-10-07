@@ -32,10 +32,7 @@ const TRANSITION_DE_L_EXCEPTION = {
 export type ExceptionDuGeste = keyof typeof TRANSITION_DE_L_EXCEPTION;
 
 export type MotifDuRefus =
-  | 'droit_absent'
-  | 'attribution_introuvable'
-  | 'non_confirmee'
-  | 'deja_annulee_autrement';
+  'droit_absent' | 'attribution_introuvable' | 'non_confirmee' | 'deja_annulee_autrement';
 
 export class ErreurAnnulationApresConfirmation extends Error {
   constructor(readonly motif: MotifDuRefus) {
