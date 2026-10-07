@@ -140,6 +140,10 @@ export const CLES_REFUSEES = {
     'personneDeclaree',
     'peremptionSuspendueParId',
     'peremptionSuspenduePar',
+    // DM-71 : l'auteur de l'annulation après la confirmation, un employé de la console (le marqueur
+    // lui-même ne se pose qu'avec l'annulation, garde de la base).
+    'annulationParId',
+    'annulationPar',
     'courrielsEnvoyes',
     'demandeConfirmation',
     'demandesDroitsContact',
@@ -266,6 +270,7 @@ export const RELATIONS = {
     'jetonDepot',
     'personneDeclaree',
     'peremptionSuspenduePar',
+    'annulationPar',
     'courrielsEnvoyes',
     'demandeConfirmation',
     'demandesDroitsContact',
@@ -466,6 +471,10 @@ export const CHAMPS_TUS = {
     'versionQualification',
     // DM-59 : l'empreinte du jeton de la page des droits du contact, jamais rendue à l'apporteur.
     'jetonDroitsHash',
+    // DM-71 : le marqueur de l'exception et son auteur (un employé de la console) ; l'apporteur
+    // apprend l'annulation et son motif par sa notification.
+    'annulationException',
+    'annulationParId',
   ],
   changementCourriel: ['apporteurId', 'emailChiffre', 'emailHash', 'tokenHash', 'kid'],
   courrielEnvoye: [
