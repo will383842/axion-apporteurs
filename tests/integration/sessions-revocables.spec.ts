@@ -35,6 +35,7 @@ import {
   type PortsDeSession,
 } from '../../src/server/auth/session';
 import { semerSession } from '../../prisma/seed/05-sessions';
+import { poserUnGelEnBase } from './gel-en-base';
 
 let base: Base;
 
@@ -218,7 +219,8 @@ describe('REQ-SEC-003 — la version de session, tenue par la base', () => {
     const jeton = await ouvrir(id, new Date(t0));
     const maintenant = new Date(t0 + MINUTE);
     expect(await verdict(jeton, maintenant)).toBe('acceptee');
-    await base.prisma.apporteur.update({ where: { id }, data: { statut: 'suspendu' } });
+    // SEC-15 : `suspendu` ne s'écrit plus seul ; c'est une VRAIE pose de gel.
+    await poserUnGelEnBase(base.prisma, id, maintenant);
     expect(await version(id)).toBe(0);
     expect(await verdict(jeton, maintenant)).toBe('acceptee');
   });

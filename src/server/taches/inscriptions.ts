@@ -70,6 +70,7 @@ import { purgerLesNotificationsDeLEspace } from './purger-notifications-espace';
 import { alerterLesNonRendus, passageDEnvoiDesNotifications } from './envoyer-notifications-espace';
 import { purgerLesValeursDesDroits } from './purger-valeurs-droits-contact';
 import { anonymiserLesTracesDesDroits } from './anonymiser-traces-droits-contact';
+import { leverLesSuspensionsEchues } from '../apporteur/suspension';
 import {
   anonymiserLesAnomalies,
   purgerLesContestations,
@@ -254,6 +255,9 @@ export function inscriptions(
     // DM-60 (REQ-JUR-065) : la trace d'une demande de droit, anonymisée cinq ans après sa clôture.
     droits_contact_anonymiser: () =>
       anonymiserLesTracesDesDroits(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-15 (REQ-SEC-019) : la levée de plein droit des suspensions échues, chacune SA transaction.
+    suspensions_lever: () =>
+      leverLesSuspensionsEchues(prisma, new Date(horlogeSysteme.maintenant())),
     // SEC-18 (REQ-SEC-031) : l'ouverture DIFFÉRÉE des anomalies d'auto-parrainage, depuis le curseur
     // que son propre battement porte.
     auto_parrainage_ouvrir: () =>
