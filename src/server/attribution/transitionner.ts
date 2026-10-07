@@ -222,11 +222,14 @@ async function jugerSousLeVerrou(tx: Tx, demande: DemandeEcriture, l: Ligne): Pr
   if (demande.anomalieId === undefined) return;
   const a = await tx.anomalie.findUnique({
     where: { id: demande.anomalieId },
-    select: { statut: true, attributionId: true, apporteurId: true },
+    select: { statut: true, type: true, attributionId: true, apporteurId: true },
   });
   if (
     a === null ||
     a.statut !== 'confirmee' ||
+    // DM-71 (sécurité, #815) : une fraude ne se fonde que sur une anomalie de SINCÉRITÉ, comme le gel
+    // de SEC-15 ; une anomalie d'auto-parrainage confirmée ne la fonde jamais.
+    (demande.transition === 'fraude_etablie' && a.type !== 'sincerite') ||
     a.attributionId !== demande.attributionId ||
     a.apporteurId !== l.apporteur_id
   ) {

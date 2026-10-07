@@ -1549,6 +1549,37 @@ describe('REQ-DM-006 — l’écrivain porte le motif, et écrit la notification
     }
   );
 
+  it.each([
+    ['auto_parrainage', 'anomalie_refusee'],
+    ['sincerite', null],
+  ] as const)(
+    'REQ-JUR-007 : TÉMOIN à deux faces — DM-71 (sécurité, #815) : une fraude ne se fonde que sur une anomalie de SINCÉRITÉ confirmée ; %s → %s',
+    async (type, refus) => {
+      const { transitionnerUneAttribution } = await ecrivain();
+      const t = txDM55(ligneDe({ statut: 'signee', confirmee_at: MAINTENANT }), {
+        statut: 'confirmee',
+        type,
+        attributionId: ID,
+        apporteurId: APPORTEUR,
+      });
+      const r = await transitionnerUneAttribution(t.tx, {
+        attributionId: ID,
+        transition: 'fraude_etablie',
+        acteur: { par: 'utilisateur_console', id: '0190a5c0-0000-7000-8000-0000000000c1' },
+        maintenant: MAINTENANT,
+        anomalieId: ANOMALIE,
+      }).catch((x: unknown) => x);
+      if (refus === null) {
+        expect(r).toStrictEqual({ de: 'signee', vers: 'annulee' });
+        return;
+      }
+      expect((r as { code: string }).code).toBe(refus);
+      expect(t.mises).toStrictEqual([]);
+      expect(evenementsEcrits()).toStrictEqual([]);
+      expect(t.notifications).toStrictEqual([]);
+    }
+  );
+
   it('REQ-DM-006 : TÉMOIN (face admise) — l’anomalie confirmée de CETTE attribution et de CET apporteur : la notification la nomme, la charge du journal ne la porte pas', async () => {
     const { transitionnerUneAttribution } = await ecrivain();
     const t = txDM55(ligneDe({}), {
@@ -1566,7 +1597,7 @@ describe('REQ-DM-006 — l’écrivain porte le motif, et écrit la notification
     expect(t.lues).toStrictEqual([
       {
         where: { id: ANOMALIE },
-        select: { statut: true, attributionId: true, apporteurId: true },
+        select: { statut: true, type: true, attributionId: true, apporteurId: true },
       },
     ]);
     expect(evenementsEcrits()[0]!.charge).not.toHaveProperty('anomalieId');
