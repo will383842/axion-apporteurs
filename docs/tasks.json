@@ -25531,7 +25531,9 @@
         "src/content/micro-copy/espace/notifications.ts",
         "tests/unit/espace/notifications-decision-attribution.spec.ts",
         "src/server/anomalie/justification.ts",
-        "tests/unit/espace/notifications-ecran.spec.ts"
+        "tests/unit/espace/notifications-ecran.spec.ts",
+        "tests/unit/espace/notifications-fin-de-contrat.spec.ts",
+        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts"
       ],
       "schema": false,
       "sensible": [
