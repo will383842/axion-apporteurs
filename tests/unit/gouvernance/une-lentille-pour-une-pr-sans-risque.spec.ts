@@ -167,7 +167,15 @@ describe('REQ-GOV-011 — une PR sans risque n’exige qu’une lentille, dériv
       'scripts/vues/',
       'scripts/plan-state/',
     ]);
-    expect([...LECTEUR.ZONES_A_UNE_LENTILLE]).toEqual(['gouvernance', 'qualite']);
+    // La relecture proportionnée (#319, 5988252245, point 2, amendée par 6032068586) y fait entrer
+    // `espace` et `console`, pour leurs seuls fichiers sans données : la liste reste FERMÉE.
+    expect([...LECTEUR.ZONES_A_UNE_LENTILLE]).toEqual([
+      'gouvernance',
+      'qualite',
+      'espace',
+      'console',
+    ]);
+    expect([...LECTEUR.RACINES_SANS_DONNEES]).toEqual(['src/content/micro-copy/']);
   });
 
   it('REQ-GOV-011 — TÉMOIN : une PR qui ne change que `sensible` dans docs/tasks.json en exige DEUX', () => {
