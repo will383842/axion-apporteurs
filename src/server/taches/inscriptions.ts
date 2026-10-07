@@ -66,6 +66,7 @@ import { purgerLesContacts } from './purger-contacts';
 import { confirmerTacitementLesEchues } from '../jobs/confirmation-tacite';
 import { purgerLesEntreprisesConnues } from './purger-entreprises-connues';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
+import { appliquerLesEcheances } from '../jobs/attribution-echeances';
 import { purgerLesAppareils } from './purger-appareils';
 import { purgerLesNotificationsDeLEspace } from './purger-notifications-espace';
 import { alerterLesNonRendus, passageDEnvoiDesNotifications } from './envoyer-notifications-espace';
@@ -232,6 +233,9 @@ export function inscriptions(
     // DM-53 (REQ-DM-043) : le SIREN des dépôts refusés, douze mois après le refus.
     siren_refuses_purger: () =>
       purgerLesSirenRefuses(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-13 (REQ-DM-007) : les échéances d'attribution, chaque attribution dans SA transaction.
+    attribution_echeances: () =>
+      appliquerLesEcheances(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-66 (REQ-DM-029) : les projections de l'antériorité, effacées quand elles ne fondent plus de refus.
     entreprises_connues_purger: () =>
       purgerLesEntreprisesConnues(prisma, new Date(horlogeSysteme.maintenant())),

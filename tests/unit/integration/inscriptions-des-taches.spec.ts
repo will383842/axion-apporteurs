@@ -29,6 +29,8 @@ const m = vi.hoisted(() => ({
   // DM-24 : la confirmation tacite, à l'instant t.
   confirmerTacitementLesEchues: vi.fn(),
   purgerLesSirenRefuses: vi.fn(),
+  // DM-13 : les échéances d'attribution, à l'instant t.
+  appliquerLesEcheances: vi.fn(),
   purgerLesEntreprisesConnues: vi.fn(),
   purgerLesValeursDesDroits: vi.fn(),
   purgerLesNotificationsDeLEspace: vi.fn(),
@@ -92,6 +94,9 @@ vi.mock('../../../src/server/taches/purger-contacts', () => ({
 vi.mock('../../../src/server/taches/purger-entreprises-connues', async (original) => ({
   ...(await original<object>()),
   purgerLesEntreprisesConnues: m.purgerLesEntreprisesConnues,
+}));
+vi.mock('../../../src/server/jobs/attribution-echeances', () => ({
+  appliquerLesEcheances: m.appliquerLesEcheances,
 }));
 vi.mock('../../../src/server/taches/purger-siren-refuses', () => ({
   purgerLesSirenRefuses: m.purgerLesSirenRefuses,
@@ -313,6 +318,7 @@ describe('REQ-QA-027 — les passages planifiés reçoivent le client et l’heu
     ['contacts_purger', 'purgerLesContacts'],
     ['confirmation_tacite', 'confirmerTacitementLesEchues'],
     ['siren_refuses_purger', 'purgerLesSirenRefuses'],
+    ['attribution_echeances', 'appliquerLesEcheances'],
     ['entreprises_connues_purger', 'purgerLesEntreprisesConnues'],
     ['droits_contact_purger', 'purgerLesValeursDesDroits'],
     ['droits_contact_anonymiser', 'anonymiserLesTracesDesDroits'],

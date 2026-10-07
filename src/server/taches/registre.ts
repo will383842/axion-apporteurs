@@ -28,6 +28,8 @@ export const TACHES = {
   confirmation_tacite: { req: 'REQ-DM-006' },
   /** DM-53 — la purge du SIREN des dépôts refusés, douze mois après le refus. */
   siren_refuses_purger: { req: 'REQ-DM-043' },
+  /** DM-13 — les échéances d'attribution (art. 3.2, 3.4 et 3.5 du v2), « tout ce qui est dû à l'instant t ». */
+  attribution_echeances: { req: 'REQ-DM-007' },
   /**
    * DM-66 — l'effacement des projections de l'antériorité (`devis_connus`, `entreprises_connues`)
    * quand elles ne fondent plus aucun refus (`purgerLesEntreprisesConnues`).
