@@ -1,5 +1,4 @@
 // @req REQ-DM-011
-// @req REQ-SEC-023
 /**
  * DM-63 — les effets de la fin du contrat en phase 1, en base RÉELLE (art. 11 et 12) : la résiliation,
  * en UNE transaction, mène chaque attribution à son état d'arrivée, avec son événement, et le geste de
@@ -253,8 +252,8 @@ describe('REQ-DM-011 — les effets de la fin du contrat, en une transaction', (
   });
 });
 
-describe('REQ-SEC-023 — le geste de résiliation est réservé à un rôle nommé', () => {
-  it('REQ-SEC-023 : TÉMOIN — un autre rôle est refusé, sans effet : ni statut, ni attribution, ni événement', async () => {
+describe('REQ-DM-011 — le geste de résiliation est réservé à un rôle nommé', () => {
+  it('REQ-DM-011 : TÉMOIN — un autre rôle est refusé, sans effet : ni statut, ni attribution, ni événement', async () => {
     for (const role of ['comptable', 'qualifieur', 'lecteur'] as const) {
       const apporteurId = await unApporteur();
       const a = await uneAttribution(apporteurId, 'provisoire');
@@ -280,7 +279,7 @@ describe('REQ-SEC-023 — le geste de résiliation est réservé à un rôle nom
     }
   });
 
-  it('REQ-SEC-023 : TÉMOIN — sans session, le geste est refusé sans effet', async () => {
+  it('REQ-DM-011 : TÉMOIN — sans session, le geste est refusé sans effet', async () => {
     const apporteurId = await unApporteur();
     const r = await resilierDepuisLaConsole(portsDe(), DEMANDE(apporteurId, undefined));
     expect(r).toStrictEqual({ ok: false, motif: 'absente' });

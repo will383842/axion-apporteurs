@@ -1,5 +1,5 @@
 /**
- * DM-63 (REQ-DM-011, REQ-SEC-023) — le geste de RÉSILIATION en console : réservé à un rôle nommé,
+ * DM-63 (REQ-DM-011) — le geste de RÉSILIATION en console : réservé à un rôle nommé,
  * contrôlé côté serveur, et qui journalise un acteur humain identifié.
  *
  * La porte est `requireRole('action:resilier_apporteur', …)`, posée AVANT tout travail : un autre rôle

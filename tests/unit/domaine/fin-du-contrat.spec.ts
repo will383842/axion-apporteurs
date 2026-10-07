@@ -1,5 +1,4 @@
 // @req REQ-DM-011
-// @req REQ-SEC-023
 /**
  * DM-63 — les effets de la fin du contrat en phase 1 : les règles PURES, et le geste de la console.
  *
@@ -171,8 +170,8 @@ const portsDe = (role: 'admin' | 'comptable' | 'qualifieur' | 'lecteur' | null) 
   };
 };
 
-describe('REQ-SEC-023 — le geste de résiliation en console est réservé à un rôle nommé', () => {
-  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — chaque rôle sauf admin est refusé, sans transaction ouverte ; admin passe, avec SON identifiant pour acteur', async () => {
+describe('REQ-DM-011 — le geste de résiliation en console est réservé à un rôle nommé', () => {
+  it('REQ-DM-011 : TÉMOIN À DEUX FACES — chaque rôle sauf admin est refusé, sans transaction ouverte ; admin passe, avec SON identifiant pour acteur', async () => {
     const resilierUnApporteur = vi.fn(async (_tx: unknown, _demande: unknown) => ({
       de: 'signe',
       vers: 'resilie',
