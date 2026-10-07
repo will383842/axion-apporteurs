@@ -24,6 +24,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomInt, randomUUID } from 'node:crypto';
 import { PrismaClient, type ConsoleRole } from '@prisma/client';
+import { INFORMATION_LISTE_TENUE } from '../../src/content/micro-copy/espace/issues-depot';
 import { demarrerBase, type Base } from './harnais';
 import {
   ROLE_D_EXECUTION,
@@ -594,5 +595,13 @@ describe('REQ-DM-028 — la trace d’un retrait est gardée cinq ans, puis effa
       )
     );
     expect(effaceurs).toEqual(['src/server/taches/purger-traces-liste-noire.ts']);
+  });
+});
+
+describe('REQ-DM-028 — l’apporteur est informé de l’existence et du principe de la liste', () => {
+  it('REQ-DM-028 : le texte de l’aide du dépôt est celui de la juriste, MOT POUR MOT', () => {
+    expect(INFORMATION_LISTE_TENUE).toBe(
+      "Axion-IA tient une liste d'organismes avec lesquels elle est déjà en relation : administrations, financeurs publics ou paritaires, et organismes de formation. Une entreprise qui y figure ne peut pas être déposée, et le refus vous indique cette catégorie (contrat, article 3.3 bis)."
+    );
   });
 });
