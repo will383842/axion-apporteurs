@@ -42,10 +42,9 @@ import {
 } from '../../domain/apporteur/resiliation';
 import { versParis } from '../../domain/temps/paris';
 import {
-  ETATS_ATTRIBUTION,
-  TRANSITIONS_ATTRIBUTION,
-  type EtatAttribution,
-} from '../../domain/attribution/machine';
+  ETATS_A_TRAITER_A_LA_FIN_DU_CONTRAT,
+  sortieDeFinDeContrat,
+} from '../../domain/apporteur/effets-de-la-fin';
 import {
   ajouterEvenement,
   lireLaChargeDUnFait,
@@ -307,19 +306,6 @@ export async function mettreEnDemeure(
 }
 
 /**
- * DÉRIVÉES DE LA MATRICE, jamais recopiées : un état est à traiter s'il admet l'une des deux sorties
- * de fin de contrat ; il garde le droit à commission (art. 12.3) s'il admet `figee` — ce sont les
- * états AVEC commande.
- */
-const sortieDeFinDeContrat = (e: EtatAttribution): 'figee' | 'fin_de_contrat' | null =>
-  TRANSITIONS_ATTRIBUTION[e].figee !== undefined
-    ? 'figee'
-    : TRANSITIONS_ATTRIBUTION[e].fin_de_contrat !== undefined
-      ? 'fin_de_contrat'
-      : null;
-const A_TRAITER = ETATS_ATTRIBUTION.filter((e) => sortieDeFinDeContrat(e) !== null);
-
-/**
  * Les `envoye_at` des mises en demeure de CET article : chaque notification `mise_en_demeure` de
  * l'apporteur mène à son fait (l'article, relu par le lecteur du journal) et à ses courriels envoyés.
  */
@@ -493,7 +479,7 @@ async function appliquerLesEffetsDeLArticle12(
   maintenant: Date
 ): Promise<number> {
   const attributions = await tx.attribution.findMany({
-    where: { apporteurId, statut: { in: [...A_TRAITER] } },
+    where: { apporteurId, statut: { in: [...ETATS_A_TRAITER_A_LA_FIN_DU_CONTRAT] } },
     select: { id: true, statut: true },
     orderBy: { id: 'asc' },
   });
