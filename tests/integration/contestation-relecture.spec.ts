@@ -97,27 +97,41 @@ async function uneAttribution(apporteurId: string, siren: string): Promise<strin
   return id;
 }
 
-/** Une contestation d'annulation, ses textes chiffrés sous SON id ; répondue si `reponse` est donnée. */
+/**
+ * Une contestation d'annulation, ses textes chiffrés sous SON id ; répondue si `reponse` est donnée.
+ * Elle naît DIRECTEMENT dans son état final : la garde `contestations_refuser_substitution` refuse toute
+ * réécriture d'un texte, d'une réponse, de son auteur ou de sa date, et aucun témoin ne la contourne.
+ * `chiffres` pose des chiffrés FABRIQUÉS (permutés : le témoin d'un échec de déchiffrement) ; `purgeeAt`
+ * la fait naître purgée, sans texte.
+ */
 async function uneContestation(p: {
   apporteurId: string;
   attributionId: string;
   texte: string;
   reponse?: string;
+  id?: string;
+  chiffres?: { texte: Buffer | null; reponse: Buffer | null };
+  purgeeAt?: Date;
 }): Promise<string> {
-  const id = randomUUID();
+  const id = p.id ?? randomUUID();
   const repondue = p.reponse !== undefined;
+  const chiffres = p.chiffres ?? {
+    texte: chiffrer(id, 'texteChiffre', p.texte),
+    reponse: repondue ? chiffrer(id, 'reponseChiffre', p.reponse!) : null,
+  };
   await base.prisma.$executeRawUnsafe(
     `INSERT INTO contestations (id, apporteur_id, objet, attribution_id, texte_chiffre, recue_at,
-       reponse_chiffre, repondue_par_id, repondue_at)
-     VALUES ($1::uuid, $2::uuid, 'annulation_attribution', $3::uuid, $4, $5, $6, $7::uuid, $8)`,
+       reponse_chiffre, repondue_par_id, repondue_at, purgee_at)
+     VALUES ($1::uuid, $2::uuid, 'annulation_attribution', $3::uuid, $4, $5, $6, $7::uuid, $8, $9)`,
     id,
     p.apporteurId,
     p.attributionId,
-    chiffrer(id, 'texteChiffre', p.texte),
+    chiffres.texte,
     RECUE,
-    repondue ? chiffrer(id, 'reponseChiffre', p.reponse!) : null,
+    chiffres.reponse,
     repondue ? adminId : null,
-    repondue ? REPONDUE : null
+    repondue ? REPONDUE : null,
+    p.purgeeAt ?? null
   );
   return id;
 }
@@ -197,39 +211,33 @@ describe('REQ-DM-043 — l’apporteur relit sa contestation et la réponse, et 
   });
 
   it('REQ-DM-043 : TÉMOIN — un chiffré permuté entre deux contestations échoue au déchiffrement', async () => {
+    // Le chiffré de B, lié à l'id de B, posé dans A dès sa naissance.
+    const b = randomUUID();
     const a = await uneContestation({
       apporteurId: moi,
       attributionId: monAttribution,
       texte: 'A',
+      chiffres: { texte: chiffrer(b, 'texteChiffre', `B ${MARQUEUR}`), reponse: null },
     });
-    const b = await uneContestation({
-      apporteurId: moi,
-      attributionId: monAttribution,
-      texte: `B ${MARQUEUR}`,
-    });
-    await base.prisma.$executeRawUnsafe(
-      `UPDATE contestations SET texte_chiffre = (SELECT texte_chiffre FROM contestations WHERE id = $2::uuid)
-       WHERE id = $1::uuid`,
-      a,
-      b
-    );
     const r = await relire(a);
     expect(r).toEqual({ etat: 'illisible' });
     expect(JSON.stringify(r)).not.toContain(MARQUEUR);
   });
 
   it('REQ-DM-043 : TÉMOIN — le texte et la réponse permutés dans la MÊME contestation échouent au déchiffrement', async () => {
+    // Le texte et la réponse, chacun chiffré sous le champ de l'autre, posés dès la naissance.
+    const naissance = randomUUID();
     const id = await uneContestation({
+      id: naissance,
       apporteurId: moi,
       attributionId: monAttribution,
       texte: 'Mon écrit.',
       reponse: `La réponse. ${MARQUEUR}`,
+      chiffres: {
+        texte: chiffrer(naissance, 'reponseChiffre', `La réponse. ${MARQUEUR}`),
+        reponse: chiffrer(naissance, 'texteChiffre', 'Mon écrit.'),
+      },
     });
-    await base.prisma.$executeRawUnsafe(
-      `UPDATE contestations SET texte_chiffre = reponse_chiffre, reponse_chiffre = texte_chiffre
-       WHERE id = $1::uuid`,
-      id
-    );
     const r = await relire(id);
     expect(r).toEqual({ etat: 'illisible' });
     expect(JSON.stringify(r)).not.toContain(MARQUEUR);
@@ -241,13 +249,9 @@ describe('REQ-DM-043 — l’apporteur relit sa contestation et la réponse, et 
       attributionId: monAttribution,
       texte: 'Écrit purgé.',
       reponse: 'Réponse purgée.',
+      chiffres: { texte: null, reponse: null },
+      purgeeAt: new Date('2031-10-10T14:00:00.000Z'),
     });
-    await base.prisma.$executeRawUnsafe(
-      `UPDATE contestations SET texte_chiffre = NULL, reponse_chiffre = NULL, purgee_at = $2
-       WHERE id = $1::uuid`,
-      id,
-      new Date('2031-10-10T14:00:00.000Z')
-    );
     expect(await relire(id)).toEqual({
       etat: 'purgee',
       objet: 'annulation_attribution',
@@ -263,10 +267,6 @@ describe('REQ-DM-043 — l’apporteur relit sa contestation et la réponse, et 
     const espions = (['log', 'info', 'warn', 'error', 'debug'] as const).map((m) =>
       vi.spyOn(console, m).mockImplementation(garder)
     );
-    const ecrire = vi.spyOn(process.stdout, 'write').mockImplementation((c: unknown) => {
-      capture.push(String(c));
-      return true;
-    });
     try {
       const id = await uneContestation({
         apporteurId: moi,
@@ -276,14 +276,22 @@ describe('REQ-DM-043 — l’apporteur relit sa contestation et la réponse, et 
       });
       await relire(id);
       await relire(id, autre);
-      await base.prisma.$executeRawUnsafe(
-        `UPDATE contestations SET texte_chiffre = reponse_chiffre WHERE id = $1::uuid`,
-        id
-      );
-      await relire(id);
+      // Une contestation née illisible : la réponse chiffrée sous le champ du texte.
+      const naissance = randomUUID();
+      const illisible = await uneContestation({
+        id: naissance,
+        apporteurId: moi,
+        attributionId: monAttribution,
+        texte: `Écrit ${MARQUEUR}`,
+        reponse: `Réponse ${MARQUEUR}`,
+        chiffres: {
+          texte: chiffrer(naissance, 'reponseChiffre', `Réponse ${MARQUEUR}`),
+          reponse: chiffrer(naissance, 'reponseChiffre', `Réponse ${MARQUEUR}`),
+        },
+      });
+      await relire(illisible);
     } finally {
       for (const e of espions) e.mockRestore();
-      ecrire.mockRestore();
     }
     expect(capture.join('\n')).not.toContain(MARQUEUR);
   });
