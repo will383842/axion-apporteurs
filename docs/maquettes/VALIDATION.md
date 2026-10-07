@@ -12,7 +12,7 @@
 | Écran | Fichier | Tâche | Validé le | Par |
 | --- | --- | --- | --- | --- |
 | Accueil (3 chiffres, 1 alerte, 1 champ, 4 onglets) | `accueil.html` | UX-P1-08 | 2026-09-19 | Will |
-| Entreprise (recherche + carte 4 états + « Déposer ») — à revalider (« Personne ne suit… » devient « disponible », et l'attente porte la phrase de la juriste, après la validation du 19/09) | `entreprise.html` | UX-P1-01 | 2026-09-19 | Will |
+| Entreprise (recherche + carte 4 états + « Déposer ») — à revalider (« Personne ne suit… » devient « disponible », et l'attente porte la phrase de la juriste, après la validation du 19/09 ; EXT-T06 ajoute l'état « Carte : libre, déjà déposée par le passé ») | `entreprise.html` | UX-P1-01 | 2026-09-19 | Will |
 | Déposer un contact (W20 : quatre coordonnées, message, carte Annuler / Corriger) — à revalider (« Un autre apporteur suit… » devient « déjà réservée », après la validation du 03/10) | `deposer.html` | UX-P1-02 | 2026-10-03 | Will |
 | Mes entreprises (W20 : badges de la confirmation) — à revalider (libellé du rattrapage 70, après la validation du 03/10) | `mes-entreprises.html` | UX-P1-05 | 2026-10-03 | Will |
 | Réponse du contact (page publique /confirmer) | `confirmation-contact.html` | UX-P1-42 | 2026-10-03 | Will |
