@@ -86,6 +86,8 @@ export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction
   'tache:traces_liste_noire_purger': 'sans_contact',
   // SEC-14 : l'ouverture d'un signalement de sincérité est un passage interne, qui ne contacte aucune entreprise.
   'tache:sincerite_ouvrir': 'sans_contact',
+  // DM-71 (sécurité) : une décision notifiée à l'apporteur, et aucune entreprise n'est contactée.
+  'action:annuler_apres_confirmation': 'sans_contact',
 };
 
 /** Les actions et tâches qui doivent appeler la garde de la réserve. */
