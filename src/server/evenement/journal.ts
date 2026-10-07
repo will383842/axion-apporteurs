@@ -191,7 +191,6 @@ export async function lireLaChargeDUnFait(
   return l === null ? null : { type: l.type, charge: l.charge };
 }
 
-<<<<<<< HEAD
 /**
  * SEC-59 — les charges des résumés quotidiens du journal des accès à la console, du plus ancien au plus
  * récent. Une lecture seule, par l'écrivain unique du journal ; la tâche du résumé les confronte à la
@@ -206,7 +205,8 @@ export async function lireLesResumesDuJournalDesAcces(
     select: { charge: true },
   });
   return lignes.map((l) => l.charge);
-=======
+}
+
 /** Une transition de l'apporteur, telle que le journal la nomme : la liste FERMÉE de sa charge. */
 export type TransitionDeLApporteur = (typeof TRANSITIONS_DU_JOURNAL_APPORTEUR)[number];
 
@@ -244,5 +244,4 @@ export async function acteursDUneTransition(
     if (!lu.success) throw new Error('lecture_du_journal_refusee : charge hors schéma');
     return lu.data.acteur.id ?? null;
   });
->>>>>>> origin/main
 }
