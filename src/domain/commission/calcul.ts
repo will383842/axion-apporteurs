@@ -1,5 +1,5 @@
 /**
- * Le calcul d'une commission et son prorata entier — DM-04 (REQ-DM-015, REQ-DM-017, REQ-ARG-004,
+ * Le calcul d'une commission et son acquisition au paiement intégral — DM-04, T-ARG-044 (REQ-DM-015, REQ-DM-017, REQ-ARG-004,
  * REQ-ARG-007, REQ-ARG-017, REQ-DM-040 ; avenant A01 du 2026-09-29).
  *
  * LE BARÈME EST CHOISI UNE SEULE FOIS, ET PAS ICI. La ligne de devis arrive avec le `commissionId`
@@ -22,6 +22,7 @@
  */
 import { BPS_MAX, type ContenuGrille } from './grille';
 import { PARAMETRES } from '../seuils/ssot';
+import type { DateCivile } from '../temps/calendrier-civil';
 
 export type EntreeCalcul = {
   /** La version de grille IMPORTÉE sous laquelle la ligne est calculée. */
@@ -95,63 +96,60 @@ export function calculerCommission(e: EntreeCalcul): VerdictCommission {
 }
 
 /**
- * Les parts acquises, une par encaissement, dans l'ordre reçu (REQ-ARG-004, REQ-DM-017) :
- * part_i = ⌊ commission × min(cumul TTC_i, TTC net) / TTC net ⌋ − Σ parts précédentes.
- * Numérateur et dénominateur sont TOUS DEUX TTC. Le cumul est borné au TTC net : un trop-perçu
- * n'acquiert rien au-delà de la commission. La formule est cumulative : l'état final ne dépend pas
- * de l'ordre des encaissements, et le dernier absorbe le reliquat d'arrondi par construction.
+ * T-ARG-044 (contrat v2, art. 4.0, 4.2 et 4.3) — l'ACQUISITION AU PAIEMENT INTÉGRAL. La commission est
+ * acquise lorsque la Société a encaissé l'intégralité du prix facturé au titre de la commande, NET DES
+ * AVOIRS, tous payeurs confondus (le client, un opérateur de compétences ou tout autre financeur) ;
+ * jamais à la signature, jamais à la facture. AUCUNE part n'est due au titre d'un paiement partiel :
+ * le prorata est retiré. La date est celle du crédit effectif des fonds qui SOLDE la commande.
  *
- * UN ENCAISSEMENT NUL, NÉGATIF OU NON ENTIER (DM-46, décision A02 du 2026-10-02) :
- *   — NUL : il n'acquiert rien — part 0, cumul inchangé — et il est RAPPORTÉ dans `ecartes`
- *     (`encaissement_nul`) pour que l'appelant l'écrive au journal. C'est le seul écart admis ;
- *   — NÉGATIF : il LÈVE. Un remboursement est un événement distinct (`paiement_rembourse`) qui
- *     produit sa ligne de reprise (REQ-DM-019) ; un montant négatif ici viole le contrat, et
- *     l'écarter laisserait passer un remboursement mal acheminé comme un « rien » ;
- *   — NON ENTIER : il LÈVE — une donnée corrompue est une faute en amont.
- * Une commission totale négative ou non entière, un TTC net nul ou négatif lèvent aussi : un prorata
- * sur une donnée fausse n'a pas de valeur par défaut. Chaque refus nomme ce qu'il refuse.
+ * TOUT EN ENTIERS : le cumul et le prix se comparent en `BigInt`, exactement ; un centime manquant
+ * ne rend rien acquis. Un encaissement NUL n'ajoute rien ; un montant négatif ou non entier, un avoir
+ * négatif ou un prix net nul ou négatif LÈVENT, nommés : une donnée fausse n'a pas de valeur par défaut.
+ *
+ * Ce que ce domaine NE fait PAS (limite nommée, conditions 1 et 2 de la sécurité) : il ne lit aucune
+ * source. Le registre des lignes de commission, qui n'existe pas encore, devra ne cumuler que des
+ * encaissements reçus par le canal signé, et juger l'acquisition sous le verrou de la commande, une
+ * seule fois.
  */
-export type EcartDEncaissement = { readonly indice: number; readonly motif: 'encaissement_nul' };
+export type Payeur = 'client' | 'opco' | 'autre_financeur';
 
-export function prorataDesEncaissements(
-  commissionTotaleCents: number,
-  factureTtcNetCents: number,
-  encaissementsTtcCents: readonly number[]
-): { parts: number[]; ecartes: EcartDEncaissement[] } {
-  if (!Number.isSafeInteger(commissionTotaleCents) || commissionTotaleCents < 0) {
-    throw new RangeError('prorata : la commission totale doit être un entier de centimes ≥ 0');
+export type EncaissementRecu = {
+  readonly montantCents: number;
+  readonly payeur: Payeur;
+  /** Le jour du crédit effectif des fonds (art. 4.0). */
+  readonly creditLe: DateCivile;
+};
+
+export type Acquisition = { readonly acquise: false } | { readonly acquise: true; readonly le: DateCivile };
+
+const entierPositifOuNul = (v: number) => Number.isSafeInteger(v) && v >= 0;
+const ordreDuJour = (d: DateCivile) => d.annee * 10_000 + d.mois * 100 + d.jour;
+
+export function acquisitionAuPaiementIntegral(
+  commande: { readonly prixFactureCents: number; readonly avoirsCents: readonly number[] },
+  encaissements: readonly EncaissementRecu[]
+): Acquisition {
+  if (!entierPositifOuNul(commande.prixFactureCents)) {
+    throw new RangeError('acquisition : le prix facturé doit être un entier de centimes ≥ 0');
   }
-  if (!Number.isSafeInteger(factureTtcNetCents) || factureTtcNetCents <= 0) {
-    throw new RangeError('prorata : le TTC net de la facture doit être un entier de centimes > 0');
-  }
-  const total = BigInt(commissionTotaleCents);
-  const net = BigInt(factureTtcNetCents);
-  const ecartes: EcartDEncaissement[] = [];
-  let cumul = 0n;
-  let acquis = 0n;
-  const parts = encaissementsTtcCents.map((e, i) => {
-    if (!Number.isSafeInteger(e) || e < 0) {
-      throw new RangeError(`prorata : l'encaissement ${i} doit être un entier de centimes ≥ 0`);
+  let net = BigInt(commande.prixFactureCents);
+  commande.avoirsCents.forEach((a, i) => {
+    if (!entierPositifOuNul(a)) {
+      throw new RangeError(`acquisition : l'avoir ${i} doit être un entier de centimes ≥ 0`);
     }
-    if (e === 0) {
-      ecartes.push({ indice: i, motif: 'encaissement_nul' });
-      return 0;
-    }
-    cumul += BigInt(e);
-    const borne = cumul < net ? cumul : net;
-    const part = (total * borne) / net - acquis;
-    acquis += part;
-    return Number(part);
+    net -= BigInt(a);
   });
-  return { parts, ecartes };
-}
-
-/** Les parts seules : l'enveloppe historique de `prorataDesEncaissements`, même signature. */
-export function partsDuProrata(
-  commissionTotaleCents: number,
-  factureTtcNetCents: number,
-  encaissementsTtcCents: readonly number[]
-): number[] {
-  return prorataDesEncaissements(commissionTotaleCents, factureTtcNetCents, encaissementsTtcCents)
-    .parts;
+  if (net <= 0n) throw new RangeError('acquisition : le prix net des avoirs doit être > 0');
+  encaissements.forEach((e, i) => {
+    if (!entierPositifOuNul(e.montantCents)) {
+      throw new RangeError(`acquisition : l'encaissement ${i} doit être un entier de centimes ≥ 0`);
+    }
+  });
+  const parDate = [...encaissements].sort((a, b) => ordreDuJour(a.creditLe) - ordreDuJour(b.creditLe));
+  let cumul = 0n;
+  for (const e of parDate) {
+    cumul += BigInt(e.montantCents);
+    if (cumul >= net) return { acquise: true, le: e.creditLe };
+  }
+  return { acquise: false };
 }

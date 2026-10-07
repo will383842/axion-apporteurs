@@ -35,6 +35,7 @@ import {
   type TransitionAttribution,
   type TypePorteur,
   EXCEPTION_DE_LA_TRANSITION,
+  fondeeSurUneAnomalie,
   type ExceptionAnnulation,
 } from '../../domain/attribution/machine';
 import { ajouterEvenement } from '../evenement/journal';
@@ -180,10 +181,10 @@ function jugerLeMotif(demande: DemandeEcriture): void {
       `${transition} : le motif est exigé pour annulee_par_la_console seule, la catégorie pour l'article 3.3 bis seul`
     );
   }
-  if ((transition === 'anomalie_confirmee') !== (anomalieId !== undefined)) {
+  if (fondeeSurUneAnomalie(transition) !== (anomalieId !== undefined)) {
     throw new ErreurTransitionAttribution(
       'anomalie_refusee',
-      `${transition} : l'anomalie est exigée pour anomalie_confirmee, et pour elle seule`
+      `${transition} : l'anomalie est exigée pour une transition fondée sur une anomalie, et pour elle seule`
     );
   }
 }
@@ -230,7 +231,7 @@ async function jugerSousLeVerrou(tx: Tx, demande: DemandeEcriture, l: Ligne): Pr
   ) {
     throw new ErreurTransitionAttribution(
       'anomalie_refusee',
-      "anomalie_confirmee : l'anomalie n'est pas confirmée, sur cette attribution, pour ce porteur"
+      `${demande.transition} : l'anomalie n'est pas confirmée, sur cette attribution, pour ce porteur`
     );
   }
 }

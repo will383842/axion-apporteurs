@@ -64,10 +64,13 @@ const motif = async (p: Promise<unknown>): Promise<string> => {
   return 'aucun refus';
 };
 
+const ANOMALIE = '0190f0c2-0000-7000-8000-0000000000c1';
 const geste = (d: ReturnType<typeof unDouble>, exception: 'erreur_identification' | 'fraude') =>
   annulerApresConfirmation(
     d.tx,
-    { attributionId: ATTRIBUTION, exception, acteur: { id: ADMIN }, maintenant: MAINTENANT },
+    exception === 'fraude'
+      ? { attributionId: ATTRIBUTION, exception, anomalieId: ANOMALIE, acteur: { id: ADMIN }, maintenant: MAINTENANT }
+      : { attributionId: ATTRIBUTION, exception, acteur: { id: ADMIN }, maintenant: MAINTENANT },
     { transitionner: d.transitionner }
   );
 
@@ -101,11 +104,13 @@ describe('REQ-JUR-007 — le geste, après la confirmation seulement', () => {
       const d = unDouble({});
       expect(await geste(d, exception)).toEqual({ issue: 'annulee' });
       expect(d.appels).toEqual(['verrou', `transition:${transition}`]);
+      // La fraude transmet SON anomalie confirmée à l'écrivain ; l'erreur d'identification, aucune.
       expect(d.transitionner.mock.calls[0]![1]).toEqual({
         attributionId: ATTRIBUTION,
         transition,
         acteur: { par: 'utilisateur_console', id: ADMIN },
         maintenant: MAINTENANT,
+        ...(exception === 'fraude' ? { anomalieId: ANOMALIE } : {}),
       });
     }
   });

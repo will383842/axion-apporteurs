@@ -195,6 +195,19 @@ export const EXCEPTIONS_ANNULATION = [
 ] as const;
 export type ExceptionAnnulation = (typeof EXCEPTIONS_ANNULATION)[number];
 
+/**
+ * Les transitions FONDÉES SUR UNE ANOMALIE CONFIRMÉE : elles exigent son identifiant, qui va à la
+ * notification (jamais à la charge, DM-12 (d)), et leur motif rend les faits de cette anomalie, purge
+ * comprise. DM-71 : la fraude de l'apporteur après la confirmation en est une.
+ */
+export const TRANSITIONS_FONDEES_SUR_UNE_ANOMALIE = [
+  'anomalie_confirmee',
+  'fraude_etablie',
+] as const satisfies readonly TransitionAttribution[];
+
+export const fondeeSurUneAnomalie = (t: unknown): boolean =>
+  (TRANSITIONS_FONDEES_SUR_UNE_ANOMALIE as readonly unknown[]).includes(t);
+
 /** L'exception que porte chaque transition humaine de l'art. 3.3, dans la charge et en base. */
 export const EXCEPTION_DE_LA_TRANSITION = {
   annulee_erreur_identification: 'erreur_identification',

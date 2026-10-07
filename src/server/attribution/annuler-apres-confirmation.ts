@@ -10,6 +10,9 @@
  *   l'antériorité ou l'annulation par la console y suffisent.
  * - L'IDEMPOTENCE vient de l'état : `annulee` est terminal et le marqueur immuable. La même exception
  *   sur une attribution déjà annulée rend l'issue existante ; une autre est refusée, nommée.
+ * - L'ERREUR D'IDENTIFICATION n'a pas de faits dans sa notification (juriste, #806 6039942821) :
+ *   l'erreur précise se dit dans la RÉPONSE MOTIVÉE à une éventuelle contestation (art. 3.3), que
+ *   l'administrateur rédige ; l'écran de ce geste (UX-P1-63) le lui rappelle.
  * - L'ÉCRITURE passe par l'écrivain unique des transitions : la transition, le marqueur et son auteur
  *   humain, l'événement, et la décision notifiée à l'apporteur (`decision_attribution`).
  */
@@ -61,10 +64,14 @@ export async function annulerApresConfirmation(
   tx: Tx,
   d: {
     attributionId: string;
-    exception: ExceptionDuGeste;
     acteur: { readonly id: string };
     maintenant: Date;
-  },
+  } & (
+    | { exception: 'erreur_identification' }
+    /** La fraude se fonde sur une anomalie de sincérité CONFIRMÉE, de cette attribution, du même
+     * apporteur : l'écrivain la vérifie sous le verrou, et la notification en rend les faits. */
+    | { exception: 'fraude'; anomalieId: string }
+  ),
   p: { transitionner?: typeof transitionnerUneAttribution } = {}
 ): Promise<{ issue: 'annulee' | 'deja_annulee' }> {
   await rejugerLeDroit(tx, d.acteur.id);
@@ -84,6 +91,7 @@ export async function annulerApresConfirmation(
     transition: TRANSITION_DE_L_EXCEPTION[d.exception],
     acteur: { par: 'utilisateur_console', id: d.acteur.id },
     maintenant: d.maintenant,
+    ...(d.exception === 'fraude' ? { anomalieId: d.anomalieId } : {}),
   });
   return { issue: 'annulee' };
 }

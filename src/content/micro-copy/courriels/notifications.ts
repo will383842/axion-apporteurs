@@ -137,9 +137,10 @@ export const MOTIFS_DES_DECISIONS = {
   annulee_par_la_console:
     'Axion-IA a annulé ce dépôt avant sa confirmation, pour la raison suivante : {raison}',
   // DM-71 (art. 3.3 du v2) : les deux exceptions humaines après la confirmation (juriste, #806
-  // 6039893112 ; #474 6037701905), mot pour mot ; « Faits retenus : {faits} » une fois, en fin de motif.
+  // 6039893112, révisé en 6039942821 : l'erreur d'identification n'a pas de faits ; #474 6037701905),
+  // mot pour mot ; pour la fraude, « Faits retenus : {faits} » une fois, en fin de motif.
   annulee_erreur_identification:
-    "Ce dépôt est annulé : l'entreprise a été identifiée par erreur (contrat, article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues. Faits retenus : {faits}",
+    "Ce dépôt est annulé : l'entreprise a été identifiée par erreur (contrat, article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues",
   fraude_etablie:
     "À la vérification, ce dépôt ne remplit pas les conditions de l'article 3.7 du contrat et il est annulé (article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues. Faits retenus : {faits}",
 } as const;

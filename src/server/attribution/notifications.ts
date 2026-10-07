@@ -10,6 +10,7 @@
  * « anomalie » ou « sanction » (juriste) ; sans nom de tiers, ce que le texte de la mesure tient à sa
  * saisie. Une valeur vide est refusée. Un refus lève, nommé : la notification ne part pas à moitié.
  */
+import { fondeeSurUneAnomalie } from '../../domain/attribution/machine';
 import {
   ENTREPRISE_DE_REPLI,
   LIBELLES_DES_CATEGORIES,
@@ -136,7 +137,7 @@ export function motifDeLaDecision(d: Decision): string | null {
   if (!estUneDecision(transition)) {
     throw new MotifRefuse('motif_incoherent', `${transition} n'est pas une décision notifiée`);
   }
-  if ((transition === 'anomalie_confirmee') !== (faits !== undefined)) {
+  if (fondeeSurUneAnomalie(transition) !== (faits !== undefined)) {
     throw new MotifRefuse('motif_incoherent', `faits sur ${transition}`);
   }
   // Les paramètres fermés (arbitrage de la sécurité) : une raison ou une catégorie hors de leur liste
@@ -278,7 +279,7 @@ async function motifDuFait(
   if (!lue.success) return nonRendue('charge_illisible');
   const { transition, motifAnnulation, categorieRelation } = lue.data;
   let faits: string | undefined;
-  if (transition === 'anomalie_confirmee') {
+  if (fondeeSurUneAnomalie(transition)) {
     // Sans lien (vidé par la purge ou l'anonymisation), ou purgés : les faits ne sont plus conservés.
     if (n.anomalieId === null) return nonRendue('faits_non_conserves');
     const lus = await s.faitsDe(tx, {
@@ -369,13 +370,13 @@ export function texteDeLaDecisionDansLEspace(
   if (!lue.success) return null;
   const { transition, motifAnnulation, categorieRelation } = lue.data;
   let motif: string | null;
-  if (transition === 'anomalie_confirmee' && faits === 'purgee') {
-    const gabarit = MOTIFS_DES_DECISIONS.anomalie_confirmee;
+  if (fondeeSurUneAnomalie(transition) && faits === 'purgee') {
+    const gabarit = MOTIFS_DES_DECISIONS[transition as 'anomalie_confirmee' | 'fraude_etablie'];
     if (gabarit.split(PHRASE_DES_FAITS).length !== 2) return null;
     motif = gabarit.replace(PHRASE_DES_FAITS, () => NOTIFICATIONS.faitsNonConserves);
   } else {
     let propres: string | undefined;
-    if (transition === 'anomalie_confirmee') {
+    if (fondeeSurUneAnomalie(transition)) {
       if (faits === null || faits === 'purgee' || faits === 'refusee') return null;
       const f = faitsPourLEcran(faits.faits);
       if (f === null) return null;
