@@ -216,6 +216,9 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   // #752) — l'article de SA mise en demeure, la date de fin de SON contrat ; aucun autre apporteur.
   'espace/notifications.ts › DECISIONS_PURGEES › mise_en_demeure': ['article'],
   'espace/notifications.ts › DECISIONS_PURGEES › manquement_grave': ['dateEffet'],
+  // SEC-15 : la suspension purgée, du jour de SA notification à celui de SA fin (juriste, #794
+  // 6036374348 ; #474 6036797355), lus sur la ligne nue et au journal.
+  'espace/notifications.ts › DECISIONS_PURGEES › suspension': ['dateDebut', 'dateFin'],
   // DM-25 : l'annulation de SON dépôt pour antériorité de la Société (art. 3.3) — SON entreprise, et le
   // délai de réponse à SA contestation, venu de la SSOT. Aucun critère d'antériorité (règle de SEC-12).
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_annulee_anteriorite': [

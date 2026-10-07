@@ -49,6 +49,8 @@ export const TACHES = {
   droits_contact_purger: { req: 'REQ-JUR-065' },
   /** DM-60 — l'anonymisation, cinq ans après sa clôture, de la trace d'une demande de droit du contact. */
   droits_contact_anonymiser: { req: 'REQ-JUR-065' },
+  /** SEC-15 — la levée de plein droit d'une suspension, quinze jours après sa notification. */
+  suspensions_lever: { req: 'REQ-SEC-019' },
   /** SEC-55 — la purge des appareils connus, une durée de session après leur dernière vue. */
   appareils_purger: { req: 'REQ-SEC-003' },
   /** SEC-58 — la purge, à échéance, du journal des accès à la console. */

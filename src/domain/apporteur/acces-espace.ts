@@ -3,8 +3,9 @@
  *
  * UN SEUL VERDICT, défaut FERMÉ : un statut absent de la liste blanche, inconnu ou mal orthographié
  * ne donne pas accès.
- *   — `plein` : `signe` et `suspendu` — la suspension déconnecte mais ne coupe pas l'accès
- *     (REQ-SEC-032) ;
+ *   — `plein` : `signe` et `suspendu` — la suspension ne gèle que l'enregistrement des nouvelles
+ *     déclarations : elle ne déconnecte pas et ne coupe pas l'accès (contrat v2, art. 3.7 al. 3 ;
+ *     REQ-SEC-032) ;
  *   — `limite` : `kyc_en_cours` et `pret_a_signer` — l'apporteur entre, mais ne voit que « Ma
  *     conformité » et « Mon contrat » (décision de Williams du 2026-10-01, qui amende
  *     HYP-SEC03-ACCES) ;
