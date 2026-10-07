@@ -39,4 +39,11 @@ export const DECISIONS_PURGEES = {
   /** Le seul paragraphe de résiliation qui porte un texte saisi ; le paragraphe commun suit. */
   manquement_grave:
     "Axion-IA a résilié votre contrat d'apporteur sans préavis, par une décision motivée, en application de l'article 11.2 ; le détail du motif n'est plus conservé, sa durée de conservation ayant pris fin. Le contrat a pris fin le {dateEffet}.",
+  /**
+   * SEC-15 : le corps ENTIER d'une suspension aux faits purgés (juriste, #794, 6036374348 ;
+   * vocabulaire rectifié sur #474, 6036797355 : « déposer », jamais « déclarer », GLOSSAIRE §6) ; le titre
+   * est inchangé. Les deux dates se lisent sur la ligne nue et au journal, jamais dans le texte purgé.
+   */
+  suspension:
+    "Axion-IA a suspendu l'enregistrement de vos nouveaux dépôts du {dateDebut} au {dateFin}, le temps d'une vérification, au titre de l'article 3.7 du contrat. Le détail des faits n'est plus conservé, sa durée de conservation ayant pris fin. Cette suspension n'a eu d'effet ni sur les entreprises que vous avez déposées, ni sur vos commandes, ni sur vos commissions, et elle ne constitue pas un antécédent.",
 } as const;
