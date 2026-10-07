@@ -3,7 +3,7 @@
  * UX-P1-50 — les maquettes de la console passent en BARRE LATÉRALE (demande de Williams du
  * 2026-10-03, aperçu validé), sans toucher à leur contenu fonctionnel.
  *
- * CE QUE CE FICHIER GARDE, sur les treize maquettes de la console (section Console de
+ * CE QUE CE FICHIER GARDE, sur les quatorze maquettes de la console (section Console de
  * `VALIDATION.md`, lue, jamais retapée — RM-01) :
  *
  *   (1) AU BUREAU, la barre latérale : chaque écran qui porte une navigation la porte dans
@@ -70,8 +70,8 @@ const AVEC_NAV = CONSOLE.flatMap((f) =>
 );
 
 describe('REQ-UX-048 — au bureau, la barre latérale', () => {
-  it('REQ-UX-048 — les treize maquettes de la console sont lues, et la plupart de leurs écrans naviguent', () => {
-    expect(CONSOLE).toHaveLength(13);
+  it('REQ-UX-048 — les quatorze maquettes de la console sont lues, et la plupart de leurs écrans naviguent', () => {
+    expect(CONSOLE).toHaveLength(14);
     expect(AVEC_NAV.length).toBeGreaterThan(80);
   });
 
