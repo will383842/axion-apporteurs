@@ -538,7 +538,10 @@ function confronterALaConfiguration(
   if (d.surPanne !== 'refuser') {
     faute(`déclare surPanne ${JSON.stringify(d.surPanne)} : seul \`refuser\` est admis.`);
   }
-  const cles = (u.configuration ?? PLAFONDS_EN_CONFIGURATION)[nom];
+  // Un dictionnaire lu par un nom de compteur quelconque : la clé n'est pas typée, la valeur est inconnue.
+  const configuration: Readonly<Record<string, unknown>> =
+    u.configuration ?? PLAFONDS_EN_CONFIGURATION;
+  const cles = configuration[nom];
   const fermees = CLES_DES_PLAFONDS as readonly string[];
   if (
     !estObjet(cles) ||
