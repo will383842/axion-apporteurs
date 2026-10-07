@@ -32,6 +32,7 @@ import { SEUILS } from '../../domain/seuils/ssot';
 // La conversion d'une fenêtre lue en minutes dans la SSOT : la constante nommée de la table fermée
 // que lit la garde `rate-famille`, jamais un nombre tapé dans la déclaration d'un compteur.
 import { SECONDES_PAR_MINUTE } from '../../domain/seuils/conversions';
+import { MS_PAR_JOUR, MS_PAR_MINUTE } from '../../domain/temps/calendrier-civil';
 
 // ── Le vocabulaire fermé ────────────────────────────────────────────────────────────────────────
 
@@ -302,7 +303,9 @@ export const MOTIFS_DE_PLAFONDS_REFUSES = [
 export type MotifDePlafondsRefuses = (typeof MOTIFS_DE_PLAFONDS_REFUSES)[number];
 
 /** Les bornes de FORME (sécurité) : une limite vaut au moins 1 ; une fenêtre, d'une minute à une semaine. */
-const MINUTES_PAR_SEMAINE = 7 * 24 * 60;
+// Une semaine du CALENDRIER (une borne de forme, pas un délai du contrat : rien de la SSOT).
+const JOURS_PAR_SEMAINE = 7;
+const MINUTES_PAR_SEMAINE = (JOURS_PAR_SEMAINE * MS_PAR_JOUR) / MS_PAR_MINUTE;
 const BORNES_DES_PLAFONDS: Readonly<Record<CleDePlafond, readonly [number, number]>> = {
   identite_jour: [1, 99_999],
   identite_court: [1, 99_999],
