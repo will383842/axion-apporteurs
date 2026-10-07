@@ -11,9 +11,11 @@
  * Deux motifs FERMÉS, jugés AVANT toute écriture : `signalement_apporteur` ou `securite` ; aucun texte.
  *
  * DANS UNE TRANSACTION, le statut de l'apporteur VERROUILLÉ (`FOR UPDATE`) :
- *   — un RÉSILIÉ est refusé (`contrat_termine`), sans rien écrire ni envoyer : son accès a pris fin
- *     avec le contrat (art. 12.3 ; juriste, 6034493150, a). Un apporteur en préavis est encore sous
- *     contrat : le geste s'applique ;
+ *   — le geste s'applique aux SEULS statuts qui ouvrent l'espace : `kyc_en_cours`, `pret_a_signer`,
+ *     `signe` (préavis compris) et `suspendu` (juriste, 6034733889, e). Un RÉSILIÉ est refusé
+ *     (`contrat_termine`) : son accès a pris fin avec le contrat (art. 12.3 ; 6034493150, a). Tout autre
+ *     statut est refusé (`sans_acces`) : il n'a jamais eu d'accès à révoquer (6034733889, d). Un refus
+ *     n'écrit et n'envoie rien ;
  *   — la version de session est incrémentée : toutes ses sessions tombent ;
  *   — ses appareils confirmés sont oubliés : la prochaine connexion redemande l'avis (SEC-55, SEC-62) ;
  *   — son jeton de dépôt et ses liens de connexion non consommés sont révoqués ;
@@ -33,7 +35,10 @@ import { roleAutorise } from '../roles/matrice';
 export type MotifDeRevocation = (typeof MOTIFS_REVOCATION_ACCES)[number];
 
 export type RefusDeRevocation =
-  'motif_invalide' | 'droit_absent' | 'apporteur_inconnu' | 'contrat_termine';
+  'motif_invalide' | 'droit_absent' | 'apporteur_inconnu' | 'contrat_termine' | 'sans_acces';
+
+/** Les statuts dont l'accès se révoque et se renouvelle (juriste, #474, 6034733889, e) ; et eux seuls. */
+export const STATUTS_DU_GESTE = ['kyc_en_cours', 'pret_a_signer', 'signe', 'suspendu'] as const;
 
 export class ErreurRevocationAcces extends Error {
   constructor(readonly motif: RefusDeRevocation) {
@@ -105,6 +110,8 @@ export async function revoquerLAccesDUnApporteur(
     const statut = await statutVerrouille(tx, d.apporteurId);
     if (statut === null) throw new ErreurRevocationAcces('apporteur_inconnu');
     if (statut === 'resilie') throw new ErreurRevocationAcces('contrat_termine');
+    if (!(STATUTS_DU_GESTE as readonly string[]).includes(statut))
+      throw new ErreurRevocationAcces('sans_acces');
     await tx.apporteur.update({
       where: { id: d.apporteurId },
       data: { sessionVersion: { increment: 1 } },

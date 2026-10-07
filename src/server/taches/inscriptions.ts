@@ -68,6 +68,7 @@ import { purgerLesSirenRefuses } from './purger-siren-refuses';
 import { purgerLesAppareils } from './purger-appareils';
 import { purgerLesNotificationsDeLEspace } from './purger-notifications-espace';
 import { alerterLesNonRendus, passageDEnvoiDesNotifications } from './envoyer-notifications-espace';
+import { portsDuRenouvellement, renouvelerLesAcces } from './renouveler-acces';
 import { purgerLesValeursDesDroits } from './purger-valeurs-droits-contact';
 import { anonymiserLesTracesDesDroits } from './anonymiser-traces-droits-contact';
 import {
@@ -240,7 +241,10 @@ export function inscriptions(
       const bilan = await passageDEnvoiDesNotifications(prisma, env)();
       // Arbitrage de la sécurité : un non-rendu lève aussi une alerte fermée (motif et nombre).
       await alerterLesNonRendus(bilan, canalDAlerte(env));
-      return bilan;
+      // SEC-71 : le renouvellement de l'accès après une révocation, sous le MÊME verrou du lanceur
+      // (A02, #474, 6034725998) : le lien, puis l'avis, hors de toute transaction tenue.
+      const renouvellement = await renouvelerLesAcces(portsDuRenouvellement(prisma, env));
+      return { ...bilan, renouvellement };
     },
     // DM-25 (REQ-JUR-007) : l'antériorité établie après coup, jugée au dépôt sur des faits antérieurs.
     anteriorites_rapprocher: () =>

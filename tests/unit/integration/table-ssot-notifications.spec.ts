@@ -74,6 +74,8 @@ const table = (): Record<string, LigneDeNotification> =>
 describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles', () => {
   it('REQ-UX-016 : la table porte EXACTEMENT les clés arrêtées — celles de l’apporteur, dont la micro-copie porte les mêmes, et celles de la console', () => {
     const attendues = [
+      // SEC-71 (art. 3.8) : l'avis du renouvellement de l'accès, après le courriel du lien.
+      'acces_renouvele',
       // DM-25 : l'annulation pour antériorité de la Société (art. 3.3), clé NEUVE (coordination).
       'attribution_annulee_anteriorite',
       'attribution_liberee',
@@ -153,6 +155,7 @@ describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles'
       nouvel_appareil: 'T/F',
       mise_en_demeure: 'T/T',
       resiliation: 'T/T',
+      acces_renouvele: 'T/F',
     });
   });
 

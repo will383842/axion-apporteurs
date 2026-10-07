@@ -103,7 +103,38 @@ export const TEXTES_DES_NOTIFICATIONS = {
     appel: 'Voir mes commissions',
     corps: null,
   },
+  // SEC-71 (art. 3.8) : l'avis du renouvellement de l'accès ; l'objet de la juriste (#474, 6034003544),
+  // MOT POUR MOT. Son corps se choisit par le motif (`CORPS_DU_RENOUVELLEMENT`). Son appel, le libellé
+  // des courriels de l'espace (juriste, 6034821195), mène à la page de connexion ; le lien de connexion
+  // lui-même part dans son propre courriel, AVANT cet avis.
+  acces_renouvele: {
+    titre: "Votre accès à l'espace en ligne a été renouvelé",
+    appel: 'Ouvrir mon espace',
+    corps: null,
+  },
 } as const satisfies Readonly<Record<string, TexteDeNotification>>;
+
+/**
+ * SEC-71 — le corps de l'avis `acces_renouvele`, choisi par le MOTIF fermé de la révocation (textes de
+ * la juriste, #474, 6034003544, MOT POUR MOT ; leur dernière phrase, 6034869308). L'avis part APRÈS le courriel du lien, et jamais si le
+ * lien a échoué (juriste, 6034554456) : « Un nouvel accès vous est adressé » est vrai quand il part.
+ */
+export const CORPS_DU_RENOUVELLEMENT = {
+  signalement_apporteur:
+    "À la suite de votre signalement, votre accès à l'espace en ligne a été révoqué. Un nouvel accès vous est adressé par courrier électronique. Les entreprises que vous avez déclarées et vos commissions ne sont pas affectées.",
+  securite:
+    "Pour un motif de sécurité, Axion-IA a révoqué votre accès à l'espace en ligne. Un nouvel accès vous est adressé par courrier électronique. Les entreprises que vous avez déclarées et vos commissions ne sont pas affectées.",
+} as const;
+
+/**
+ * SEC-71 (juriste, #474, 6034733889, f) : AVANT la signature (`kyc_en_cours`, `pret_a_signer`), il n'y
+ * a ni attribution ni commission ; la dernière phrase des deux corps est REMPLACÉE par celle du dossier
+ * d'inscription, MOT POUR MOT. L'objet et le reste des corps sont inchangés.
+ */
+export const RENOUVELLEMENT_AVANT_SIGNATURE = {
+  remplacee: 'Les entreprises que vous avez déclarées et vos commissions ne sont pas affectées.',
+  par: "Votre dossier d'inscription n'est pas affecté.",
+} as const;
 
 export type CleDeNotification = keyof typeof TEXTES_DES_NOTIFICATIONS;
 

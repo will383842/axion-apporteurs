@@ -1,4 +1,5 @@
-// @req REQ-SEC-073
+// @req REQ-SEC-003
+// @req REQ-JUR-069
 /**
  * `revocation-acces-apporteur.spec.ts` — SEC-71, la révocation de l'accès d'un apporteur par la console
  * (contrat v2, art. 3.8), EN PROCESSUS, sur un faux client : le motif fermé jugé avant toute écriture,
@@ -16,6 +17,17 @@ import {
   type ActeurDeLaRevocation,
 } from '../../../src/server/console/acces-apporteur';
 import { ajouterEvenement } from '../../../src/server/evenement/journal';
+import type { StatutCourriel } from '@prisma/client';
+import type { DemandeDEnvoi } from '../../../src/server/integrations/zeptomail/emetteur';
+import {
+  avisDuRenouvellement,
+  renouvelerLesAcces,
+  type PortsDuRenouvellement,
+} from '../../../src/server/taches/renouveler-acces';
+import { CORPS_DU_RENOUVELLEMENT } from '../../../src/content/micro-copy/courriels/notifications';
+
+/** Un marqueur dans le corps du lien : il ne doit apparaître dans aucune sortie capturée. */
+const MARQUEUR_DU_JETON = 'jeton-temoin-sec71';
 
 vi.mock('../../../src/server/evenement/journal', () => ({ ajouterEvenement: vi.fn() }));
 
@@ -83,8 +95,8 @@ beforeEach(() => {
   vi.mocked(ajouterEvenement).mockResolvedValue({ id: '42', selfHash: 'h' });
 });
 
-describe('REQ-SEC-073 — la révocation de l’accès d’un apporteur : une transaction, rien d’autre', () => {
-  it('REQ-SEC-073 : TÉMOIN — sessions, appareils, jetons et liens révoqués dans UNE transaction, puis le journal et la file', async () => {
+describe('REQ-JUR-069 — la révocation de l’accès d’un apporteur : une transaction, rien d’autre', () => {
+  it('REQ-SEC-003 : TÉMOIN — sessions, appareils, jetons et liens révoqués dans UNE transaction, puis le journal et la file', async () => {
     const { client, appels } = univers();
     expect(await revoquer(client)).toEqual({
       appareilsOublies: 2,
@@ -122,7 +134,7 @@ describe('REQ-SEC-073 — la révocation de l’accès d’un apporteur : une tr
     });
   });
 
-  it('REQ-SEC-073 : TÉMOIN — l’événement porte le motif fermé et l’acteur de la console, l’instant du GESTE, et rien d’autre', async () => {
+  it('REQ-JUR-069 : TÉMOIN — l’événement porte le motif fermé et l’acteur de la console, l’instant du GESTE, et rien d’autre', async () => {
     const { client } = univers();
     await revoquer(client, 'securite');
     expect(ajouterEvenement).toHaveBeenCalledTimes(1);
@@ -135,7 +147,7 @@ describe('REQ-SEC-073 — la révocation de l’accès d’un apporteur : une tr
     });
   });
 
-  it('REQ-SEC-073 : TÉMOIN — un motif hors des deux est refusé AVANT toute transaction', async () => {
+  it('REQ-JUR-069 : TÉMOIN — un motif hors des deux est refusé AVANT toute transaction', async () => {
     for (const motif of ['', 'sanction', 'suspension', 'SECURITE']) {
       const { client, appels } = univers();
       expect(await refus(revoquer(client, motif))).toBe('motif_invalide');
@@ -143,7 +155,7 @@ describe('REQ-SEC-073 — la révocation de l’accès d’un apporteur : une tr
     }
   });
 
-  it('REQ-SEC-073 : TÉMOIN — un résilié est refusé (contrat_termine) : rien n’est écrit, ni journal ni file', async () => {
+  it('REQ-JUR-069 : TÉMOIN — un résilié est refusé (contrat_termine) : rien n’est écrit, ni journal ni file', async () => {
     const { client, appels } = univers({ statut: 'resilie' });
     expect(await refus(revoquer(client))).toBe('contrat_termine');
     expect(appels.map((a) => a.quoi)).toEqual([
@@ -154,7 +166,7 @@ describe('REQ-SEC-073 — la révocation de l’accès d’un apporteur : une tr
     expect(ajouterEvenement).not.toHaveBeenCalled();
   });
 
-  it('REQ-SEC-073 : un apporteur en préavis, suspendu ou en cours de KYC est encore sous contrat ou en parcours : le geste s’applique', async () => {
+  it('REQ-JUR-069 : TÉMOIN — le geste s’applique à kyc_en_cours, pret_a_signer, signe (préavis compris) et suspendu', async () => {
     for (const statut of ['signe', 'suspendu', 'kyc_en_cours', 'pret_a_signer']) {
       const { client, appels } = univers({ statut });
       await revoquer(client);
@@ -162,13 +174,27 @@ describe('REQ-SEC-073 — la révocation de l’accès d’un apporteur : une tr
     }
   });
 
-  it('REQ-SEC-073 : TÉMOIN — un apporteur inconnu est refusé sans rien écrire', async () => {
+  it.each(['candidat', 'retenu', 'vivier', 'refuse'])(
+    'REQ-JUR-069 : TÉMOIN — %s n’a jamais eu d’accès : refusé, sans_acces, rien d’envoyé ni d’écrit',
+    async (statut) => {
+      const { client, appels } = univers({ statut });
+      expect(await refus(revoquer(client))).toBe('sans_acces');
+      expect(appels.map((a) => a.quoi)).toEqual([
+        '$transaction',
+        'utilisateurConsole.findUnique',
+        '$queryRaw',
+      ]);
+      expect(ajouterEvenement).not.toHaveBeenCalled();
+    }
+  );
+
+  it('REQ-JUR-069 : TÉMOIN — un apporteur inconnu est refusé sans rien écrire', async () => {
     const { client, appels } = univers({ statut: null });
     expect(await refus(revoquer(client))).toBe('apporteur_inconnu');
     expect(appels.map((a) => a.quoi)).not.toContain('apporteur.update');
   });
 
-  it('REQ-SEC-073 : TÉMOIN — le droit est RELU en base : un admin désactivé, non validé, d’un autre rôle, ou inconnu est refusé', async () => {
+  it('REQ-JUR-069 : TÉMOIN — le droit est RELU en base : un admin désactivé, non validé, d’un autre rôle, ou inconnu est refusé', async () => {
     for (const acteur of [
       null,
       { role: 'admin', desactiveAt: VALIDE, valideAt: VALIDE },
@@ -181,7 +207,7 @@ describe('REQ-SEC-073 — la révocation de l’accès d’un apporteur : une tr
     }
   });
 
-  it('REQ-SEC-073 : TÉMOIN — un acteur jugé hors de la matrice est refusé avant toute lecture', async () => {
+  it('REQ-JUR-069 : TÉMOIN — un acteur jugé hors de la matrice est refusé avant toute lecture', async () => {
     const { client, appels } = univers();
     const e = await revoquerLAccesDUnApporteur(client, {
       acteur: { id: ADMIN.id, role: 'conseiller' },
@@ -196,7 +222,7 @@ describe('REQ-SEC-073 — la révocation de l’accès d’un apporteur : une tr
     expect(appels.map((a) => a.quoi)).toEqual(['$transaction']);
   });
 
-  it('REQ-SEC-073 : TÉMOIN — aucune écriture ne touche une attribution, une commission, une autofacture ni le statut', async () => {
+  it('REQ-JUR-069 : TÉMOIN — aucune écriture ne touche une attribution, une commission, une autofacture ni le statut', async () => {
     const { client, appels } = univers();
     await revoquer(client);
     const ecrites = appels.map((a) => a.quoi.split('.')[0]);
@@ -206,5 +232,82 @@ describe('REQ-SEC-073 — la révocation de l’accès d’un apporteur : une tr
       data: Record<string, unknown>;
     };
     expect(Object.keys(maj.data)).toEqual(['sessionVersion']);
+  });
+});
+
+/**
+ * LE PASSAGE DU RENOUVELLEMENT (sécurité, #474, 6034536145 ; juriste, 6034554456) : le LIEN d'abord,
+ * puis l'AVIS, et aucun avis si le lien n'est pas parti ; seul l'avis porte la notification ; une
+ * notification caduque n'envoie rien.
+ */
+describe('REQ-JUR-069 — le renouvellement : le lien, puis l’avis, et jamais l’avis seul', () => {
+  const N = { id: 'n-1', apporteurId: APP, evenementId: '42' };
+  const PREPARES = {
+    a: 'apporteur@exemple.test',
+    lien: { sujet: 'Votre lien', corps: `url ${MARQUEUR_DU_JETON}` },
+    avis: { sujet: 'Avis', corps: 'Corps de l’avis' },
+  };
+  function ports(o: { prepares?: typeof PREPARES | null; statuts?: StatutCourriel[] } = {}) {
+    const envois: DemandeDEnvoi[] = [];
+    const statuts = [...(o.statuts ?? ['envoye', 'envoye'])];
+    const p: PortsDuRenouvellement = {
+      lireLot: async () => [N],
+      preparer: async () => (o.prepares === undefined ? PREPARES : o.prepares),
+      envoyer: async (d) => {
+        envois.push(d);
+        return statuts.shift() ?? 'envoye';
+      },
+    };
+    return { p, envois };
+  }
+
+  it('REQ-JUR-069 : TÉMOIN — l’avis part APRÈS le lien ; seul l’avis porte la notification', async () => {
+    const { p, envois } = ports();
+    expect(await renouvelerLesAcces(p)).toMatchObject({ lus: 1, renouveles: 1 });
+    expect(envois.map((e) => e.gabarit)).toEqual(['lien_magique', 'acces_renouvele']);
+    expect(envois[0]!.notificationEspaceId).toBeUndefined();
+    expect(envois[1]!.notificationEspaceId).toBe('n-1');
+    expect(envois.every((e) => e.a === PREPARES.a && e.apporteurId === APP)).toBe(true);
+  });
+
+  it.each(['echec', 'retenu_adresse_supprimee', 'retenu_dmarc_non_verifie'] as const)(
+    'REQ-JUR-069 : TÉMOIN — un lien %s ne laisse partir AUCUN avis',
+    async (statut) => {
+      const { p, envois } = ports({ statuts: [statut] });
+      expect(await renouvelerLesAcces(p)).toMatchObject({ liensNonPartis: 1, renouveles: 0 });
+      expect(envois.map((e) => e.gabarit)).toEqual(['lien_magique']);
+    }
+  );
+
+  it('REQ-JUR-069 : TÉMOIN — une notification caduque (supplantée, hors statut, motif illisible) n’envoie rien', async () => {
+    const { p, envois } = ports({ prepares: null });
+    expect(await renouvelerLesAcces(p)).toMatchObject({ lus: 1, caducs: 1 });
+    expect(envois).toEqual([]);
+  });
+
+  it('REQ-JUR-069 : TÉMOIN — l’avis du motif, et AVANT la signature la phrase du dossier d’inscription, jamais celle des attributions', () => {
+    for (const motif of ['signalement_apporteur', 'securite'] as const) {
+      const apres = avisDuRenouvellement(motif, 'signe');
+      expect(apres.titre).toBe("Votre accès à l'espace en ligne a été renouvelé");
+      expect(apres.appel).toBe('Ouvrir mon espace');
+      expect(apres.corps).toBe(CORPS_DU_RENOUVELLEMENT[motif]);
+      expect(
+        apres.corps.endsWith(
+          'Les entreprises que vous avez déclarées et vos commissions ne sont pas affectées.'
+        )
+      ).toBe(true);
+      for (const statut of ['kyc_en_cours', 'pret_a_signer']) {
+        const avant = avisDuRenouvellement(motif, statut);
+        expect(avant.corps.endsWith("Votre dossier d'inscription n'est pas affecté.")).toBe(true);
+        expect(avant.corps).not.toContain('Les entreprises que vous avez déclarées');
+        expect(avant.corps.slice(0, 40)).toBe(apres.corps.slice(0, 40));
+      }
+    }
+    expect(avisDuRenouvellement('signalement_apporteur', 'signe').corps).toContain(
+      'À la suite de votre signalement'
+    );
+    expect(avisDuRenouvellement('securite', 'suspendu').corps).toContain(
+      'Pour un motif de sécurité, Axion-IA'
+    );
   });
 });
