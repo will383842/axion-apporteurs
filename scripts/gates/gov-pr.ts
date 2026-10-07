@@ -58,6 +58,7 @@ import {
   lentillesExigees,
   lireRevues,
   resoudreLeLot,
+  lireLeLot,
   risqueDeLaPr,
   tachesDeLaBase,
   tachesDeLaBaseDeFusion,
@@ -278,7 +279,17 @@ export function ecartsDuRegistreDUnePrDAuteur(
       continue;
     }
     const hors = t.empreinteHorsPaths ?? null;
-    if (hors === null || hors !== (avant.empreinteHorsPaths ?? null)) {
+    // GOV-154 : une CLÔTURE DANS LA PR bien formée (`lot:cloture --dans-la-pr`) n'est pas un écart,
+    // pourvu qu'hors des champs de clôture et des chemins, rien d'autre ne bouge.
+    const horsCloture = t.empreinteHorsCloture ?? null;
+    const clotureSeule =
+      horsCloture !== null &&
+      horsCloture === (avant.empreinteHorsCloture ?? null) &&
+      // La tâche close doit être DÉCLARÉE par le titre ou le `Lot:` — jamais par son seul `pr`, que la
+      // clôture elle-même vient d écrire (une PR ne se rend pas propriétaire d une tâche en la close).
+      (t.id === idDuTitre || lireLeLot(pr.corps ?? '').ids.includes(t.id)) &&
+      clotureDansLaPrBienFormee(t, avant, pr.numero ?? null);
+    if (!clotureSeule && (hors === null || hors !== (avant.empreinteHorsPaths ?? null))) {
       ecarts.push(
         `${t.id} : un autre champ que \`paths\` est réécrit (ou son empreinte est incalculable)`
       );
@@ -572,9 +583,41 @@ export type Tache = {
    * réécrit QUE ses chemins. Absente ou `null` : jamais lue comme « inchangée ».
    */
   empreinteHorsPaths?: string | null;
+  /** GOV-154 : l'empreinte sans `paths` NI les champs d'une clôture dans la PR (`CHAMPS_DE_CLOTURE`). */
+  empreinteHorsCloture?: string | null;
+  /** GOV-154 : les champs de clôture, pour juger qu'une clôture dans la PR est bien formée. */
+  cloture?: {
+    statut: string | null;
+    pr: number | null;
+    owner: string | null;
+    branch: string | null;
+    attestation: { pr: number; sha: string | null; fusionneeAt: string | null } | null;
+  };
   /** `null` si le champ manque — GOV-096 : on ne déduit pas « livrée » d'une absence. */
   statut: string | null;
 };
+
+/**
+ * GOV-154 — UNE CLÔTURE DANS LA PR BIEN FORMÉE : la tâche, `a_faire` (ou non livrée) à la base, passe
+ * `fusionnee` avec `pr` = le numéro de CETTE PR, un propriétaire, une branche, et une attestation
+ * PENDANTE (sha et date `null`) au même numéro. Rien d'autre.
+ */
+export function clotureDansLaPrBienFormee(t: Tache, avant: Tache, numero: number | null): boolean {
+  const c = t.cloture;
+  if (!c || numero === null) return false;
+  if (avant.statut === 'fusionnee') return false;
+  const a = c.attestation;
+  return (
+    c.statut === 'fusionnee' &&
+    c.pr === numero &&
+    !!c.owner &&
+    !!c.branch &&
+    a !== null &&
+    a.pr === numero &&
+    a.sha === null &&
+    a.fusionneeAt === null
+  );
+}
 export type Depot = {
   gabarit: string;
   codeowners: string;
@@ -1339,7 +1382,25 @@ type TacheBrute = TacheDeLaPr & {
   // pour qu'un témoin puisse la réécrire sans passer par un transtypage.
   titre?: string;
   acceptance?: string | null;
+  owner?: string | null;
+  branch?: string | null;
+  lot?: string | null;
+  attestation?: { pr: number; sha: string | null; fusionneeAt: string | null } | null;
 };
+
+/**
+ * GOV-154 — LES CHAMPS D'UNE CLÔTURE DANS LA PR, et eux seuls : ce que `lot:cloture --dans-la-pr` écrit
+ * sur une tâche que la PR déclare. Liste FERMÉE : tout autre champ réécrit reste un écart.
+ */
+export const CHAMPS_DE_CLOTURE = [
+  'statut',
+  'pr',
+  'owner',
+  'branch',
+  'lot',
+  'attestation',
+  'motif',
+] as const;
 
 /**
  * LA PROJECTION D'UNE TÂCHE, UNE FOIS — pour le registre de la tête comme pour celui de la base
@@ -1362,6 +1423,18 @@ export function projeter(brutes: readonly TacheBrute[] | null): Tache[] | null {
     tests: t.tests ?? null,
     empreinte: empreinteDeLEntree(t),
     empreinteHorsPaths: empreinteDeLEntree({ ...t, paths: undefined }),
+    empreinteHorsCloture: empreinteDeLEntree({
+      ...t,
+      paths: undefined,
+      ...Object.fromEntries(CHAMPS_DE_CLOTURE.map((k) => [k, undefined])),
+    }),
+    cloture: {
+      statut: t.statut ?? null,
+      pr: t.pr ?? null,
+      owner: t.owner ?? null,
+      branch: t.branch ?? null,
+      attestation: t.attestation ?? null,
+    },
     // ⚠️ `statut` FAIT PARTIE DE LA PROJECTION (GOV-096) : sans lui, le refus « une PR ne rouvre
     // pas une tâche livrée » lirait `undefined` sur chaque tâche et ne tirerait JAMAIS — le même
     // défaut, exactement, que l'absence de `pr` a produit deux fois (voir `lireDepot()`).

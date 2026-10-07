@@ -163,6 +163,15 @@ jobs:
         run: pnpm gov:sonde
       - name: La sonde sait rougir
         run: pnpm gov:sonde:prove
+      # GOV-154 (#319, 6043631639 et 6043741780) : la fin des rattrapages. Une PR clôt sa propre tâche
+      # (attestation PENDANTE) ; le registre se juge contre l'historique de main, par écart PROUVÉ. Sur
+      # une PR, sa propre clôture n'a pas encore de commit squashé : `--pr` le dit à la garde.
+      - name: Le registre suit les fusions
+        run: pnpm gov:registre-fusions
+        env:
+          PR_COURANTE: ${{ github.event.pull_request.number }}
+      - name: La garde du registre des fusions sait rougir
+        run: pnpm gov:registre-fusions:prove
       - name: ADR — index derive et gabarit
         run: pnpm gov:adr
       - name: La garde des ADR sait rougir

@@ -1164,7 +1164,10 @@ export function resoudreLeLot<T extends TacheDeLaPr>(e: {
       });
       continue;
     }
-    if (t.statut != null && e.livrees.has(t.statut)) {
+    // GOV-154 : une tâche que CETTE PR clôt elle-même (`lot:cloture --dans-la-pr`, `pr` = son numéro)
+    // n'est pas « déjà livrée » par une autre : c'est sa propre clôture, pendante jusqu'au squash.
+    const closeParCettePr = t.pr != null && e.numero !== null && t.pr === e.numero;
+    if (t.statut != null && e.livrees.has(t.statut) && !closeParCettePr) {
       refus.push({
         famille: 'lot_tache_livree',
         message:
@@ -1370,6 +1373,10 @@ export const RACINES_DE_LA_GARDE_DES_REVUES: readonly string[] = [
   // refuser de clore une tache que la PR ne porte pas — il importe revues.ts, donc il appartient a
   // la garde. Affaiblir ce lecteur laisserait attacher n'importe quelle PR a n'importe quelle tache.
   'scripts/lot/cloture.ts',
+  // GOV-154 : registre-fusions.ts lit le champ `Lot:` d'un commit squashé (lireLeLot) pour juger
+  // qu'une clôture dans la PR correspond à sa fusion — il importe revues.ts, donc il appartient à la
+  // garde. L'affaiblir laisserait une tâche close par une PR qui ne la portait pas.
+  'scripts/gates/registre-fusions.ts',
 ];
 
 let gardeEnCache: readonly string[] | null = null;

@@ -58,11 +58,24 @@ export const DEPOT_LOCAL = 'partners';
 export type Attestation = {
   /** Numéro de la PR DANS le dépôt de la tâche. Ne résout pas ici — c'est tout le problème. */
   pr: number;
-  /** SHA ENTIER (40 hex minuscules) du commit de fusion. La seule valeur non réattribuable. */
-  sha: string;
+  /**
+   * SHA ENTIER (40 hex minuscules) du commit de fusion. La seule valeur non réattribuable.
+   * GOV-154 : `null` avec `fusionneeAt` `null` — l'attestation PENDANTE d'une tâche de CE dépôt
+   * close DANS sa propre PR : le sha n'existe qu'au squash, et il se LIT ensuite dans l'historique de
+   * main (`gov:registre-fusions`), il ne s'écrit jamais.
+   */
+  sha: string | null;
   /** Instant de la fusion, ISO 8601 UTC (`docs/CONVENTIONS.md` §3 : stockage en UTC, suffixe `…At`). */
-  fusionneeAt: string;
+  fusionneeAt: string | null;
 };
+
+/**
+ * GOV-154 — l'attestation PENDANTE : sha ET date à `null`, ensemble. Admise pour une tâche de CE
+ * dépôt seulement ; ailleurs, la forme est refusée comme un sha non conforme.
+ */
+export function estPendante(a: Attestation | null | undefined): boolean {
+  return !!a && a.sha === null && a.fusionneeAt === null;
+}
 
 /** Une tâche, vue par ce module. Le reste du backlog ne l'intéresse pas. */
 export type TacheAttestable = {
@@ -258,7 +271,7 @@ export function referencePr(t: TacheAttestable): string | null {
   const a = t.attestation;
   const depot = depotDeLaTache(t);
   if (!a) return t.pr == null ? null : `pr ${t.pr} NON QUALIFIÉ (repo ${t.repo})`;
-  const court = MOTIF_SHA.test(a.sha) ? a.sha.slice(0, 7) : a.sha;
+  const court = a.sha !== null && MOTIF_SHA.test(a.sha) ? a.sha.slice(0, 7) : String(a.sha);
   return `${depot ?? `repo:${t.repo}`}#${a.pr} (${court})`;
 }
 
@@ -372,7 +385,10 @@ export function controlerAttestation(
           `le composeur la juge éligible et la refera.`
       );
     }
-    if (!MOTIF_SHA.test(a.sha)) {
+    // GOV-154 : une attestation PENDANTE de CE dépôt n'a ni sha ni date à juger ici ; son commit
+    // squashé se juge sur main par `gov:registre-fusions`. Ailleurs, la forme pendante est refusée.
+    if (local && estPendante(a)) return fautes;
+    if (!MOTIF_SHA.test(String(a.sha))) {
       ajouter(
         'attestation_sha_non_conforme',
         `${t.id} : « attestation.sha » vaut « ${a.sha} », qui n'a pas la forme d'un SHA (40 ` +
@@ -380,7 +396,11 @@ export function controlerAttestation(
           `le SHA entier est la seule valeur de cette attestation qu'aucun autre dépôt ne réattribue.`
       );
     }
-    if (!MOTIF_FUSIONNEE_AT.test(a.fusionneeAt) || Number.isNaN(Date.parse(a.fusionneeAt))) {
+    if (
+      a.fusionneeAt === null ||
+      !MOTIF_FUSIONNEE_AT.test(a.fusionneeAt) ||
+      Number.isNaN(Date.parse(a.fusionneeAt))
+    ) {
       ajouter(
         'attestation_date_non_conforme',
         `${t.id} : « attestation.fusionneeAt » vaut « ${a.fusionneeAt} », qui n'est pas un instant ` +
@@ -465,7 +485,10 @@ export function resoudreAttestations(
       );
       continue;
     }
-    if (!MOTIF_SHA.test(a.sha)) {
+    // GOV-154 : une attestation PENDANTE ne se résout pas ici, par la forge : son commit squashé se lit
+    // sur main par `gov:registre-fusions`.
+    if (t.repo === DEPOT_LOCAL && estPendante(a)) continue;
+    if (a.sha === null || !MOTIF_SHA.test(a.sha)) {
       r.fautes.push(
         `${t.id} — « ${a.sha} » n'a pas la forme d'un SHA ; \`pnpm gov:tasks\` le dit déjà.`
       );
@@ -527,7 +550,7 @@ export function resoudreAttestations(
       continue;
     }
     admises.add(versUtcSeconde(p.merged_at));
-    if (!admises.has(a.fusionneeAt)) {
+    if (a.fusionneeAt === null || !admises.has(a.fusionneeAt)) {
       r.fautes.push(
         `${t.id} — « fusionneeAt » vaut ${a.fusionneeAt} ; la forge et le commit disent ` +
           `${[...admises].join(' ou ')}.`

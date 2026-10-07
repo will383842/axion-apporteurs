@@ -289,7 +289,7 @@ function poserLaLivraison(t: Tache, attestation: Attestation): string {
     pr: t.pr,
     attestation: t.attestation,
   });
-  return `${t.id} → fusionnee (${ref ?? 'aucune référence de PR'}, sha ${attestation.sha})`;
+  return `${t.id} → fusionnee (${ref ?? 'aucune référence de PR'}, sha ${attestation.sha ?? 'PENDANT : lu sur main au squash (GOV-154)'})`;
 }
 
 /**
@@ -647,6 +647,83 @@ export function cloturerUneTacheSeule(options: {
   t.branch = livraison.branch!;
   if (!t.owner) t.owner = owner;
   return { journal: [poserLaLivraison(t, { pr: numero!, sha: sha!, fusionneeAt: quand! })] };
+}
+
+/**
+ * GOV-154 — CLORE SA TÂCHE DANS SA PROPRE PR (`--dans-la-pr --tache <id> --pr <n>`). Le sha et l'instant
+ * de fusion n'existent qu'au squash : l'attestation est PENDANTE (sha et date `null`), et le commit
+ * squashé « (#n) » se LIT ensuite sur main par `gov:registre-fusions`, qui juge aussi son sujet. Les
+ * refus sont ceux du mode `--tache` qu'une PR ouverte peut juger : la PR doit DÉCLARER la tâche (titre,
+ * `Lot:`, `pr`), la tâche ne doit pas être déjà livrée, la branche suit le motif, un propriétaire est
+ * connu. Le titre d'écrasement et l'atterrissage, qu'elle ne peut pas encore savoir, se jugent sur main.
+ */
+export function cloturerDansLaPr(options: {
+  tacheId: string;
+  pr: { numero: number; titre: string | null; corps: string | null; branch: string | null };
+  taches: Tache[];
+  owner?: string;
+}): { journal: string[] } {
+  const { tacheId, pr, taches, owner = '' } = options;
+  const t = taches.find((x) => x.id === tacheId);
+  if (!t) {
+    throw new ErreurDeCloture([
+      {
+        famille: 'tache_inconnue',
+        message: `${tacheId} n'est pas dans docs/tasks.json : rien à clore.`,
+      },
+    ]);
+  }
+  const depot = depotDeLaTache(t) ?? DEPOT_LOCAL;
+  const refus: RefusDeCloture[] = [];
+  if ((t.repo ?? DEPOT_LOCAL) !== DEPOT_LOCAL) {
+    refus.push({
+      famille: 'tache_hors_depot',
+      message:
+        `${t.id} est une tâche du dépôt « ${t.repo} » : sa PR n'est pas d'ici, elle se clôt par ` +
+        '`--tache` après sa fusion.',
+    });
+  }
+  if (LIVREE.has(t.statut)) {
+    refus.push({
+      famille: 'tache_deja_livree',
+      message: `${t.id} est déjà \`${t.statut}\` : la re-clore écraserait son attestation.`,
+    });
+  }
+  const lot = lireLeLot(pr.corps ?? '');
+  const declarees = tachesDeLaPr(taches, pr.numero, idDuTitre(pr.titre), lot.ids);
+  if (!declarees.some((x) => x.id === t.id)) {
+    refus.push({
+      famille: 'tache_etrangere_a_la_pr',
+      message:
+        `${t.id} : la PR ${depot}#${pr.numero} ne déclare pas cette tâche — ni son titre ` +
+        `(« ${pr.titre ?? 'absent'} »), ni son champ \`Lot:\`` +
+        (lot.malForme ? ` (illisible : ${lot.malForme})` : '') +
+        '. Une PR ne clôt que les tâches qu’elle porte.',
+    });
+  }
+  if (!pr.branch) {
+    refus.push({
+      famille: 'branche_absente',
+      message: `${t.id} : la branche de la PR ${depot}#${pr.numero} est inconnue.`,
+    });
+  } else if (!motifDeBranche(t.repo).test(pr.branch)) {
+    refus.push({
+      famille: 'branche_hors_motif',
+      message:
+        `${t.id} : la branche « ${pr.branch} » est refusée par le motif de \`branch\` de ` +
+        `${CHEMIN_SCHEMA_DES_TACHES}.`,
+    });
+  }
+  if (!t.owner && !owner) {
+    refus.push({
+      famille: 'proprietaire_absent',
+      message: `${t.id} n'a pas de propriétaire, et aucun \`--owner <Axx>\` n'est fourni.`,
+    });
+  }
+  if (refus.length > 0) throw new ErreurDeCloture(refus);
+  t.branch = pr.branch!;
+  if (!t.owner) t.owner = owner;
+  return { journal: [poserLaLivraison(t, { pr: pr.numero, sha: null, fusionneeAt: null })] };
 }
 
 /**
@@ -1051,7 +1128,46 @@ function cloreUneTacheSeule(
   }
 }
 
+function cloreDansLaPr(tacheId: string, numero: number, owner: string): void {
+  const doc = JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as {
+    version: number;
+    taches: Tache[];
+  };
+  const brut = execFileSync(
+    'gh',
+    ['pr', 'view', String(numero), '--json', 'title,body,headRefName,state'],
+    { encoding: 'utf8' }
+  );
+  const p = JSON.parse(brut) as {
+    title: string;
+    body: string | null;
+    headRefName: string;
+    state: string;
+  };
+  if (p.state !== 'OPEN') {
+    throw new Error(
+      `#${numero} est « ${p.state} » : la clôture DANS la PR ne vaut que pour une PR ouverte ` +
+        '(après la fusion, `--tache`).'
+    );
+  }
+  const { journal } = cloturerDansLaPr({
+    tacheId,
+    pr: { numero, titre: p.title, corps: p.body, branch: p.headRefName },
+    taches: doc.taches,
+    owner,
+  });
+  writeFileSync('docs/tasks.json', JSON.stringify(doc, null, 2) + '\n');
+  console.log(`Clôture de ${tacheId} DANS sa PR #${numero} :`);
+  for (const l of journal) console.log(`  ${l}`);
+}
+
 function principal(): void {
+  if (process.argv.includes('--dans-la-pr')) {
+    const pr = Number(arg('pr'));
+    if (!Number.isInteger(pr) || pr < 1) throw new Error('--pr attend un numéro de PR entier.');
+    cloreDansLaPr(arg('tache'), pr, arg('owner', ''));
+    return;
+  }
   if (process.argv.includes('--rattraper-attestations')) {
     rattraperLePasse(process.argv.includes('--a-blanc'));
     return;

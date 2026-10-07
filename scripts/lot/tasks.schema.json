@@ -168,12 +168,12 @@
               "description": "Numéro de la PR DANS le dépôt de la tâche."
             },
             "sha": {
-              "type": "string",
-              "description": "SHA ENTIER du commit de fusion. La forme est jugée par gov:tasks."
+              "type": ["string", "null"],
+              "description": "SHA ENTIER du commit de fusion. La forme est jugée par gov:tasks. GOV-154 : null avec fusionneeAt null, l attestation PENDANTE d une tâche de ce dépôt close dans sa propre PR ; le commit squashé se lit sur main (gov:registre-fusions)."
             },
             "fusionneeAt": {
-              "type": "string",
-              "description": "Instant de fusion, ISO 8601 UTC. La forme est jugée par gov:tasks."
+              "type": ["string", "null"],
+              "description": "Instant de fusion, ISO 8601 UTC. La forme est jugée par gov:tasks. null : attestation pendante (GOV-154)."
             }
           }
         }

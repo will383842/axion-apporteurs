@@ -152,6 +152,17 @@ export const AJOUTS_ADMIS: Readonly<Record<string, AjoutAdmis>> = {
     categorie: '(6) la preuve du témoin',
     run: 'pnpm gov:ci-etapes:prove',
   },
+  // (7) UNE GARDE NEUVE, NOMMÉE PAR SA TÂCHE — et elle seule. La référence est l'« avant » figé du
+  // découpage (GOV-142) : une garde née après lui n'y figure pas, et ne peut entrer que nommée ici,
+  // avec sa tâche et sa commande exacte.
+  'Le registre suit les fusions': {
+    categorie: '(7) garde neuve — GOV-154',
+    run: 'pnpm gov:registre-fusions',
+  },
+  'La garde du registre des fusions sait rougir': {
+    categorie: '(7) preuve de la garde neuve — GOV-154',
+    run: 'pnpm gov:registre-fusions:prove',
+  },
 };
 
 export type Famille =

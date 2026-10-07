@@ -195,7 +195,9 @@
     "deploy:alerter": "tsx scripts/gates/deploy-verify.ts --alerter",
     "aipd:signee": "tsx scripts/gates/aipd-signee.ts",
     "deploy:retour-arriere": "tsx scripts/gates/deploy-verify.ts --retour-arriere",
-    "deploy:retirer-echappatoire": "tsx scripts/gates/deploy-verify.ts --retirer-echappatoire"
+    "deploy:retirer-echappatoire": "tsx scripts/gates/deploy-verify.ts --retirer-echappatoire",
+    "gov:registre-fusions": "tsx scripts/gates/registre-fusions.ts",
+    "gov:registre-fusions:prove": "tsx scripts/gates/registre-fusions.ts --prove"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
