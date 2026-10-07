@@ -269,6 +269,18 @@ export const MOTIFS_LISTE_NOIRE = [
   'organisme_de_formation_partenaire',
 ] as const;
 export type MotifListeNoire = (typeof MOTIFS_LISTE_NOIRE)[number];
+
+/**
+ * UX-P1-61 (contrat v2, art. 3.4 al. 2 ; juriste #319 6037008645) : pourquoi l'absence d'échange tient
+ * à la Société — la liste FERMÉE de la suspension de péremption, le MÊME vocabulaire que l'enum
+ * `MotifSuspensionPeremption` de la base.
+ */
+export const MOTIFS_SUSPENSION_PEREMPTION = [
+  'rdv_annule_par_la_societe',
+  'absence_de_reponse_de_la_societe',
+  'devis_non_emis_par_la_societe',
+] as const;
+export type MotifSuspensionPeremption = (typeof MOTIFS_SUSPENSION_PEREMPTION)[number];
 export type CritereDAnteriorite = (typeof CRITERES_D_ANTERIORITE)[number];
 
 export type CodeTransitionAttribution =

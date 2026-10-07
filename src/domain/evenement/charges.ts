@@ -35,6 +35,7 @@ import {
   MOTIFS_LISTE_NOIRE,
   EXCEPTIONS_ANNULATION,
   EXCEPTION_DE_LA_TRANSITION,
+  MOTIFS_SUSPENSION_PEREMPTION,
   EVENEMENTS_ATTRIBUTION,
   NAISSANCES_ATTRIBUTION,
 } from '../attribution/machine';
@@ -272,8 +273,13 @@ export const CHARGES_PAR_TYPE = {
       }
     ),
   /** DM-08 (REQ-DM-007) : le marqueur qui suspend la péremption, posé par un rôle habilité. */
+  // UX-P1-61 (forme d'A02, #803) : la suspension porte son motif FERMÉ, obligatoire.
   attribution_peremption_suspendue: z
-    .object({ acteur: FORMES.acteur(), suspendueAt: FORMES.horodatage() })
+    .object({
+      acteur: FORMES.acteur(),
+      suspendueAt: FORMES.horodatage(),
+      motif: z.enum(MOTIFS_SUSPENSION_PEREMPTION),
+    })
     .strict(),
   /**
    * DM-08 (W19 (5)) : le porteur réaffecté, de conseiller à conseiller ; aucune donnée de personne,

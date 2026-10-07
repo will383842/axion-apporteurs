@@ -455,27 +455,27 @@ model UtilisateurConsole {
   valideAt               DateTime?            @map("valide_at") @db.Timestamptz(3)
   administrateursValides UtilisateurConsole[] @relation("ValidationDesAdministrateurs")
 
-  liensMagiques           LienMagique[]
-  sessionsEspace          SessionEspace[]
-  attributions            Attribution[]            @relation("AttributionsDuConseiller")
-  suspensionsDePeremption Attribution[]            @relation("SuspensionsDePeremption")
-  annulationsApresConfirmation Attribution[]       @relation("AnnulationsApresConfirmation")
-  verifications           Verification[]
-  anomaliesTraitees       Anomalie[]
-  rattachementsDecides    RattachementManuel[]
-  contestationsRepondues  Contestation[]
-  qualificationsSaisies   Qualification[]
-  accesJournalises        JournalAccesConsole[]
+  liensMagiques                LienMagique[]
+  sessionsEspace               SessionEspace[]
+  attributions                 Attribution[]            @relation("AttributionsDuConseiller")
+  suspensionsDePeremption      Attribution[]            @relation("SuspensionsDePeremption")
+  annulationsApresConfirmation Attribution[]            @relation("AnnulationsApresConfirmation")
+  verifications                Verification[]
+  anomaliesTraitees            Anomalie[]
+  rattachementsDecides         RattachementManuel[]
+  contestationsRepondues       Contestation[]
+  qualificationsSaisies        Qualification[]
+  accesJournalises             JournalAccesConsole[]
   /// SEC-61 : les gels du journal des accès qui visent l'utilisateur, ceux qu'il a posés, levés.
-  gelsJournalVises        JournalAccesConsoleGel[] @relation("GelsJournalVises")
-  gelsJournalPoses        JournalAccesConsoleGel[] @relation("GelsJournalPoses")
-  gelsJournalLeves        JournalAccesConsoleGel[] @relation("GelsJournalLeves")
-  sirensListeNoireAjoutes SirenListeNoire[]
+  gelsJournalVises             JournalAccesConsoleGel[] @relation("GelsJournalVises")
+  gelsJournalPoses             JournalAccesConsoleGel[] @relation("GelsJournalPoses")
+  gelsJournalLeves             JournalAccesConsoleGel[] @relation("GelsJournalLeves")
+  sirensListeNoireAjoutes      SirenListeNoire[]
   /// CPL-T06 : les décisions de candidature dont l'utilisateur est l'auteur.
-  decisionsCandidature    DecisionCandidature[]
+  decisionsCandidature         DecisionCandidature[]
   /// CPL-T24 : les RIB que l'utilisateur a vérifiés, et ceux qu'il a confirmés.
-  ribsVerifies            PieceKyc[]               @relation("RibsVerifies")
-  ribsConfirmes           PieceKyc[]               @relation("RibsConfirmes")
+  ribsVerifies                 PieceKyc[]               @relation("RibsVerifies")
+  ribsConfirmes                PieceKyc[]               @relation("RibsConfirmes")
 
   @@map("utilisateurs_console")
 }
@@ -966,30 +966,33 @@ model Attribution {
   lienInteretPrecisionChiffre Bytes?            @map("lien_interet_precision_chiffre")
 
   // Le temps de la machine (REQ-DM-004, REQ-DM-007, REQ-UX-022).
-  aQualifierDepuisAt               DateTime?           @map("a_qualifier_depuis_at") @db.Timestamptz(3)
-  premierContactAt                 DateTime?           @map("premier_contact_at") @db.Timestamptz(3)
-  confirmeeAt                      DateTime?           @map("confirmee_at") @db.Timestamptz(3)
-  fenetreFinAt                     DateTime?           @map("fenetre_fin_at") @db.Timestamptz(3)
-  peremptionAt                     DateTime?           @map("peremption_at") @db.Timestamptz(3)
+  aQualifierDepuisAt               DateTime?                  @map("a_qualifier_depuis_at") @db.Timestamptz(3)
+  premierContactAt                 DateTime?                  @map("premier_contact_at") @db.Timestamptz(3)
+  confirmeeAt                      DateTime?                  @map("confirmee_at") @db.Timestamptz(3)
+  fenetreFinAt                     DateTime?                  @map("fenetre_fin_at") @db.Timestamptz(3)
+  peremptionAt                     DateTime?                  @map("peremption_at") @db.Timestamptz(3)
   /// La suspension de péremption : les trois ensemble ou aucune (CHECK).
-  peremptionSuspendueAt            DateTime?           @map("peremption_suspendue_at") @db.Timestamptz(3)
-  peremptionSuspendueParId         String?             @map("peremption_suspendue_par_id") @db.Uuid
-  peremptionSuspenduePar           UtilisateurConsole? @relation("SuspensionsDePeremption", fields: [peremptionSuspendueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  peremptionSuspendueJustification String?             @map("peremption_suspendue_justification") @db.Text
-  fenetreRedeclarationFinAt        DateTime?           @map("fenetre_redeclaration_fin_at") @db.Timestamptz(3)
+  peremptionSuspendueAt            DateTime?                  @map("peremption_suspendue_at") @db.Timestamptz(3)
+  peremptionSuspendueParId         String?                    @map("peremption_suspendue_par_id") @db.Uuid
+  peremptionSuspenduePar           UtilisateurConsole?        @relation("SuspensionsDePeremption", fields: [peremptionSuspendueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  peremptionSuspendueJustification String?                    @map("peremption_suspendue_justification") @db.Text
+  /// UX-P1-61 (contrat v2, art. 3.4 al. 2) : le motif FERMÉ de la suspension de péremption, posé avec son
+  /// instant et son auteur ; la justification libre n'est plus admise (CHECK de 005010).
+  peremptionSuspendueMotif         MotifSuspensionPeremption? @map("peremption_suspendue_motif")
+  fenetreRedeclarationFinAt        DateTime?                  @map("fenetre_redeclaration_fin_at") @db.Timestamptz(3)
   /// DM-71 (art. 3.3 du v2, migration 005020) : l'exception d'une annulation APRÈS la confirmation et
   /// son auteur humain, posés ensemble avec l'arrivée en `annulee`, immuables ensuite (garde
   /// `attributions_annulation_apres_confirmation`).
-  annulationException              ExceptionAnnulation? @map("annulation_exception")
-  annulationParId                  String?             @map("annulation_par_id") @db.Uuid
-  annulationPar                    UtilisateurConsole? @relation("AnnulationsApresConfirmation", fields: [annulationParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  purgeContactAt                   DateTime?           @map("purge_contact_at") @db.Timestamptz(3)
-  contactPurgeAt                   DateTime?           @map("contact_purge_at") @db.Timestamptz(3)
+  annulationException              ExceptionAnnulation?       @map("annulation_exception")
+  annulationParId                  String?                    @map("annulation_par_id") @db.Uuid
+  annulationPar                    UtilisateurConsole?        @relation("AnnulationsApresConfirmation", fields: [annulationParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  purgeContactAt                   DateTime?                  @map("purge_contact_at") @db.Timestamptz(3)
+  contactPurgeAt                   DateTime?                  @map("contact_purge_at") @db.Timestamptz(3)
   /// L'empreinte HMAC du jeton de la page des droits du contact, jamais le jeton (DM-59). Unique
   /// quand posée (index partiel en SQL), effacée par la purge du contact.
-  jetonDroitsHash                  String?             @map("jeton_droits_hash") @db.Char(64)
+  jetonDroitsHash                  String?                    @map("jeton_droits_hash") @db.Char(64)
   /// Verrou optimiste de la fiche (REQ-CPL-024).
-  versionQualification             Int                 @default(0) @map("version_qualification")
+  versionQualification             Int                        @default(0) @map("version_qualification")
 
   courrielsEnvoyes      CourrielEnvoye[]
   demandeConfirmation   DemandeConfirmation?
@@ -1595,4 +1598,14 @@ model DecisionDeContrat {
 
   @@index([apporteurId])
   @@map("decisions_de_contrat")
+}
+
+/// UX-P1-61 (contrat v2, art. 3.4 al. 2 ; juriste #319 6037008645) : pourquoi l'absence d'échange tient
+/// à la Société, ce qui suspend la péremption à 90 jours. Liste FERMÉE, sans texte libre.
+enum MotifSuspensionPeremption {
+  rdv_annule_par_la_societe
+  absence_de_reponse_de_la_societe
+  devis_non_emis_par_la_societe
+
+  @@map("motif_suspension_peremption")
 }
