@@ -189,7 +189,17 @@ export const CLES_REFUSEES = {
     'lienMagique',
   ],
   personneDeclaree: ['id', 'apporteurId', 'apporteur', 'attributions'],
-  pieceKyc: ['id', 'apporteurId', 'apporteur', 'identitesFacturation'],
+  // Le RIB à quatre yeux (migration 004750) : les deux regards sont ceux de la console, jamais de l'espace.
+  pieceKyc: [
+    'id',
+    'apporteurId',
+    'apporteur',
+    'identitesFacturation',
+    'ribVerifieParId',
+    'ribVerifiePar',
+    'ribConfirmeParId',
+    'ribConfirmePar',
+  ],
   // UX-P1-10 : l'attribution d'une notification est une référence vérifiée ; la clé d'une
   // préférence s'écrit, et Zod la juge contre la table des notifications avant la couche.
   // DM-55 (sécurité) : le fait du journal, l'anomalie et les courriels d'une notification sont HORS DE L'ESPACE :
@@ -275,7 +285,7 @@ export const RELATIONS = {
   jetonDepot: ['apporteur', 'attributions'],
   lienMagique: ['apporteur', 'utilisateurConsole', 'session'],
   personneDeclaree: ['apporteur', 'attributions'],
-  pieceKyc: ['apporteur', 'identitesFacturation'],
+  pieceKyc: ['apporteur', 'identitesFacturation', 'ribVerifiePar', 'ribConfirmePar'],
   sessionEspace: ['apporteur', 'utilisateurConsole', 'lienMagique'],
   notificationEspace: [
     'apporteur',
@@ -485,7 +495,19 @@ export const CHAMPS_TUS = {
   lienMagique: ['apporteurId', 'utilisateurConsoleId', 'tokenHash', 'kid', 'codeHash'],
   personneDeclaree: ['apporteurId', 'nomChiffre', 'prenomChiffre'],
   // DM-11 : le fichier (stockage privé, REQ-SEC-026), sa purge, et l'IBAN chiffré et empreint.
-  pieceKyc: ['apporteurId', 'fichierRef', 'fichierPurgeAt', 'ibanChiffre', 'ibanHash'],
+  // Le RIB à quatre yeux (migration 004750) : qui a vérifié et confirmé, et quand — un contrôle interne
+  // de la console, que l'espace ne rend pas.
+  pieceKyc: [
+    'apporteurId',
+    'fichierRef',
+    'fichierPurgeAt',
+    'ibanChiffre',
+    'ibanHash',
+    'ribVerifieParId',
+    'ribVerifieAt',
+    'ribConfirmeParId',
+    'ribConfirmeAt',
+  ],
   sessionEspace: [
     'apporteurId',
     'utilisateurConsoleId',

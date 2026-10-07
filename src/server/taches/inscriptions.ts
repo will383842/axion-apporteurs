@@ -79,6 +79,7 @@ import {
 import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
 import { purgerLesSessions } from './purger-sessions-espace';
 import { effacerLesComptesDesactives } from './purger-utilisateurs-console';
+import { purgerLesTextesDesDecisions } from './purger-textes-des-decisions';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import {
   ouvrirLesAnomaliesDAutoParrainage,
@@ -280,6 +281,9 @@ export function inscriptions(
     sessions_purger: () => purgerLesSessions(prisma, new Date(horlogeSysteme.maintenant())),
     utilisateurs_console_effacer: () =>
       effacerLesComptesDesactives(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-70 (REQ-JUR-029) : le texte d'une décision de contrat, purgé le lendemain de son échéance.
+    decisions_contrat_purger: () =>
+      purgerLesTextesDesDecisions(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>

@@ -58,6 +58,10 @@ export const SEGMENTS_PLEINS = [
   'activite',
   'ressources',
   'aide',
+  // UX-P1-51 : l'apporteur relit sa contestation et la réponse d'Axion-IA (REQ-DM-043). En PLEIN
+  // seulement (arbitrage de la coordination sur #775 : le contrat v2 fait foi, art. 12.3, SEC-70) :
+  // un résilié n'y a pas accès.
+  'contestations',
 ] as const;
 
 /**
