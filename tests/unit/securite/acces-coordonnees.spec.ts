@@ -299,4 +299,34 @@ describe('REQ-SEC-042 — TÉMOIN DU DISQUE : aucune autre voie de la console ne
       false
     );
   });
+
+  /** Les champs chiffrés PROPRES au contact (l'email et le téléphone sont aussi ceux de l'apporteur). */
+  const CHAMPS_DU_CONTACT =
+    /\b(nomContactChiffre|prenomContactChiffre|fonctionContactChiffre|MODELE_DE_L_ATTRIBUTION)\b/;
+
+  it('REQ-SEC-042 : liste NOMINATIVE et fermée des fichiers qui nomment un champ chiffré propre au contact', () => {
+    const noms = sources().filter((f) => CHAMPS_DU_CONTACT.test(readFileSync(f, 'utf8')));
+    // Chaque entrée a sa raison ; tout fichier neuf rougit et doit être examiné avant d'entrer ici.
+    expect(noms.sort()).toEqual(
+      [
+        // le calcul de sincérité : côté serveur, hors console
+        'src/server/anomalie/sincerite.ts',
+        // le lecteur du journal des accès, seul déchiffreur de la console (appelé par l'accesseur seul)
+        'src/server/console/journal-des-acces.ts',
+        // la table des champs chiffrés
+        'src/server/securite/pii.ts',
+        // la purge : elle met ces champs à null
+        'src/server/taches/purger-contacts.ts',
+        // la couche de l'apporteur : elle REFUSE ces champs
+        'src/server/acces/for-apporteur.ts',
+      ].sort()
+    );
+  });
+
+  it('REQ-SEC-042 : preuve rouge à deux faces — une voie de la console qui sélectionne le champ et déchiffre est attrapée', () => {
+    const voieClandestine =
+      'const r = await tx.attribution.findFirst({ select: { nomContactChiffre: true } }); dechiffrer(r.nomContactChiffre);';
+    expect(CHAMPS_DU_CONTACT.test(voieClandestine)).toBe(true);
+    expect(CHAMPS_DU_CONTACT.test('emailChiffre telephoneChiffre')).toBe(false);
+  });
 });
