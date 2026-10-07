@@ -1266,9 +1266,9 @@
                     <form class="pile" action="#etat-recu" method="post">
                       <label class="champ"
                         ><span class="etiquette">Votre message</span>
-                        <textarea name="message" rows="8" maxlength="3000"></textarea>
+                        <textarea name="message" rows="8" maxlength="5000"></textarea>
                       </label>
-                      <p class="doux petit">3 000 caractères au plus.</p>
+                      <p class="doux petit">5 000 caractères au plus.</p>
                       <button class="bouton" type="submit"><span>Envoyer</span></button>
                     </form>
                   </div>
@@ -1326,10 +1326,10 @@
                     <form class="pile" action="#etat-recu" method="post">
                       <label class="champ"
                         ><span class="etiquette">Votre message</span>
-                        <textarea name="message" rows="8" maxlength="3000">
+                        <textarea name="message" rows="8" maxlength="5000">
 Je conteste la suspension de mes nouveaux dépôts notifiée le 6 octobre : j’ai bien rencontré la gérante de la Boulangerie Démo du Lac, le 2 octobre, à sa boutique.</textarea>
                       </label>
-                      <p class="doux petit">3 000 caractères au plus.</p>
+                      <p class="doux petit">5 000 caractères au plus.</p>
                       <button class="bouton" type="submit"><span>Envoyer</span></button>
                     </form>
                   </div>
@@ -1387,10 +1387,10 @@ Je conteste la suspension de mes nouveaux dépôts notifiée le 6 octobre : j’
                     <form class="pile" action="#etat-recu" method="post">
                       <label class="champ"
                         ><span class="etiquette">Votre message</span>
-                        <textarea name="message" rows="8" maxlength="3000" disabled>
+                        <textarea name="message" rows="8" maxlength="5000" disabled>
 Je conteste la suspension de mes nouveaux dépôts notifiée le 6 octobre : j’ai bien rencontré la gérante de la Boulangerie Démo du Lac, le 2 octobre, à sa boutique.</textarea>
                       </label>
-                      <p class="doux petit">3 000 caractères au plus.</p>
+                      <p class="doux petit">5 000 caractères au plus.</p>
                       <button class="bouton" type="submit" disabled aria-busy="true">
                         <span>Envoi…</span>
                       </button>
@@ -1510,12 +1510,12 @@ Je conteste la suspension de mes nouveaux dépôts notifiée le 6 octobre : j’
                         <textarea
                           name="message"
                           rows="8"
-                          maxlength="3000"
+                          maxlength="5000"
                           aria-invalid="true"
                           aria-describedby="erreur-message"
                         ></textarea>
                       </label>
-                      <p class="doux petit">3 000 caractères au plus.</p>
+                      <p class="doux petit">5 000 caractères au plus.</p>
                       <p class="erreur" id="erreur-message" role="alert">
                         Écrivez votre message avant de l’envoyer.
                       </p>
@@ -1579,15 +1579,15 @@ Je conteste la suspension de mes nouveaux dépôts notifiée le 6 octobre : j’
                         <textarea
                           name="message"
                           rows="8"
-                          maxlength="3000"
+                          maxlength="5000"
                           aria-invalid="true"
                           aria-describedby="erreur-message"
                         >
 Je conteste la suspension de mes nouveaux dépôts notifiée le 6 octobre : j’ai bien rencontré la gérante de la Boulangerie Démo du Lac, le 2 octobre, à sa boutique.</textarea>
                       </label>
-                      <p class="doux petit">3 000 caractères au plus.</p>
+                      <p class="doux petit">5 000 caractères au plus.</p>
                       <p class="erreur" id="erreur-message" role="alert">
-                        Votre message dépasse 3 000 caractères : raccourcissez-le.
+                        Votre message dépasse 5 000 caractères : raccourcissez-le.
                       </p>
                       <button class="bouton" type="submit"><span>Envoyer</span></button>
                     </form>
@@ -1649,13 +1649,13 @@ Je conteste la suspension de mes nouveaux dépôts notifiée le 6 octobre : j’
                         <textarea
                           name="message"
                           rows="8"
-                          maxlength="3000"
+                          maxlength="5000"
                           aria-invalid="true"
                           aria-describedby="erreur-message"
                         >
 Je conteste la suspension de mes nouveaux dépôts notifiée le 6 octobre : j’ai bien rencontré la gérante de la Boulangerie Démo du Lac, le 2 octobre, à sa boutique.</textarea>
                       </label>
-                      <p class="doux petit">3 000 caractères au plus.</p>
+                      <p class="doux petit">5 000 caractères au plus.</p>
                       <p class="erreur" id="erreur-message" role="alert">
                         Votre écrit n’est pas parti et rien n’est enregistré : réessayez.
                       </p>
@@ -1771,7 +1771,10 @@ Je conteste la suspension de mes nouveaux dépôts notifiée le 6 octobre : j’
             un envoi, sans fil ni FAQ (ceux-ci restent en phase 3). <b>Geste principal</b> : écrire,
             puis envoyer. Les textes sont ceux de la juriste (#319, 6038148824), mot pour mot.
           </p>
-          <p>La borne vient de la source unique des seuils ; la valeur affichée est fictive.</p>
+          <p>
+            La borne vient de la source unique des seuils (ECRIT_CARACTERES_MAX, 5 000 caractères,
+            sur l’arbitrage de la coordination) ; une contestation motivée n’est pas coupée.
+          </p>
         </section>
         <section class="note" data-pour="etat-envoi">
           <h2>Envoi</h2>
