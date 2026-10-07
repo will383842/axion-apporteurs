@@ -44,7 +44,7 @@ const ANNEXE_2 = lire('docs/contrat/ANNEXE-2-MANDAT.md');
 const ATTENDUES: readonly [string, number, Seuil['unite']][] = [
   ['PRISE_DE_CONTACT_JOURS_OUVRES', 2, 'jours_ouvres'],
   ['CONFIRMATION_TACITE_JOURS', 30, 'jours'],
-  // JUR-T66 : le délai de prise de contact de la Société (art. 3.2, contrat v2 d'axion-ia).
+  // Le contrat v2 : le délai de prise de contact de la Société (art. 3.2, contrat v2 d'axion-ia).
   ['PRISE_DE_CONTACT_SOCIETE_JOURS', 30, 'jours'],
   ['FILE_FENETRE_REDECLARATION_JOURS', 15, 'jours'],
   ['FILE_EXPIRATION_MOIS', 12, 'mois'],
