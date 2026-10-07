@@ -12,7 +12,7 @@ export const ANOMALIES_CONSOLE = {
   liste: {
     titre: 'Anomalies ouvertes',
     intro:
-      'Les anomalies de sincérité de la déclaration, les plus anciennes d’abord. Une anomalie ouverte n’a aucun effet : seule sa confirmation par un administrateur en a un, et ce geste ne pose aucun gel.',
+      'Les anomalies de sincérité de la déclaration, les plus anciennes d’abord. Une anomalie ouverte n’a aucun effet, et sa confirmation par un administrateur ne fait que la clore : un effet sur l’apporteur se décide à part, et ce geste ne pose aucun gel.',
     colonnes: {
       nature: 'Nature',
       entreprise: 'Entreprise',
