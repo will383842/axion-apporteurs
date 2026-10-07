@@ -1609,7 +1609,7 @@ model DecisionDeContrat {
 
 /// L'écrit reçu d'un apporteur, par « Écrire à Axion-IA » (arbitrage #319 6038136969 ; forme d'A02 #319
 /// 6038168915). Sa date de RÉCEPTION est posée par la BASE (déclencheur), jamais fournie. Ajout seul :
-/// seul le texte se purge, une fois, avec sa date. L'id naît côté applicatif (uuid v7), sans défaut.
+/// seul le texte se purge, une fois, avec sa date. L'id naît côté applicatif (randomUUID), sans défaut.
 model EcritApporteur {
   id           String    @id @db.Uuid
   apporteurId  String    @map("apporteur_id") @db.Uuid
