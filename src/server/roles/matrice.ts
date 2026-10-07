@@ -59,6 +59,10 @@ export const MATRICE_DES_ROLES = {
   // à l'admin SEUL, jamais en attente ; la lecture se journalise elle-même
   // (`src/server/console/journal-des-acces.ts`).
   'action:lire_journal_des_acces': { roles: ['admin'], stepUp: false },
+  // DM-65 (REQ-DM-028, art. 3.3 bis (b)) : ajouter un SIREN à la liste de la Société, ou l'en retirer —
+  // le retrait le rend déclarable, donc ouvert à une attribution : geste à effet d'argent, à l'administrateur
+  // validé seul, sous step-up (condition de la sécurité).
+  'action:tenir_liste_noire': { roles: ['admin'], stepUp: true },
   // SEC-29 : l'écran `/console` minimal (le repli de la redirection, avant l'accueil du rôle
   // d'UX-P1-16) et la déconnexion, ouverts aux quatre rôles : chacun doit pouvoir arriver et partir.
   'ecran:accueil': { roles: ['admin', 'qualifieur', 'comptable', 'lecteur'], stepUp: false },
