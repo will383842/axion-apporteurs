@@ -1250,7 +1250,7 @@
       "tache": "GOV-154",
       "verifie": "le registre suit les fusions sans rattrapage : une attestation PENDANTE (close dans sa PR) a son commit squashé « (#n) » sur main, qui nomme la tâche ; toute PR fusionnée depuis GOV-154 qui nomme une tâche l'a close ; un registre illisible arrête la garde",
       "fixtureRouge": "attestation pendante sans commit (#n) ; commit (#n) qui ne nomme pas la tâche ; PR fusionnée qui nomme une tâche a_faire",
-      "preuveRouge": "pnpm gov:registre-fusions:prove — 3 familles rougissent chacune sur son témoin (pendante_sans_commit, pendante_sujet_etranger, fusion_sans_cloture) ; 4 contre-témoins restent verts"
+      "preuveRouge": "pnpm gov:registre-fusions:prove — 3 familles rougissent chacune sur son témoin (pendante_sans_commit, pendante_sujet_etranger, fusion_sans_cloture) ; 5 contre-témoins restent verts"
     }
   ]
 }

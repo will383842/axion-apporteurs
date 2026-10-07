@@ -22,7 +22,7 @@
  *
  * CE QU'ELLE NE FAIT PAS. Une attestation pendante en attente d'atterrissage n'est PAS un rouge :
  * l'atterrissage se juge par la vérification du déploiement (`gate-deploiement`), et rien ici ne fait
- * rougir main jusqu'au déploiement (arbitrage de la coordination, #319, 6043741780). Avant `DEBUT`,
+ * rougir main jusqu'au déploiement (arbitrage de la coordination, #319, 6043741780). Avant le premier commit qui porte cette garde,
  * les PR fusionnées se closaient par rattrapage : elles ne sont pas relues.
  */
 import { execFileSync } from 'node:child_process';
@@ -30,13 +30,22 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { LIVREE } from '../lot/avancement';
 import { DEPOT_LOCAL, depotDeLaTache } from '../lot/attestation';
+import { lireLeLot } from '../lot/revues';
 
 /** Le dépôt de forge de ce registre : une référence de PR se compose QUALIFIÉE (GOV-038). */
 const depot = depotDeLaTache({ repo: DEPOT_LOCAL }) ?? DEPOT_LOCAL;
-import { lireLeLot } from '../lot/revues';
 
-/** L'instant à partir duquel une PR fusionnée doit s'être close elle-même (fusion de GOV-154). */
-export const DEBUT = '2026-10-08T00:00:00Z';
+/**
+ * LE DÉBUT DE LA RÈGLE N'EST PAS UNE DATE TAPÉE : c'est l'instant du premier commit de l'historique qui
+ * porte cette garde (`git log --diff-filter=A`). Avant lui, les PR se closaient par rattrapage ; une
+ * date fixe aurait fait rougir main pour toute PR fusionnée entre elle et la fusion de GOV-154.
+ */
+export const CHEMIN_DE_LA_GARDE = 'scripts/gates/registre-fusions.ts';
+/**
+ * Les seuls types de PR qui LIVRENT une tâche. Un `docs(…)` (le geste d'un fichier réservé) ou un
+ * `chore(…)` (le registre) la nomme sans la clore.
+ */
+export const TYPES_QUI_LIVRENT: readonly string[] = ['feat', 'fix'];
 /**
  * Les tâches qu'une PR peut nommer sans les clore : la tâche récurrente des rattrapages du registre.
  * Liste FERMÉE ; une entrée de plus se décide par la gouvernance, avec sa raison.
@@ -111,11 +120,15 @@ export function ecartsDuRegistreEtDesFusions(e: {
     }
   }
 
-  const debut = Date.parse(e.debut ?? DEBUT);
+  // Sans début connu (la garde n'est pas encore dans l'historique lu), aucune fusion n'est relue.
+  const debut = e.debut ? Date.parse(e.debut) : Number.POSITIVE_INFINITY;
   for (const c of e.commits) {
-    if (Date.parse(c.date) < debut) continue;
-    const n = numeroDuSujet(c.message.split('\n')[0] ?? '');
+    if (Date.parse(c.date) <= debut) continue;
+    const sujet = c.message.split('\n')[0] ?? '';
+    const n = numeroDuSujet(sujet);
     if (n === null) continue;
+    const type = /^(\w+)/.exec(sujet.trim())?.[1] ?? '';
+    if (!TYPES_QUI_LIVRENT.includes(type)) continue;
     for (const id of tachesNommees(c.message)) {
       if (NOMMEES_SANS_CLOTURE.includes(id)) continue;
       const t = parId.get(id);
@@ -157,6 +170,17 @@ function lireLesCommits(): CommitDeMain[] {
     });
 }
 
+/** L'instant du premier commit qui ajoute cette garde, ou `undefined` s'il n'est pas dans l'historique. */
+function lireLeDebut(): string | undefined {
+  const brut = execFileSync(
+    'git',
+    ['log', '--diff-filter=A', '--format=%cI', 'HEAD', '--', CHEMIN_DE_LA_GARDE],
+    { encoding: 'utf8' }
+  ).trim();
+  const lignes = brut.split(/\r?\n/).filter((l) => l.trim() !== '');
+  return lignes.length > 0 ? lignes[lignes.length - 1] : undefined;
+}
+
 // ── la preuve : chaque famille rougit sur son témoin ────────────────────────
 
 const T: TacheDuRegistre[] = [
@@ -169,6 +193,7 @@ const T: TacheDuRegistre[] = [
   },
   { id: 'X-2', repo: 'partners', statut: 'a_faire', pr: null, attestation: null },
 ];
+const DEBUT_TEMOIN = '2026-10-08T00:00:00Z';
 const C = (n: number, sujet: string, date = '2026-10-09T10:00:00Z'): CommitDeMain => ({
   sha: 'a'.repeat(40),
   date,
@@ -185,7 +210,12 @@ export const TEMOINS: {
   },
   {
     famille: 'fusion_sans_cloture',
-    cas: { taches: T, commits: [C(901, 'feat(X-1): x'), C(902, 'feat(X-2): y')], prCourante: null },
+    cas: {
+      taches: T,
+      commits: [C(901, 'feat(X-1): x'), C(902, 'feat(X-2): y')],
+      prCourante: null,
+      debut: DEBUT_TEMOIN,
+    },
   },
 ];
 export const CONTRE_TEMOINS: {
@@ -206,6 +236,7 @@ export const CONTRE_TEMOINS: {
       taches: T,
       commits: [C(901, 'feat(X-1): x'), C(800, 'feat(X-2): y', '2026-10-01T10:00:00Z')],
       prCourante: null,
+      debut: DEBUT_TEMOIN,
     },
   },
   {
@@ -214,6 +245,16 @@ export const CONTRE_TEMOINS: {
       taches: T,
       commits: [C(901, 'feat(X-1): x'), C(903, 'chore(GOV-012): rattrapage')],
       prCourante: null,
+      debut: DEBUT_TEMOIN,
+    },
+  },
+  {
+    quoi: 'un geste docs(…) qui nomme une tâche sans la livrer',
+    cas: {
+      taches: T,
+      commits: [C(901, 'feat(X-1): x'), C(904, 'docs(X-2): le geste du glossaire')],
+      prCourante: null,
+      debut: DEBUT_TEMOIN,
     },
   },
 ];
@@ -262,7 +303,12 @@ function principal(): number {
     );
     return 1;
   }
-  const ecarts = ecartsDuRegistreEtDesFusions({ taches, commits, prCourante });
+  const ecarts = ecartsDuRegistreEtDesFusions({
+    taches,
+    commits,
+    prCourante,
+    debut: lireLeDebut(),
+  });
   if (ecarts.length === 0) {
     console.log(
       `✅ gov:registre-fusions — le registre suit les fusions (${commits.length} commits lus).`
