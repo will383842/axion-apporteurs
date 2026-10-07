@@ -15,10 +15,18 @@ import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 import { clesPii, encryptPii } from '../../../src/server/securite/pii';
 import { echeanceDeReponse } from '../../../src/domain/anomalie/regles';
 import { MODELE_CONTESTATION } from '../../../prisma/seed/12-console-cas';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { SEUILS } from '../../../src/domain/seuils/ssot';
+import {
+  EcranChargementContestation,
+  EcranContestation,
+} from '../../../src/app/(espace)/contestations/[id]/ecran';
 import {
   MODELE_DE_LA_CONTESTATION,
   relireLaContestation,
   type ClientDesContestations,
+  type ContestationRelue,
 } from '../../../src/server/contestation/relire';
 
 const ID = '0190f3a0-0000-7000-8000-0000000000c1';
@@ -299,5 +307,99 @@ describe('REQ-DM-043 — le segment « contestations » : lu en lecture, jamais 
       motif: 'lecture_seule',
     });
     expect(corps).not.toHaveBeenCalled();
+  });
+});
+
+/** L'écran « Ma contestation », rendu en HTML statique pour chaque état du lecteur. */
+describe('REQ-UX-047 — l’écran « Ma contestation » : ses six états, et rien que ce que le lecteur rend', () => {
+  const date = (d: Date) => d.toISOString().slice(0, 10);
+  const rendre = (c: ContestationRelue) =>
+    renderToStaticMarkup(createElement(EcranContestation, { contestationId: ID, c, date }));
+  const texteDe = (html: string) =>
+    html
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&#x27;|&#39;/g, "'")
+      .replace(/&amp;/g, '&')
+      .replace(/\s+/g, ' ')
+      .trim();
+  const base = {
+    objet: 'refus_depot' as const,
+    entreprise: 'Entreprise n° 732829320',
+    recueAt: RECUE,
+  };
+  const repondue: ContestationRelue = {
+    etat: 'repondue',
+    ...base,
+    texte: `Je conteste ce refus. ${MARQUEUR}`,
+    reponse: 'Le refus est maintenu.',
+    repondueAt: REPONDUE,
+  };
+
+  it('REQ-UX-047 : TÉMOIN — répondue : l’objet, l’entreprise, l’écrit et la réponse d’Axion-IA, datés', () => {
+    const t = texteDe(rendre(repondue));
+    expect(t).toContain('Refus d’un dépôt · Entreprise n° 732829320');
+    expect(t).toContain('Votre écrit, reçu le 2026-10-03');
+    expect(t).toContain(`Je conteste ce refus. ${MARQUEUR}`);
+    expect(t).toContain('Réponse d’Axion-IA, le 2026-10-10');
+    expect(t).toContain('Le refus est maintenu.');
+  });
+
+  it('REQ-UX-047 : TÉMOIN — en attente : l’échéance, et le délai LU dans la SSOT, sans paramètre resté brut', () => {
+    const echeance = new Date(echeanceDeReponse(RECUE.getTime()));
+    const t = texteDe(
+      rendre({ etat: 'en_attente', ...base, texte: 'Je conteste ce refus.', echeance })
+    );
+    expect(t).toContain(
+      `Axion-IA vous répond de façon motivée dans les ${SEUILS.REPONSE_CONTESTATION_JOURS.valeur} ${SEUILS.REPONSE_CONTESTATION_JOURS.unite} qui suivent la réception de votre écrit, au plus tard le ${date(echeance)}.`
+    );
+    expect(t).not.toMatch(/\{[a-zA-Z]+\}/);
+  });
+
+  it('REQ-UX-047 : TÉMOIN — purgée : EXACTEMENT le texte de la juriste, l’objet, la date et le statut, et aucun fragment de l’ancien texte', () => {
+    const t = texteDe(rendre({ etat: 'purgee', ...base, repondue: true }));
+    expect(t).toContain(
+      "Le texte de cette contestation et la réponse d'Axion-IA ne sont plus conservés, leur durée de conservation ayant pris fin."
+    );
+    expect(t).toContain('Contestation reçue le 2026-10-03 · réponse donnée');
+    expect(t).toContain('Refus d’un dépôt · Entreprise n° 732829320');
+    expect(t).not.toContain(MARQUEUR);
+    expect(texteDe(rendre({ etat: 'purgee', ...base, repondue: false }))).toContain(
+      'en attente de réponse'
+    );
+  });
+
+  it('REQ-UX-047 : TÉMOIN — indisponible : ni objet, ni entreprise, ni date ; un geste vers Mes entreprises', () => {
+    const html = rendre({ etat: 'indisponible' });
+    const t = texteDe(html);
+    expect(t).toContain('Cette contestation n’est pas disponible');
+    expect(t).not.toMatch(/Refus d’un dépôt|Entreprise n°|2026/);
+    expect(html).toContain('href="/mes-entreprises"');
+  });
+
+  it('REQ-UX-047 : illisible : une alerte sans détail, et un geste pour réessayer ; le chargement est annoncé', () => {
+    const html = rendre({ etat: 'illisible' });
+    expect(html).toContain('role="alert"');
+    expect(texteDe(html)).toContain('Votre contestation ne s’affiche pas');
+    expect(html).toContain(`href="/contestations/${ID}"`);
+    const chargement = renderToStaticMarkup(createElement(EcranChargementContestation));
+    expect(chargement).toContain('role="status"');
+  });
+
+  it('REQ-UX-047 : TÉMOIN — l’interface dit « Axion-IA », jamais « la Société », dans aucun état', () => {
+    for (const c of [
+      repondue,
+      { etat: 'en_attente', ...base, texte: 'x', echeance: REPONDUE } as const,
+      { etat: 'purgee', ...base, repondue: true } as const,
+      { etat: 'indisponible' } as const,
+      { etat: 'illisible' } as const,
+    ])
+      expect(texteDe(rendre(c)), c.etat).not.toMatch(/la Société/i);
+  });
+
+  it('REQ-UX-047 : TÉMOIN à deux faces — un <script> dans l’écrit s’affiche comme du TEXTE, échappé une fois', () => {
+    const html = rendre({ ...repondue, texte: '<script>alert(1)</script> & co' });
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt; &amp; co');
+    expect(html).not.toContain('<script>');
+    expect(html).not.toContain('&amp;lt;');
   });
 });

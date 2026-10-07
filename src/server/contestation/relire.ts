@@ -23,7 +23,10 @@
 import type { ObjetContestation, PrismaClient } from '@prisma/client';
 import { echeanceDeReponse } from '../../domain/anomalie/regles';
 import { decryptPii, ErreurPii, type ClesPii } from '../securite/pii';
-import { entrepriseDeLaNotification } from '../attribution/notifications';
+import { dateEnClair, entrepriseDeLaNotification } from '../attribution/notifications';
+
+/** La date en clair d'une contestation, au jour civil de Paris : le formateur commun des notifications. */
+export const dateDeLaContestation = dateEnClair;
 
 /** Le nom du modèle dans la donnée authentifiée des blocs chiffrés d'une contestation. */
 export const MODELE_DE_LA_CONTESTATION = 'Contestation';
