@@ -24229,7 +24229,9 @@
         "docs/rgpd/registre-article-30.md",
         "docs/GLOSSAIRE.md",
         "src/content/micro-copy/espace/issues-depot.ts",
-        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts"
+        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts",
+        "tests/unit/integration/liste-noire.spec.ts",
+        "tests/unit/integration/purger-traces-liste-noire.spec.ts"
       ],
       "schema": true,
       "sensible": [],
