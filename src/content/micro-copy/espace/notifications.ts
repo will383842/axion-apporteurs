@@ -11,6 +11,13 @@ export const NOTIFICATIONS = {
   titre: 'Notifications',
   aucunDelai:
     'Les avis qui font courir un délai vous sont toujours envoyés par e-mail ; cette liste n’en fait courir aucun.',
+  /**
+   * UX-P1-58 — juriste (#619, 5984284097), MOT POUR MOT : pour le seul motif `anomalie_confirmee`,
+   * quand ses faits sont purgés, cette phrase remplace « Faits retenus : {faits} » dans le motif. Sans
+   * point final, comme le gabarit. Le SERVEUR la pose ; l'écran ne la recompose jamais.
+   */
+  faitsNonConserves:
+    "Faits retenus : leur détail n'est plus conservé, sa durée de conservation ayant pris fin",
   chargement: 'Chargement…',
   erreur: {
     titre: 'Les notifications n’ont pas pu être chargées',
