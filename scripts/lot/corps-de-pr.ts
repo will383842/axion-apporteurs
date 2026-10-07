@@ -57,6 +57,7 @@ import {
   lireRevues,
   risqueDeLaPr,
   tachesDeLaBase,
+  tachesDeLaBaseDeFusion,
   tachesDeLaPr,
   type EntreeDeFichier,
   type ListeDesFichiers,
@@ -193,6 +194,8 @@ export function jugerCaseRevues(e: {
   taches: readonly TacheDeLaPr[];
   /** Le registre de la BASE de la PR — `null` s'il est illisible, et la case reste alors vide. */
   tachesBase: readonly TacheDeLaPr[] | null;
+  /** GOV-152 : le registre de la base COURANTE, pour le risque seul (union monotone, comme la garde). */
+  tachesBaseCourante?: readonly TacheDeLaPr[] | null;
   tete: string;
   auteurPoste: string | null;
   auteurCompte: string | null;
@@ -208,6 +211,7 @@ export function jugerCaseRevues(e: {
       pr: e.pr,
       taches: e.taches,
       tachesBase: e.tachesBase,
+      ...(e.tachesBaseCourante === undefined ? {} : { tachesBaseCourante: e.tachesBaseCourante }),
       fichiers: e.fichiers,
       liste: e.liste,
       labels: e.labels,
@@ -329,9 +333,11 @@ function caseRevues(
     labels,
     revues,
     taches,
-    // La base de la PR, lue par `git show <sha>:docs/tasks.json`. Illisible → `null` → risque
-    // élevé : sans elle, une PR qui déclasse sa propre tâche se relirait en ordinaire.
-    tachesBase: tachesDeLaBase(baseSha),
+    // La BASE DE FUSION de la tête et de la base (GOV-152, le même lecteur que `gov:pr`), lue par
+    // `git show <sha>:docs/tasks.json`. Illisible → `null` → risque élevé : sans elle, une PR qui
+    // déclasse sa propre tâche se relirait en ordinaire.
+    tachesBase: tachesDeLaBaseDeFusion(baseSha, tete),
+    tachesBaseCourante: tachesDeLaBase(baseSha),
     tete,
     auteurPoste: /^Auteur:\s*(A\d{2})\s*$/m.exec(gabarit)?.[1] ?? null,
     auteurCompte,

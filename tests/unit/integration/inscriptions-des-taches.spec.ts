@@ -34,6 +34,7 @@ const m = vi.hoisted(() => ({
   purgerLeJournalDesAccesConsole: vi.fn(),
   purgerLesSessions: vi.fn(),
   effacerLesComptesDesactives: vi.fn(),
+  purgerLesTextesDesDecisions: vi.fn(),
   // DM-60 : l'anonymisation des traces de droits du contact.
   anonymiserLesTracesDesDroits: vi.fn(),
   anonymiserLesAnomalies: vi.fn(),
@@ -51,6 +52,7 @@ const m = vi.hoisted(() => ({
   clientRelecture: vi.fn(),
   // SEC-18 : l'ouverture différée des anomalies d'auto-parrainage, simulée pour juger son inscription.
   ouvrirLesAnomaliesDAutoParrainage: vi.fn(),
+  ouvrirLesAnomaliesDeSincerite: vi.fn(),
   precedentDuBattement: vi.fn(),
   // INT-T73-P : la réconciliation des sommes, simulée pour juger son branchement dans le passage.
   passageDesSommes: vi.fn(),
@@ -115,6 +117,10 @@ vi.mock('../../../src/server/taches/purger-utilisateurs-console', async (origina
   ...(await original<object>()),
   effacerLesComptesDesactives: m.effacerLesComptesDesactives,
 }));
+vi.mock('../../../src/server/taches/purger-textes-des-decisions', async (original) => ({
+  ...(await original<object>()),
+  purgerLesTextesDesDecisions: m.purgerLesTextesDesDecisions,
+}));
 vi.mock('../../../src/server/taches/anonymiser-traces-droits-contact', () => ({
   anonymiserLesTracesDesDroits: m.anonymiserLesTracesDesDroits,
 }));
@@ -149,6 +155,10 @@ vi.mock('../../../src/server/taches/ouvrir-anomalies-auto-parrainage', async (or
   ouvrirLesAnomaliesDAutoParrainage: m.ouvrirLesAnomaliesDAutoParrainage,
   precedentDuBattement: m.precedentDuBattement,
 }));
+vi.mock('../../../src/server/anomalie/sincerite', async (original) => ({
+  ...(await original<object>()),
+  ouvrirLesAnomaliesDeSincerite: m.ouvrirLesAnomaliesDeSincerite,
+}));
 vi.mock('../../../src/server/integrations/axionia/reconciliation-sommes', () => ({
   passageDesSommes: m.passageDesSommes,
   portsDesSommesEnBase: m.portsDesSommesEnBase,
@@ -165,6 +175,7 @@ import {
 } from '../../../src/server/taches/inscriptions';
 import { PARAMETRES } from '../../../src/server/integrations/recherche-entreprises/parametres';
 import { TACHES } from '../../../src/server/taches/registre';
+import { lireReglageDeSincerite } from '../../../src/server/anomalie/sincerite';
 
 const PRISMA = { nom: 'client-de-test' } as unknown as PrismaClient;
 const RECU = {
@@ -317,6 +328,7 @@ describe('REQ-QA-027 — les passages planifiés reçoivent le client et l’heu
     ['journal_acces_console_purger', 'purgerLeJournalDesAccesConsole'],
     ['sessions_purger', 'purgerLesSessions'],
     ['utilisateurs_console_effacer', 'effacerLesComptesDesactives'],
+    ['decisions_contrat_purger', 'purgerLesTextesDesDecisions'],
   ] as const;
 
   for (const [cle, purge] of PURGES) {
@@ -727,5 +739,51 @@ describe('REQ-QA-027 — `auto_parrainage_ouvrir` ouvre depuis le curseur de SON
     ];
     expect([client, d.precedent]).toEqual([PRISMA, precedent]);
     expect(d.maintenant()).toEqual(INSTANT);
+  });
+});
+
+describe('REQ-SEC-017 — `sincerite_ouvrir` : le passage différé des détecteurs de sincérité', () => {
+  const INSTANT = new Date('2026-10-03T08:00:00.000Z');
+  const ENV = { ...process.env };
+  beforeEach(() => {
+    vi.useFakeTimers({ now: INSTANT, toFake: ['Date'] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    process.env = { ...ENV };
+  });
+
+  it('REQ-SEC-017 : TÉMOIN — le passage reçoit le client, l’heure du système, le réglage hors dépôt et les clés, et rend son bilan', async () => {
+    process.env.PARTNERS_SINCERITE_REGLAGE =
+      'seuil=50;texte_min=20;tranche_minutes=60;suite_min=3;recul_heures=72;poids.contact_dirigeant=30';
+    m.clesPii.mockReturnValue('cles');
+    const bilan = { jugees: 4, ouvertes: 1 };
+    m.ouvrirLesAnomaliesDeSincerite.mockResolvedValue(bilan);
+    expect(await inscriptions(PRISMA).sincerite_ouvrir!()).toBe(bilan);
+    const [client, d] = m.ouvrirLesAnomaliesDeSincerite.mock.calls[0]! as [
+      unknown,
+      { maintenant: Date; reglage: unknown; cles: unknown },
+    ];
+    expect([client, d.maintenant, d.cles]).toEqual([PRISMA, INSTANT, 'cles']);
+    expect(d.reglage).toEqual(
+      lireReglageDeSincerite(
+        'seuil=50;texte_min=20;tranche_minutes=60;suite_min=3;recul_heures=72;poids.contact_dirigeant=30'
+      )
+    );
+  });
+
+  it('REQ-SEC-017 : sans réglage, le passage reçoit un réglage nul, et le module ne juge rien (défaut fermé)', async () => {
+    delete process.env.PARTNERS_SINCERITE_REGLAGE;
+    m.ouvrirLesAnomaliesDeSincerite.mockResolvedValue({ jugees: 0, ouvertes: 0 });
+    await inscriptions(PRISMA).sincerite_ouvrir!();
+    const [, d] = m.ouvrirLesAnomaliesDeSincerite.mock.calls.at(-1)! as [
+      unknown,
+      { reglage: unknown },
+    ];
+    expect(d.reglage).toBeNull();
+  });
+
+  it('REQ-SEC-017 : la clé du registre exige REQ-SEC-017', () => {
+    expect(TACHES.sincerite_ouvrir).toEqual({ req: 'REQ-SEC-017' });
   });
 });

@@ -32,6 +32,51 @@ let base: Base;
 const MAINTENANT = new Date('2026-10-03T08:00:00.000Z');
 const PLUS_TARD = new Date('2026-10-04T08:00:00.000Z');
 const hex = (octets: number) => randomBytes(octets).toString('hex');
+
+/**
+ * Un RIB VALIDE, tel que la base l'exige depuis la migration 004750 : il naît `a_verifier`, SANS
+ * regard, puis un administrateur le vérifie et un AUTRE le confirme ; la confirmation le passe à
+ * `valide` dans la même écriture, et pose `remplacee_at` quand la fixture le demande (un regard ne se
+ * pose jamais sur une pièce écartée).
+ */
+/** Un client qui exécute du SQL paramétré : le propriétaire, `partners_app` ou une transaction. */
+type ClientSql = { $executeRawUnsafe(sql: string, ...valeurs: unknown[]): Promise<number> };
+const VERIFICATEUR_DU_RIB = randomUUID();
+const CONFIRMATEUR_DU_RIB = randomUUID();
+
+/** Les deux administrateurs actifs et validés des regards, sous le propriétaire. */
+async function deuxAdministrateursDuRib(proprietaire: ClientSql) {
+  for (const [id, par] of [
+    [VERIFICATEUR_DU_RIB, null],
+    [CONFIRMATEUR_DU_RIB, VERIFICATEUR_DU_RIB],
+  ] as const) {
+    await proprietaire.$executeRawUnsafe(
+      `INSERT INTO utilisateurs_console (id, role, email_chiffre, email_hash, cree_at, valide_at, valide_par_id)
+       VALUES ($1::uuid, 'admin'::console_role, $2, $3, clock_timestamp(), clock_timestamp(), $4::uuid)`,
+      id,
+      randomBytes(40),
+      randomBytes(32).toString('hex'),
+      par
+    );
+  }
+}
+
+/** Les deux regards d'un RIB inséré sans eux : vérifié, puis confirmé et passé à `valide`. */
+async function confirmerLeRib(client: ClientSql, id: string, remplaceeAt: Date | null = null) {
+  await client.$executeRawUnsafe(
+    `UPDATE pieces_kyc SET rib_verifie_par_id = $1::uuid, rib_verifie_at = clock_timestamp()
+     WHERE id = $2::uuid`,
+    VERIFICATEUR_DU_RIB,
+    id
+  );
+  await client.$executeRawUnsafe(
+    `UPDATE pieces_kyc SET rib_confirme_par_id = $1::uuid, rib_confirme_at = clock_timestamp(),
+       statut = 'valide', remplacee_at = $3 WHERE id = $2::uuid`,
+    CONFIRMATEUR_DU_RIB,
+    id,
+    remplaceeAt
+  );
+}
 const FIGEES = 'pieces_kyc_coordonnees_figees';
 const TRONCATURE = 'pieces_kyc_troncature';
 
@@ -50,6 +95,7 @@ beforeAll(async () => {
   u.password = randomBytes(24).toString('hex');
   await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: u.toString() });
   app = new PrismaClient({ datasourceUrl: u.toString() });
+  await deuxAdministrateursDuRib(base.prisma);
 }, 180_000);
 
 afterAll(async () => {
@@ -81,14 +127,16 @@ async function piece(type: 'rib' | 'identite', fichierRef: string | null = null)
   const rib = type === 'rib';
   await app.$executeRawUnsafe(
     `INSERT INTO pieces_kyc (id, apporteur_id, type, statut, fichier_ref, iban_chiffre, iban_hash)
-     VALUES ($1::uuid, $2::uuid, $3::type_piece_kyc, 'valide', $4, $5, $6)`,
+     VALUES ($1::uuid, $2::uuid, $3::type_piece_kyc, $7::statut_piece_kyc, $4, $5, $6)`,
     id,
     await unApporteur(),
     type,
     fichierRef,
     rib ? randomBytes(40) : null,
-    rib ? hex(32) : null
+    rib ? hex(32) : null,
+    rib ? 'a_verifier' : 'valide'
   );
+  if (rib) await confirmerLeRib(app, id);
   return id;
 }
 

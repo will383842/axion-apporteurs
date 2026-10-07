@@ -473,6 +473,9 @@ model UtilisateurConsole {
   sirensListeNoireAjoutes SirenListeNoire[]
   /// CPL-T06 : les décisions de candidature dont l'utilisateur est l'auteur.
   decisionsCandidature    DecisionCandidature[]
+  /// CPL-T24 : les RIB que l'utilisateur a vérifiés, et ceux qu'il a confirmés.
+  ribsVerifies            PieceKyc[]               @relation("RibsVerifies")
+  ribsConfirmes           PieceKyc[]               @relation("RibsConfirmes")
 
   @@map("utilisateurs_console")
 }
@@ -525,20 +528,30 @@ model IdentiteFacturation {
 /// QUE sur une pièce `rib`, chiffré (SEC-08) et empreint (CHECK). `expireAt` est obligatoire pour
 /// `vigilance` et `rc_pro` (CHECK). Le fichier vit sur un stockage privé (REQ-SEC-026).
 model PieceKyc {
-  id             String         @id @default(uuid()) @db.Uuid
-  apporteurId    String         @map("apporteur_id") @db.Uuid
-  apporteur      Apporteur      @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  type           TypePieceKyc
-  statut         StatutPieceKyc
-  verifieeAt     DateTime?      @map("verifiee_at") @db.Timestamptz(3)
-  expireAt       DateTime?      @map("expire_at") @db.Timestamptz(3)
+  id               String              @id @default(uuid()) @db.Uuid
+  apporteurId      String              @map("apporteur_id") @db.Uuid
+  apporteur        Apporteur           @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  type             TypePieceKyc
+  statut           StatutPieceKyc
+  verifieeAt       DateTime?           @map("verifiee_at") @db.Timestamptz(3)
+  expireAt         DateTime?           @map("expire_at") @db.Timestamptz(3)
   /// La référence du fichier sur le stockage privé, jamais une URL publique.
-  fichierRef     String?        @map("fichier_ref") @db.VarChar(300)
+  fichierRef       String?             @map("fichier_ref") @db.VarChar(300)
   /// La purge du fichier (la pièce d'identité, dès validation : REQ-JUR-029).
-  fichierPurgeAt DateTime?      @map("fichier_purge_at") @db.Timestamptz(3)
-  remplaceeAt    DateTime?      @map("remplacee_at") @db.Timestamptz(3)
-  ibanChiffre    Bytes?         @map("iban_chiffre")
-  ibanHash       String?        @map("iban_hash") @db.Char(64)
+  fichierPurgeAt   DateTime?           @map("fichier_purge_at") @db.Timestamptz(3)
+  remplaceeAt      DateTime?           @map("remplacee_at") @db.Timestamptz(3)
+  ibanChiffre      Bytes?              @map("iban_chiffre")
+  ibanHash         String?             @map("iban_hash") @db.Char(64)
+  /// CPL-T24 (REQ-UX-027, REQ-DM-027) : le RIB à quatre yeux. Le premier regard VÉRIFIE hors bande,
+  /// un AUTRE administrateur validé CONFIRME ; les quatre colonnes ne vivent que sur une pièce `rib`,
+  /// s'écrivent une fois, et un RIB n'est `valide` que confirmé (CHECK et déclencheur
+  /// `pieces_kyc_rib_quatre_yeux_garde`, SQL brut).
+  ribVerifieParId  String?             @map("rib_verifie_par_id") @db.Uuid
+  ribVerifiePar    UtilisateurConsole? @relation("RibsVerifies", fields: [ribVerifieParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  ribVerifieAt     DateTime?           @map("rib_verifie_at") @db.Timestamptz(3)
+  ribConfirmeParId String?             @map("rib_confirme_par_id") @db.Uuid
+  ribConfirmePar   UtilisateurConsole? @relation("RibsConfirmes", fields: [ribConfirmeParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  ribConfirmeAt    DateTime?           @map("rib_confirme_at") @db.Timestamptz(3)
 
   identitesFacturation IdentiteFacturation[]
 

@@ -198,8 +198,17 @@ pas au titre du présent alinéa lorsque l'absence de rendez-vous, de devis et d
 la Société ; seule la durée de l'alinéa 1 s'applique alors.** L'entreprise
 redevient ensuite librement déclarable par tout Apporteur.
 
-Lorsqu'un devis est en cours au terme de la période, l'attribution est prolongée de trois mois, une seule
-fois, les deux parties en étant informées.
+**L'attribution est prolongée de trois mois, une seule fois et sans démarche de l'Apporteur, lorsqu'au terme
+de la période l'une des conditions suivantes est remplie : (a) un devis émis par la Société à l'entreprise est
+en cours ; (b) la Société a tenu un rendez-vous ou eu un échange avec l'entreprise au cours des
+{{PROLONGATION_FAITS_RECENTS_JOURS}} derniers jours ; (c) un dossier de financement de la prestation, notamment
+auprès d'un opérateur de compétences, est en cours d'instruction.** Ces conditions s'apprécient sur les seules
+données de la Société ; aucune ne dépend de l'activité de l'Apporteur. Un devis est en cours tant qu'il n'est
+ni signé, ni refusé, ni expiré. Un dossier de financement est en cours d'instruction tant que l'organisme
+financeur n'a pas statué. L'Apporteur est informé de la prolongation.
+
+*Exemple : une entreprise dont l'attribution expire le 30 juin, et avec laquelle la Société a eu un rendez-vous
+le 15 juin, reste attribuée jusqu'au 30 septembre ; une commande signée en août est commissionnée.*
 
 > **Cette limitation de durée est délibérée** : les parties entendent expressément écarter la constitution
 > d'un portefeuille permanent au profit de l'Apporteur.

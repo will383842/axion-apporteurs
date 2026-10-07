@@ -88,6 +88,9 @@ export const MATRICE_DES_ROLES = {
   'action:verifier_piece': { roles: ['admin', 'qualifieur'], stepUp: false },
   'action:ouvrir_kyc': { roles: ['admin'], stepUp: false },
   'action:valider_kyc': { roles: ['admin'], stepUp: true },
+  // CPL-T24 (REQ-UX-027, REQ-DM-027) : vérifier puis confirmer un RIB, à quatre yeux, chacun par un
+  // administrateur VALIDÉ, sous step-up (condition de la sécurité).
+  'action:verifier_rib': { roles: ['admin'], stepUp: true },
   // SEC-61 (conditions de la sécurité) : poser et lever un gel du journal des accès, à un admin
   // VALIDÉ, sous step-up ; la levée par un AUTRE que l'auteur et que la personne visée (CHECK).
   'action:poser_gel_journal_acces': { roles: ['admin'], stepUp: true },
@@ -96,6 +99,11 @@ export const MATRICE_DES_ROLES = {
   // à admin seul et sans step-up (lire ne change rien, chaque page se trace) ; l'administrateur
   // VALIDÉ est relu en base par la lecture elle-même.
   'ecran:gels_journal_acces': { roles: ['admin'], stepUp: false },
+  // UX-P1-57 (conditions de la sécurité, #703) : la mise en demeure est un acte juridique qui ouvre la
+  // voie à la résiliation sans préavis ; à l'admin seul, sous step-up. Son écran, à l'admin seul : le
+  // relèvement est exigé par le geste, que l'action rejuge.
+  'ecran:mise_en_demeure': { roles: ['admin'], stepUp: false },
+  'action:mettre_en_demeure': { roles: ['admin'], stepUp: true },
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, EntreeDeLaMatrice>>;
 
 /**

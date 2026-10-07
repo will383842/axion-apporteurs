@@ -148,6 +148,10 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
     'connexion de la console et son courriel, lus par ses utilisateurs seuls (portée dépôt, REQ-GOV-017)',
   'console/navigation.ts':
     'le cadre de la console, lu par ses utilisateurs seuls (portée dépôt, REQ-GOV-017)',
+  // UX-P1-57 : le geste de mise en demeure, lu par Axion-IA seul ; le courriel que l'apporteur reçoit
+  // est celui de SEC-19, dans `courriels/notifications.ts`, parcouru avec l'espace.
+  'console/mise-en-demeure.ts':
+    'geste de mise en demeure, lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
 };
 
 /**
@@ -200,6 +204,12 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   'espace/vocabulaire.ts › FORMULES › droitACommissionJusquau': ['dateFin'],
   'espace/vocabulaire.ts › FORMULES › courrierDeSuspension': ['dateCourrier'],
   'espace/vocabulaire.ts › FORMULES › limiteDeVerification': ['limiteParJour'],
+  // UX-P1-51 : SA contestation — la réception de SON écrit, la date de la réponse qui LUI est faite, et
+  // l'échéance de cette réponse, dérivée de la réception ; le délai vient de la SSOT (RM-10).
+  'espace/vocabulaire.ts › CONTESTATION › votreEcrit': ['date'],
+  'espace/vocabulaire.ts › CONTESTATION › reponse': ['date'],
+  'espace/vocabulaire.ts › CONTESTATION › contestationRecue': ['date'],
+  'espace/vocabulaire.ts › CONTESTATION › attente › phrase': ['delaiReponse', 'dateLimite'],
   // UX-P1-10 : les notifications de l'apporteur, clé par clé (textes d'A07). Chaque paramètre dit
   // SON entreprise, SON contact, et la décision, le motif ou la date qui le concernent ; jamais un
   // autre apporteur ni l'occupant d'une entreprise (art. 3.5).

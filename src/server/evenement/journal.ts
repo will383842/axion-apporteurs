@@ -36,7 +36,7 @@
  * Aucun client Prisma n'est créé ici : ce module reçoit celui de l'appelant.
  */
 import type { Prisma, PrismaClient, TypeEvenementJournal, AgregatJournal } from '@prisma/client';
-import { CHARGES_PAR_TYPE } from '../../domain/evenement/charges';
+import { CHARGES_PAR_TYPE, TRANSITIONS_DU_JOURNAL_APPORTEUR } from '../../domain/evenement/charges';
 import { calculerSelfHash, type LigneJournal } from '../../domain/evenement/journal';
 
 /**
@@ -191,6 +191,7 @@ export async function lireLaChargeDUnFait(
   return l === null ? null : { type: l.type, charge: l.charge };
 }
 
+<<<<<<< HEAD
 /**
  * SEC-59 — les charges des résumés quotidiens du journal des accès à la console, du plus ancien au plus
  * récent. Une lecture seule, par l'écrivain unique du journal ; la tâche du résumé les confronte à la
@@ -205,4 +206,43 @@ export async function lireLesResumesDuJournalDesAcces(
     select: { charge: true },
   });
   return lignes.map((l) => l.charge);
+=======
+/** Une transition de l'apporteur, telle que le journal la nomme : la liste FERMÉE de sa charge. */
+export type TransitionDeLApporteur = (typeof TRANSITIONS_DU_JOURNAL_APPORTEUR)[number];
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * CPL-T24 — les ACTEURS d'une transition de l'apporteur, relus au journal (conditions d'A02 et de la
+ * sécurité sur #753). Une lecture seule, par l'écrivain unique du journal (garde `journal:sans-pii`),
+ * paramétrée, par l'agrégat et le TYPE (`apporteur_statut_modifie`), sur une transition de la liste
+ * fermée. Chaque charge est jugée par SON schéma Zod ; seul l'identifiant de l'acteur sort, `null`
+ * pour le système, jamais la charge, le type ni une date. Une entrée hors forme, ou une charge qui
+ * ne se lit pas, lève : un échec fermé. Le RIB à quatre yeux y lit qui a ouvert le dossier.
+ */
+export async function acteursDUneTransition(
+  client: PrismaClient | Prisma.TransactionClient,
+  agregatId: string,
+  transition: TransitionDeLApporteur
+): Promise<(string | null)[]> {
+  if (
+    !UUID.test(agregatId) ||
+    !(TRANSITIONS_DU_JOURNAL_APPORTEUR as readonly string[]).includes(transition)
+  )
+    throw new Error('lecture_du_journal_refusee : agrégat ou transition hors forme');
+  const faits = await client.evenement.findMany({
+    where: {
+      agregat: 'apporteur',
+      agregatId,
+      type: 'apporteur_statut_modifie',
+      charge: { path: ['transition'], equals: transition },
+    },
+    select: { charge: true },
+  });
+  return faits.map((f) => {
+    const lu = CHARGES_PAR_TYPE.apporteur_statut_modifie.safeParse(f.charge);
+    if (!lu.success) throw new Error('lecture_du_journal_refusee : charge hors schéma');
+    return lu.data.acteur.id ?? null;
+  });
+>>>>>>> origin/main
 }

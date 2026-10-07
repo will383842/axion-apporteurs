@@ -263,13 +263,16 @@ describe('REQ-UX-016 — le lecteur dédié : l’apporteur de la session, et de
     expect(apres[0]!.titre).toContain('25 mai 2027');
   });
 
-  it('REQ-UX-016 : `decision_attribution` n’apparaît pas dans la liste (option (c) de la coordination) — ni demandée, ni rendue', async () => {
-    const decision = { ...ligneDe('2', MOI, FIN), cle: 'decision_attribution' };
+  // UX-P1-58 renverse l'option (c) : `decision_attribution` est demandée, et rendue par son propre
+  // chemin (`notifications-decision-attribution.spec.ts`). Ici, ce qui reste vrai : sans le fait qui la
+  // fonde, la décision n'est pas rendue, et `entreeDeLEspace` ne rend que `premier_rang_libere`.
+  it('REQ-UX-016 : `decision_attribution` est demandée ; sans son fait, elle n’est pas rendue', async () => {
+    const decision = { ...ligneDe('2', MOI, FIN), cle: 'decision_attribution', evenementId: null };
     const { c, requetes } = client([ligneDe('1', MOI, FIN), decision]);
     const rendues = await notificationsDeLEspace(c, MOI);
     expect(rendues.map((n) => n.id)).toEqual(['1']);
     const r = requetes[0] as { where: { cle: { in: string[] } } };
-    expect(r.where.cle.in).not.toContain('decision_attribution');
+    expect(r.where.cle.in).toContain('decision_attribution');
     expect(entreeDeLEspace({ ...decision, attribution: decision.attribution })).toBeNull();
     expect(liste(rendues)).not.toContain('une décision concerne votre dépôt');
   });

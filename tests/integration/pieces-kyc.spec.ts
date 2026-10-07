@@ -25,6 +25,7 @@ const hex = (octets: number) => randomBytes(octets).toString('hex');
 
 beforeAll(async () => {
   base = await demarrerBase();
+  await deuxAdministrateursDuRib(base.prisma);
   apporteurId = await unApporteur();
 }, 180_000);
 
@@ -60,21 +61,69 @@ type Piece = {
   ibanHash?: string | null;
 };
 
+/**
+ * Un RIB VALIDE, tel que la base l'exige depuis la migration 004750 : il naît `a_verifier`, SANS
+ * regard, puis un administrateur le vérifie et un AUTRE le confirme ; la confirmation le passe à
+ * `valide` dans la même écriture, et pose `remplacee_at` quand la fixture le demande (un regard ne se
+ * pose jamais sur une pièce écartée).
+ */
+/** Un client qui exécute du SQL paramétré : le propriétaire, `partners_app` ou une transaction. */
+type ClientSql = { $executeRawUnsafe(sql: string, ...valeurs: unknown[]): Promise<number> };
+const VERIFICATEUR_DU_RIB = randomUUID();
+const CONFIRMATEUR_DU_RIB = randomUUID();
+
+/** Les deux administrateurs actifs et validés des regards, sous le propriétaire. */
+async function deuxAdministrateursDuRib(proprietaire: ClientSql) {
+  for (const [id, par] of [
+    [VERIFICATEUR_DU_RIB, null],
+    [CONFIRMATEUR_DU_RIB, VERIFICATEUR_DU_RIB],
+  ] as const) {
+    await proprietaire.$executeRawUnsafe(
+      `INSERT INTO utilisateurs_console (id, role, email_chiffre, email_hash, cree_at, valide_at, valide_par_id)
+       VALUES ($1::uuid, 'admin'::console_role, $2, $3, clock_timestamp(), clock_timestamp(), $4::uuid)`,
+      id,
+      randomBytes(40),
+      randomBytes(32).toString('hex'),
+      par
+    );
+  }
+}
+
+/** Les deux regards d'un RIB inséré sans eux : vérifié, puis confirmé et passé à `valide`. */
+async function confirmerLeRib(client: ClientSql, id: string, remplaceeAt: Date | null = null) {
+  await client.$executeRawUnsafe(
+    `UPDATE pieces_kyc SET rib_verifie_par_id = $1::uuid, rib_verifie_at = clock_timestamp()
+     WHERE id = $2::uuid`,
+    VERIFICATEUR_DU_RIB,
+    id
+  );
+  await client.$executeRawUnsafe(
+    `UPDATE pieces_kyc SET rib_confirme_par_id = $1::uuid, rib_confirme_at = clock_timestamp(),
+       statut = 'valide', remplacee_at = $3 WHERE id = $2::uuid`,
+    CONFIRMATEUR_DU_RIB,
+    id,
+    remplaceeAt
+  );
+}
+
 /** Une pièce par SQL brut : c'est la BASE qu'on juge. */
 async function piece(p: Piece): Promise<string> {
   const id = randomUUID();
+  const statut = p.statut ?? 'valide';
+  const ribValide = p.type === 'rib' && statut === 'valide';
   await base.prisma.$executeRawUnsafe(
     `INSERT INTO pieces_kyc (id, apporteur_id, type, statut, expire_at, remplacee_at, iban_chiffre, iban_hash)
      VALUES ($1::uuid, $2::uuid, $3::type_piece_kyc, $4::statut_piece_kyc, $5, $6, $7, $8)`,
     id,
     p.apporteur ?? apporteurId,
     p.type,
-    p.statut ?? 'valide',
+    ribValide ? 'a_verifier' : statut,
     p.expireAt ?? null,
-    p.remplaceeAt ?? null,
+    ribValide ? null : (p.remplaceeAt ?? null),
     p.ibanChiffre ?? null,
     p.ibanHash ?? null
   );
+  if (ribValide) await confirmerLeRib(base.prisma, id, p.remplaceeAt ?? null);
   return id;
 }
 

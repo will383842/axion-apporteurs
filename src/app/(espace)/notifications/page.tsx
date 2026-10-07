@@ -53,8 +53,8 @@ export default async function PageNotifications() {
   const verdict = await pageEspace('notifications', jeton, portsDeLaGarde());
   if (!verdict.ok) redirect(destinationDuRefus(verdict.motif));
   const { prisma } = dependancesDuProcessus({ apres: after, env: process.env });
-  // Les clés de déchiffrement des faits d'une décision du contrat (UX-P1-59) : le lecteur réservé
-  // ne lit que les décisions de l'apporteur de la session.
+  // Les clés des faits d'une décision du contrat (UX-P1-59) ou d'une anomalie (UX-P1-58), et la lecture
+  // d'un fait par l'écrivain unique du journal : les lecteurs réservés ne lisent que l'apporteur de la session.
   const notifications = await notificationsDeLEspace(prisma, verdict.session.apporteurId, {
     cles: clesPii(process.env),
     lireUnFait: (id) => lireLaChargeDUnFait(prisma, id),
