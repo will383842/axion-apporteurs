@@ -36,6 +36,8 @@ import {
 } from '../../domain/depot/issue-depot';
 import { niveauDAcces } from '../../domain/apporteur/acces-espace';
 import { ETATS_OCCUPANTS } from '../../domain/attribution/etats';
+import { redepotPermis } from '../../domain/attribution/echeances';
+import { derniereFinSansAdresseValide } from '../evenement/journal';
 import { anterioriteDe, verrouillerLesSirens } from '../entreprise-connue/projection';
 import { journaliserLaNaissance } from '../attribution/transitionner';
 import { creerLaDemande } from '../confirmation/demandes';
@@ -221,6 +223,18 @@ export class DepotInterdit extends Error {
   }
 }
 
+/**
+ * DM-13 (art. 3.2 du v2) : le même apporteur redépose la même entreprise pendant la carence qui suit
+ * une fin faute d'adresse valide. Une erreur TYPÉE du serveur, hors `IssueDepot` : rien n'est écrit,
+ * aucune trace, aucune sanction.
+ */
+export class RedepotEnCarence extends Error {
+  constructor() {
+    super('redepot_en_carence : la carence qui suit une fin faute d’adresse valide court encore');
+    this.name = 'RedepotEnCarence';
+  }
+}
+
 const forme = (type: 'courriel' | 'telephone', valeur: string, cles: ClesPii): boolean => {
   try {
     empreinteRecherche(type, valeur, cles);
@@ -269,6 +283,21 @@ export async function deposerDans(
     SELECT statut::text AS statut
       FROM apporteurs WHERE id = ${apporteurId}::uuid FOR UPDATE`;
   if (a === undefined || niveauDAcces(a.statut) !== 'plein') throw new DepotInterdit();
+
+  // DM-13 : la carence se dérive des attributions de CE couple périmées faute d'adresse valide.
+  const perimees = await tx.attribution.findMany({
+    where: { apporteurId, siren, statut: 'perimee' },
+    select: { id: true },
+  });
+  if (perimees.length > 0) {
+    const fin = await derniereFinSansAdresseValide(
+      tx,
+      perimees.map((p) => p.id)
+    );
+    if (!redepotPermis(fin === null ? null : fin.getTime(), maintenant.getTime())) {
+      throw new RedepotEnCarence();
+    }
+  }
 
   const anteriorite = await anterioriteDe(tx, siren, maintenant);
   const occupants = await tx.attribution.count({

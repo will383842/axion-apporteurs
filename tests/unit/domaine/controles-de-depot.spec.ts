@@ -228,6 +228,7 @@ vi.mock('../../../src/server/confirmation/demandes', () => ({
 import type { PrismaClient } from '@prisma/client';
 import {
   DepotInterdit,
+  RedepotEnCarence,
   ErreurSaisieDepot,
   champsRefuses,
   deposer,
@@ -298,6 +299,9 @@ function transaction(regles: {
   statut?: string | null;
   occupation?: { occupee: boolean; en_attente: number };
   grille?: { id: string } | null;
+  /** DM-13 : les attributions `perimee` du couple, et l'instant de la dernière fin faute d'adresse. */
+  perimees?: string[];
+  finSansAdresse?: Date | null;
 }) {
   const appels: Appel[] = [];
   const tx = {
@@ -331,6 +335,17 @@ function transaction(regles: {
       create: (a: unknown) => {
         appels.push(['attribution.create', a]);
         return Promise.resolve({});
+      },
+      findMany: (a: unknown) => {
+        appels.push(['attribution.findMany', a]);
+        return Promise.resolve((regles.perimees ?? []).map((id) => ({ id })));
+      },
+    },
+    evenement: {
+      findFirst: (a: unknown) => {
+        appels.push(['evenement.findFirst', a]);
+        const f = regles.finSansAdresse ?? null;
+        return Promise.resolve(f === null ? null : { survenuAt: f });
       },
     },
   };
@@ -546,6 +561,54 @@ describe('REQ-SEC-022 — les faits lus sous verrou, et le refus tracé', () => 
   it('REQ-SEC-022 : aucune attribution occupante comptée, rien n’occupe : la déclaration est enregistrée', async () => {
     const { tx } = transaction({ occupation: { occupee: false, en_attente: 1 } });
     expect((await deposerDans(tx, demande(), ports())).issue).toBe('enregistree');
+  });
+});
+
+describe('REQ-DM-004 — la carence unique après une fin faute d’adresse valide (DM-13, v2 art. 3.2)', () => {
+  const JOUR = 86_400_000;
+
+  it('REQ-DM-004 : TÉMOIN — 29 jours après la fin, le même apporteur est refusé, nommé, et RIEN n’est écrit', async () => {
+    const { tx, appels } = transaction({
+      perimees: ['a-ancienne'],
+      finSansAdresse: new Date(MAINTENANT.getTime() - 29 * JOUR),
+    });
+    const e = await deposerDans(tx, demande(), ports()).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(RedepotEnCarence);
+    expect(noms(appels)).not.toContain('depotRefuse.create');
+    expect(noms(appels)).not.toContain('attribution.create');
+  });
+
+  it('REQ-DM-004 : TÉMOIN à deux faces — 30 jours après la fin, le dépôt suit les règles ordinaires', async () => {
+    const { tx } = transaction({
+      perimees: ['a-ancienne'],
+      finSansAdresse: new Date(MAINTENANT.getTime() - 30 * JOUR),
+    });
+    expect((await deposerDans(tx, demande(), ports())).issue).toBe('enregistree');
+  });
+
+  it('REQ-DM-004 : la carence ne vise que CE couple : les attributions périmées du même apporteur et du même SIREN, et la seule fin faute d’adresse valide', async () => {
+    const { tx, appels } = transaction({ perimees: ['a-ancienne'], finSansAdresse: null });
+    await deposerDans(tx, demande(), ports());
+    expect(ecrit(appels, 'attribution.findMany')).toEqual({
+      where: { apporteurId: APPORTEUR, siren: demande().saisie.siren, statut: 'perimee' },
+      select: { id: true },
+    });
+    expect(ecrit(appels, 'evenement.findFirst')).toEqual({
+      where: {
+        agregat: 'attribution',
+        agregatId: { in: ['a-ancienne'] },
+        type: 'attribution_etat_modifie',
+        charge: { path: ['transition'], equals: 'fin_sans_adresse_valide' },
+      },
+      orderBy: { survenuAt: 'desc' },
+      select: { survenuAt: true },
+    });
+  });
+
+  it('REQ-DM-004 : sans attribution périmée du couple, le journal n’est pas lu', async () => {
+    const { tx, appels } = transaction({});
+    await deposerDans(tx, demande(), ports());
+    expect(noms(appels)).not.toContain('evenement.findFirst');
   });
 });
 

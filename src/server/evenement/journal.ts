@@ -190,3 +190,25 @@ export async function lireLaChargeDUnFait(
   });
   return l === null ? null : { type: l.type, charge: l.charge };
 }
+
+/**
+ * DM-13 (art. 3.2 du v2) — l'instant de la DERNIÈRE fin faute d'adresse valide parmi ces attributions,
+ * lu au journal (aucune colonne ne la porte) ; `null` s'il n'y en a aucune. La carence de redépôt
+ * part de cet instant.
+ */
+export async function derniereFinSansAdresseValide(
+  client: PrismaClient | Prisma.TransactionClient,
+  attributionIds: readonly string[]
+): Promise<Date | null> {
+  const f = await client.evenement.findFirst({
+    where: {
+      agregat: 'attribution',
+      agregatId: { in: [...attributionIds] },
+      type: 'attribution_etat_modifie',
+      charge: { path: ['transition'], equals: 'fin_sans_adresse_valide' },
+    },
+    orderBy: { survenuAt: 'desc' },
+    select: { survenuAt: true },
+  });
+  return f?.survenuAt ?? null;
+}

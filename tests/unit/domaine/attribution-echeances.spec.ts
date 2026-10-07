@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import {
   ETATS_QUI_EXPIRENT,
   executableAujourdHui,
+  redepotPermis,
   transitionEchue,
   type EcheancesDUneAttribution,
 } from '../../../src/domain/attribution/echeances';
@@ -205,5 +206,24 @@ describe('REQ-DM-006 — la fin faute d’adresse valide, 45 jours après la DÉ
 
   it('REQ-DM-006 : la fin s’exécute normalement (aucun échec fermé)', () => {
     expect(executableAujourdHui('fin_sans_adresse_valide', 'apporteur')).toBe(true);
+  });
+});
+
+describe('REQ-DM-004 — la carence UNIQUE après une fin faute d’adresse valide (v2, art. 3.2 ; arbitrage 6036991499)', () => {
+  const FIN = Date.UTC(2027, 3, 1, 8, 0);
+  const PERMIS = ajouterJoursCivilsParis(FIN, SEUILS.CARENCE_REDEPOT_APRES_LIBERATION_JOURS.valeur);
+
+  it('REQ-DM-004 : TÉMOIN — à J+30 moins une minute, refusé ; à J+30, permis', () => {
+    expect(redepotPermis(FIN, PERMIS - MINUTE)).toBe(false);
+    expect(redepotPermis(FIN, PERMIS)).toBe(true);
+  });
+
+  it('REQ-DM-004 : sans fin faute d’adresse valide, rien ne retient le dépôt', () => {
+    expect(redepotPermis(null, FIN)).toBe(true);
+  });
+
+  it('REQ-DM-004 : la carence est UNIQUE : 30 jours, jamais davantage (aucune carence graduée)', () => {
+    expect(SEUILS.CARENCE_REDEPOT_APRES_LIBERATION_JOURS.valeur).toBe(30);
+    expect(redepotPermis(FIN, PERMIS + MINUTE)).toBe(true);
   });
 });

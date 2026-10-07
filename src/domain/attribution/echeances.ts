@@ -119,3 +119,16 @@ export function executableAujourdHui(transition: TransitionEchue, porteur: TypeP
   if (transition === 'perimee') return porteur === 'conseiller';
   return true;
 }
+
+/**
+ * La carence UNIQUE (art. 3.2 ; arbitrage #319 6036991499) : après une fin faute d'adresse valide, le
+ * même apporteur ne dépose à nouveau la même entreprise qu'à l'expiration de
+ * `CARENCE_REDEPOT_APRES_LIBERATION_JOURS` jours civils de Paris. `finAt` nul : aucune carence.
+ */
+export function redepotPermis(finAt: Instant | null, maintenant: Instant): boolean {
+  if (finAt === null) return true;
+  return (
+    maintenant >=
+    ajouterJoursCivilsParis(finAt, SEUILS.CARENCE_REDEPOT_APRES_LIBERATION_JOURS.valeur)
+  );
+}
