@@ -101,6 +101,7 @@ function secretsValides() {
     PARTNERS_MCP_SHARED_SECRET: 'a'.repeat(32) + '-mcp',
     ZEPTOMAIL_WEBHOOK_SECRET: 'a'.repeat(32) + '-zepto',
     AXIONIA_RELECTURE_SECRET: 'a'.repeat(32) + '-relecture',
+    APPORTEUR_REF_KEY: 'a'.repeat(32) + '-references',
   };
   return s;
 }
