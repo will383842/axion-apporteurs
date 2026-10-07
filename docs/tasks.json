@@ -10037,7 +10037,8 @@
         "package.json",
         "scripts/gates/lexique-apporteurs.ts",
         "tests/unit/gouvernance/lexique.spec.ts",
-        "scripts/gates/gov-conventions.ts"
+        "scripts/gates/gov-conventions.ts",
+        "scripts/gates/ci-etapes-identiques.ts"
       ],
       "schema": false,
       "sensible": [

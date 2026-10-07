@@ -163,6 +163,31 @@ export const AJOUTS_ADMIS: Readonly<Record<string, AjoutAdmis>> = {
     categorie: '(7) preuve de la garde neuve — GOV-154',
     run: 'pnpm gov:registre-fusions:prove',
   },
+  // JUR-T30 — les trois gardes de l'art. 2.7, chacune avec sa preuve.
+  'Charte — la date du contact reste inerte': {
+    categorie: '(7) garde neuve — JUR-T30',
+    run: 'pnpm jur:date-contact-inerte',
+  },
+  'La garde de la date du contact sait rougir': {
+    categorie: '(7) preuve de la garde neuve — JUR-T30',
+    run: 'pnpm jur:date-contact-inerte:prove',
+  },
+  'Charte — aucun support de presentation servi': {
+    categorie: '(7) garde neuve — JUR-T30',
+    run: 'pnpm jur:supports-de-presentation',
+  },
+  'La garde des supports de presentation sait rougir': {
+    categorie: '(7) preuve de la garde neuve — JUR-T30',
+    run: 'pnpm jur:supports-de-presentation:prove',
+  },
+  'Charte — aucune instruction, aucune activite mesuree': {
+    categorie: '(7) garde neuve — JUR-T30',
+    run: 'pnpm jur:aucune-instruction',
+  },
+  'La garde des instructions sait rougir': {
+    categorie: '(7) preuve de la garde neuve — JUR-T30',
+    run: 'pnpm jur:aucune-instruction:prove',
+  },
 };
 
 export type Famille =
