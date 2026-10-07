@@ -3,8 +3,8 @@
  * SEC-52 (REQ-SEC-042) — l'accès de la console aux coordonnées du contact d'une entreprise RÉSERVÉE s'écrit
  * au journal chaîné, en base RÉELLE, sous le rôle du serveur (`partners_app`) : un accès pendant la réserve →
  * UN événement, par identifiants seuls, rattaché à l'attribution ; un accès hors réserve → aucun ; la lecture
- * reste permise dans les deux cas et reste tracée au journal des accès à la console (SEC-58) ; la chaîne
- * du journal reste intacte. Le jugement est celui de SEC-51 (`portSousVerrou`), sous le verrou du SIREN que
+ * reste permise dans les deux cas et reste tracée au journal des accès à la console ; la chaîne
+ * du journal reste intacte. Le jugement est celui de la garde de la réserve (`portSousVerrou`), sous le verrou du SIREN que
  * le dépôt prend lui-même.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -140,7 +140,7 @@ describe('REQ-SEC-042 — l’accès aux coordonnées d’une entreprise réserv
     expect(ecrits).toHaveLength(1);
     expect(ecrits[0]!.agregat).toBe('attribution');
     expect(ecrits[0]!.charge).toEqual({ acteur: { par: 'utilisateur_console', id: consoleId } });
-    // La lecture reste tracée au journal des accès à la console (SEC-58), cible = l'attribution.
+    // La lecture reste tracée au journal des accès à la console, cible = l'attribution.
     const traces = await base.prisma.journalAccesConsole.findMany({
       where: { cibleId: attributionId, nature: 'lecture_coordonnees_contact' },
     });
