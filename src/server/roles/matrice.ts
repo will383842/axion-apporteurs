@@ -104,6 +104,11 @@ export const MATRICE_DES_ROLES = {
   // relèvement est exigé par le geste, que l'action rejuge.
   'ecran:mise_en_demeure': { roles: ['admin'], stepUp: false },
   'action:mettre_en_demeure': { roles: ['admin'], stepUp: true },
+  // UX-P1-56 (coordination, conditions de la sécurité) : confirmer une anomalie de sincérité, seul
+  // fondement d'un gel pour fraude (SEC-15), à l'admin SEUL, sous step-up ; le droit est relu en base par
+  // le geste. Son écran, à l'admin seul : le relèvement est exigé par le geste, que l'action rejuge.
+  'ecran:anomalies': { roles: ['admin'], stepUp: false },
+  'action:confirmer_anomalie': { roles: ['admin'], stepUp: true },
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, EntreeDeLaMatrice>>;
 
 /**

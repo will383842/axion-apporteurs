@@ -24832,7 +24832,16 @@
         "tests/unit/securite/matrice-des-roles.spec.ts",
         "docs/CONSOLE-ROUTES.md",
         "scripts/gates/ux-exhaustivite.ts",
-        "tests/unit/console/confirmer-anomalie.spec.ts"
+        "tests/unit/console/confirmer-anomalie.spec.ts",
+        "docs/maquettes/anomalies.html",
+        "docs/maquettes/VALIDATION.md",
+        "tests/unit/espace/maquettes-validees.spec.ts",
+        "tests/unit/console/maquettes-epuree.spec.ts",
+        "tests/unit/espace/charte-commune.spec.ts",
+        "tests/unit/console/maquettes-barre-laterale.spec.ts",
+        "src/content/micro-copy/console/etats-vides.ts",
+        "src/server/console/navigation.ts",
+        "vitest.mutation.config.ts"
       ],
       "schema": false,
       "sensible": [],
