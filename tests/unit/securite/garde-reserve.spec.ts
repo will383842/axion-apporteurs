@@ -1,8 +1,7 @@
 // @req REQ-SEC-042
 /**
  * SEC-51 — la GARDE UNIQUE de la réserve : la console ne démarche aucune entreprise réservée par un
- * apporteur. La garde juge des FAITS (les actes de l'apporteur et leurs exceptions, la confirmation en
- * cours), lus par un port ; ce spec juge la règle, l'échec fermé et le refus non révélateur.
+ * apporteur. La garde juge des FAITS (les actes de l'apporteur et leurs exceptions, ), lus par un port ; ce spec juge la règle, l'échec fermé et le refus non révélateur.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -23,13 +22,12 @@ const MAINTENANT = new Date('2026-10-03T10:00:00.000Z');
 const JOURS = SEUILS.RESERVE_APRES_ACTE_APPORTEUR_JOURS.valeur;
 const avant = (ms: number) => new Date(MAINTENANT.getTime() - ms);
 const ACTION = 'tache:contacts_purger' as const;
-const LIBRE: FaitsDeReserve = { actes: [], confirmationEnCours: false };
+const LIBRE: FaitsDeReserve = { actes: [] };
 
 describe('REQ-SEC-042 — la réserve après un acte de l’apporteur', () => {
   it('REQ-SEC-042 : TÉMOIN — un acte de moins de RESERVE_APRES_ACTE_APPORTEUR_JOURS réserve l’entreprise : le démarchage est refusé', () => {
     const faits = {
       actes: [{ at: avant(MS_PAR_JOUR), exempte: false }],
-      confirmationEnCours: false,
     };
     expect(jugerLaReserve(faits, 'demarchage', MAINTENANT)).toEqual({
       permis: false,
@@ -39,10 +37,9 @@ describe('REQ-SEC-042 — la réserve après un acte de l’apporteur', () => {
 
   it('REQ-SEC-042 : TÉMOIN — la réserve ÉCHUE laisse passer : à l’échéance exacte, l’action passe ; une milliseconde avant, refusée', () => {
     const echeance = JOURS * MS_PAR_JOUR;
-    const pile = { actes: [{ at: avant(echeance), exempte: false }], confirmationEnCours: false };
+    const pile = { actes: [{ at: avant(echeance), exempte: false }] };
     const juste = {
       actes: [{ at: avant(echeance - 1), exempte: false }],
-      confirmationEnCours: false,
     };
     expect(jugerLaReserve(pile, 'demarchage', MAINTENANT)).toEqual({ permis: true });
     expect(jugerLaReserve(juste, 'demarchage', MAINTENANT).permis).toBe(false);
@@ -51,21 +48,17 @@ describe('REQ-SEC-042 — la réserve après un acte de l’apporteur', () => {
   it('REQ-SEC-042 : un acte EXEMPTÉ (entreprise déjà connue de la Société, ou occupée à la date de l’acte) ne réserve rien', () => {
     const faits = {
       actes: [{ at: avant(MS_PAR_JOUR), exempte: true }],
-      confirmationEnCours: false,
     };
     expect(jugerLaReserve(faits, 'demarchage', MAINTENANT)).toEqual({ permis: true });
   });
 
-  it('REQ-SEC-042 : TÉMOIN — pendant le délai de confirmation, aucun démarchage', () => {
-    expect(
-      jugerLaReserve({ actes: [], confirmationEnCours: true }, 'demarchage', MAINTENANT)
-    ).toEqual({ permis: false, code: CODE_ENTREPRISE_RESERVEE });
+  it('REQ-SEC-042 : TÉMOIN — sans acte non exempté, aucune réserve : une entreprise déclarée ou attribuée reste démarchable (contrat v2, art. 3.5)', () => {
+    expect(jugerLaReserve({ actes: [] }, 'demarchage', MAINTENANT)).toEqual({ permis: true });
   });
 
   it('REQ-SEC-042 : TÉMOIN — la VÉRIFICATION (l’appel de confirmation) n’est pas du démarchage : elle passe pendant la réserve', () => {
     const faits = {
       actes: [{ at: avant(MS_PAR_JOUR), exempte: false }],
-      confirmationEnCours: true,
     };
     expect(jugerLaReserve(faits, 'verification', MAINTENANT)).toEqual({ permis: true });
     expect(jugerLaReserve(LIBRE, 'demarchage', MAINTENANT)).toEqual({ permis: true });
@@ -88,9 +81,10 @@ describe('REQ-SEC-042 — la garde à l’appel : échec fermé, refus non rév�
     };
     const parActe = await refus({
       actes: [{ at: avant(MS_PAR_JOUR), exempte: false }],
-      confirmationEnCours: false,
     });
-    const parConfirmation = await refus({ actes: [], confirmationEnCours: true });
+    const parConfirmation = await refus({
+      actes: [{ at: avant(2 * MS_PAR_JOUR), exempte: false }],
+    });
     expect(parActe).toBeInstanceOf(EntrepriseReservee);
     expect([parActe.message, parActe.code]).toEqual([
       CODE_ENTREPRISE_RESERVEE,
@@ -150,7 +144,7 @@ describe('REQ-SEC-042 — la garde à l’appel : échec fermé, refus non rév�
 });
 
 describe('REQ-SEC-042 — le refus est journalisé sous les identifiants seuls', () => {
-  const reservee: FaitsDeReserve = { actes: [], confirmationEnCours: true };
+  const reservee: FaitsDeReserve = { actes: [{ at: avant(MS_PAR_JOUR), exempte: false }] };
 
   it('REQ-SEC-042 : TÉMOIN — un refus écrit UNE ligne : le SIREN et l’action, ni la cause, ni l’apporteur, ni la date', async () => {
     const lignes: RefusDeReserve[] = [];

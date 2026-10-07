@@ -3,7 +3,7 @@
  * SEC-51 (REQ-SEC-042) — la garde de la réserve en base RÉELLE, sous le rôle du serveur
  * (`partners_app`) : elle est rejugée DANS la transaction de l'action, sur des faits lus en base, et
  * un état illisible (une transaction avortée par la base) refuse sous le même code. Le port est celui
- * de PRODUCTION (`portSousVerrou`) : une cause d'acte à la fois, le délai de confirmation, le verrou du
+ * de PRODUCTION (`portSousVerrou`) : une cause d'acte à la fois, le verrou du
  * SIREN partagé avec le dépôt (avis de la sécurité, point 2), et la ligne de journal du refus.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -157,31 +157,22 @@ describe('REQ-SEC-042 — la garde jugée en base réelle, une cause à la fois'
     await expect(demarcher(occupee)).resolves.toBeUndefined();
   });
 
-  it('REQ-SEC-042 : TÉMOIN — le délai de confirmation : refus tant que la demande est planifiée ou envoyée, puis l’action passe', async () => {
+  it('REQ-SEC-042 : TÉMOIN — une demande de confirmation planifiée ne réserve RIEN, et une entreprise attribuée sans acte non exempté n’est pas réservée (contrat v2, art. 3.5)', async () => {
     const siren = unSiren();
     const attribution = await attribuer(siren, 'provisoire');
     await base.prisma.demandeConfirmation.create({
       data: { attributionId: attribution, etat: 'planifiee' },
     });
-    await expect(demarcher(siren)).rejects.toMatchObject({ code: CODE_ENTREPRISE_RESERVEE });
-    await base.prisma.$executeRawUnsafe(
-      `UPDATE demandes_confirmation SET etat = 'repondue_oui', envoyee_at = now(), repondu_at = now()
-       WHERE attribution_id = $1::uuid`,
-      attribution
-    );
     await expect(demarcher(siren)).resolves.toBeUndefined();
   });
 
-  it('REQ-SEC-042 : TÉMOIN — le corps du refus est IDENTIQUE pour la réserve après acte et le délai de confirmation', async () => {
-    const parActe = unSiren();
-    await verifier(parActe, 1, 'libre');
-    const parConfirmation = unSiren();
-    const attribution = await attribuer(parConfirmation, 'provisoire');
-    await base.prisma.demandeConfirmation.create({
-      data: { attributionId: attribution, etat: 'planifiee' },
-    });
-    const a = await refusDe(parActe);
-    const c = await refusDe(parConfirmation);
+  it('REQ-SEC-042 : TÉMOIN — le corps du refus est IDENTIQUE pour une vérification et pour un dépôt refusé', async () => {
+    const parVerification = unSiren();
+    await verifier(parVerification, 1, 'libre');
+    const parRefus = unSiren();
+    await refuser(parRefus, 1, 'insincerite');
+    const a = await refusDe(parVerification);
+    const c = await refusDe(parRefus);
     expect(a).toEqual({ code: CODE_ENTREPRISE_RESERVEE, message: CODE_ENTREPRISE_RESERVEE });
     expect(c).toEqual(a);
   });

@@ -6,8 +6,6 @@
  * - dans les `RESERVE_APRES_ACTE_APPORTEUR_JOURS` jours qui suivent un ACTE d'apporteur (une
  *   vérification, une déclaration refusée ou en attente), sauf si l'acte est EXEMPTÉ (entreprise déjà
  *   connue de la Société au sens de l'art. 3.3, ou occupée à la date de l'acte) ;
- * - pendant le délai de confirmation d'un dépôt (« aucun démarchage pendant le délai de
- *   confirmation »).
  * La VÉRIFICATION (l'appel de confirmation) n'est pas du démarchage : elle passe, sans même lire
  * l'état.
  *
@@ -31,10 +29,13 @@ export class EntrepriseReservee extends Error {
   }
 }
 
-/** Les faits d'une entreprise, lus par le port : les actes d'apporteur, et la confirmation en cours. */
+/**
+ * Les faits d'une entreprise, lus par le port : les actes d'apporteur. Le contrat v2 (art. 3.5) ne connaît
+ * aucune réserve pendant le délai de confirmation : la Société peut contacter une entreprise déclarée dès
+ * l'enregistrement de la déclaration.
+ */
 export type FaitsDeReserve = {
   actes: readonly { at: Date; exempte: boolean }[];
-  confirmationEnCours: boolean;
 };
 
 /** Le jugement pur : une action d'une nature, sur des faits, à un instant. */
@@ -48,7 +49,7 @@ export function jugerLaReserve(
   const acteEnCours = faits.actes.some(
     (a) => !a.exempte && maintenant.getTime() < a.at.getTime() + duree
   );
-  if (acteEnCours || faits.confirmationEnCours) {
+  if (acteEnCours) {
     return { permis: false, code: CODE_ENTREPRISE_RESERVEE };
   }
   return { permis: true };
@@ -135,13 +136,10 @@ const REFUS_EXEMPTE: ReadonlySet<MotifRefusDepot> = new Set([
   'file_complete',
 ]);
 
-/** Les états de la demande de confirmation qui tiennent le délai de confirmation. */
-const CONFIRMATION_EN_COURS = ['planifiee', 'envoyee'] as const;
-
 /**
  * Le port de PRODUCTION, lié à la transaction de l'appelant : il prend le verrou du SIREN, puis lit les
  * actes de l'apporteur sur l'entreprise — une vérification, un dépôt refusé, un dépôt en attente — avec
- * leur exemption, et la demande de confirmation en cours. L'appelant ne fournit que sa transaction : la
+ * leur exemption. L'appelant ne fournit que sa transaction : la
  * définition de la réserve ne se recopie nulle part.
  */
 export function portSousVerrou(
@@ -152,7 +150,7 @@ export function portSousVerrou(
     journaliser,
     async lireLesFaits(siren) {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${cleDuVerrouDuSiren(siren)}, 0))`;
-      const [verifications, refuses, enAttente, confirmations] = await Promise.all([
+      const [verifications, refuses, enAttente] = await Promise.all([
         tx.verification.findMany({
           where: { siren, apporteurId: { not: null } },
           select: { resultat: true, verifieeAt: true },
@@ -161,13 +159,6 @@ export function portSousVerrou(
         tx.attribution.findMany({
           where: { siren, apporteurId: { not: null }, statut: 'en_attente' },
           select: { deposeeAt: true },
-        }),
-        tx.attribution.count({
-          where: {
-            siren,
-            apporteurId: { not: null },
-            demandeConfirmation: { etat: { in: [...CONFIRMATION_EN_COURS] } },
-          },
         }),
       ]);
       return {
@@ -179,7 +170,6 @@ export function portSousVerrou(
           ...refuses.map((r) => ({ at: r.refuseAt, exempte: REFUS_EXEMPTE.has(r.motif) })),
           ...enAttente.map((a) => ({ at: a.deposeeAt, exempte: false })),
         ],
-        confirmationEnCours: confirmations > 0,
       };
     },
   };
