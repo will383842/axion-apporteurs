@@ -1776,6 +1776,23 @@ describe('REQ-SEC-023 — CPL-T07 : les droits du dossier de conformité', () =>
     expect(jugerAcces('action:verifier_rib', sessionAdmin(releve - 1), T0, KID).ok).toBe(true);
   });
 
+  it('REQ-SEC-023 : TÉMOIN — l’écran des gels du journal des accès : admin seul, sans step-up ; ses deux gestes à step-up', () => {
+    expect(MATRICE_DES_ROLES['ecran:gels_journal_acces']).toEqual({
+      roles: ['admin'],
+      stepUp: false,
+    });
+    expect(MATRICE_DES_ROLES['action:poser_gel_journal_acces']).toEqual({
+      roles: ['admin'],
+      stepUp: true,
+    });
+    expect(MATRICE_DES_ROLES['action:lever_gel_journal_acces']).toEqual({
+      roles: ['admin'],
+      stepUp: true,
+    });
+    for (const role of ['qualifieur', 'comptable', 'lecteur'] as const)
+      expect(roleAutorise('ecran:gels_journal_acces', role), role).toBe(false);
+  });
+
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — valider le dossier, session ouverte il y a le délai de relèvement : « releve_requis » ; un instant avant, elle passe', () => {
     expect(jugerAcces('action:valider_kyc', sessionAdmin(releve), T0, KID)).toEqual({
       ok: false,

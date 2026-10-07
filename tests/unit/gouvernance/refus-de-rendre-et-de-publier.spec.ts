@@ -1986,6 +1986,8 @@ const GATES_A_TEMOIN_D_EFFET = [
       'docs/DECISIONS.md',
       'scripts/lot/tasks.schema.json',
       'docs/CHARTE-AGENTS.md',
+      // GOV-150 — la liste du gel de la phase 1 : absente, la garde s'arrête (échec fermé).
+      'config/gel-phase-1.json',
     ],
     // Une dépendance vers une tâche qui n'existe pas : faute RÉELLE, contrôlée par la gate.
     fautes: [
