@@ -74,6 +74,8 @@ import {
   type DependancesDeLEmetteur,
 } from '../integrations/zeptomail/emetteur';
 import { relaisZeptomail } from '../integrations/zeptomail/relais';
+import { habillerLeCourriel } from '../email/chassis';
+import { TEXTES_DES_NOTIFICATIONS } from '../../content/micro-copy/courriels/notifications';
 
 export { MODELE_APPORTEUR } from './lien-magique-depot';
 
@@ -85,6 +87,8 @@ export interface EnvoiDuLien {
     a: string;
     sujet: string;
     corps: string;
+    /** UX-P1-64 : le HTML du châssis commun, famille A. */
+    html?: string;
     gabarit?:
       | 'lien_magique'
       | 'lien_magique_console'
@@ -145,6 +149,27 @@ export function corpsDuCourriel(url: string, code: string): string {
   return `${CONNEXION.courriel.corps}\n\n${url}\n\n${avant}\n${code}\n${apres}`;
 }
 
+/**
+ * UX-P1-64 — le courriel de connexion habillé du châssis commun, famille A : le lien est SECRET, il
+ * n'est jamais recopié en clair dans le HTML (le texte joint le porte, comme avant) ; le code suit.
+ */
+export function htmlDuCourrielDeConnexion(
+  courriel: { readonly sujet: string; readonly corps: string },
+  appel: string,
+  url: string,
+  code: string
+): string {
+  const { avant, apres } = CODE_DU_COURRIEL_DE_CONNEXION;
+  return habillerLeCourriel({
+    famille: 'A',
+    preEnTete: courriel.corps,
+    titre: courriel.sujet,
+    paragraphes: [courriel.corps, `${avant} ${code}`, apres],
+    appel: { libelle: appel, href: url },
+    appelSecret: true,
+  }).html;
+}
+
 export function portsDeDemande(d: DependancesDuLien): PortsDeDemande {
   const cles = clesPii(d.env);
   const configuration = configurationDuLien(d.env);
@@ -168,7 +193,17 @@ export function portsDeDemande(d: DependancesDuLien): PortsDeDemande {
       ...lectureDuCompte(d.prisma, cles),
       ...ecrituresDeLien(d.prisma),
       envoyer: ({ a, url, code }) =>
-        d.envoi.envoyer({ a, sujet: CONNEXION.courriel.sujet, corps: corpsDuCourriel(url, code) }),
+        d.envoi.envoyer({
+          a,
+          sujet: CONNEXION.courriel.sujet,
+          corps: corpsDuCourriel(url, code),
+          html: htmlDuCourrielDeConnexion(
+            CONNEXION.courriel,
+            TEXTES_DES_NOTIFICATIONS.lien_magique.appel,
+            url,
+            code
+          ),
+        }),
       signalerPotDeMiel: async ({ formulaire, adresseHash, survenuAt }) =>
         signalerPotDeMiel({ formulaire, adresseHash, survenuAt: survenuAt.getTime() }),
       signalerEchec: (motif) => d.journal.warn(`lien_magique_${motif}`),
@@ -417,6 +452,12 @@ export function portsDeDemandeConsole(d: DependancesDuLien): PortsDeDemandeConso
           a,
           sujet: CONNEXION_CONSOLE.courriel.sujet,
           corps: corpsDuCourrielConsole(url, code),
+          html: htmlDuCourrielDeConnexion(
+            CONNEXION_CONSOLE.courriel,
+            CONNEXION_CONSOLE.courriel.appel,
+            url,
+            code
+          ),
           gabarit: 'lien_magique_console',
         }),
       signalerPotDeMiel: espace.emission.signalerPotDeMiel,
@@ -470,8 +511,11 @@ export function portsDuCodeConsole(
  */
 export function envoiParLEmetteur(emetteur: () => DependancesDeLEmetteur): EnvoiDuLien {
   return {
-    async envoyer({ a, sujet, corps, gabarit = 'lien_magique' }) {
-      await demanderEnvoi({ gabarit, a, sujet, corps, apporteurId: null }, emetteur());
+    async envoyer({ a, sujet, corps, html, gabarit = 'lien_magique' }) {
+      await demanderEnvoi(
+        { gabarit, a, sujet, corps, ...(html === undefined ? {} : { html }), apporteurId: null },
+        emetteur()
+      );
     },
   };
 }

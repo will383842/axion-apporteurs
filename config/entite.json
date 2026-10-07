@@ -12,7 +12,10 @@
     "siren": "108018631",
     "siret": "10801863100011",
     "tvaIntracommunautaire": "FR51108018631",
-    "siege": "11 Avenue Paul Verlaine, ELITE BUREAUX boîte 53, 38100 Grenoble"
+    "siege": "11 Avenue Paul Verlaine, ELITE BUREAUX boîte 53, 38100 Grenoble",
+    "rcsVille": "A-RENSEIGNER",
+    "capitalSocial": "A-RENSEIGNER",
+    "representant": "A-RENSEIGNER"
   },
 
   "domaines": {

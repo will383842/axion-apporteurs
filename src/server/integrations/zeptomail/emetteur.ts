@@ -127,6 +127,8 @@ export interface DemandeDEnvoi {
   a: string;
   sujet: string;
   corps: string;
+  /** UX-P1-64 : le même courriel, habillé du châssis commun ; le texte reste la version de repli. */
+  html?: string;
   apporteurId: string | null;
   /** DM-55 : la notification de l'espace que le courriel porte ; absente pour les autres courriels. */
   notificationEspaceId?: string;
@@ -154,6 +156,8 @@ export interface Relais {
     a: string;
     sujet: string;
     corps: string;
+    /** UX-P1-64 : le HTML du châssis commun, quand le courriel en a un. */
+    html?: string;
     reference: string;
   }): Promise<{ messageId: string }>;
 }
@@ -227,6 +231,7 @@ export async function emettre(
         a: demande.a,
         sujet: demande.sujet,
         corps: demande.corps,
+        ...(demande.html === undefined ? {} : { html: demande.html }),
         reference: ligne.id,
       });
       ligne.statut = 'envoye';

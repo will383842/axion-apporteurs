@@ -116,6 +116,12 @@ export function relaisZeptomail(d: {
         to: [{ email_address: { address: m.a } }],
         subject: m.sujet,
         textbody: m.corps,
+        // UX-P1-64 : le châssis commun, quand le courriel en a un ; le texte reste toujours joint.
+        ...(m.html === undefined ? {} : { htmlbody: m.html }),
+        // UX-P1-64, condition 6 du logo distant (#319 6041013643) : le suivi d'ouverture et de clic du
+        // fournisseur est ÉTEINT, explicitement, à chaque envoi.
+        track_opens: false,
+        track_clicks: false,
         client_reference: m.reference,
       });
 

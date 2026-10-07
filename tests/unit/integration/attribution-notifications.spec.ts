@@ -1230,10 +1230,18 @@ describe('REQ-UX-016 — les trois sources du rendu : la charge, les faits, la c
     const url = new URL('https://espace.partners.test');
     expect(
       composerLeCourriel('premier_rang_libere', { titre: 'T', appel: 'A', corps: 'C' }, url)
-    ).toEqual({ sujet: 'T', corps: 'C\n\nA : https://espace.partners.test/deposer' });
+    ).toMatchObject({ sujet: 'T', corps: 'C\n\nA : https://espace.partners.test/deposer' });
+    // UX-P1-64 : le même courriel, habillé du châssis commun (famille C), en plus du texte.
+    const { html } = composerLeCourriel(
+      'premier_rang_libere',
+      { titre: 'T', appel: 'A', corps: 'C' },
+      url
+    );
+    expect(html).toContain('data-famille="C"');
+    expect(html).toContain('href="https://espace.partners.test/deposer"');
     expect(
       composerLeCourriel('decision_attribution', { titre: 'T', appel: 'A', corps: null }, url)
-    ).toEqual({ sujet: 'T', corps: 'A' });
+    ).toMatchObject({ sujet: 'T', corps: 'A' });
   });
 });
 

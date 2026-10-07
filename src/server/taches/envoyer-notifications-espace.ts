@@ -27,7 +27,7 @@ import { MODELE_APPORTEUR } from '../auth/lien-magique-depot';
 import { lireLaChargeDUnFait } from '../evenement/journal';
 import { configurationDeLEmetteur } from '../integrations/zeptomail/emetteur';
 import { relaisZeptomail } from '../integrations/zeptomail/relais';
-import { composerLeCourriel } from '../notifications/envoyer';
+import { composerLeCourriel, type CourrielCompose } from '../notifications/envoyer';
 import { CHAMPS_PII, clesPii, decryptPii, type ClesPii } from '../securite/pii';
 import { finDeLaFenetreDeRedeclaration } from '../../domain/attribution/fenetre-redeclaration';
 import { TAILLES_DE_LOT } from '../../domain/seuils/ssot';
@@ -66,16 +66,12 @@ export type GestesDeLaTransaction = {
   rendre(
     n: NotificationAEnvoyer,
     envoyeLe: Date
-  ): Promise<{ sujet: string; corps: string } | { nonRendue: MotifDeNonRendu }>;
+  ): Promise<CourrielCompose | { nonRendue: MotifDeNonRendu }>;
   /**
    * L'envoi par l'émetteur unique, et sa ligne de courriel, liée à la notification. `envoyeLe` est
    * l'heure DONNÉE au rendu : le courriel la consigne, et la fenêtre en part (juriste).
    */
-  envoyer(
-    n: NotificationAEnvoyer,
-    texte: { sujet: string; corps: string },
-    envoyeLe: Date
-  ): Promise<IssueDeLEnvoi>;
+  envoyer(n: NotificationAEnvoyer, texte: CourrielCompose, envoyeLe: Date): Promise<IssueDeLEnvoi>;
   /** La fenêtre de redéclaration, posée seulement si elle est encore nulle. */
   poserLaFenetre(attributionId: string, finAt: Date): Promise<void>;
 };
@@ -170,11 +166,11 @@ export type GestesExternes = {
     tx: Prisma.TransactionClient,
     n: NotificationAEnvoyer,
     envoyeLe: Date
-  ): Promise<{ sujet: string; corps: string } | { nonRendue: MotifDeNonRendu }>;
+  ): Promise<CourrielCompose | { nonRendue: MotifDeNonRendu }>;
   envoyer(
     tx: Prisma.TransactionClient,
     n: NotificationAEnvoyer,
-    texte: { sujet: string; corps: string },
+    texte: CourrielCompose,
     envoyeLe: Date
   ): Promise<IssueDeLEnvoi>;
 };
@@ -255,6 +251,7 @@ export function envoyerParLEmetteur(
         a: await adresseDe(tx, n),
         sujet: texte.sujet,
         corps: texte.corps,
+        ...(texte.html === undefined ? {} : { html: texte.html }),
         apporteurId: n.apporteurId,
         notificationEspaceId: n.id,
       },

@@ -117,6 +117,9 @@ describe('REQ-INT-022 — la requête a la forme officielle, la réponse se réd
       subject: MESSAGE.sujet,
       textbody: MESSAGE.corps,
       client_reference: MESSAGE.reference,
+      // UX-P1-64 (condition 6 du logo distant) : le suivi du fournisseur est éteint à chaque envoi.
+      track_opens: false,
+      track_clicks: false,
     });
   });
 

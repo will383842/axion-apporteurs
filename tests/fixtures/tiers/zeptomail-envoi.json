@@ -1,5 +1,5 @@
 {
-  "Source": "Source: documentation officielle de ZeptoMail, Send Email API (https://www.zoho.com/zeptomail/help/api/email-sending.html), lue le 2026-10-02 par A05 pour INT-T57 : exemple de requete reduit aux champs que Partners emploie, reponses 200 et 400 copiees telles quelles. Aucun envoi reel enregistre a ce jour.",
+  "Source": "Source: documentation officielle de ZeptoMail, Send Email API (https://www.zoho.com/zeptomail/help/api/email-sending.html), lue le 2026-10-02 par A05 pour INT-T57 : exemple de requete reduit aux champs que Partners emploie, reponses 200 et 400 copiees telles quelles. Aucun envoi reel enregistre a ce jour. Relue le 2026-10-07 par A06 pour UX-P1-64 : htmlbody (string, optionnel, \"HTML content of the email body\"), track_clicks et track_opens (boolean, optionnels, \"Enable or disable click/open tracking\") ; Partners pose les deux derniers a false a chaque envoi.",
   "Confronte-a": "docs/tiers/zeptomail.md#2-source-officielle",
   "requete": {
     "methode": "POST",
@@ -13,7 +13,9 @@
       "to": [{ "email_address": { "address": "rudra.d@zylker.com" } }],
       "subject": "Account Confirmation",
       "textbody": "Kindly click on Verify Account to confirm your account.",
-      "client_reference": "order-12345"
+      "client_reference": "order-12345",
+      "track_opens": false,
+      "track_clicks": false
     }
   },
   "reponse200": {

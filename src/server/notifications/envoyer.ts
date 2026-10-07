@@ -29,6 +29,7 @@ import {
 import type { MotifResiliation } from '../../domain/apporteur/statut';
 import type { AccesApporteur } from '../acces/for-apporteur';
 import type { DemandeDEnvoi } from '../integrations/zeptomail/emetteur';
+import { habillerLeCourriel } from '../email/chassis';
 import {
   GABARITS,
   schemaGabarit,
@@ -236,6 +237,12 @@ export interface DemandeDeNotification {
 }
 
 /**
+ * UX-P1-64 : un courriel composé — le sujet, le corps en texte (la version de repli, toujours jointe),
+ * et son HTML habillé du châssis commun quand il en a un.
+ */
+export type CourrielCompose = { sujet: string; corps: string; html?: string };
+
+/**
  * La composition d'un courriel de notification, UNE fois pour tous ses émetteurs (`notifier()` et
  * le passage d'envoi de DM-55) : le titre en sujet ; le corps, puis l'appel à l'action suivi du lien
  * de sa route quand elle existe.
@@ -244,13 +251,21 @@ export function composerLeCourriel(
   cle: string,
   texte: TexteRendu,
   urlDeLEspace: URL
-): { sujet: string; corps: string } {
+): CourrielCompose {
   const route = GABARITS[cleDeLaTable(cle)].route;
   const lien = route === null ? null : new URL(route, urlDeLEspace).href;
   const corps = [texte.corps, lien === null ? texte.appel : `${texte.appel} : ${lien}`]
     .filter((x): x is string => x !== null)
     .join('\n\n');
-  return { sujet: texte.titre, corps };
+  // UX-P1-64 : le même courriel, habillé du châssis commun, famille C (l'apporteur, sous contrat).
+  const { html } = habillerLeCourriel({
+    famille: 'C',
+    preEnTete: texte.corps ?? texte.appel,
+    titre: texte.titre,
+    paragraphes: texte.corps === null ? [] : texte.corps.split('\n\n'),
+    ...(lien === null ? {} : { appel: { libelle: texte.appel, href: lien } }),
+  });
+  return { sujet: texte.titre, corps, html };
 }
 
 export async function notifier(
@@ -279,12 +294,13 @@ export async function notifier(
     if (preference?.active === false)
       return { notificationId, courriel: 'desactive_par_preference' };
   }
-  const { sujet, corps } = composerLeCourriel(cle, texte, d.urlDeLEspace);
+  const { sujet, corps, html } = composerLeCourriel(cle, texte, d.urlDeLEspace);
   const courriel = await d.envoyerCourriel({
     gabarit: cle,
     a: demande.a,
     sujet,
     corps,
+    ...(html === undefined ? {} : { html }),
     apporteurId: d.acces.apporteurId,
   });
   return { notificationId, courriel };

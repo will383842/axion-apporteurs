@@ -49,6 +49,10 @@ export type Registre = {
     siret: string;
     tvaIntracommunautaire: string;
     siege: string;
+    /** UX-P1-64 (art. R.123-238 C. com.) : la ville du greffe, le capital, le représentant légal. */
+    rcsVille: string;
+    capitalSocial: string;
+    representant: string;
   };
   domaines: { servi: string; envoi: string };
   perimetre: { modeleTetesDeReseau: string; residenceFiscaleExigee: string; tenance: string };
@@ -150,6 +154,36 @@ export const CHAMPS: Champ[] = [
     libelle: 'siège social',
     reqs: ['REQ-CPL-001'],
     ancre: { source: 'decisions', id: 'W1' },
+    secret: false,
+    env: null,
+    identifiant: false,
+  },
+  // UX-P1-64 (juriste, #819 6042302938 ; code de commerce, art. R.123-238) : les mentions du pied des
+  // courriels et la signature. Aucune ancre encore : elles n'attendent que le geste DECISIONS de
+  // Williams, qui les attestera (le RCS et le représentant d'après axion-ia, le capital à sa réponse).
+  {
+    cle: 'entite.rcsVille',
+    libelle: 'ville du greffe du RCS',
+    reqs: ['REQ-CPL-001'],
+    ancre: null,
+    secret: false,
+    env: null,
+    identifiant: false,
+  },
+  {
+    cle: 'entite.capitalSocial',
+    libelle: 'capital social',
+    reqs: ['REQ-CPL-001'],
+    ancre: null,
+    secret: false,
+    env: null,
+    identifiant: false,
+  },
+  {
+    cle: 'entite.representant',
+    libelle: 'représentant légal',
+    reqs: ['REQ-CPL-001'],
+    ancre: null,
     secret: false,
     env: null,
     identifiant: false,
@@ -423,6 +457,9 @@ export function entiteContractante(registre: Registre = registreDuDepot()) {
     siret: lire(registre, 'entite.siret'),
     tvaIntracommunautaire: lire(registre, 'entite.tvaIntracommunautaire'),
     siege: lire(registre, 'entite.siege'),
+    rcsVille: lire(registre, 'entite.rcsVille'),
+    capitalSocial: lire(registre, 'entite.capitalSocial'),
+    representant: lire(registre, 'entite.representant'),
   };
 }
 

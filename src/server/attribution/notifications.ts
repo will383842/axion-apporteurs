@@ -30,6 +30,7 @@ import { nettoyerUnTexteSaisi } from '../securite/pii';
 import {
   NotificationRefusee,
   rendreLaNotification,
+  type CourrielCompose,
   type TexteRendu,
 } from '../notifications/envoyer';
 import { versParis } from '../../domain/temps/paris';
@@ -260,7 +261,7 @@ export type SourcesDuRendu = {
     tx: Tx,
     q: { anomalieId: string; attributionId: string; apporteurId: string }
   ): Promise<{ faits: string } | 'purgee' | 'refusee'>;
-  composer(cle: string, texte: TexteRendu): { sujet: string; corps: string };
+  composer(cle: string, texte: TexteRendu): CourrielCompose;
 };
 
 const nonRendue = (motif: MotifDeNonRendu) => ({ nonRendue: motif });
@@ -316,7 +317,7 @@ export async function rendreDepuisLaBase(
   n: NotificationARendre,
   envoyeLe: Date,
   s: SourcesDuRendu
-): Promise<{ sujet: string; corps: string } | { nonRendue: MotifDeNonRendu }> {
+): Promise<CourrielCompose | { nonRendue: MotifDeNonRendu }> {
   if (n.attributionId === null) return nonRendue('attribution_introuvable');
   const a = await tx.attribution.findUnique({
     where: { id: n.attributionId },

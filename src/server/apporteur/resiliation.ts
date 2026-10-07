@@ -53,6 +53,7 @@ import {
   NotificationRefusee,
   parametresDe,
   rendreLaNotification,
+  type CourrielCompose,
   type TexteRendu,
 } from '../notifications/envoyer';
 import {
@@ -468,8 +469,8 @@ const nonRendue = (motif: MotifDeNonRendu) => ({ nonRendue: motif });
 export async function rendreUneDecisionDeContrat(
   tx: Tx,
   n: NotificationDuContrat,
-  s: { cles: ClesPii; composer(cle: string, texte: TexteRendu): { sujet: string; corps: string } }
-): Promise<{ sujet: string; corps: string } | { nonRendue: MotifDeNonRendu }> {
+  s: { cles: ClesPii; composer(cle: string, texte: TexteRendu): CourrielCompose }
+): Promise<CourrielCompose | { nonRendue: MotifDeNonRendu }> {
   if (n.decisionContratId === null) return nonRendue('faits_non_conserves');
   const d = await tx.decisionDeContrat.findUnique({
     where: { id: n.decisionContratId },
