@@ -13,9 +13,9 @@
 | --- | --- | --- | --- | --- |
 | Accueil (3 chiffres, 1 alerte, 1 champ, 4 onglets) | `accueil.html` | UX-P1-08 | 2026-09-19 | Will |
 | Entreprise (recherche + carte 4 états + « Déposer ») — à revalider (« Personne ne suit… » devient « disponible », et l'attente porte la phrase de la juriste, après la validation du 19/09) | `entreprise.html` | UX-P1-01 | 2026-09-19 | Will |
-| Déposer un contact (W20 : quatre coordonnées, message, carte Annuler / Corriger) — à revalider (« Un autre apporteur suit… » devient « déjà réservée », après la validation du 03/10) | `deposer.html` | UX-P1-02 | 2026-10-03 | Will |
-| Mes entreprises (W20 : badges de la confirmation) — à revalider (libellé du rattrapage 70, après la validation du 03/10) | `mes-entreprises.html` | UX-P1-05 | 2026-10-03 | Will |
-| Réponse du contact (page publique /confirmer) | `confirmation-contact.html` | UX-P1-42 | 2026-10-03 | Will |
+| Déposer un contact (W20 : quatre coordonnées, message, carte Annuler / Corriger) — à revalider (« Un autre apporteur suit… » devient « déjà réservée », après la validation du 03/10) — retouche de conformité au v2 (le badge « Axion-IA va appeler votre contact » retiré, DM-72), en attente de Williams | `deposer.html` | UX-P1-02 | 2026-10-03 | Will |
+| Mes entreprises (W20 : badges de la confirmation) — à revalider (libellé du rattrapage 70, après la validation du 03/10) — retouche de conformité au v2 (le badge « Axion-IA va appeler votre contact » retiré, DM-72), en attente de Williams | `mes-entreprises.html` | UX-P1-05 | 2026-10-03 | Will |
+| Réponse du contact (page publique /confirmer) — retouche de conformité au v2 (la seconde question après « Non » retirée, DM-72), en attente de Williams | `confirmation-contact.html` | UX-P1-42 | 2026-10-03 | Will |
 | Mes commissions | `mes-commissions.html` | UX-P2-01 | 2026-09-19 | Will |
 | Ma conformité / Mon profil (ouverture limitée, état vide) | `conformite.html` | UX-P1-09 | 2026-10-03 | Will |
 | Se connecter (lien, code à 6 chiffres, lien déjà utilisé) | `connexion.html` | UX-P1-04 | 2026-10-03 | Will |
