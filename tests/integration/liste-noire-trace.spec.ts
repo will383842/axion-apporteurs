@@ -375,7 +375,7 @@ describe('REQ-DM-028 — le report : chaque inscription existante reçoit sa pé
 describe('REQ-DM-028 — ajouter et retirer sont réservés au rôle que la matrice nomme', () => {
   it('REQ-DM-028 : la matrice nomme le droit de tenir la liste, et le réserve à l’administrateur', () => {
     expect(DROIT_DE_TENIR_LA_LISTE).toBe('action:tenir_liste_noire');
-    expect(MATRICE_DES_ROLES[DROIT_DE_TENIR_LA_LISTE]).toEqual(['admin']);
+    expect(MATRICE_DES_ROLES[DROIT_DE_TENIR_LA_LISTE].roles).toEqual(['admin']);
   });
 
   it('REQ-DM-028 : l’administrateur ajoute puis retire ; la période porte l’auteur et la date de chacun', async () => {
