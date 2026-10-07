@@ -9,12 +9,13 @@
  *
  * Le texte est nettoyé, jugé non vide et borné par `ECRIT_CARACTERES_MAX` (points de code), sans
  * troncature ; il est chiffré sous l'AAD de SON écrit. Il n'entre ni au journal ni dans un message.
- * L'apporteur est celui de la SESSION, passé par l'appelant, jamais lu dans la requête.
+ * L'écriture passe par la COUCHE de cloisonnement (modèle en ajout seul) : l'apporteur est celui de la
+ * SESSION, posé par la couche, jamais lu dans la requête ; elle ne rend que l'identifiant et la date.
  */
 import { randomUUID } from 'node:crypto';
-import type { PrismaClient } from '@prisma/client';
 import { ECRIT_CARACTERES_MAX } from '../../domain/seuils/ssot';
 import { encryptPii, nettoyerUnTexteSaisi, type ClesPii } from '../securite/pii';
+import type { AccesApporteur } from '../acces/for-apporteur';
 
 /** Le modèle de l'AAD du texte d'un écrit. */
 export const MODELE_DE_L_ECRIT = 'EcritApporteur';
@@ -38,21 +39,17 @@ export function jugerLEcrit(brut: string): string {
 
 /** Reçoit l'écrit de l'apporteur de la session ; rend son identifiant et sa date, POSÉE PAR LA BASE. */
 export async function recevoirUnEcrit(
-  prisma: Pick<PrismaClient, 'ecritApporteur'>,
-  d: { apporteurId: string; texte: string },
+  acces: Pick<AccesApporteur, 'ecritApporteur'>,
+  d: { texte: string },
   cles: ClesPii
 ): Promise<{ ecritId: string; recuAt: Date }> {
   const texte = jugerLEcrit(d.texte);
   const id = randomUUID();
-  const ecrit = await prisma.ecritApporteur.create({
-    data: {
-      id,
-      apporteurId: d.apporteurId,
-      texteChiffre: Buffer.from(
-        encryptPii({ modele: MODELE_DE_L_ECRIT, champ: 'texteChiffre', id }, texte, cles)
-      ),
-    },
-    select: { id: true, recuAt: true },
+  const ecrit = await acces.ecritApporteur.creer({
+    id,
+    texteChiffre: Buffer.from(
+      encryptPii({ modele: MODELE_DE_L_ECRIT, champ: 'texteChiffre', id }, texte, cles)
+    ),
   });
   return { ecritId: ecrit.id, recuAt: ecrit.recuAt };
 }

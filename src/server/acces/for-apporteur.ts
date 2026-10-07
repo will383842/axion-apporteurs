@@ -49,6 +49,7 @@ import type {
   CourrielEnvoye,
   DecisionCandidature,
   DepotRefuse,
+  EcritApporteur,
   IdentiteFacturation,
   JetonDepot,
   LienMagique,
@@ -73,6 +74,8 @@ export const MODELES_CLOISONNES = [
   'courrielEnvoye',
   'decisionCandidature',
   'depotRefuse',
+  // UX-P1-62 : l'écrit de l'apporteur (« Écrire à Axion-IA »), créé par lui, jamais relu en phase 1.
+  'ecritApporteur',
   'identiteFacturation',
   'jetonDepot',
   'lienMagique',
@@ -114,6 +117,7 @@ export const MODELES_EN_AJOUT_SEUL = [
   'alerteLiberation',
   'decisionCandidature',
   'depotRefuse',
+  'ecritApporteur',
   'personneDeclaree',
   'verification',
 ] as const satisfies readonly ModeleCloisonne[];
@@ -221,6 +225,9 @@ export const CLES_REFUSEES = {
   preferenceNotification: ['id', 'apporteurId', 'apporteur'],
   // DM-12 : le porteur console ne s'écrit jamais de l'espace.
   verification: ['id', 'apporteurId', 'apporteur', 'utilisateurConsoleId', 'utilisateurConsole'],
+  // UX-P1-62 : l'identifiant est tiré par l'ÉCRIVAIN serveur (il fonde l'AAD du texte), jamais par la
+  // requête ; la date de réception est posée par la BASE ; la purge est un geste du serveur.
+  ecritApporteur: ['apporteurId', 'apporteur', 'recuAt', 'textePurgeAt'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
 
 /** Les clés étrangères vers une autre table cloisonnée : admises si la ligne visée est de la session. */
@@ -297,6 +304,7 @@ export const RELATIONS = {
   ],
   preferenceNotification: ['apporteur'],
   verification: ['apporteur', 'utilisateurConsole'],
+  ecritApporteur: ['apporteur'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
 
 /**
@@ -349,6 +357,9 @@ export const CHAMPS_RENDUS = {
   // DM-12 : l'entreprise vérifiée et la date ; le résultat est un journal serveur, jamais exposé tel
   // quel (glossaire, `ResultatVerification`).
   verification: ['id', 'siren', 'verifieeAt'],
+  // UX-P1-62 : l'identifiant et la date de réception posée par la base, que la confirmation affiche ;
+  // jamais le texte.
+  ecritApporteur: ['id', 'recuAt'],
   // DM-07 : ce que l'apporteur lit de son dépôt — son état, l'entreprise telle que l'API publique
   // l'a rendue, et le temps de la machine qui le concerne. Jamais le contact, jamais un porteur.
   attribution: [
@@ -426,6 +437,7 @@ export const CHAMPS_TUS = {
     'gelLitigeLeveAt',
     'gelLitigeRef',
   ],
+  ecritApporteur: ['apporteurId', 'texteChiffre', 'textePurgeAt'],
   verification: [
     'apporteurId',
     'utilisateurConsoleId',
@@ -678,6 +690,10 @@ type WContestation = Prisma.ContestationWhereInput;
 type CContestation = Prisma.ContestationUncheckedCreateInput;
 type UContestation = Prisma.ContestationUncheckedUpdateManyInput;
 type OContestation = Prisma.ContestationOrderByWithRelationInput;
+type WEcrit = Prisma.EcritApporteurWhereInput;
+type CEcrit = Prisma.EcritApporteurUncheckedCreateInput;
+type UEcrit = Prisma.EcritApporteurUncheckedUpdateManyInput;
+type OEcrit = Prisma.EcritApporteurOrderByWithRelationInput;
 type WVerification = Prisma.VerificationWhereInput;
 type CVerification = Prisma.VerificationUncheckedCreateInput;
 type UVerification = Prisma.VerificationUncheckedUpdateManyInput;
@@ -792,6 +808,13 @@ export interface AccesApporteur {
     SansProprietaire<CContestation>,
     UContestation,
     OContestation
+  >;
+  ecritApporteur: VueCloisonnee<
+    Rendu<EcritApporteur, 'ecritApporteur'>,
+    WEcrit,
+    SansProprietaire<CEcrit>,
+    UEcrit,
+    OEcrit
   >;
   verification: VueCloisonnee<
     Rendu<Verification, 'verification'>,
