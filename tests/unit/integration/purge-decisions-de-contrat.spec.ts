@@ -1,0 +1,356 @@
+// @req REQ-JUR-029
+/**
+ * DM-70 — la purge du texte d'une décision de contrat, jugée EN PROCESSUS sur un double de Prisma :
+ * le point de départ de chaque geste, l'échéance au jour civil de Paris, ce que le passage DEMANDE à
+ * la base (sa sélection, son écriture) et ce qu'il en rend. Ce que la base en fait — la garde dédiée
+ * de la table, la ligne nue qui reste, le rendu qui refuse un texte purgé — est jugé en base réelle par
+ * `tests/integration/purge-decisions-de-contrat.spec.ts`. Ce fichier-ci existe pour la mutation :
+ * `pnpm mutation:pr` ne lance que les tests en processus (`vitest.mutation.config.ts`).
+ */
+import { describe, it, expect, vi } from 'vitest';
+import type { PrismaClient } from '@prisma/client';
+import {
+  LOT_DE_PURGE_DES_DECISIONS,
+  departDuTexte,
+  echeanceDuTexte,
+  purgerLesTextesDesDecisions,
+  texteEchu,
+} from '../../../src/server/taches/purger-textes-des-decisions';
+import { SEUILS } from '../../../src/domain/seuils/ssot';
+
+/** Une colonne DATE, telle que Prisma la rend : minuit UTC du jour civil. */
+const jour = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+const civil = (annee: number, mois: number, j: number) => ({ annee, mois, jour: j });
+
+describe('REQ-JUR-029 — la SSOT de la juriste', () => {
+  it('REQ-JUR-029 : DECISION_CONTRAT_TEXTE_CONSERVATION_ANS vaut 5 ans', () => {
+    expect(SEUILS.DECISION_CONTRAT_TEXTE_CONSERVATION_ANS.valeur).toBe(5);
+    expect(SEUILS.DECISION_CONTRAT_TEXTE_CONSERVATION_ANS.unite).toBe('ans');
+  });
+});
+
+describe('REQ-JUR-029 — le point de départ, aux trois cas de la juriste', () => {
+  it('REQ-JUR-029 : TÉMOIN — une résiliation court depuis sa date_effet', () => {
+    expect(
+      departDuTexte(
+        {
+          geste: 'resiliation',
+          dateEffet: jour('2026-11-30'),
+          creeAt: new Date('2026-10-04T08:00:00Z'),
+        },
+        null
+      )
+    ).toEqual(civil(2026, 11, 30));
+  });
+
+  it('REQ-JUR-029 : TÉMOIN — une mise en demeure suivie d’une résiliation court depuis la date_effet de celle-ci', () => {
+    expect(
+      departDuTexte(
+        { geste: 'mise_en_demeure', dateEffet: null, creeAt: new Date('2026-10-04T08:00:00Z') },
+        { dateEffet: jour('2026-12-15') }
+      )
+    ).toEqual(civil(2026, 12, 15));
+  });
+
+  it('REQ-JUR-029 : TÉMOIN — une mise en demeure sans résiliation court depuis le jour civil de Paris de son cree_at', () => {
+    // 22h30 UTC le 4 octobre est déjà le 5 octobre à Paris (heure d'été) : le jour de Paris compte.
+    expect(
+      departDuTexte(
+        { geste: 'mise_en_demeure', dateEffet: null, creeAt: new Date('2026-10-04T22:30:00Z') },
+        null
+      )
+    ).toEqual(civil(2026, 10, 5));
+    expect(
+      departDuTexte(
+        { geste: 'mise_en_demeure', dateEffet: null, creeAt: new Date('2026-10-04T21:59:59.999Z') },
+        null
+      )
+    ).toEqual(civil(2026, 10, 4));
+  });
+
+  it('REQ-JUR-029 : une résiliation sans date_effet n’a pas de départ (échec fermé : le texte est gardé)', () => {
+    expect(
+      departDuTexte(
+        { geste: 'resiliation', dateEffet: null, creeAt: new Date('2020-01-01T00:00:00Z') },
+        null
+      )
+    ).toBeNull();
+  });
+});
+
+describe('REQ-JUR-029 — l’échéance, en jours civils de Paris', () => {
+  it('REQ-JUR-029 : le départ plus cinq ans', () => {
+    expect(echeanceDuTexte(civil(2026, 10, 5))).toEqual(civil(2031, 10, 5));
+  });
+
+  it('REQ-JUR-029 : un départ au 29 février échoit le 28 février, jamais le 1er mars', () => {
+    expect(echeanceDuTexte(civil(2028, 2, 29))).toEqual(civil(2033, 2, 28));
+  });
+
+  // Correction de la juriste (#766, 5988086461, point 2) : le jour anniversaire appartient encore au
+  // délai (code civil art. 2229) ; la purge a lieu au plus tôt le LENDEMAIN, heure de Paris.
+  it('REQ-JUR-029 : TÉMOIN À TROIS FACES — la veille et le jour de l’échéance, rien ; le lendemain, échu (heure de Paris)', () => {
+    const depart = civil(2026, 10, 5);
+    // L'échéance est le 5 octobre 2031 ; minuit à Paris est 22h00 UTC la veille (heure d'été).
+    expect(texteEchu(depart, new Date('2031-10-04T12:00:00.000Z'))).toBe(false);
+    expect(texteEchu(depart, new Date('2031-10-04T22:00:00.000Z'))).toBe(false);
+    expect(texteEchu(depart, new Date('2031-10-05T21:59:59.999Z'))).toBe(false);
+    expect(texteEchu(depart, new Date('2031-10-05T22:00:00.000Z'))).toBe(true);
+    expect(texteEchu(depart, new Date('2031-10-06T09:00:00.000Z'))).toBe(true);
+    expect(texteEchu(depart, new Date('2030-10-05T12:00:00.000Z'))).toBe(false);
+  });
+
+  it('REQ-JUR-029 : sans départ, jamais échu', () => {
+    expect(texteEchu(null, new Date('2099-01-01T00:00:00Z'))).toBe(false);
+  });
+});
+
+type Candidate = {
+  id: string;
+  apporteurId: string;
+  geste: 'mise_en_demeure' | 'resiliation';
+  dateEffet: Date | null;
+  creeAt: Date;
+};
+
+function unDouble(
+  lots: Candidate[][],
+  resiliations: { apporteurId: string; dateEffet: Date | null; creeAt: Date }[]
+) {
+  const restants = [...lots];
+  const findMany = vi.fn(async (args: { where: { geste?: string } }) =>
+    args.where.geste === 'resiliation' ? resiliations : (restants.shift() ?? [])
+  );
+  const updateMany = vi.fn(async (args: { where: { id: { in: string[] } } }) => ({
+    count: args.where.id.in.length,
+  }));
+  const prisma = { decisionDeContrat: { findMany, updateMany } } as unknown as PrismaClient;
+  return { prisma, findMany, updateMany };
+}
+
+const MAINTENANT = new Date('2031-10-06T09:00:00.000Z');
+const A = '00000000-0000-4000-8000-00000000000a';
+const B = '00000000-0000-4000-8000-00000000000b';
+
+describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il rend', () => {
+  it('REQ-JUR-029 : TÉMOIN — seuls les textes échus sont purgés : le texte ET son empreinte vidés, la date posée, dans la même écriture', async () => {
+    const d = unDouble(
+      [
+        [
+          // Échue : résiliation au 2026-10-01.
+          {
+            id: 'r1',
+            apporteurId: A,
+            geste: 'resiliation',
+            dateEffet: jour('2026-10-01'),
+            creeAt: new Date('2026-10-01T08:00:00Z'),
+          },
+          // Non échue : résiliation au 2026-10-07.
+          {
+            id: 'r2',
+            apporteurId: B,
+            geste: 'resiliation',
+            dateEffet: jour('2026-10-07'),
+            creeAt: new Date('2026-10-01T08:00:00Z'),
+          },
+          // Mise en demeure de A, avant sa résiliation du 2026-10-01 : échue avec elle.
+          {
+            id: 'm1',
+            apporteurId: A,
+            geste: 'mise_en_demeure',
+            dateEffet: null,
+            creeAt: new Date('2026-09-01T08:00:00Z'),
+          },
+          // Mise en demeure de B, suivie de sa résiliation au 2026-10-07 : gardée comme elle.
+          {
+            id: 'm2',
+            apporteurId: B,
+            geste: 'mise_en_demeure',
+            dateEffet: null,
+            creeAt: new Date('2026-09-01T08:00:00Z'),
+          },
+        ],
+      ],
+      [
+        { apporteurId: A, dateEffet: jour('2026-10-01'), creeAt: new Date('2026-10-01T08:00:00Z') },
+        { apporteurId: B, dateEffet: jour('2026-10-07'), creeAt: new Date('2026-10-01T08:00:00Z') },
+      ]
+    );
+    expect(await purgerLesTextesDesDecisions(d.prisma, MAINTENANT)).toEqual({ textesPurges: 2 });
+    expect(d.updateMany).toHaveBeenCalledTimes(1);
+    expect(d.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['r1', 'm1'] }, textePurgeAt: null, NOT: { texteChiffre: null } },
+      data: { texteChiffre: null, faitsEmpreinte: null, textePurgeAt: MAINTENANT },
+    });
+  });
+
+  it('REQ-JUR-029 : TÉMOIN — une mise en demeure lit la PREMIÈRE résiliation créée à ou après elle, jamais une antérieure', async () => {
+    const d = unDouble(
+      [
+        [
+          {
+            id: 'm1',
+            apporteurId: A,
+            geste: 'mise_en_demeure',
+            dateEffet: null,
+            creeAt: new Date('2026-09-01T08:00:00Z'),
+          },
+        ],
+      ],
+      [
+        // Antérieure à la mise en demeure : ignorée, sinon la mise en demeure échoirait trop tôt.
+        { apporteurId: A, dateEffet: jour('2026-01-01'), creeAt: new Date('2026-01-01T08:00:00Z') },
+        // La suivante : son départ, non échu au 2031-10-06.
+        { apporteurId: A, dateEffet: jour('2026-12-01'), creeAt: new Date('2026-09-02T08:00:00Z') },
+        { apporteurId: A, dateEffet: jour('2026-01-02'), creeAt: new Date('2026-09-03T08:00:00Z') },
+      ]
+    );
+    expect(await purgerLesTextesDesDecisions(d.prisma, MAINTENANT)).toEqual({ textesPurges: 0 });
+    expect(d.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('REQ-JUR-029 : une mise en demeure sans résiliation court de son jour de Paris : rien le jour anniversaire, purgée le lendemain', async () => {
+    const leJour = unDouble(
+      [
+        [
+          {
+            id: 'm1',
+            apporteurId: A,
+            geste: 'mise_en_demeure',
+            dateEffet: null,
+            creeAt: new Date('2026-10-06T08:00:00Z'),
+          },
+        ],
+      ],
+      []
+    );
+    expect(await purgerLesTextesDesDecisions(leJour.prisma, MAINTENANT)).toEqual({
+      textesPurges: 0,
+    });
+    const laVeille = unDouble(
+      [
+        [
+          {
+            id: 'm1',
+            apporteurId: A,
+            geste: 'mise_en_demeure',
+            dateEffet: null,
+            creeAt: new Date('2026-10-05T08:00:00Z'),
+          },
+        ],
+      ],
+      []
+    );
+    expect(await purgerLesTextesDesDecisions(laVeille.prisma, MAINTENANT)).toEqual({
+      textesPurges: 1,
+    });
+  });
+
+  it('REQ-JUR-029 : la sélection — textes présents, jamais purgés, assez anciens, par lots bornés, en avançant sur l’id', async () => {
+    // Un lot PLEIN appelle le suivant, après le dernier id lu ; un lot court clôt le passage.
+    const plein: Candidate[] = Array.from({ length: LOT_DE_PURGE_DES_DECISIONS }, (_, n) => ({
+      id: `r${String(n).padStart(3, '0')}`,
+      apporteurId: A,
+      geste: 'resiliation',
+      dateEffet: jour('2026-10-01'),
+      creeAt: new Date('2026-10-01T08:00:00Z'),
+    }));
+    const court: Candidate[] = [
+      {
+        id: 'z1',
+        apporteurId: A,
+        geste: 'resiliation',
+        dateEffet: jour('2026-10-02'),
+        creeAt: new Date('2026-10-01T08:00:00Z'),
+      },
+    ];
+    const d = unDouble([plein, court], []);
+    expect(await purgerLesTextesDesDecisions(d.prisma, MAINTENANT)).toEqual({
+      textesPurges: LOT_DE_PURGE_DES_DECISIONS + 1,
+    });
+    const lectures = d.findMany.mock.calls.map((c) => c[0] as Record<string, unknown>);
+    // Cinq ans avant l'instant, plus deux jours de marge.
+    const borne = new Date('2026-10-08T09:00:00.000Z');
+    expect(lectures[0]).toEqual({
+      where: { textePurgeAt: null, NOT: { texteChiffre: null }, creeAt: { lte: borne } },
+      select: { id: true, apporteurId: true, geste: true, dateEffet: true, creeAt: true },
+      orderBy: { id: 'asc' },
+      take: LOT_DE_PURGE_DES_DECISIONS,
+    });
+    expect(lectures[1]).toEqual({
+      ...lectures[0],
+      where: { ...(lectures[0]!.where as object), id: { gt: 'r499' } },
+    });
+    expect(lectures).toHaveLength(2);
+    expect(d.updateMany).toHaveBeenCalledTimes(2);
+    expect(LOT_DE_PURGE_DES_DECISIONS).toBe(500);
+  });
+
+  it('REQ-JUR-029 : un lot sans texte échu n’écrit rien, et le passage s’arrête au premier lot vide', async () => {
+    const d = unDouble([], []);
+    expect(await purgerLesTextesDesDecisions(d.prisma, MAINTENANT)).toEqual({ textesPurges: 0 });
+    expect(d.findMany).toHaveBeenCalledTimes(1);
+    expect(d.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('REQ-JUR-029 : un lot sans mise en demeure ne lit aucune résiliation ; un lot qui en porte les lit pour ses seuls apporteurs', async () => {
+    const sans = unDouble(
+      [
+        [
+          {
+            id: 'r1',
+            apporteurId: A,
+            geste: 'resiliation',
+            dateEffet: jour('2026-10-01'),
+            creeAt: new Date('2026-10-01T08:00:00Z'),
+          },
+        ],
+      ],
+      []
+    );
+    await purgerLesTextesDesDecisions(sans.prisma, MAINTENANT);
+    expect(
+      sans.findMany.mock.calls.some((c) => (c[0] as { where: { geste?: string } }).where.geste)
+    ).toBe(false);
+
+    const avec = unDouble(
+      [
+        [
+          {
+            id: 'm1',
+            apporteurId: B,
+            geste: 'mise_en_demeure',
+            dateEffet: null,
+            creeAt: new Date('2026-09-01T08:00:00Z'),
+          },
+          {
+            id: 'm2',
+            apporteurId: B,
+            geste: 'mise_en_demeure',
+            dateEffet: null,
+            creeAt: new Date('2026-09-02T08:00:00Z'),
+          },
+        ],
+      ],
+      []
+    );
+    await purgerLesTextesDesDecisions(avec.prisma, MAINTENANT);
+    expect(avec.findMany).toHaveBeenCalledWith({
+      // Correction de la juriste (#766, 5988086461, point 1) : seule une résiliation OPPOSABLE compte ;
+      // aujourd'hui, celle que fonde un changement de statut (la coupure immédiate).
+      where: {
+        apporteurId: { in: [B] },
+        geste: 'resiliation',
+        faitDuJournal: { type: 'apporteur_statut_modifie' },
+      },
+      select: { apporteurId: true, dateEffet: true, creeAt: true },
+      orderBy: [{ creeAt: 'asc' }, { id: 'asc' }],
+    });
+  });
+
+  it('REQ-JUR-029 : la date reçue n’est pas modifiée', async () => {
+    const m = new Date(MAINTENANT.getTime());
+    await purgerLesTextesDesDecisions(unDouble([], []).prisma, m);
+    expect(m).toEqual(MAINTENANT);
+  });
+});
