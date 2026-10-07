@@ -26,6 +26,8 @@ const m = vi.hoisted(() => ({
   // DM-62 : les passages planifiés, simulés pour juger ce que chaque inscription leur passe.
   minimiserCandidatures: vi.fn(),
   purgerLesContacts: vi.fn(),
+  // DM-24 : la confirmation tacite, à l'instant t.
+  confirmerTacitementLesEchues: vi.fn(),
   purgerLesSirenRefuses: vi.fn(),
   purgerLesEntreprisesConnues: vi.fn(),
   purgerLesValeursDesDroits: vi.fn(),
@@ -80,6 +82,9 @@ vi.mock('../../../src/server/integrations/axionia/candidature-recue', () => ({
 vi.mock('../../../src/server/securite/pii', () => ({ clesPii: m.clesPii }));
 vi.mock('../../../src/server/taches/minimiser-candidatures', () => ({
   minimiserCandidatures: m.minimiserCandidatures,
+}));
+vi.mock('../../../src/server/jobs/confirmation-tacite', () => ({
+  confirmerTacitementLesEchues: m.confirmerTacitementLesEchues,
 }));
 vi.mock('../../../src/server/taches/purger-contacts', () => ({
   purgerLesContacts: m.purgerLesContacts,
@@ -306,6 +311,7 @@ describe('REQ-QA-027 — les passages planifiés reçoivent le client et l’heu
 
   const PURGES = [
     ['contacts_purger', 'purgerLesContacts'],
+    ['confirmation_tacite', 'confirmerTacitementLesEchues'],
     ['siren_refuses_purger', 'purgerLesSirenRefuses'],
     ['entreprises_connues_purger', 'purgerLesEntreprisesConnues'],
     ['droits_contact_purger', 'purgerLesValeursDesDroits'],

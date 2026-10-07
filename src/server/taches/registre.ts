@@ -24,6 +24,8 @@ export const TACHES = {
   journal_verifier: { req: 'REQ-DM-024' },
   /** DM-48 — la purge du contact d'une attribution à échéance (`purgerLesContacts`). */
   contacts_purger: { req: 'REQ-DM-031' },
+  /** DM-24 — la confirmation tacite (art. 3.2 du v2), « tout ce qui est dû à l'instant t ». */
+  confirmation_tacite: { req: 'REQ-DM-006' },
   /** DM-53 — la purge du SIREN des dépôts refusés, douze mois après le refus. */
   siren_refuses_purger: { req: 'REQ-DM-043' },
   /**

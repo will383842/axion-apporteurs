@@ -63,6 +63,7 @@ import {
 import { passageQuotidien } from '../jobs/reconciliation';
 import { minimiserCandidatures } from './minimiser-candidatures';
 import { purgerLesContacts } from './purger-contacts';
+import { confirmerTacitementLesEchues } from '../jobs/confirmation-tacite';
 import { purgerLesEntreprisesConnues } from './purger-entreprises-connues';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
 import { purgerLesAppareils } from './purger-appareils';
@@ -225,6 +226,9 @@ export function inscriptions(
     journal_verifier: passageDuJournal(() => lireJournalParLots(prisma)),
     // DM-48 (REQ-DM-031) : la purge du contact à échéance, à l'heure du système.
     contacts_purger: () => purgerLesContacts(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-24 (REQ-DM-006) : la confirmation tacite, chaque attribution dans SA transaction.
+    confirmation_tacite: () =>
+      confirmerTacitementLesEchues(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-53 (REQ-DM-043) : le SIREN des dépôts refusés, douze mois après le refus.
     siren_refuses_purger: () =>
       purgerLesSirenRefuses(prisma, new Date(horlogeSysteme.maintenant())),
