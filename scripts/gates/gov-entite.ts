@@ -3304,6 +3304,11 @@ const REGISTRE_TEMOIN: Registre = {
     siret: '20407031100017',
     tvaIntracommunautaire: 'FR44204070311',
     siege: '7 rue du Temoin, 38000 Ville',
+    // UX-P1-64 : le pied légal des courriels (art. R.123-238 C. com.), à la sentinelle d'ici le geste.
+    rcsVille: SENTINELLE,
+    capitalSocial: SENTINELLE,
+    representant: SENTINELLE,
+    adresseDeContact: SENTINELLE,
   },
   domaines: { servi: 'temoin.exemple.test', envoi: SENTINELLE },
   perimetre: {

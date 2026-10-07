@@ -551,7 +551,8 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
 // ── 1 ter. REQ-UX-002 : le snapshot des libellés, sans date, sans nom, sans UUID ─
 
 /** Les marques et les noms d'écran qui portent une capitale en milieu de phrase — rien d'autre. */
-const CAPITALES_ADMISES = new Set(['Axion-IA', 'Société', 'OPCO', 'RIB', 'Mes']);
+// UX-P1-64 : « CEO », le sigle de la fonction dans la signature commune d'axion-ia (chassis.ts).
+const CAPITALES_ADMISES = new Set(['Axion-IA', 'Société', 'OPCO', 'RIB', 'Mes', 'CEO']);
 /**
  * Ce qu'un libellé du snapshot révèle et ne doit pas révéler : une date écrite, un UUID, une
  * adresse, ou un nom propre — une capitale en milieu de phrase, hors des marques admises. Les
@@ -987,7 +988,16 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › ordinaire_axion : Axion-IA résilie votre contrat d'apporteur, comme le permet l'article 11.1. Le préavis court à compter de l'envoi de ce message : le contrat prend fin le {dateEffet}.
       courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › manquement_grave : Axion-IA résilie votre contrat d'apporteur sans préavis, par une décision motivée, en application de l'article 11.2 : {motif}. Le contrat prend fin le {dateEffet}.
       courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › fin_de_plein_droit : Le contrat d'apporteur a pris fin de plein droit le {dateEffet}, en application de l'article 12.5.
-      courriels/notifications.ts › PARAGRAPHE_COMMUN_DE_LA_RESILIATION : Vos dépôts en cours de confirmation et vos dépôts en attente sont annulés ; vos réservations sans commande prennent fin. Les commandes signées avant la fin du contrat continuent de vous ouvrir droit à commission, au fur et à mesure de leurs encaissements, quelle qu'en soit la date. Les commissions déjà acquises vous sont payées au dernier relevé. Vous gardez l'accès en lecture à votre espace jusqu'à l'extinction de vos droits : reconnectez-vous avec votre adresse e-mail pour y accéder."
+      courriels/notifications.ts › PARAGRAPHE_COMMUN_DE_LA_RESILIATION : Vos dépôts en cours de confirmation et vos dépôts en attente sont annulés ; vos réservations sans commande prennent fin. Les commandes signées avant la fin du contrat continuent de vous ouvrir droit à commission, au fur et à mesure de leurs encaissements, quelle qu'en soit la date. Les commissions déjà acquises vous sont payées au dernier relevé. Vous gardez l'accès en lecture à votre espace jusqu'à l'extinction de vos droits : reconnectez-vous avec votre adresse e-mail pour y accéder.
+      courriels/chassis.ts › CHASSIS_DES_COURRIELS › accroche : Le programme des apporteurs d'Axion-IA
+      courriels/chassis.ts › CHASSIS_DES_COURRIELS › logoAlt : Axion-IA
+      courriels/chassis.ts › CHASSIS_DES_COURRIELS › repliDuBouton : Le bouton ne fonctionne pas ? Copiez cette adresse :
+      courriels/chassis.ts › CHASSIS_DES_COURRIELS › soupape : Une question ? Répondez simplement à cet e-mail — il arrive directement chez nous, et c'est un humain qui lit.
+      courriels/chassis.ts › CHASSIS_DES_COURRIELS › envoiAutomatique : Cet e-mail vous a été envoyé automatiquement suite à une action sur votre compte.
+      courriels/chassis.ts › CHASSIS_DES_COURRIELS › pasALOrigine : Vous n'êtes pas à l'origine de cette demande ? Écrivez-nous :
+      courriels/chassis.ts › CHASSIS_DES_COURRIELS › contact : Contact :
+      courriels/chassis.ts › CHASSIS_DES_COURRIELS › droits : Tous droits réservés.
+      courriels/chassis.ts › CHASSIS_DES_COURRIELS › signatureRole : Fondateur & CEO · Axion-IA"
     `);
   });
 

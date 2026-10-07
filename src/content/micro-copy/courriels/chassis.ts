@@ -13,7 +13,7 @@ export const CHASSIS_DES_COURRIELS = {
   accroche: "Le programme des apporteurs d'Axion-IA",
   /** axion-ia : le texte de remplacement du logo. */
   logoAlt: 'Axion-IA',
-  /** axion-ia : le repli du bouton en texte brut (référentiel §3.8). */
+  /** axion-ia : le repli du bouton, son adresse en texte seul (référentiel §3.8). */
   repliDuBouton: 'Le bouton ne fonctionne pas ? Copiez cette adresse :',
   /** axion-ia : la soupape de réponse, familles B et C (référentiel §4.3). */
   soupape:

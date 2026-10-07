@@ -27043,7 +27043,10 @@
         "tests/fixtures/tiers/zeptomail-envoi.json",
         "tests/unit/integration/attribution-notifications.spec.ts",
         "tests/unit/integration/relais-zeptomail.spec.ts",
-        "tests/unit/securite/administration-console.spec.ts"
+        "tests/unit/securite/administration-console.spec.ts",
+        "scripts/gates/gov-entite.ts",
+        "scripts/gates/ux-exhaustivite.ts",
+        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts"
       ],
       "hyp": [],
       "externe": null,

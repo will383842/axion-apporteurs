@@ -68,6 +68,7 @@ import * as ETATS_VIDES_DE_L_ESPACE from '../../src/content/micro-copy/espace/et
 import * as VOCABULAIRE_DE_L_ESPACE from '../../src/content/micro-copy/espace/vocabulaire';
 import * as TYPES_DE_LA_MICRO_COPIE from '../../src/content/micro-copy/types';
 import * as NOTIFICATIONS_DE_L_APPORTEUR from '../../src/content/micro-copy/courriels/notifications';
+import * as CHASSIS_DES_COURRIELS from '../../src/content/micro-copy/courriels/chassis';
 import * as CONFIRMATION_DU_DEPOT from '../../src/content/micro-copy/espace/confirmation-du-depot';
 import * as INFORMATION_DES_TIERS from '../../src/content/micro-copy/espace/information-tiers';
 import * as ETATS_DES_DEPOTS from '../../src/content/micro-copy/espace/etats-attribution';
@@ -111,6 +112,8 @@ const MICRO_COPIE_DE_L_ESPACE: Readonly<Record<string, unknown>> = {
   'types.ts': TYPES_DE_LA_MICRO_COPIE,
   // UX-P1-10 : les notifications de l'apporteur (e-mail et espace), lues par lui : parcourues aussi.
   'courriels/notifications.ts': NOTIFICATIONS_DE_L_APPORTEUR,
+  // UX-P1-64 : le châssis commun des courriels, que l'apporteur lit au pied de chacun.
+  'courriels/chassis.ts': CHASSIS_DES_COURRIELS,
 };
 
 /**
