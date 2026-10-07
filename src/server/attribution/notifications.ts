@@ -356,7 +356,8 @@ const PHRASE_DES_FAITS = 'Faits retenus : {faits}';
 /**
  * UX-P1-58 — le texte de `decision_attribution` pour l'ESPACE : le MÊME gabarit que le courriel
  * (juriste, #619, 5984284097, point (b)), par `motifDeLaDecision`, avec les mêmes paramètres ; une
- * seule exception, les faits purgés d'`anomalie_confirmee`, dont la phrase devient le texte fermé de
+ * seule exception, les faits purgés d'une transition fondée sur une anomalie (`anomalie_confirmee`,
+ * DM-71 : `fraude_etablie`), dont la phrase devient le texte fermé de
  * la juriste, posé ici par le serveur. Les faits viennent du lecteur dédié de l'espace ; ils sont
  * nettoyés et bornés pour l'écran, jamais échappés. Tout manque rend `null` : la notification n'est
  * pas affichée, jamais à moitié.

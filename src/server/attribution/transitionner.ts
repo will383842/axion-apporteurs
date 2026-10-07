@@ -116,7 +116,8 @@ export interface DemandeEcriture {
   /** DM-55 : exigée avec le motif de l'article 3.3 bis, et lui seul. */
   readonly categorieRelation?: MotifListeNoire;
   /**
-   * DM-55 : exigée pour `anomalie_confirmee`, et pour elle seule. Elle va à la NOTIFICATION, jamais
+   * DM-55 : exigée pour une transition fondée sur une anomalie (`anomalie_confirmee` ; DM-71 :
+   * `fraude_etablie`), et pour elles seules. Elle va à la NOTIFICATION, jamais
    * à la charge du journal (décision (d) de la juriste pour DM-12).
    */
   readonly anomalieId?: string;
