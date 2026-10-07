@@ -226,7 +226,7 @@ describe('REQ-DM-043 — l’écrivain passe par la COUCHE, en ajout seul', () =
   it('REQ-DM-043 : TÉMOIN statique — `SansProprietaireAvecId` n’est employé QUE pour l’écrit, dans la couche ; tout autre emploi rougit', () => {
     const couche = readFileSync('src/server/acces/for-apporteur.ts', 'utf8');
     // La déclaration du type (`SansProprietaireAvecId<C> =`) n'est pas un emploi.
-    const emplois = [...couche.matchAll(/SansProprietaireAvecId<([A-Za-z]+)>(?!s*=)/g)].map(
+    const emplois = [...couche.matchAll(/SansProprietaireAvecId<([A-Za-z]+)>(?!\s*=)/g)].map(
       (m) => m[1]
     );
     expect(emplois).toEqual(['CEcrit']);
