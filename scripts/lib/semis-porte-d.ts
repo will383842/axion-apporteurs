@@ -246,12 +246,26 @@ function valeurDeType(c: ColonneVue, motif: string | undefined, rang = 0): strin
   return typee('porte-d'.slice(0, longueur === null ? undefined : Number(longueur[1])));
 }
 
-/** Les tables dans l'ordre des clés étrangères : une table référencée se sème avant qui la référence. */
+/**
+ * Les tables dans l'ordre des clés étrangères : une table référencée se sème avant qui la référence.
+ * Seule une clé OBLIGATOIRE (toutes ses colonnes non nulles) impose cet ordre : une clé nullable peut
+ * rester NULL. Sans cette règle, deux tables qui se référencent l'une l'autre, l'une par une clé
+ * nullable, formaient un cycle rompu par l'ordre alphabétique (SEC-15 : `apporteurs.gel_anomalie_id`
+ * vers `anomalies`, qui référence `apporteurs`), et la table semée trop tôt ne l'était pas.
+ */
 function ordreDesTables(schema: SchemaVu): string[] {
   const tables = [...new Set(schema.colonnes.map((c) => c.table))].sort();
   const dependances = new Map(tables.map((t) => [t, new Set<string>()]));
+  const obligatoire = (table: string, colonne: string): boolean =>
+    schema.colonnes.some((c) => c.table === table && c.colonne === colonne && c.nonNul);
   for (const k of schema.contraintes) {
-    if (k.genre === 'f' && k.cible !== null && k.cible !== k.table && dependances.has(k.cible)) {
+    if (
+      k.genre === 'f' &&
+      k.cible !== null &&
+      k.cible !== k.table &&
+      dependances.has(k.cible) &&
+      k.colonnes.every((c) => obligatoire(k.table, c))
+    ) {
       dependances.get(k.table)?.add(k.cible);
     }
   }

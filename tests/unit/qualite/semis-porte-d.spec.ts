@@ -195,3 +195,35 @@ describe('REQ-QA-021 — le semeur remplit DEUX groupes de nullables ensemble', 
     expect(candidatsDe(VERIFICATIONS, 'verifications').length).toBeLessThanOrEqual(400);
   });
 });
+
+/**
+ * SEC-15 (main 8879e786) : `apporteurs` référence `anomalies` et `decisions_de_contrat` par des clés
+ * NULLABLES (le gel), alors que ces tables référencent `apporteurs` par une clé OBLIGATOIRE. L'ordre
+ * des clés étrangères formait un CYCLE, que le semeur rompait par l'ordre alphabétique : `anomalies`
+ * passait avant `apporteurs`, sa sous-requête de clé rendait NULL, et la table n'était pas semée (CI de
+ * #815, REQ-QA-021). Une clé nullable peut rester NULL : elle n'impose aucun ordre.
+ */
+const CYCLE_DU_GEL: SchemaVu = {
+  colonnes: [
+    col('anomalies', 'id', 'uuid', true),
+    col('anomalies', 'apporteur_id', 'uuid', true),
+    col('apporteurs', 'id', 'uuid', true),
+    col('apporteurs', 'gel_anomalie_id', 'uuid', false),
+  ],
+  contraintes: [
+    cle('anomalies', 'apporteur_id', 'apporteurs'),
+    cle('apporteurs', 'gel_anomalie_id', 'anomalies'),
+  ],
+};
+
+describe('REQ-QA-021 — une clé étrangère NULLABLE n’impose aucun ordre de semis', () => {
+  it('REQ-QA-021 : TÉMOIN — dans le cycle du gel, la table de la clé OBLIGATOIRE est semée après sa cible', () => {
+    const { tables } = semis(CYCLE_DU_GEL);
+    expect(tables.indexOf('apporteurs')).toBeLessThan(tables.indexOf('anomalies'));
+  });
+
+  it('REQ-QA-021 : la clé nullable du cycle reste NULL dans le premier candidat', () => {
+    const [premier] = candidatsDe(CYCLE_DU_GEL, 'apporteurs');
+    expect(premier!.get('gel_anomalie_id')).toBe('NULL');
+  });
+});
