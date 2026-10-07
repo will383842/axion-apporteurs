@@ -25075,7 +25075,9 @@
         "src/content/micro-copy/console/etats-vides.ts",
         "tests/unit/espace/charte-commune.spec.ts",
         "tests/unit/console/maquettes-barre-laterale.spec.ts",
-        "tests/unit/console/maquettes-epuree.spec.ts"
+        "tests/unit/console/maquettes-epuree.spec.ts",
+        "src/server/console/navigation.ts",
+        "vitest.mutation.config.ts"
       ],
       "schema": false,
       "sensible": [

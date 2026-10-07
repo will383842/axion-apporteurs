@@ -148,6 +148,10 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
     'connexion de la console et son courriel, lus par ses utilisateurs seuls (portée dépôt, REQ-GOV-017)',
   'console/navigation.ts':
     'le cadre de la console, lu par ses utilisateurs seuls (portée dépôt, REQ-GOV-017)',
+  // UX-P1-57 : le geste de mise en demeure, lu par Axion-IA seul ; le courriel que l'apporteur reçoit
+  // est celui de SEC-19, dans `courriels/notifications.ts`, parcouru avec l'espace.
+  'console/mise-en-demeure.ts':
+    'geste de mise en demeure, lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
 };
 
 /**

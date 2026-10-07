@@ -66,6 +66,8 @@ export const ROUTES_LIVREES_DE_LA_CONSOLE: readonly string[] = [
   '/console/apporteurs/[id]/conformite',
   // UX-P1-53 : les gels du journal des accès, ouverts depuis l'administration (hors du menu).
   '/console/journal-des-acces/gels',
+  // UX-P1-57 : la mise en demeure d'un apporteur, ouverte depuis sa fiche (hors du menu).
+  '/console/apporteurs/[id]/mise-en-demeure',
 ];
 
 /** La liste de préférence de l'accueil, rôle par rôle (`docs/CONSOLE-ROUTES.md`). */
