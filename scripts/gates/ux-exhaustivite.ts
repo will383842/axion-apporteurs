@@ -69,6 +69,7 @@ import * as VOCABULAIRE_DE_L_ESPACE from '../../src/content/micro-copy/espace/vo
 import * as TYPES_DE_LA_MICRO_COPIE from '../../src/content/micro-copy/types';
 import * as NOTIFICATIONS_DE_L_APPORTEUR from '../../src/content/micro-copy/courriels/notifications';
 import * as CONFIRMATION_DU_DEPOT from '../../src/content/micro-copy/espace/confirmation-du-depot';
+import * as INFORMATION_DES_TIERS from '../../src/content/micro-copy/espace/information-tiers';
 import * as ETATS_DES_DEPOTS from '../../src/content/micro-copy/espace/etats-attribution';
 import * as NOTIFICATIONS_DE_L_ESPACE from '../../src/content/micro-copy/espace/notifications';
 import { ETATS_VIDES_CONSOLE } from '../../src/content/micro-copy/console/etats-vides';
@@ -101,6 +102,8 @@ const MICRO_COPIE_DE_L_ESPACE: Readonly<Record<string, unknown>> = {
   'espace/etats-vides.ts': ETATS_VIDES_DE_L_ESPACE,
   'espace/vocabulaire.ts': VOCABULAIRE_DE_L_ESPACE,
   'espace/confirmation-du-depot.ts': CONFIRMATION_DU_DEPOT,
+  // SEC-12 (REQ-JUR-008) : la case que l'apporteur coche au dépôt.
+  'espace/information-tiers.ts': INFORMATION_DES_TIERS,
   'espace/etats-attribution.ts': ETATS_DES_DEPOTS,
   // UX-P1-54 : l'écran des notifications de l'espace.
   'espace/notifications.ts': NOTIFICATIONS_DE_L_ESPACE,
@@ -134,6 +137,9 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
   // lira y sont celles de la juriste, mot pour mot, et repassent par l'espace quand il les affichera.
   'console/conformite.ts':
     'dossier de conformité, lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
+  // UX-P1-53 : l'écran des gels du journal des accès, lu par les administrateurs de la console seuls.
+  'console/gels-journal-acces.ts':
+    'gels du journal des accès, lus par les administrateurs de la console seuls (portée dépôt, REQ-GOV-017)',
   // JUR-T61 : la page publique des données de la console, lue par ses utilisateurs avant connexion.
   'console/vos-donnees.ts':
     'page « Vos données dans la console », lue par ses utilisateurs seuls : couverte par le témoin vos-donnees-console',
@@ -202,6 +208,10 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
     'contact',
   ],
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee': ['entreprise'],
+  // UX-P1-59 : les textes fermés d'une décision de SON contrat dont le texte saisi est purgé (juriste,
+  // #752) — l'article de SA mise en demeure, la date de fin de SON contrat ; aucun autre apporteur.
+  'espace/notifications.ts › DECISIONS_PURGEES › mise_en_demeure': ['article'],
+  'espace/notifications.ts › DECISIONS_PURGEES › manquement_grave': ['dateEffet'],
   // DM-25 : l'annulation de SON dépôt pour antériorité de la Société (art. 3.3) — SON entreprise, et le
   // délai de réponse à SA contestation, venu de la SSOT. Aucun critère d'antériorité (règle de SEC-12).
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_annulee_anteriorite': [
