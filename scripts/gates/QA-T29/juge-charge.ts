@@ -1,11 +1,11 @@
 /**
- * QA-T29 (REQ-QA-005) — le juge du test de charge léger : cinquante dépôts simultanés sur un même SIREN.
+ * REQ-QA-005 — le juge du test de charge léger : cinquante dépôts simultanés sur un même SIREN.
  *
  * Il est PUR : il lit des mesures prises par le banc en base réelle
  * (`tests/integration/charge-depots-meme-siren.spec.ts`) et rend la liste de ce qui est faux, vide si
  * tout est juste. Il ne démarre rien et n'importe pas le client Prisma.
  *
- * CE QU'IL EXIGE, dans l'ordre de ce que le dépôt doit à REQ-QA-005 et à SEC-12 :
+ * CE QU'IL EXIGE, dans l'ordre de ce que le dépôt doit à REQ-QA-005 et à la course de vingt dépôts de `concurrence.spec.ts` :
  *   — UN SEUL occupant (l'index partiel sur les états occupants a tenu sous la course) ;
  *   — la file derrière lui est PLEINE (`PLACES_DE_LA_FILE`), ses rangs sont 1, 2… sans doublon ni trou, et
  *     `deposee_at` croît strictement dans l'ordre des rangs (le verrou consultatif par SIREN sérialise) ;

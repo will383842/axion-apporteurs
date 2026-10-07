@@ -1,6 +1,6 @@
 // @req REQ-QA-005
 /**
- * QA-T29 — le juge du test de charge léger : cinquante dépôts simultanés sur un même SIREN.
+ * Le juge du test de charge léger : cinquante dépôts simultanés sur un même SIREN.
  *
  * Le juge est PUR : il lit des mesures (les lignes, les refus tracés, les demandes, la durée) et rend la
  * liste de ce qui est faux. Le banc en base réelle (`tests/integration/charge-depots-meme-siren.spec.ts`)
@@ -40,7 +40,7 @@ function juste(): MesureDeCharge {
   };
 }
 
-describe('REQ-QA-005 — QA-T29 : le juge de la charge', () => {
+describe('REQ-QA-005 : le juge de la charge', () => {
   it('la mesure juste ne rougit pas', () => {
     expect(jugerLaCharge(juste())).toEqual([]);
   });

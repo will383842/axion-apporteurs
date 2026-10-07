@@ -1,7 +1,7 @@
 // @req REQ-QA-005
 /**
- * QA-T29 — le test de charge léger, en base RÉELLE : cinquante dépôts simultanés, par cinquante
- * apporteurs, sur un MÊME SIREN. Le pendant de SEC-12 (vingt dépôts, `concurrence.spec.ts`), à la taille
+ * Le test de charge léger, en base RÉELLE : cinquante dépôts simultanés, par cinquante
+ * apporteurs, sur un MÊME SIREN. Le pendant de `concurrence.spec.ts` (vingt dépôts), à la taille
  * que la tâche fixe ; le juge est `scripts/gates/QA-T29/juge-charge.ts`, pur et prouvé rouge en unitaire.
  *
  * CE QU'IL PROUVE (REQ-QA-005) : sous la course, UN seul occupant (l'index partiel sur les états
@@ -111,7 +111,7 @@ function demande(apporteurId: string, siren: string): DemandeDeDepot {
   };
 }
 
-describe('REQ-QA-005 — QA-T29 : cinquante dépôts simultanés sur un même SIREN', () => {
+describe('REQ-QA-005 — cinquante dépôts simultanés sur un même SIREN', () => {
   it('REQ-QA-005 : un seul occupant, la file pleine, le reste refusé et tracé, sans échec, sous le plafond', async () => {
     const ids = await Promise.all(Array.from({ length: DEPOTS_SIMULTANES }, () => apporteur()));
 
