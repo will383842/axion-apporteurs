@@ -55,6 +55,9 @@ export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction
   'action:poser_gel_journal_acces': 'sans_contact',
   'action:lever_gel_journal_acces': 'sans_contact',
   'ecran:gels_journal_acces': 'sans_contact',
+  // UX-P1-56 : confirmer une anomalie de sincérité ne fait que la clore ; aucune entreprise n'est contactée.
+  'ecran:anomalies': 'sans_contact',
+  'action:confirmer_anomalie': 'sans_contact',
   'tache:evenements_recus': 'sans_contact',
   'tache:minimiser_candidatures': 'sans_contact',
   'tache:journal_verifier': 'sans_contact',
