@@ -62,10 +62,10 @@ type Piece = {
 };
 
 /**
- * Un RIB VALIDE, tel que la base l'exige depuis la migration 004750 : il naît SANS regard, dans un
- * statut qui n'est pas `a_verifier` (il occupe donc le même index partiel qu'une pièce courante,
- * comme avant), puis un administrateur le vérifie et un AUTRE le confirme ; la confirmation le passe à
- * `valide`, dans la même écriture.
+ * Un RIB VALIDE, tel que la base l'exige depuis la migration 004750 : il naît `a_verifier`, SANS
+ * regard, puis un administrateur le vérifie et un AUTRE le confirme ; la confirmation le passe à
+ * `valide` dans la même écriture, et pose `remplacee_at` quand la fixture le demande (un regard ne se
+ * pose jamais sur une pièce écartée).
  */
 /** Un client qui exécute du SQL paramétré : le propriétaire, `partners_app` ou une transaction. */
 type ClientSql = { $executeRawUnsafe(sql: string, ...valeurs: unknown[]): Promise<number> };
@@ -90,7 +90,7 @@ async function deuxAdministrateursDuRib(proprietaire: ClientSql) {
 }
 
 /** Les deux regards d'un RIB inséré sans eux : vérifié, puis confirmé et passé à `valide`. */
-async function confirmerLeRib(client: ClientSql, id: string) {
+async function confirmerLeRib(client: ClientSql, id: string, remplaceeAt: Date | null = null) {
   await client.$executeRawUnsafe(
     `UPDATE pieces_kyc SET rib_verifie_par_id = $1::uuid, rib_verifie_at = clock_timestamp()
      WHERE id = $2::uuid`,
@@ -99,9 +99,10 @@ async function confirmerLeRib(client: ClientSql, id: string) {
   );
   await client.$executeRawUnsafe(
     `UPDATE pieces_kyc SET rib_confirme_par_id = $1::uuid, rib_confirme_at = clock_timestamp(),
-       statut = 'valide' WHERE id = $2::uuid`,
+       statut = 'valide', remplacee_at = $3 WHERE id = $2::uuid`,
     CONFIRMATEUR_DU_RIB,
-    id
+    id,
+    remplaceeAt
   );
 }
 
@@ -116,13 +117,13 @@ async function piece(p: Piece): Promise<string> {
     id,
     p.apporteur ?? apporteurId,
     p.type,
-    ribValide ? 'refusee' : statut,
+    ribValide ? 'a_verifier' : statut,
     p.expireAt ?? null,
-    p.remplaceeAt ?? null,
+    ribValide ? null : (p.remplaceeAt ?? null),
     p.ibanChiffre ?? null,
     p.ibanHash ?? null
   );
-  if (ribValide) await confirmerLeRib(base.prisma, id);
+  if (ribValide) await confirmerLeRib(base.prisma, id, p.remplaceeAt ?? null);
   return id;
 }
 

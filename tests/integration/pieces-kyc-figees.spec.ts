@@ -34,10 +34,10 @@ const PLUS_TARD = new Date('2026-10-04T08:00:00.000Z');
 const hex = (octets: number) => randomBytes(octets).toString('hex');
 
 /**
- * Un RIB VALIDE, tel que la base l'exige depuis la migration 004750 : il naît SANS regard, dans un
- * statut qui n'est pas `a_verifier` (il occupe donc le même index partiel qu'une pièce courante,
- * comme avant), puis un administrateur le vérifie et un AUTRE le confirme ; la confirmation le passe à
- * `valide`, dans la même écriture.
+ * Un RIB VALIDE, tel que la base l'exige depuis la migration 004750 : il naît `a_verifier`, SANS
+ * regard, puis un administrateur le vérifie et un AUTRE le confirme ; la confirmation le passe à
+ * `valide` dans la même écriture, et pose `remplacee_at` quand la fixture le demande (un regard ne se
+ * pose jamais sur une pièce écartée).
  */
 /** Un client qui exécute du SQL paramétré : le propriétaire, `partners_app` ou une transaction. */
 type ClientSql = { $executeRawUnsafe(sql: string, ...valeurs: unknown[]): Promise<number> };
@@ -62,7 +62,7 @@ async function deuxAdministrateursDuRib(proprietaire: ClientSql) {
 }
 
 /** Les deux regards d'un RIB inséré sans eux : vérifié, puis confirmé et passé à `valide`. */
-async function confirmerLeRib(client: ClientSql, id: string) {
+async function confirmerLeRib(client: ClientSql, id: string, remplaceeAt: Date | null = null) {
   await client.$executeRawUnsafe(
     `UPDATE pieces_kyc SET rib_verifie_par_id = $1::uuid, rib_verifie_at = clock_timestamp()
      WHERE id = $2::uuid`,
@@ -71,9 +71,10 @@ async function confirmerLeRib(client: ClientSql, id: string) {
   );
   await client.$executeRawUnsafe(
     `UPDATE pieces_kyc SET rib_confirme_par_id = $1::uuid, rib_confirme_at = clock_timestamp(),
-       statut = 'valide' WHERE id = $2::uuid`,
+       statut = 'valide', remplacee_at = $3 WHERE id = $2::uuid`,
     CONFIRMATEUR_DU_RIB,
-    id
+    id,
+    remplaceeAt
   );
 }
 const FIGEES = 'pieces_kyc_coordonnees_figees';
@@ -133,7 +134,7 @@ async function piece(type: 'rib' | 'identite', fichierRef: string | null = null)
     fichierRef,
     rib ? randomBytes(40) : null,
     rib ? hex(32) : null,
-    rib ? 'refusee' : 'valide'
+    rib ? 'a_verifier' : 'valide'
   );
   if (rib) await confirmerLeRib(app, id);
   return id;

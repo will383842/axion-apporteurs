@@ -222,6 +222,65 @@ describe('REQ-UX-027 — deux regards distincts rendent un RIB valide, une fois'
   });
 });
 
+describe('REQ-DM-027 — un regard ne se pose que sur une pièce à vérifier, jamais écartée (sécurité, #764)', () => {
+  const GARDE = 'pieces_kyc_rib_quatre_yeux';
+  const verifier = (id: string) =>
+    ecrire(
+      `UPDATE pieces_kyc SET rib_verifie_par_id = $1::uuid, rib_verifie_at = $2 WHERE id = $3::uuid`,
+      U.a1,
+      MAINTENANT,
+      id
+    );
+  const confirmer = (id: string) =>
+    ecrire(
+      `UPDATE pieces_kyc SET rib_confirme_par_id = $1::uuid, rib_confirme_at = $2, statut = 'valide' WHERE id = $3::uuid`,
+      U.a2,
+      PLUS_TARD,
+      id
+    );
+
+  it('REQ-DM-027 : TÉMOIN — un RIB vérifié puis REFUSÉ ne se confirme pas : il ne passe pas à valide', async () => {
+    const id = await unRib(await unApporteur());
+    await verifier(id);
+    await ecrire(`UPDATE pieces_kyc SET statut = 'refusee' WHERE id = $1::uuid`, id);
+    expect(await refus(confirmer(id))).toContain(GARDE);
+    expect((await piece(id)).statut).toBe('refusee');
+  });
+
+  it('REQ-DM-027 : TÉMOIN — un RIB vérifié puis PÉRIMÉ ne se confirme pas', async () => {
+    const id = await unRib(await unApporteur());
+    await verifier(id);
+    await ecrire(`UPDATE pieces_kyc SET statut = 'perimee' WHERE id = $1::uuid`, id);
+    expect(await refus(confirmer(id))).toContain(GARDE);
+  });
+
+  it('REQ-DM-027 : TÉMOIN — une pièce ÉCARTÉE (remplacee_at posé) ne reçoit plus de regard', async () => {
+    const id = await unRib(await unApporteur());
+    await verifier(id);
+    await ecrire(`UPDATE pieces_kyc SET remplacee_at = $1 WHERE id = $2::uuid`, MAINTENANT, id);
+    expect(await refus(confirmer(id))).toContain(GARDE);
+    const ecartee = await unRib(await unApporteur());
+    await ecrire(
+      `UPDATE pieces_kyc SET remplacee_at = $1 WHERE id = $2::uuid`,
+      MAINTENANT,
+      ecartee
+    );
+    expect(await refus(verifier(ecartee))).toContain(GARDE);
+  });
+
+  it('REQ-DM-027 : TÉMOIN — un RIB REFUSÉ ne se vérifie pas', async () => {
+    const id = await unRib(await unApporteur(), IBAN, 'refusee');
+    expect(await refus(verifier(id))).toContain(GARDE);
+  });
+
+  it('REQ-DM-027 : CONTRE-TÉMOIN — le parcours normal passe : à vérifier, vérifié, puis confirmé et valide', async () => {
+    const id = await unRib(await unApporteur());
+    await expect(verifier(id)).resolves.toBe(1);
+    await expect(confirmer(id)).resolves.toBe(1);
+    expect(await piece(id)).toMatchObject({ statut: 'valide', ribConfirmeParId: U.a2 });
+  });
+});
+
 describe('REQ-DM-027 — la base refuse, contre tout appelant (garde et CHECK)', () => {
   it('REQ-DM-027 : TÉMOIN — la même personne pour les deux regards est refusée (CHECK)', async () => {
     const id = await unRib(await unApporteur());

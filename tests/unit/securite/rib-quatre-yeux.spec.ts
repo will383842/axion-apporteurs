@@ -62,6 +62,7 @@ type Piece = {
   ribVerifieParId: string | null;
   ribVerifieAt: Date | null;
   ribConfirmeAt: Date | null;
+  remplaceeAt: Date | null;
 };
 const pieceRib = (p: Partial<Piece> = {}): Piece => ({
   id: PIECE,
@@ -71,6 +72,7 @@ const pieceRib = (p: Partial<Piece> = {}): Piece => ({
   ribVerifieParId: null,
   ribVerifieAt: null,
   ribConfirmeAt: null,
+  remplaceeAt: null,
   ...p,
 });
 
@@ -167,6 +169,8 @@ describe('REQ-DM-027 — vérifier un RIB : le premier regard', () => {
       [null, 'introuvable'],
       [pieceRib({ ribVerifieParId: AUTRE_ADMIN.id, ribVerifieAt: MAINTENANT }), 'deja_verifie'],
       [pieceRib({ statut: 'valide' }), 'pas_a_verifier'],
+      // La sécurité (#764) : une pièce écartée ne reçoit plus de regard.
+      [pieceRib({ remplaceeAt: MAINTENANT }), 'piece_ecartee'],
     ] as const) {
       const f = fauxClient({ piece });
       expect(
@@ -206,7 +210,13 @@ describe('REQ-DM-027 — vérifier un RIB : le premier regard', () => {
       {
         quoi: 'ecrire',
         args: {
-          where: { id: PIECE, type: 'rib', statut: 'a_verifier', ribVerifieAt: null },
+          where: {
+            id: PIECE,
+            type: 'rib',
+            statut: 'a_verifier',
+            remplaceeAt: null,
+            ribVerifieAt: null,
+          },
           data: { ribVerifieParId: ADMIN.id, ribVerifieAt: MAINTENANT },
         },
       },
@@ -237,6 +247,8 @@ describe('REQ-UX-027 — confirmer un RIB : le second regard pose `valide` dans 
       [verifie({ ribConfirmeAt: MAINTENANT }), AUTRE_ADMIN, 'deja_confirme'],
       [verifie(), ADMIN, 'meme_regard'],
       [verifie({ type: 'rc_pro' }), AUTRE_ADMIN, 'pas_un_rib'],
+      // La sécurité (#764) : une pièce écartée ne se confirme pas.
+      [verifie({ remplaceeAt: MAINTENANT }), AUTRE_ADMIN, 'piece_ecartee'],
     ] as const) {
       const f = fauxClient({ piece });
       expect(
@@ -275,6 +287,7 @@ describe('REQ-UX-027 — confirmer un RIB : le second regard pose `valide` dans 
             id: PIECE,
             type: 'rib',
             statut: 'a_verifier',
+            remplaceeAt: null,
             ribVerifieAt: { not: null },
             ribConfirmeAt: null,
           },

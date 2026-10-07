@@ -48,11 +48,18 @@ BEGIN
         OR NEW."rib_confirme_par_id" IS DISTINCT FROM OLD."rib_confirme_par_id")) THEN
     RAISE EXCEPTION 'pieces_kyc_rib_quatre_yeux : une vérification ou une confirmation ne se réécrit pas';
   END IF;
-  -- (3) Une pièce rib ne devient `valide` QUE dans l'écriture qui pose sa confirmation, une fois : elle ne revient
-  --     jamais à `valide` depuis un autre statut (périmée, refusée…). Un nouveau RIB est une nouvelle pièce.
+  -- (3) Une pièce rib ne devient `valide` QUE depuis `a_verifier`, dans l'écriture qui pose sa confirmation, une
+  --     fois : jamais depuis un autre statut (périmée, refusée…). Un nouveau RIB est une nouvelle pièce.
   IF NEW."type" = 'rib' AND NEW."statut" = 'valide' AND OLD."statut" IS DISTINCT FROM 'valide'
-     AND NOT (OLD."rib_confirme_at" IS NULL AND NEW."rib_confirme_at" IS NOT NULL) THEN
-    RAISE EXCEPTION 'pieces_kyc_rib_quatre_yeux : un RIB ne devient valide que par sa confirmation, une fois';
+     AND NOT (OLD."statut" = 'a_verifier' AND OLD."rib_confirme_at" IS NULL AND NEW."rib_confirme_at" IS NOT NULL) THEN
+    RAISE EXCEPTION 'pieces_kyc_rib_quatre_yeux : un RIB ne devient valide que depuis a_verifier, par sa confirmation, une fois';
+  END IF;
+  -- (3 bis) Un regard (vérifier ou confirmer) ne se pose que sur une pièce `a_verifier` qui n'est pas écartée
+  --     (sécurité, #764) : un RIB refusé, périmé ou remplacé ne reçoit plus de regard.
+  IF ((NEW."rib_verifie_at" IS NOT NULL AND OLD."rib_verifie_at" IS NULL)
+      OR (NEW."rib_confirme_at" IS NOT NULL AND OLD."rib_confirme_at" IS NULL))
+     AND (OLD."statut" IS DISTINCT FROM 'a_verifier' OR OLD."remplacee_at" IS NOT NULL) THEN
+    RAISE EXCEPTION 'pieces_kyc_rib_quatre_yeux : un regard ne se pose que sur une pièce à vérifier, non écartée';
   END IF;
   -- (4) Chaque regard est celui d'un administrateur ACTIF et VALIDÉ (SEC-30).
   IF NEW."rib_verifie_par_id" IS NOT NULL AND OLD."rib_verifie_par_id" IS NULL THEN

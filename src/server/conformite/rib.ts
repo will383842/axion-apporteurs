@@ -38,7 +38,8 @@ export type MotifDuRib =
   | 'pas_encore_verifie'
   | 'deja_confirme'
   | 'meme_regard'
-  | 'auteur_de_l_ouverture';
+  | 'auteur_de_l_ouverture'
+  | 'piece_ecartee';
 
 export class ErreurRibQuatreYeux extends Error {
   constructor(readonly motif: MotifDuRib) {
@@ -79,6 +80,7 @@ function lireLaPiece(tx: Tx, pieceId: string) {
       ribVerifieParId: true,
       ribVerifieAt: true,
       ribConfirmeAt: true,
+      remplaceeAt: true,
     },
   });
 }
@@ -102,10 +104,18 @@ export async function verifierUnRib(
     // Ce module n'écrit QUE des RIB : tout autre type est refusé avant toute écriture.
     if (piece.type !== 'rib') throw new ErreurRibQuatreYeux('pas_un_rib');
     if (piece.statut !== 'a_verifier') throw new ErreurRibQuatreYeux('pas_a_verifier');
+    // La sécurité (#764) : une pièce écartée ne reçoit plus de regard ; la base le refuse aussi.
+    if (piece.remplaceeAt !== null) throw new ErreurRibQuatreYeux('piece_ecartee');
     if (piece.ribVerifieAt !== null) throw new ErreurRibQuatreYeux('deja_verifie');
     await exigerUnAutreQueLOuvreur(tx, piece.apporteurId, d.acteur.id);
     const { count } = await tx.pieceKyc.updateMany({
-      where: { id: piece.id, type: 'rib', statut: 'a_verifier', ribVerifieAt: null },
+      where: {
+        id: piece.id,
+        type: 'rib',
+        statut: 'a_verifier',
+        remplaceeAt: null,
+        ribVerifieAt: null,
+      },
       data: { ribVerifieParId: d.acteur.id, ribVerifieAt: d.maintenant },
     });
     if (count === 0) throw new ErreurRibQuatreYeux('deja_verifie');
@@ -133,6 +143,7 @@ export async function confirmerUnRib(
     // Ce module n'écrit QUE des RIB : tout autre type est refusé avant toute écriture.
     if (piece.type !== 'rib') throw new ErreurRibQuatreYeux('pas_un_rib');
     if (piece.statut !== 'a_verifier') throw new ErreurRibQuatreYeux('pas_a_verifier');
+    if (piece.remplaceeAt !== null) throw new ErreurRibQuatreYeux('piece_ecartee');
     if (piece.ribVerifieAt === null) throw new ErreurRibQuatreYeux('pas_encore_verifie');
     if (piece.ribConfirmeAt !== null) throw new ErreurRibQuatreYeux('deja_confirme');
     if (piece.ribVerifieParId === d.acteur.id) throw new ErreurRibQuatreYeux('meme_regard');
@@ -154,6 +165,7 @@ export async function confirmerUnRib(
         id: piece.id,
         type: 'rib',
         statut: 'a_verifier',
+        remplaceeAt: null,
         ribVerifieAt: { not: null },
         ribConfirmeAt: null,
       },
