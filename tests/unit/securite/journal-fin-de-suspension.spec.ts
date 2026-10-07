@@ -76,13 +76,9 @@ describe('REQ-SEC-019 — la fin d’une suspension, lue au journal par son modu
   });
 
   it('REQ-SEC-019 : TÉMOIN — deux suspensions successives : chacune prend SA levée', async () => {
-    const seconde = levee(32n);
+    const seconde: Fait = { ...levee(32n), survenuAt: new Date('2027-03-01T08:00:00.000Z') };
     const j = unJournal([levee(12n), seconde]);
     // La pose de la seconde suspension est le fait 30 : sa levée est le fait 32, jamais le fait 12.
-    j.findFirst.mockImplementationOnce(
-      async () =>
-        ({ survenuAt: new Date('2027-03-01T08:00:00.000Z'), charge: seconde.charge }) as never
-    );
     expect((await finDUneSuspension(j.client, APPORTEUR, 30n))?.fin).toEqual(
       new Date('2027-03-01T08:00:00.000Z')
     );

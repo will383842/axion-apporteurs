@@ -9,6 +9,8 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import type { PrismaClient } from '@prisma/client';
+import { NOMS_DES_SECRETS } from '../../../src/lib/env';
+import { clesPii } from '../../../src/server/securite/pii';
 import {
   ErreurSuspension,
   leverLesSuspensionsEchues,
@@ -20,6 +22,16 @@ const APPORTEUR = '0190f0c2-0000-7000-8000-0000000000a1';
 const ADMIN = '0190f0c2-0000-7000-8000-0000000000ad';
 const ANOMALIE = '0190f0c2-0000-7000-8000-0000000000e1';
 const MAINTENANT = new Date('2026-10-07T07:30:00.000Z');
+const CLE = '0190f0c2-0000-7000-8000-0000000000c1';
+const FAITS = "L'entreprise déclarée a indiqué le 6 octobre n'avoir eu aucun échange avec vous.";
+/** Des clés de test, fabriquées à l'exécution (jamais un secret réel). */
+const CLES = clesPii({
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-sec-15-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: 'e'.repeat(64),
+});
 
 type Ligne = { statut: string; etat_gel: string };
 
@@ -40,6 +52,19 @@ function unDouble(o: {
         return o.anomalie === undefined
           ? { statut: 'confirmee', apporteurId: APPORTEUR }
           : o.anomalie;
+      }),
+    },
+    decisionDeContrat: {
+      findUnique: vi.fn(async () => null),
+      create: vi.fn(async (args: unknown) => {
+        appels.push({ quoi: 'decision', args });
+        return {};
+      }),
+    },
+    notificationEspace: {
+      create: vi.fn(async (args: unknown) => {
+        appels.push({ quoi: 'notification', args });
+        return {};
       }),
     },
     apporteur: {
@@ -89,6 +114,9 @@ describe('REQ-SEC-018 — la pose : un rôle habilité, une écriture, deux fait
       faits: DEMENTI,
       acteur: ADMIN_ROLE,
       maintenant: MAINTENANT,
+      faitsTexte: FAITS,
+      cleIdempotence: CLE,
+      cles: CLES,
       ecrireUnFait: d.ecrireUnFait,
     });
     expect(d.appels.filter((a) => a.quoi === 'ecrire')).toEqual([
@@ -102,6 +130,7 @@ describe('REQ-SEC-018 — la pose : un rôle habilité, une écriture, deux fait
             depotsGelesDepuis: MAINTENANT,
             gelAnomalieId: null,
             gelPoseParId: ADMIN,
+            gelDecisionContratId: expect.stringMatching(/^[0-9a-f-]{36}$/),
           },
         },
       },
@@ -119,6 +148,68 @@ describe('REQ-SEC-018 — la pose : un rôle habilité, une écriture, deux fait
     ]);
   });
 
+  it('REQ-SEC-018 : TÉMOIN — la pose écrit la DÉCISION (art. 3.7, faits chiffrés, clé, empreinte), puis l’apporteur qui la cite, puis la NOTIFICATION', async () => {
+    const d = unDouble({});
+    await poserUneSuspension(d.tx, {
+      apporteurId: APPORTEUR,
+      faits: DEMENTI,
+      acteur: ADMIN_ROLE,
+      maintenant: MAINTENANT,
+      faitsTexte: FAITS,
+      cleIdempotence: CLE,
+      cles: CLES,
+      ecrireUnFait: d.ecrireUnFait,
+    });
+    expect(d.appels.map((a) => a.quoi)).toEqual(['decision', 'ecrire', 'notification']);
+    const decision = (d.appels[0]!.args as { data: Record<string, unknown> }).data;
+    expect(decision).toMatchObject({
+      apporteurId: APPORTEUR,
+      geste: 'suspension',
+      article: '3.7',
+      cleIdempotence: CLE,
+      creeAt: MAINTENANT,
+      evenementId: 2n,
+    });
+    expect(decision.faitsEmpreinte).toMatch(/^[0-9a-f]{64}$/);
+    // Le texte n'est jamais écrit en clair : seule sa forme chiffrée entre dans la ligne.
+    expect(
+      JSON.stringify(decision, (_k, v) => (typeof v === 'bigint' ? String(v) : v))
+    ).not.toContain('aucun échange');
+    const lien = (d.appels[1]!.args as { data: { gelDecisionContratId: string } }).data
+      .gelDecisionContratId;
+    expect(decision.id).toBe(lien);
+    expect((d.appels[2]!.args as { data: unknown }).data).toEqual({
+      apporteurId: APPORTEUR,
+      cle: 'suspension_declarations',
+      evenementId: 2n,
+      decisionContratId: lien,
+    });
+  });
+
+  it('REQ-SEC-018 : les faits refusés par le juge, ou une clé hors forme, sont refusés sans écriture', async () => {
+    for (const [faitsTexte, cleIdempotence, attendu] of [
+      ['   ', CLE, 'faits_vides'],
+      [FAITS, 'pas-une-cle', 'cle_idempotence_invalide'],
+    ] as const) {
+      const d = unDouble({});
+      const m = await motif(
+        poserUneSuspension(d.tx, {
+          apporteurId: APPORTEUR,
+          faits: DEMENTI,
+          acteur: ADMIN_ROLE,
+          maintenant: MAINTENANT,
+          faitsTexte,
+          cleIdempotence,
+          cles: CLES,
+          ecrireUnFait: d.ecrireUnFait,
+        })
+      );
+      expect(m === attendu || m.startsWith('faits_'), m).toBe(true);
+      expect(d.appels.filter((a) => a.quoi !== 'anomalie')).toEqual([]);
+      expect(d.faits).toEqual([]);
+    }
+  });
+
   it('REQ-SEC-018 : TÉMOIN — un autre rôle que admin est refusé, sans rien lire ni écrire', async () => {
     for (const role of ['qualifieur', 'comptable', 'lecteur', 'inconnu']) {
       const d = unDouble({});
@@ -129,6 +220,9 @@ describe('REQ-SEC-018 — la pose : un rôle habilité, une écriture, deux fait
             faits: DEMENTI,
             acteur: { id: ADMIN, role },
             maintenant: MAINTENANT,
+            faitsTexte: FAITS,
+            cleIdempotence: CLE,
+            cles: CLES,
             ecrireUnFait: d.ecrireUnFait,
           })
         ),
@@ -157,6 +251,9 @@ describe('REQ-SEC-018 — la pose : un rôle habilité, une écriture, deux fait
             faits: fraude,
             acteur: ADMIN_ROLE,
             maintenant: MAINTENANT,
+            faitsTexte: FAITS,
+            cleIdempotence: CLE,
+            cles: CLES,
             ecrireUnFait: d.ecrireUnFait,
           })
         )
@@ -169,6 +266,9 @@ describe('REQ-SEC-018 — la pose : un rôle habilité, une écriture, deux fait
       faits: fraude,
       acteur: ADMIN_ROLE,
       maintenant: MAINTENANT,
+      faitsTexte: FAITS,
+      cleIdempotence: CLE,
+      cles: CLES,
       ecrireUnFait: d.ecrireUnFait,
     });
     expect(
@@ -193,6 +293,9 @@ describe('REQ-SEC-018 — la pose : un rôle habilité, une écriture, deux fait
             faits: DEMENTI,
             acteur: ADMIN_ROLE,
             maintenant: MAINTENANT,
+            faitsTexte: FAITS,
+            cleIdempotence: CLE,
+            cles: CLES,
             ecrireUnFait: d.ecrireUnFait,
           })
         )
@@ -201,7 +304,7 @@ describe('REQ-SEC-018 — la pose : un rôle habilité, une écriture, deux fait
     }
   });
 
-  it('REQ-SEC-018 : une écriture qui ne trouve plus la ligne attendue est refusée, et rien n’est journalisé', async () => {
+  it('REQ-SEC-018 : une écriture qui ne trouve plus la ligne attendue est refusée, et aucune notification n’est inscrite', async () => {
     const d = unDouble({ ecrites: 0 });
     expect(
       await motif(
@@ -210,11 +313,16 @@ describe('REQ-SEC-018 — la pose : un rôle habilité, une écriture, deux fait
           faits: DEMENTI,
           acteur: ADMIN_ROLE,
           maintenant: MAINTENANT,
+          faitsTexte: FAITS,
+          cleIdempotence: CLE,
+          cles: CLES,
           ecrireUnFait: d.ecrireUnFait,
         })
       )
     ).toBe('deja_suspendu');
-    expect(d.faits).toEqual([]);
+    // Les faits écrits avant le refus partent avec la transaction de l'appelant, annulée ; aucune
+    // notification n'est inscrite.
+    expect(d.appels.map((x) => x.quoi)).not.toContain('notification');
   });
 });
 
@@ -240,6 +348,7 @@ describe('REQ-SEC-019 — la levée, par un rôle ou de plein droit', () => {
             depotsGelesDepuis: null,
             gelAnomalieId: null,
             gelPoseParId: null,
+            gelDecisionContratId: null,
           },
         },
       },
