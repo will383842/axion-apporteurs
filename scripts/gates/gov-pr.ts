@@ -208,7 +208,7 @@ export function empreinteDeLEntree(entree: unknown): string | null {
 }
 
 /**
- * ═══ CE QU'UNE PR D'AUTEUR PEUT RÉÉCRIRE DU REGISTRE (GOV-145, décision de Will du 2026-10-04,
+ * ═══ CE QU'UNE PR D'AUTEUR PEUT RÉÉCRIRE DU REGISTRE (GOV-145, décision orale de Williams du 2026-10-04, #319, 6032352874,
  * point 2) ═════════════════════════════════════════════════════════════════════════════════════
  *
  * 🔴 LE DÉFAUT MESURÉ : une branche d'auteur qui touche UN fichier de plus que sa tâche ne le
@@ -927,7 +927,7 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
     // Les sept premières se jugent avant la fusion ; la huitième sous `--apres-fusion <n>`.
     // On lit les cases DANS L'ORDRE : un compte de sept ne dit pas LESQUELLES sont cochées.
     const cases = blocDodPr.match(/^- \[[ x]\]/gm) ?? [];
-    // GOV-145 (décision de Will du 2026-10-04, point 5) : les sept premières cases se jugent APRÈS
+    // GOV-145 (décision orale de Williams du 2026-10-04, #319, 6032352874, point 5) : les sept premières cases se jugent APRÈS
     // la lecture des revues, plus bas, parce que la case « Relecteur ≠ auteur » se DÉRIVE d'elles.
     casesAvantFusion = (blocDodPr.match(/^- \[[ x]\].*$/gm) ?? []).slice(0, NB_CASES - 1);
     if (pr.apresFusion === true && cases[NB_CASES - 1] !== '- [x]') {
@@ -1092,7 +1092,7 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
     }
   }
 
-  // ── GOV-145 (décision de Will du 2026-10-04, point 2) : L'AUTEUR DÉCLARE SES CHEMINS DANS SA PR ──
+  // ── GOV-145 (décision orale de Williams du 2026-10-04, #319, 6032352874, point 2) : L'AUTEUR DÉCLARE SES CHEMINS DANS SA PR ──
   const ecartsDeLAuteur = ecartsDuRegistreDUnePrDAuteur(depot, pr, titre ? titre[2]! : null, tachesCitees);
   for (const m of ecartsDeLAuteur) ajouter('registre_reecrit_par_une_pr_d_auteur', m);
 
@@ -1223,8 +1223,8 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
   });
   const lues = lecture.verdicts.filter((v) => v.verdict === 'accepte');
   /**
-   * LES SEPT PREMIÈRES CASES DE DoD, et la troisième se DÉRIVE (GOV-145, décision de Will du
-   * 2026-10-04, point 5). « Relecteur ≠ auteur » est jugée remplie dès que le lecteur unique la
+   * LES SEPT PREMIÈRES CASES DE DoD, et la troisième se DÉRIVE (GOV-145, décision orale de Williams du
+   * 2026-10-04, #319, 6032352874, point 5). « Relecteur ≠ auteur » est jugée remplie dès que le lecteur unique la
    * coche — chaque lentille exigée a accepté sur la tête exacte ou y survit, aucune n'est en refus
    * ni périmée, aucune n'est rendue par l'auteur : `lecture.coche`, le MÊME prédicat que celui de
    * `scripts/lot/corps-de-pr.ts` (RM-01). Le `[x]` tapé n'est plus exigé : il demandait une

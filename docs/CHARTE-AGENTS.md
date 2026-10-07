@@ -411,7 +411,7 @@ qui lui est réservé — et un poste ne peut pas exercer un acte que son outill
 > sha fusionné, et `deploy:verify` le confronte à l'en-tête de build. Une suppléance qui déplacerait le diff
 > entre l'approbation et la fusion est un défaut, pas un raccourci.
 
-**La case « Relecteur ≠ auteur » et la tête neuve (GOV-145, décision de Will du 2026-10-04).** Deux règles,
+**La case « Relecteur ≠ auteur » et la tête neuve (GOV-145, décision orale de Williams du 2026-10-04, #319, 6032352874).** Deux règles,
 que `gov:pr` applique :
 
 - **La case se dérive des revues.** La case « Relecteur ≠ auteur » de la définition de « terminé » est jugée
@@ -439,7 +439,7 @@ le 2026-10-07, #319, 6032068586).** `risqueDeLaPr` et `lentillesExigees` (`scrip
 - Aucune garde « mobile first » n'est affaiblie : ses fichiers ne sont jamais à une lentille.
 
 **Le gel de la phase 1 (décision de Williams du 2026-10-05, #319, 5988252245, point 1 ; tri validé le
-2026-10-07, #319, 6032205185).** Toute tâche neuve née d'une relecture part « après la mise en service »
+2026-10-07, #319, 6032205185, et corrigé par la coordination sous délégation, 6032408699).** Toute tâche neuve née d'une relecture part « après la mise en service »
 (phase 2), sauf si elle touche l'argent, la sécurité ou une obligation légale : son `sensible`, ou sa zone
 juridique ou sécurité, le dit. `config/gel-phase-1.json` porte la liste des tâches de phase 1 au jour du gel ;
 `gov:tasks` refuse une tâche de phase 1 qui n'y figure pas et ne remplit pas la condition (`gel_phase_1`).
@@ -496,7 +496,7 @@ doit passer devant un relecteur comme une décision, pas comme une ligne de conf
 | `.claude/settings.json`, `.claude/agents/**` | **aucun agent en session** : lot dédié GOV-000 / GOV-023, lancé avec `--settings` surchargé | — | `docs/CONVENTIONS.md` §8 ; `.claude/settings.json` porte lui-même `deny` sur `Write` et `Edit` de ce fichier |
 | `config/exemptions-corps-publie.json` | A01 commite. ⚠️ **Aucune approbation SUPPLÉMENTAIRE n'est exigée ici** : `securite` figure dans `DEUX_PREMIERES` et juge donc DÉJÀ toute PR — l'écrire dans cette colonne promettait un contrôle qui n'existe pas | — | `partners/ADR-0010` ; `.github/CODEOWNERS`. ⚠️ **Ce `—` ne veut PAS dire « aucun agent ne peut écrire », comme pour la ligne du dessus : A01 commite ce fichier. Il veut dire qu'AUCUN label ne l'arme — c'est une LACUNE, pas une protection** (`GOV-040` la ferme par le `deny`, seul lot `--settings` surchargé). ⚠️ Et `.github/CODEOWNERS` est **mécaniquement INERTE** ici : le fichier porte déjà un attrape-tout au même propriétaire. La protection réelle est que la lentille `securite` juge TOUTE PR. — **le seul fichier du dépôt qui puisse ABSOUDRE un rouge bloquant** : une ligne y transforme un échec de Gate A en vert. `config/entite.json` ne peut que CONTRAINDRE ; celui-ci absout. Le label est celui du poste qui commite, comme les autres registres ; l'approbation bloquante est portée par le protocole de revue et par CODEOWNERS, ce dépôt n'ayant pas de label de rôle pour cette lentille. |
 
-**Ce qu'une PR d'auteur peut écrire dans `docs/tasks.json` (GOV-145, décision de Will du 2026-10-04).** Une PR
+**Ce qu'une PR d'auteur peut écrire dans `docs/tasks.json` (GOV-145, décision orale de Williams du 2026-10-04, #319, 6032352874).** Une PR
 dont la tâche n'est pas de la zone `gouvernance` peut AJOUTER aux `paths` d'une de SES tâches le chemin d'un
 fichier qu'elle touche — par `hors-depot/ajouter-path.mjs` — et rien d'autre : ni un autre champ, ni la tâche
 d'une autre PR, ni un chemin retiré, ni une tâche versée ou supprimée. La lentille `exactitude` juge cet ajout

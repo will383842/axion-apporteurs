@@ -578,8 +578,8 @@ export function fichiersEntre(accord: string, tete: string, cwd?: string): strin
 export const BASE_DE_L_EMPREINTE = 'origin/main';
 
 /**
- * ═══ L'ENTRÉE DE JOURNAL DE LA PR JUGÉE SORT DE L'EMPREINTE (GOV-145, décision de Will du
- * 2026-10-04, point 3) ═════════════════════════════════════════════════════════════════════════
+ * ═══ L'ENTRÉE DE JOURNAL DE LA PR JUGÉE SORT DE L'EMPREINTE (GOV-145, décision orale de Williams du
+ * 2026-10-04, #319, 6032352874, point 3) ═════════════════════════════════════════════════════════════════════════
  *
  * 🔴 LE DÉFAUT MESURÉ : chaque tête neuve d'une PR porte une ligne de plus dans SON entrée de
  * journal (`docs/journal/AAAA-MM-pr-<n>.md`, RM-15) — c'est même le geste prescrit pour relancer
@@ -594,7 +594,7 @@ export const BASE_DE_L_EMPREINTE = 'origin/main';
  * un autre lot, et l'empreinte complète le fait alors périmer.
  *
  * ⚠️ CE QUE LA RÈGLE RELÂCHE, DIT EN CLAIR : la prose de cette entrée n'est plus relue après
- * l'accord. C'est la décision de Will — l'entrée ne porte que le récit de la PR, et les gardes du
+ * l'accord. C'est la décision de Williams (#319, 6032352874) — l'entrée ne porte que le récit de la PR, et les gardes du
  * journal (`gov:attributions`, `gov:etat`, `journal:sans-pii`) la jugent à chaque tête, en porte A.
  */
 export function motifDExclusionDuJournal(numero: number): string {
@@ -1467,6 +1467,15 @@ export const EXCLUS_D_UNE_LENTILLE: readonly string[] = [
   // La relecture proportionnée (#319, 6032068586) n'affaiblit pas « les maquettes validées par
   // Williams » : la fiche de validation reste à deux lentilles, même dans une PR de maquette.
   'docs/maquettes/VALIDATION.md',
+  // Relevés de la lentille `securite` en pré-relecture du lot GOV-150 : les courriels portent le lien
+  // magique, l'avis « nouvel appareil », la mise en demeure et la résiliation ; les cartes des routes
+  // et de leurs rôles sont LUES par `src/` et par les gardes de navigation ; l'audit de sécurité et
+  // les procédures d'exploitation (secrets, restauration) ne se relisent pas à une lentille.
+  'src/content/micro-copy/courriels/',
+  'docs/CONSOLE-ROUTES.md',
+  'docs/ESPACE-ROUTES.md',
+  'docs/securite/',
+  'docs/runbooks/',
   'docs/tasks.json',
   'docs/requirements.json',
   'docs/DECISIONS.md',

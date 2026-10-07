@@ -3,7 +3,7 @@
 // @req REQ-GOV-013
 /**
  * assouplissements-gov-pr.spec.ts — GOV-145 : les trois assouplissements de `gov:pr` décidés par
- * Will le 2026-10-04 (points 2, 3 et 5). Chacun est exercé À DEUX FACES : ce qui passe désormais,
+ * Williams le 2026-10-04 (décision orale, #319, 6032352874) (points 2, 3 et 5). Chacun est exercé À DEUX FACES : ce qui passe désormais,
  * et ce qui doit continuer de rougir — un assouplissement sans son contre-témoin est une garde
  * qu'on a retirée sans le dire.
  *
@@ -346,5 +346,24 @@ describe('REQ-GOV-011 — GOV-145 : une lentille pour ce qui n’affiche aucune 
     ]) {
       expect(LECTEUR.fichierAUneLentille(f), f).toBe(false);
     }
+  });
+});
+
+describe('REQ-GOV-011 — GOV-145 : les relevés de la sécurité restent à deux lentilles', () => {
+  it('REQ-GOV-011 — courriels, cartes des routes, audit de sécurité et procédures d’exploitation : DEUX lentilles', () => {
+    for (const f of [
+      'src/content/micro-copy/courriels/lien-magique.ts',
+      'docs/CONSOLE-ROUTES.md',
+      'docs/ESPACE-ROUTES.md',
+      'docs/securite/audit.md',
+      'docs/runbooks/restauration.md',
+    ]) {
+      expect(LECTEUR.fichierAUneLentille(f), f).toBe(false);
+    }
+  });
+
+  it('REQ-GOV-011 — une maquette seule garde UNE lentille, sa fiche de validation en exige deux', () => {
+    expect(LECTEUR.fichierAUneLentille('docs/maquettes/x.html')).toBe(true);
+    expect(LECTEUR.fichierAUneLentille('docs/maquettes/VALIDATION.md')).toBe(false);
   });
 });

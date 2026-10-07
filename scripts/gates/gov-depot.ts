@@ -166,7 +166,8 @@ export function checksProduits(yml: string): string[] {
 }
 
 /**
- * GOV-151 — LES CHECKS QU'UN CHECK REQUIS COUVRE PAR SES `needs:`. Depuis GOV-142 (#579), `gate-a` est
+ * GOV-151 (#319, 6032322618, arbitrage de la coordination sous délégation de Williams) — LES CHECKS
+ * QU'UN CHECK REQUIS COUVRE PAR SES `needs:`. Depuis GOV-142 (#579), `gate-a` est
  * le seul check requis, et son étape exige `success` de CHAQUE job de ses `needs:` : un job cité là
  * bloque la fusion aussi sûrement que s'il était requis lui-même. Le découpage est celui de
  * `checksProduits` (deux niveaux d'indentation) ; `needs:` se lit en ligne (`[a, b]` ou `a`) ou en
