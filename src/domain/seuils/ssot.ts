@@ -187,6 +187,16 @@ export const SEUILS = {
     renvois: art('3.4'),
     verifieLe: LE,
   },
+  // JUR-T54 — la condition (b) de la prolongation : un rendez-vous tenu ou un échange de la Société
+  // avec l'entreprise au cours de ces derniers jours (art. 3.4 al. 3, recopié du contrat v2 d'axion-ia).
+  PROLONGATION_FAITS_RECENTS_JOURS: {
+    valeur: 30,
+    unite: 'jours',
+    source:
+      "contrat art. 3.4 al. 3 ; contrat apporteur v2 d'axion-ia validé par Williams le 2026-10-05, recopié sur sa décision du 2026-10-07 (#474, 6032423244)",
+    renvois: art('3.4'),
+    verifieLe: '2026-10-07',
+  },
   FILE_FENETRE_REDECLARATION_JOURS: {
     valeur: 15,
     unite: 'jours',
