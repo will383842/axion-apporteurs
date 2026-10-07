@@ -105,7 +105,6 @@ const MAINTENANT = new Date('2028-06-01T12:00:00.000Z');
 const ADMIN = { id: '0190f0f0-0000-7000-8000-0000000000a1', role: 'admin' as const };
 const ANOMALIE = '0190f0f0-0000-7000-8000-0000000000b1';
 const ATTRIBUTION = '0190f0f0-0000-7000-8000-0000000000c1';
-const CLE = '0190f0f0-0000-4000-8000-0000000000d1';
 const MAX = FAITS_ANOMALIE_CARACTERES_MAX.valeur;
 const FAITS = 'La personne déclarée a indiqué par écrit n’avoir jamais échangé avec l’apporteur.';
 
@@ -158,14 +157,13 @@ function univers(
   return { client, appels };
 }
 
-const confirmer = (client: PrismaClient, o: { faits?: string; cle?: string } = {}) =>
+const confirmer = (client: PrismaClient, o: { faits?: string } = {}) =>
   confirmerUneAnomalie(
     client,
     {
       acteur: ADMIN,
       anomalieId: ANOMALIE,
       faits: o.faits ?? FAITS,
-      cleIdempotence: o.cle ?? CLE,
       maintenant: MAINTENANT,
     },
     CLES
@@ -202,7 +200,6 @@ describe('REQ-SEC-023 — confirmer une anomalie : l’admin seul, sous step-up,
         acteur: { id: ADMIN.id, role: 'qualifieur' },
         anomalieId: ANOMALIE,
         faits: FAITS,
-        cleIdempotence: CLE,
         maintenant: MAINTENANT,
       },
       CLES
@@ -261,14 +258,6 @@ describe('REQ-DM-033 — la confirmation : une transaction, la clôture chiffré
       expect(u.appels).toEqual([]);
     }
   );
-
-  it('REQ-DM-033 : TÉMOIN — une clé d’idempotence absente ou forgée est refusée, sans rien écrire', async () => {
-    for (const cle of ['', 'pas-une-cle']) {
-      const u = univers();
-      expect(await refus(confirmer(u.client, { cle }))).toBe('cle_invalide');
-      expect(u.appels).toEqual([]);
-    }
-  });
 
   it('REQ-DM-033 : TÉMOIN — UNE transaction, l’anomalie verrouillée, la clôture en UNE écriture, l’événement sans identité ni faits, et RIEN d’autre : ni lecture ni transition de l’attribution', async () => {
     const { client, appels } = univers();
@@ -369,7 +358,6 @@ describe('REQ-SEC-023 — l’action de l’écran : le droit d’abord, les ref
     const f = new FormData();
     f.set('anomalieId', o.anomalieId ?? ANOMALIE);
     f.set('faits', o.faits ?? FAITS);
-    f.set('cleIdempotence', CLE);
     return f;
   }
   async function destination(f: FormData): Promise<string> {
@@ -443,7 +431,6 @@ describe('REQ-UX-047 — les écrans « Anomalies » : la liste sans score, la c
         lecture,
         refus: o.refus ?? null,
         fait: o.fait ?? false,
-        cleIdempotence: CLE,
         date,
         action: async () => {},
       })
@@ -462,10 +449,10 @@ describe('REQ-UX-047 — les écrans « Anomalies » : la liste sans score, la c
     expect(vide).toContain(T.vide.titre);
   });
 
-  it('REQ-UX-047 : TÉMOIN — le formulaire : les faits, la consigne avec la borne LUE dans la SSOT, la clé tirée au rendu, et le texte de la juriste : la clôture seule', () => {
+  it('REQ-UX-047 : TÉMOIN — le formulaire : les faits, la consigne avec la borne LUE dans la SSOT, aucune clé d’idempotence, et le texte de la juriste : la clôture seule', () => {
     const html = confirmerRendu({ etat: 'a_confirmer', anomalie: A });
     expect(html).toContain('name="faits"');
-    expect(html).toContain(`name="cleIdempotence" value="${CLE}"`);
+    expect(html).not.toContain('cleIdempotence');
     expect(texteDe(html)).toContain(T.confirmer.borne(MAX));
     expect(texteDe(html)).toContain(T.confirmer.effet);
     expect(texteDe(html)).toContain(T.confirmer.sansGel);

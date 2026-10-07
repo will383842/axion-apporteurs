@@ -237,6 +237,9 @@ export async function acteursDUneTransition(
  * qu'en soit le porteur, ou `null` ; RIEN d'autre : ni porteur, ni identifiant, ni charge, ni nombre.
  *   — Les événements se trouvent par les ATTRIBUTIONS du SIREN (`agregat_id` parmi leurs ids), jamais
  *     en lisant un SIREN dans une charge.
+ *   — UNE seule requête, agrégée en base (le dernier événement de chaque attribution, par une jointure
+ *     latérale) : le temps de réponse ne dépend pas du nombre d'attributions terminées (note de la
+ *     sécurité sur #812).
  *   — Une attribution compte si son état est dans la liste FERMÉE `ETATS_TERMINES`, et si son DERNIER
  *     `attribution_etat_modifie` dit, lisiblement, qu'elle y est passée ; la fin est son `survenuAt`.
  *   — ÉCHEC FERMÉ : une charge illisible, un événement absent ou discordant, une erreur de lecture
@@ -245,24 +248,27 @@ export async function acteursDUneTransition(
  * journalisé.
  */
 export async function derniereFinSurLeSiren(
-  client: Pick<PrismaClient, 'attribution' | 'evenement'> | Prisma.TransactionClient,
+  client: Pick<PrismaClient, '$queryRaw'> | Prisma.TransactionClient,
   siren: string
 ): Promise<Date | null> {
   try {
-    const terminees = await client.attribution.findMany({
-      where: { siren, statut: { in: [...ETATS_TERMINES] } },
-      select: { id: true, statut: true },
-    });
+    const terminees = await client.$queryRaw<
+      { statut: string; survenu_at: Date | null; charge: unknown }[]
+    >`
+      SELECT a.statut::text AS statut, d.survenu_at, d.charge
+      FROM attributions a
+      LEFT JOIN LATERAL (
+        SELECT e.survenu_at, e.charge FROM evenements e
+        WHERE e.type = 'attribution_etat_modifie' AND e.agregat = 'attribution' AND e.agregat_id = a.id
+        ORDER BY e.survenu_at DESC, e.id DESC
+        LIMIT 1
+      ) d ON true
+      WHERE a.siren = ${siren} AND a.statut::text = ANY(${[...ETATS_TERMINES]}::text[])`;
     let fin: Date | null = null;
     for (const a of terminees) {
-      const e = await client.evenement.findFirst({
-        where: { type: 'attribution_etat_modifie', agregat: 'attribution', agregatId: a.id },
-        orderBy: [{ survenuAt: 'desc' }, { id: 'desc' }],
-        select: { survenuAt: true, charge: true },
-      });
-      const lue = CHARGES_PAR_TYPE.attribution_etat_modifie.safeParse(e?.charge);
-      if (e === null || !lue.success || lue.data.vers !== a.statut) return null;
-      if (fin === null || e.survenuAt > fin) fin = e.survenuAt;
+      const lue = CHARGES_PAR_TYPE.attribution_etat_modifie.safeParse(a.charge);
+      if (a.survenu_at === null || !lue.success || lue.data.vers !== a.statut) return null;
+      if (fin === null || a.survenu_at > fin) fin = a.survenu_at;
     }
     return fin;
   } catch {

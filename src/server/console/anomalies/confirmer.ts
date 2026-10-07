@@ -11,7 +11,8 @@
  *   — les faits sont jugés À LA SAISIE (juriste) : vides, au-delà de `FAITS_ANOMALIE_CARACTERES_MAX`
  *     points de code, avec un lien ou un mot refusé, ils reviennent avec un refus NOMMÉ, sans rien écrire ;
  *   — l'anomalie est VERROUILLÉE (`FOR UPDATE`) et jugée depuis « ouverte » seulement : une seconde
- *     confirmation rend `deja_traitee`, sans réécriture ; seule la SINCÉRITÉ se confirme ici (un autre
+ *     confirmation, double envoi compris, rend `deja_traitee`, sans réécriture (sans clé
+ *     d'idempotence, qui n'ajouterait rien : note de la sécurité sur #812) ; seule la SINCÉRITÉ se confirme ici (un autre
  *     type rend `type_non_traite` : le parrainage de soi-même relève d'une tâche distincte) ;
  *   — la clôture est UNE écriture (statut, `traite_at`, `traite_par_id` et la justification CHIFFRÉE
  *     ensemble, comme l'exige la garde de la table), sous l'AAD de la ligne et du champ ;
@@ -33,12 +34,7 @@ const DROIT = 'action:confirmer_anomalie';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type RefusDeConfirmation =
-  | RefusDesFaits
-  | 'cle_invalide'
-  | 'droit_absent'
-  | 'anomalie_inconnue'
-  | 'type_non_traite'
-  | 'deja_traitee';
+  RefusDesFaits | 'droit_absent' | 'anomalie_inconnue' | 'type_non_traite' | 'deja_traitee';
 
 export class ErreurConfirmationAnomalie extends Error {
   constructor(readonly motif: RefusDeConfirmation) {
@@ -76,7 +72,6 @@ export async function confirmerUneAnomalie(
     acteur: ActeurDeLaConfirmation;
     anomalieId: string;
     faits: string;
-    cleIdempotence: string;
     maintenant: Date;
   },
   cles: ClesPii
@@ -84,8 +79,6 @@ export async function confirmerUneAnomalie(
   // À LA SAISIE, par le juge commun des faits (règle de SEC-12, borne de la SSOT) : rien n'est écrit.
   const juges = jugerLesFaitsSaisis(d.faits);
   if (!juges.ok) throw new ErreurConfirmationAnomalie(juges.motif);
-  // La clé tirée par le serveur au rendu, rapportée telle quelle : une clé absente ou forgée est refusée.
-  if (!UUID.test(d.cleIdempotence)) throw new ErreurConfirmationAnomalie('cle_invalide');
   const faits = nettoyerUnTexteSaisi(d.faits);
 
   return prisma.$transaction(async (tx) => {

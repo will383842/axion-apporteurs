@@ -2,10 +2,8 @@
  * `/console/anomalies/[id]` — confirmer une anomalie de sincérité avec ses faits retenus (UX-P1-56,
  * REQ-UX-047, REQ-SEC-023, REQ-DM-033). L'écran n'est ouvert qu'à l'administrateur
  * (`ecran:anomalies`) ; le geste est une action à step-up, son droit relu en base
- * (`../_anomalies/actions.ts`). La page tire au rendu la clé d'idempotence du formulaire. Elle ne lit ni
- * score ni faits, et ne pose aucun gel.
+ * (`../_anomalies/actions.ts`). Elle ne lit ni score ni faits, et ne pose aucun gel.
  */
-import { randomUUID } from 'node:crypto';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { after } from 'next/server';
@@ -70,7 +68,6 @@ export default async function PageConfirmerLAnomalie(props: {
       lecture={lecture}
       refus={refusLu(parametres.refus)}
       fait={faitLu(parametres.fait)}
-      cleIdempotence={randomUUID()}
       date={date}
       action={confirmerLAnomalie}
     />

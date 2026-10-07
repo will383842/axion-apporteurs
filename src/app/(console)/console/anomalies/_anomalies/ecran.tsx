@@ -72,7 +72,6 @@ export function ConfirmerLAnomalie({
   lecture,
   refus,
   fait,
-  cleIdempotence,
   date,
   action,
 }: {
@@ -80,7 +79,6 @@ export function ConfirmerLAnomalie({
   refus: RefusDeConfirmation | null;
   /** Le retour du geste : l'anomalie est close. */
   fait: boolean;
-  cleIdempotence: string;
   date: (d: Date) => string;
   action: (formData: FormData) => Promise<void>;
 }) {
@@ -127,7 +125,6 @@ export function ConfirmerLAnomalie({
       {refus === null ? null : <p role="alert">{T.refus[refus]}</p>}
       <form action={action}>
         <input type="hidden" name="anomalieId" value={a.id} />
-        <input type="hidden" name="cleIdempotence" value={cleIdempotence} />
         <label>
           {T.confirmer.faits}
           <textarea name="faits" required rows={8} aria-describedby="consigne-des-faits" />

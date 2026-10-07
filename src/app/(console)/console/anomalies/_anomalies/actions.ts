@@ -59,7 +59,6 @@ export async function confirmerLAnomalie(formData: FormData): Promise<void> {
         acteur,
         anomalieId,
         faits: texte(formData, 'faits'),
-        cleIdempotence: texte(formData, 'cleIdempotence'),
         maintenant: new Date(d.horloge.maintenant()),
       },
       clesPii(d.env)

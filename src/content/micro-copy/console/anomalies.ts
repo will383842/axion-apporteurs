@@ -54,7 +54,6 @@ export const ANOMALIES_CONSOLE = {
     faits_avec_lien: 'Les faits contiennent un lien : retirez-le avant de confirmer.',
     faits_avec_mot_refuse:
       'Les faits qualifient le geste : décrivez ce qui s’est passé, sans le nommer.',
-    cle_invalide: 'La page a expiré : rechargez-la avant de confirmer.',
     droit_absent: 'Ce geste est réservé à un administrateur validé.',
     anomalie_inconnue: 'Cette anomalie n’existe pas, ou plus.',
     type_non_traite:

@@ -637,20 +637,22 @@ describe('REQ-EXT-006 — le lecteur RÉSERVÉ de la dernière fin, en échec fe
     evenements: Record<string, Ev>,
     o: { panne?: boolean } = {}
   ) {
-    const lectures: unknown[] = [];
+    const lectures: { sql: string; valeurs: unknown[] }[] = [];
     return {
       lectures,
       c: {
-        attribution: {
-          findMany: async (a: unknown) => {
-            lectures.push(a);
-            if (o.panne) throw new Error('base indisponible');
-            return attributions;
-          },
-        },
-        evenement: {
-          findFirst: async (a: { where: { agregatId: string } }) =>
-            evenements[a.where.agregatId] ?? null,
+        // UNE requête agrégée : chaque attribution terminée vient avec son DERNIER événement (ou rien).
+        $queryRaw: async (sql: TemplateStringsArray, ...valeurs: unknown[]) => {
+          lectures.push({ sql: sql.join('?'), valeurs });
+          if (o.panne) throw new Error('base indisponible');
+          return attributions.map((a) => {
+            const e = evenements[a.id] ?? null;
+            return {
+              statut: a.statut,
+              survenu_at: e?.survenuAt ?? null,
+              charge: e?.charge ?? null,
+            };
+          });
         },
       } as unknown as PrismaClient,
     };
@@ -674,12 +676,12 @@ describe('REQ-EXT-006 — le lecteur RÉSERVÉ de la dernière fin, en échec fe
       }
     );
     expect(await derniereFinSurLeSiren(c, SIREN_LU)).toEqual(ilYA(20));
-    expect(lectures).toEqual([
-      {
-        where: { siren: SIREN_LU, statut: { in: [...ETATS_TERMINES] } },
-        select: { id: true, statut: true },
-      },
-    ]);
+    // Une SEULE lecture, par le SIREN et la liste FERMÉE des états terminés, quel que soit leur nombre.
+    expect(lectures).toHaveLength(1);
+    expect(lectures[0]!.valeurs).toEqual([SIREN_LU, [...ETATS_TERMINES]]);
+    expect(lectures[0]!.sql).toMatch(/LEFT JOIN LATERAL/);
+    expect(lectures[0]!.sql).toMatch(/agregat_id = a\.id/);
+    expect(lectures[0]!.sql).not.toMatch(/charge\s*->/);
   });
 
   it('REQ-EXT-006 : TÉMOIN — une charge illisible, discordante ou absente, ou une panne, rendent null : aucun signal', async () => {
