@@ -48,6 +48,7 @@ import { CHEMIN_CHARTE, cheminsSchema, touche } from '../lot/revues';
 
 const CHEMIN_TACHES = 'docs/tasks.json';
 const CHEMIN_SCHEMA = 'scripts/lot/tasks.schema.json';
+export const CHEMIN_GEL = 'config/gel-phase-1.json';
 const CHEMIN_DECISIONS = CHEMIN_REGISTRE;
 const CHEMIN_VUE_PAR_DEFAUT = 'docs/TASKS.md';
 
@@ -246,6 +247,41 @@ export function bloquantesHorsPorte(taches: readonly Tache[]): Faute[] {
 }
 
 /**
+ * GOV-150 — LE GEL DE LA PHASE 1 (décision de Williams du 2026-10-05, #319, 5988252245, point 1) :
+ * « Toute tâche nouvelle née d'une relecture part « après la mise en service », sauf si elle touche
+ * l'argent, la sécurité ou une obligation légale. » `config/gel-phase-1.json` porte la liste des tâches de phase 1
+ * au jour du gel. Une tâche de phase 1 qui n'y figure pas est NEUVE : elle n'y reste que si elle porte
+ * un `sensible` ou qu'elle est de la zone juridique ou sécurité ; sinon `gel_phase_1`, et elle passe
+ * en phase 2. Une tâche déjà livrée n'est pas jugée : le gel regarde ce qui reste à faire.
+ */
+export const ZONES_HORS_DU_GEL: readonly string[] = ['juridique', 'securite'];
+export function horsDuGel(taches: readonly Tache[], gelees: ReadonlySet<string>): Faute[] {
+  const fautes: Faute[] = [];
+  for (const t of taches) {
+    if (t.phase !== 1 || gelees.has(t.id) || LIVREE.has(t.statut)) continue;
+    if ((t.sensible ?? []).length > 0 || ZONES_HORS_DU_GEL.includes(t.zone)) continue;
+    fautes.push({
+      famille: 'gel_phase_1',
+      message:
+        `${t.id} est une tâche NEUVE de phase 1 (absente de ${CHEMIN_GEL}), sans \`sensible\` et hors des ` +
+        `zones juridique et sécurité. La phase 1 est gelée (décision de Williams du 2026-10-05, #319, ` +
+        `5988252245) : elle part en phase 2, « après la mise en service », sauf si elle touche l'argent, ` +
+        `la sécurité ou une obligation légale — et alors son \`sensible\` ou sa zone le dit.`,
+    });
+  }
+  return fautes;
+}
+
+/** La liste des tâches de phase 1 au jour du gel. Absente ou illisible : la garde s'arrête (échec fermé). */
+export function lireGel(chemin: string = CHEMIN_GEL): ReadonlySet<string> {
+  const brut = JSON.parse(readFileSync(chemin, 'utf8')) as { gelees?: unknown };
+  if (!Array.isArray(brut.gelees) || !brut.gelees.every((x) => typeof x === 'string')) {
+    throw new Error(`${chemin} — le champ \`gelees\` n'est pas une liste d'identifiants.`);
+  }
+  return new Set(brut.gelees as string[]);
+}
+
+/**
  * Les vues hors ligne d'UNE passe (veto sécurité 5328941794, PR 168) : l'instant fourni par
  * l'appelant, rien d'autre. L'existence et l'ascendance du SHA d'une attestation — d'ici comme
  * d'ailleurs — sont résolues EN LIGNE (`gov-attestation.ts --en-ligne`) : un oracle `git cat-file`
@@ -262,7 +298,8 @@ export function controler(
   schema: object,
   registre: Registre,
   chemins: readonly string[] = cheminsSchema(),
-  vues: VuesHorsLigne = vuesDeLaPasse(Date.now())
+  vues: VuesHorsLigne = vuesDeLaPasse(Date.now()),
+  gelees: ReadonlySet<string> | null = null
 ): Faute[] {
   const fautes: Faute[] = [];
   const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
@@ -425,6 +462,7 @@ export function controler(
 
   fautes.push(...schemaChampFaux(taches, chemins));
   fautes.push(...bloquantesHorsPorte(taches));
+  if (gelees !== null) fautes.push(...horsDuGel(taches, gelees));
 
   return fautes;
 }
@@ -449,6 +487,7 @@ export const FAMILLES = [
   'operation_sans_effet',
   'schema_champ_faux',
   'bloquante_hors_porte',
+  'gel_phase_1',
   ...FAMILLES_ATTESTATION,
 ];
 
@@ -602,9 +641,10 @@ if (LANCE_EN_SCRIPT) {
   // L'INSTANT DE LA PASSE, lu UNE fois et injecté partout : une `fusionneeAt` postérieure est une
   // faute (`attestation_date_future`), et deux appels de la même passe jugent au même instant.
   const horsLigne = vuesDeLaPasse(Date.now());
+  const gelees = lireGel();
 
   if (process.argv.includes('--render') || process.argv.includes('--verifie-rendu')) {
-    const fautes = controler(doc, schema, registre, chemins, horsLigne);
+    const fautes = controler(doc, schema, registre, chemins, horsLigne, gelees);
     if (fautes.length > 0) {
       console.error(
         `❌ Refus de rendre une vue d'un backlog fautif (${fautes.length}). Lance \`pnpm gov:tasks\`.`
@@ -664,7 +704,7 @@ if (LANCE_EN_SCRIPT) {
 
   // ── mode --prove : un défaut par famille, chacun vu rougir ────────────────────
   if (process.argv.includes('--prove')) {
-    const base = controler(doc, schema, registre, chemins, horsLigne);
+    const base = controler(doc, schema, registre, chemins, horsLigne, gelees);
     if (base.length > 0) {
       console.error(
         `❌ La preuve part d'un document DÉJÀ fautif (${base.length}) — corrige d'abord :`
@@ -1011,6 +1051,24 @@ if (LANCE_EN_SCRIPT) {
         },
       },
       {
+        // GOV-150 — une tâche NEUVE de phase 1, sans `sensible`, hors des zones juridique et sécurité.
+        famille: 'gel_phase_1',
+        defaut: () => {
+          const d = copie();
+          const t = choisir(
+            d,
+            (x) =>
+              x.phase === 1 &&
+              x.statut === 'a_faire' &&
+              (x.sensible ?? []).length === 0 &&
+              !ZONES_HORS_DU_GEL.includes(x.zone),
+            '« a_faire » de phase 1 sans sensible, hors des zones juridique et sécurité'
+          );
+          d.taches.push({ ...JSON.parse(JSON.stringify(t)), id: `${t.id}-NEUVE` });
+          return d;
+        },
+      },
+      {
         // GOV-147 — une tâche « a_faire » hors de la porte reçoit le marqueur.
         famille: 'bloquante_hors_porte',
         defaut: () => {
@@ -1102,7 +1160,7 @@ if (LANCE_EN_SCRIPT) {
     ];
 
     for (const c of CONTRE_TEMOINS) {
-      const f = controler(c.muter(), schema, registre, chemins, horsLigne);
+      const f = controler(c.muter(), schema, registre, chemins, horsLigne, gelees);
       if (f.length > 0) {
         console.error(
           `\u274c Le contre-t\u00e9moin \u00ab ${c.nom} \u00bb a fait rougir la garde alors qu'il est l\u00e9gitime :`
@@ -1114,7 +1172,7 @@ if (LANCE_EN_SCRIPT) {
 
     const prouvees = new Set<string>();
     for (const t of TEMOINS) {
-      const f = controler(t.defaut(), schema, registre, chemins, horsLigne);
+      const f = controler(t.defaut(), schema, registre, chemins, horsLigne, gelees);
       if (!f.some((x) => x.famille === t.famille)) {
         console.error(
           `❌ Le témoin de « ${t.famille} » n'a PAS fait rougir sa famille ` +
@@ -1140,7 +1198,7 @@ if (LANCE_EN_SCRIPT) {
   }
 
   // ── mode normal ──────────────────────────────────────────────────────────────
-  const fautes = controler(doc, schema, registre, chemins, horsLigne);
+  const fautes = controler(doc, schema, registre, chemins, horsLigne, gelees);
   if (fautes.length === 0) {
     const j = doc.taches.reduce((s, t) => s + t.estimateDays, 0);
     const parPhase = [-1, 0, 1, 2, 3].map((p) => {
