@@ -264,12 +264,12 @@ describe('REQ-UX-060 REQ-UX-061 — le message du dépôt, et la page de répons
     expect(FORMULAIRE_DU_CONTACT.boutonCourt).toBe('Déposer et prévenir');
   });
 
-  it('REQ-UX-061 : deux réponses explicites, un second geste pour « Non », et les cinq états de la page', () => {
+  it('REQ-UX-061 : deux réponses explicites, aucun second geste pour « Non » (contrat v2, art. 3.7 al. 2 : DM-72), et les cinq états de la page', () => {
     expect([PAGE_DE_CONFIRMATION.oui, PAGE_DE_CONFIRMATION.non]).toEqual([
       'Oui, nous avons échangé',
       'Non',
     ]);
-    expect(PAGE_DE_CONFIRMATION.confirmerLeNon).toBe("Je confirme n'avoir eu aucun échange");
+    expect(Object.keys(PAGE_DE_CONFIRMATION)).not.toContain('confirmerLeNon');
     expect(PAGE_DE_CONFIRMATION.question).toBeTruthy();
     expect(Object.keys(ETATS_DE_LA_PAGE)).toEqual([
       'merci',
