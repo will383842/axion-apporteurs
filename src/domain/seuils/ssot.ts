@@ -490,7 +490,7 @@ export const FUSEAU_DES_DELAIS = 'Europe/Paris' as const;
  */
 export type Parametre = {
   readonly valeur: number;
-  readonly unite: 'points_de_base' | 'pages' | 'traces';
+  readonly unite: 'points_de_base' | 'pages' | 'traces' | 'minutes';
   readonly source: string;
   readonly verifieLe: string;
 };
@@ -519,6 +519,17 @@ export const PARAMETRES = {
     unite: 'traces',
     source: 'SEC-67 ; sécurité, #707, commentaire 5981305490 ; valeur : sécurité, #563',
     verifieLe: '2026-10-05',
+  },
+  // SEC-59 (REQ-SEC-058) : la MARGE après minuit UTC avant de résumer la veille du journal des accès. Une
+  // transaction de la console qui écrit sa trace à 23:59:59,9 (`clock_timestamp()`) et valide après le
+  // passage serait absente d'un résumé qui ne se réécrit jamais. La marge est plus longue que toute
+  // transaction de la console ; la valeur est proposée par l'auteur, à confirmer par la sécurité.
+  JOURNAL_ACCES_CONSOLE_RESUME_MARGE_MINUTES: {
+    valeur: 10,
+    unite: 'minutes',
+    source:
+      'SEC-59 ; sécurité, #688, commentaire 6033913854 (« quelques minutes, plus longue que toute transaction de la console ») ; valeur proposée par l’auteur',
+    verifieLe: '2026-10-07',
   },
 } as const satisfies Record<string, Parametre>;
 
