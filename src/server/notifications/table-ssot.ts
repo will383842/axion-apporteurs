@@ -370,6 +370,24 @@ export const GABARITS = {
     route: '/mes-commissions',
     routeEnAttente: null,
   },
+  // SEC-71 (contrat v2, art. 3.8) : l'avis du renouvellement de l'accès, APRÈS le courriel du lien et
+  // jamais sans lui (juriste, #474, 6034554456). Par courriel seul : l'accès vient d'être coupé. Son
+  // appel mène à la page de connexion (juriste, 6034821195) ; le lien part dans son propre courriel.
+  acces_renouvele: {
+    destinataire: 'apporteur',
+    req: 'REQ-JUR-069',
+    emetteur: 'SEC-71',
+    fondement:
+      "art. 3.8 — la Société révoque et renouvelle un moyen d'accès, sans effet sur les attributions ni les commissions",
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: false,
+    canaux: ['email'],
+    desactivable: false,
+    actions: action('acces_renouvele'),
+    route: '/connexion',
+    routeEnAttente: null,
+  },
 } as const satisfies Readonly<Record<string, LigneDeNotification>>;
 
 export type Gabarit = keyof typeof GABARITS;

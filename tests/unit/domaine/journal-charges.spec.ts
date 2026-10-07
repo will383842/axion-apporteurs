@@ -2,7 +2,6 @@
 // @req REQ-DM-031
 // @req REQ-DM-027
 // @req REQ-SEC-058
-// @req REQ-SEC-073
 /**
  * `journal-charges.spec.ts` — les charges FERMÉES du journal (`src/domain/evenement/charges.ts`),
  * jugées valeur par valeur : la forme d'une empreinte, les constructeurs de formes, la charge de
@@ -442,7 +441,7 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
     ).toEqual(['acteur:acteur_console_attendu']);
   });
 
-  it('REQ-SEC-073 : TÉMOIN — la révocation de l’accès ne porte que le motif FERMÉ et l’acteur de la console', () => {
+  it('REQ-DM-024 : TÉMOIN — la révocation de l’accès (SEC-71) ne porte que le motif FERMÉ et l’acteur de la console', () => {
     for (const motif of ['signalement_apporteur', 'securite'])
       passe('apporteur_acces_revoque', { motif, acteur: CONSOLE });
     // Un motif hors des deux.

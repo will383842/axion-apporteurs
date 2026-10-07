@@ -375,6 +375,30 @@ async function emettreLienConsole(
   });
 }
 
+/**
+ * SEC-71 (contrat v2, art. 3.8) — le lien NEUF d'un apporteur CONNU, après la révocation de son accès.
+ * Le MÊME tirage que la demande (`tirerUnLien` : jeton, code à six chiffres, empreintes HMAC, `kid`,
+ * durée de vie de `DUREES_AUTH`), la MÊME URL que `emettreLien`. Rendus SÉPARÉS : la ligne (les seules
+ * empreintes), que l'appelant insère dans sa transaction courte, et le message (le jeton et le code EN
+ * MÉMOIRE), qu'il envoie hors transaction et n'écrit nulle part (sécurité, 6034536145, conditions 1 et 4).
+ * Ni l'indistinction ni le parcours de demande ne changent : ce chemin ne reçoit aucune adresse saisie.
+ */
+export function lienDuRenouvellement(
+  apporteurId: string,
+  maintenant: Date,
+  configuration: ConfigurationDuLien
+): { ligne: NouveauLien; message: { url: string; code: string; expireAt: Date } } {
+  const l = tirerUnLien(maintenant, configuration);
+  return {
+    ligne: { apporteurId, ...l.ligne },
+    message: {
+      url: `${configuration.urlPublique}/connexion/${l.jeton}`,
+      code: l.code,
+      expireAt: l.ligne.expireAt,
+    },
+  };
+}
+
 /** Le jeton, le code et la ligne d'un lien neuf : les mêmes pour les deux populations. */
 function tirerUnLien(maintenant: Date, configuration: ConfigurationDuLien) {
   const jeton = tirerJeton();
