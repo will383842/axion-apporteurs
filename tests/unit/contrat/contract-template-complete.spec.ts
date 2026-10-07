@@ -67,6 +67,7 @@ import {
   motifsDeRefus,
 } from '../../../src/domain/contrat/publication';
 import { LISTE_NOIRE_GABARIT } from '../../../src/domain/lexique/lexique-interdit';
+import { SEUILS } from '../../../src/domain/seuils/ssot';
 import { analyserGabarit } from '../../../scripts/gates/lexique-apporteurs';
 import { CHAMPS, SENTINELLE, valeur, type Registre } from '../../../src/config/entite';
 
@@ -496,28 +497,37 @@ describe('REQ-CPL-012 — contestation : deux délais distincts, une réponse mo
     }
   });
 
-  it('REQ-CPL-012 — le CALCUL se conteste dans les douze mois, sans abréger la prescription (art. 5.5)', () => {
+  it('REQ-CPL-012 — le CALCUL se conteste dans les douze mois de l’autofacture, sans abréger la prescription (art. 5.5)', () => {
     const t = txt(u(), '5.5');
-    expect(t).toContain('dans les douze mois de la mise à disposition du relevé');
+    expect(t).toContain("dans les douze mois de l'envoi de l'autofacture qui aurait dû la porter");
+    expect(t).not.toContain('mise à disposition du relevé');
     expect(t).toContain("il n'abrège pas la prescription de l'action en paiement");
     expect(gabarit() + annexe2()).not.toContain('2254');
   });
 
-  it('REQ-CPL-012 — la Société répond de façon motivée dans les quinze jours (art. 5.6)', () => {
-    expect(txt(u(), '5.6')).toContain('répond de façon motivée dans les quinze jours');
+  it('REQ-CPL-012 — la Société répond de façon motivée dans les trente jours, la valeur de la SSOT (art. 5.6)', () => {
+    expect(txt(u(), '5.6')).toContain(
+      "répond de façon motivée dans les trente jours de la réception d'une contestation"
+    );
+    expect(SEUILS.REPONSE_CONTESTATION_JOURS).toMatchObject({ valeur: 30, unite: 'jours' });
+    expect(txt(u(), '5.6')).not.toContain('quinze jours');
   });
 });
 
 describe('REQ-JUR-007 — aucune déchéance', () => {
-  it('REQ-JUR-007 — le gabarit ne connaît aucune déchéance ; les commissions acquises sont payées au dernier relevé sans seuil', () => {
+  it('REQ-JUR-007 — le gabarit ne connaît aucune déchéance ; les commissions acquises sont facturées et versées sans montant minimum', () => {
     const texte = normaliser(gabarit() + annexe2()).toLowerCase();
     for (const mot of ['déchéance', 'déchu', 'dechue']) expect(texte).not.toContain(mot);
     const u = unitesDuGabarit(gabarit());
-    expect(normaliser(u.get('12.2')!.alineas.join(' '))).toContain(
-      "Les commissions déjà acquises sont payées au dernier relevé, sans application du seuil de l'article 5.1"
+    const a122 = normaliser(u.get('12.2')!.alineas.join(' '));
+    expect(a122).toContain(
+      'Les autofactures émises avant la fin du contrat restent payables à leur échéance.'
+    );
+    expect(a122).toContain(
+      "Les commissions acquises à cette date et non encore facturées sont facturées et versées dans les conditions des articles 5.1 et 5.3, sans montant minimum, sous la seule réserve de l'article 5.4."
     );
     expect(normaliser(u.get('12.3')!.alineas.join(' '))).toContain(
-      "Les commandes signées avant la fin du contrat continuent d'ouvrir droit à commission"
+      "Les commandes signées avant la fin du contrat, ou pendant le préavis, continuent d'ouvrir droit à commission"
     );
   });
 
@@ -1067,10 +1077,11 @@ describe('REQ-JUR-003 — JUR-T31 : l’art. 3.5, entreprise déjà prise, borne
     expect(a).toContain("dans les conditions de l'article 4.4");
   });
 
-  it('REQ-JUR-003 : al. 4 — deux protections : pas de démarchage tant que l’attribution est provisoire, ni dans la réserve après un acte de l’Apporteur', () => {
+  it('REQ-JUR-003 : al. 4 — la Société prend contact dès l’enregistrement sans rien retirer à l’Apporteur, et la réserve après un acte de l’Apporteur demeure', () => {
     const a = art35();
+    expect(a).not.toContain("Tant que l'attribution est provisoire, la Société ne démarche pas");
     expect(a).toContain(
-      "Tant que l'attribution est provisoire, la Société ne démarche pas l'entreprise déclarée ; la demande de confirmation et les prises de contact de l'article 3.2 ne constituent pas un démarchage."
+      "La Société peut prendre contact avec l'entreprise déclarée et la relancer par tout moyen dès l'enregistrement de la déclaration, sans que cela retire quoi que ce soit aux droits de l'Apporteur."
     );
     expect(a).toContain(
       "Dans les {{RESERVE_APRES_ACTE_APPORTEUR_JOURS}} jours qui suivent une vérification d'entreprise faite par l'Apporteur, ou une déclaration de sa part refusée ou en attente, la Société ne démarche pas l'entreprise concernée et ne la prend pas en charge ; cette réserve ne s'applique ni à une entreprise que la Société connaissait déjà au sens de l'article 3.3, ni à une entreprise dont une attribution ou une prise en charge était en cours à la date de cette vérification ou de cette déclaration."
