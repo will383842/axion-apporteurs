@@ -71,20 +71,29 @@ afterAll(async () => {
 
 const unSiren = () => String(randomInt(100_000_000, 999_999_999));
 
+/** Le premier administrateur validé : le validateur des suivants (quatre yeux, `utilisateurs_console_quatre_yeux`). */
+let premierAdministrateur: string | null = null;
+
 async function utilisateur(role: ConsoleRole, desactive = false, valide = true): Promise<string> {
+  const administrateurValide = role === 'admin' && valide;
   const u = await base.prisma.utilisateurConsole.create({
     // Un utilisateur actif porte son adresse, chiffrée et en empreinte (`utilisateurs_console_adresse_si_actif`).
     data: {
       role,
       creeAt: T0,
       desactiveAt: desactive ? T0 : null,
-      // Un administrateur n'a de droit qu'une fois validé (quatre yeux) ; `valideParId` reste nul.
-      valideAt: role === 'admin' && valide ? T0 : null,
+      // Un administrateur n'a de droit qu'une fois validé (quatre yeux) : le premier se valide seul, les
+      // suivants par le premier.
+      valideAt: administrateurValide ? T0 : null,
+      valideParId: administrateurValide ? premierAdministrateur : null,
       emailChiffre: randomBytes(48),
       emailHash: randomBytes(32).toString('hex'),
     },
     select: { id: true },
   });
+  if (administrateurValide && !desactive && premierAdministrateur === null) {
+    premierAdministrateur = u.id;
+  }
   return u.id;
 }
 
