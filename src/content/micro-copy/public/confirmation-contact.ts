@@ -14,8 +14,6 @@ export const PAGE_DE_CONFIRMATION = {
     'Bonjour {prenomContact} {nomContact}. {prenomApporteur} {nomApporteur} nous indique avoir échangé avec vous récemment au sujet de {entreprise}. Est-ce exact ?',
   oui: 'Oui, nous avons échangé',
   non: 'Non',
-  secondeQuestion: "Vous n'avez eu aucun échange avec {prenomApporteur} {nomApporteur} ?",
-  confirmerLeNon: "Je confirme n'avoir eu aucun échange",
   information: 'Vos données personnelles',
   // DÉRIVÉ du libellé de l'opposition de l'art. 14 (A07, 2026-10-02) : la page ne promet pas plus que
   // l'opposition réelle, et ne la récrit pas (RM-01).

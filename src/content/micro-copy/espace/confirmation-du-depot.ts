@@ -47,12 +47,11 @@ export const BADGES_DU_DEPOT = {
   confirmee: 'Confirmée',
   enAttenteDatee: 'En attente · confirmée automatiquement le {date}',
   enAttente: 'En attente',
-  enAttenteSignalee: 'En attente de confirmation — Axion-IA va appeler votre contact',
   courrielNonRecu: 'E-mail non reçu par le contact',
   nonConfirmee: 'Non confirmée par le contact',
   // La fin d'une réservation, choisie par la CAUSE, comme la notification `attribution_liberee`
-  // (A07, 2026-10-02) : une demande vérifiée libérée ouvre une carence (art. 3.2 al. 6) ; une
-  // péremption ou une fin de durée (art. 3.4) n'en ouvre aucune.
+  // (A07, 2026-10-02) : la fin à défaut d'adresse valide ouvre une carence unique (contrat v2, art. 3.2,
+  // DM-72 ; la clé garde son nom) ; une péremption ou une fin de durée (art. 3.4) n'en ouvre aucune.
   reservationTermineeVerifiee:
     'Réservation terminée · nouveau dépôt possible à partir du {dateRedepot}',
   reservationTerminee: "Réservation terminée · l'entreprise est de nouveau disponible",

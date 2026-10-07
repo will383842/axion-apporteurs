@@ -859,7 +859,6 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › confirmee : Confirmée
       espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › enAttenteDatee : En attente · confirmée automatiquement le {date}
       espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › enAttente : En attente
-      espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › enAttenteSignalee : En attente de confirmation — Axion-IA va appeler votre contact
       espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › courrielNonRecu : E-mail non reçu par le contact
       espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › nonConfirmee : Non confirmée par le contact
       espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › reservationTermineeVerifiee : Réservation terminée · nouveau dépôt possible à partir du {dateRedepot}
