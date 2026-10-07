@@ -21,6 +21,7 @@ import { sourceAleatoireSysteme } from '../../src/domain/apporteur/identifiants'
 import { clesPii } from '../../src/server/securite/pii';
 import fixture from '../fixtures/axionia/candidature-recue.json';
 import { demarrerBase, type Base } from './harnais';
+import { poserUnGelEnBase } from './gel-en-base';
 
 let base: Base;
 beforeAll(async () => {
@@ -86,6 +87,11 @@ async function candidature(code: string | null) {
 /** Un parrain au statut voulu : une candidature traitée, puis passée à ce statut. */
 async function parrain(statut: 'signe' | 'suspendu' | 'resilie' | 'candidat') {
   const p = await candidature(null);
+  // SEC-15 : `suspendu` ne s'écrit plus seul ; c'est une VRAIE pose de gel (CHECK `apporteurs_suspendu_si_gele`).
+  if (statut === 'suspendu') {
+    await poserUnGelEnBase(base.prisma, p.id, MAINTENANT);
+    return p.codeParrainage;
+  }
   // Un apporteur résilié porte son motif : la base l'exige (contrainte `apporteurs_motif_si_resilie`).
   await base.prisma.apporteur.update({
     where: { id: p.id },

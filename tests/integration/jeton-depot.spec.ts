@@ -37,6 +37,7 @@ import {
   revoquerJetonsALaResiliation,
   trouverJetonUtilisable,
 } from '../../src/server/auth/jeton-depot';
+import { poserUnGelEnBase } from './gel-en-base';
 
 let base: Base;
 let grilleId: string;
@@ -71,9 +72,10 @@ type Statut = 'signe' | 'suspendu' | 'resilie' | 'candidat';
 /** Un apporteur minimal, son STATUT écrit par chaque test (RM-11). */
 async function apporteur(statut: Statut): Promise<string> {
   codes += 1;
+  // SEC-15 : `suspendu` ne s'écrit plus seul ; l'apporteur naît `signe`, puis reçoit un VRAI gel.
   const a = await base.prisma.apporteur.create({
     data: {
-      statut,
+      statut: statut === 'suspendu' ? 'signe' : statut,
       resiliationMotif: statut === 'resilie' ? 'ordinaire_axion' : null,
       codeParrainage: `AX${String(codes).padStart(6, '0')}`,
       isTest: true,
@@ -85,10 +87,12 @@ async function apporteur(statut: Statut): Promise<string> {
       creeAt: T0,
     },
   });
+  if (statut === 'suspendu') await poserUnGelEnBase(base.prisma, a.id, T0);
   return a.id;
 }
 
 async function changerStatut(id: string, statut: Statut): Promise<void> {
+  if (statut === 'suspendu') return poserUnGelEnBase(base.prisma, id, T0);
   await base.prisma.apporteur.update({
     where: { id },
     data: { statut, resiliationMotif: statut === 'resilie' ? 'ordinaire_axion' : null },

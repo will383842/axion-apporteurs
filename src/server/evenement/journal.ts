@@ -191,6 +191,48 @@ export async function lireLaChargeDUnFait(
   return l === null ? null : { type: l.type, charge: l.charge };
 }
 
+/**
+ * SEC-15 — la FIN d'une suspension, lue au journal par son écrivain unique (A02, #794, 6036174464,
+ * d'après la juriste, 6036161128) : la PREMIÈRE levée du gel postérieure au fait de la pose ; à défaut,
+ * le premier passage de l'apporteur à `resilie` (la fin du contrat). La garde du gel interdit un gel
+ * vers un autre gel : pose et levée alternent, et chaque suspension a SA levée. Le premier fait du gel
+ * qui suit la pose EST sa levée ; illisible, ou qui ne lève pas, il rend null — jamais sauté — et le
+ * texte de la décision est gardé (échec fermé). Seuls l'instant et sa source sortent.
+ */
+export async function finDUneSuspension(
+  client: PrismaClient | Prisma.TransactionClient,
+  agregatId: string,
+  poseEvenementId: bigint
+): Promise<{ fin: Date; par: 'levee' | 'fin_du_contrat' } | null> {
+  if (!UUID_CANONIQUE.test(agregatId)) {
+    throw new Error('lecture_du_journal_refusee : agrégat hors forme');
+  }
+  const apres = { agregat: 'apporteur' as const, agregatId, id: { gt: poseEvenementId } };
+  const gel = await client.evenement.findFirst({
+    where: { ...apres, type: 'apporteur_gel_modifie' },
+    orderBy: { id: 'asc' },
+    select: { survenuAt: true, charge: true },
+  });
+  if (gel !== null) {
+    const lu = CHARGES_PAR_TYPE.apporteur_gel_modifie.safeParse(gel.charge);
+    if (!lu.success || lu.data.vers !== 'libre') return null;
+    return { fin: gel.survenuAt, par: 'levee' };
+  }
+  const resiliation = await client.evenement.findFirst({
+    where: {
+      ...apres,
+      type: 'apporteur_statut_modifie',
+      charge: { path: ['vers'], equals: 'resilie' },
+    },
+    orderBy: { id: 'asc' },
+    select: { survenuAt: true, charge: true },
+  });
+  if (resiliation === null) return null;
+  const lue = CHARGES_PAR_TYPE.apporteur_statut_modifie.safeParse(resiliation.charge);
+  if (!lue.success || lue.data.vers !== 'resilie') return null;
+  return { fin: resiliation.survenuAt, par: 'fin_du_contrat' };
+}
+
 /** Une transition de l'apporteur, telle que le journal la nomme : la liste FERMÉE de sa charge. */
 export type TransitionDeLApporteur = (typeof TRANSITIONS_DU_JOURNAL_APPORTEUR)[number];
 
