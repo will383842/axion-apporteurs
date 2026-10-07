@@ -7,7 +7,6 @@
  * le nourrit ; ce témoin prouve qu'il rougit sur chaque écart, et qu'il ne rougit pas sur la mesure juste.
  */
 import { describe, it, expect } from 'vitest';
-import { PLACES_DE_LA_FILE } from '../../../src/domain/verification/etats';
 import {
   DEPOTS_SIMULTANES,
   DUREE_MAX_MS,
@@ -15,12 +14,15 @@ import {
   type MesureDeCharge,
 } from '../../../scripts/gates/QA-T29/juge-charge';
 
+/** Les places de la file de la fixture : explicites, passées au juge (RM-11). */
+const PLACES_DE_LA_FILE = 2;
 const T = (i: number) => new Date(Date.UTC(2026, 9, 7, 12, 0, 0, i));
 
 /** La mesure JUSTE : un occupant, la file pleine derrière lui, le reste refusé et tracé. */
 function juste(): MesureDeCharge {
   return {
     depots: DEPOTS_SIMULTANES,
+    places: PLACES_DE_LA_FILE,
     issues: {
       enregistree: 1,
       en_attente: PLACES_DE_LA_FILE,
@@ -91,7 +93,11 @@ describe('REQ-QA-005 — QA-T29 : le juge de la charge', () => {
 
   it('une issue hors des trois attendues, ou un compte d’issues faux, rougissent', () => {
     const m = juste();
-    m.issues = { ...m.issues, file_complete: m.issues.file_complete - 1, anteriorite_client: 1 };
+    m.issues = {
+      ...m.issues,
+      file_complete: (m.issues.file_complete ?? 0) - 1,
+      anteriorite_client: 1,
+    };
     expect(jugerLaCharge(m).join(' ')).toMatch(/issue/);
   });
 

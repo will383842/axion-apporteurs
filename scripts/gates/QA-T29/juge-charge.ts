@@ -15,10 +15,9 @@
  *     pas prouvé l'exclusion, elle l'a évitée ;
  *   — la durée sous un plafond : « léger » est une mesure, pas une épithète.
  *
- * LE NOMBRE DE PLACES N'EST PAS RECOPIÉ : il vient de `PLACES_DE_LA_FILE` (RM-01).
+ * LE NOMBRE DE PLACES N'EST PAS RECOPIÉ : le banc le passe, tiré de `PLACES_DE_LA_FILE` (RM-01). Le juge
+ * n'importe rien de `src/` : un import ferait entrer ce module dans la couverture du domaine.
  */
-import { PLACES_DE_LA_FILE } from '../../../src/domain/verification/etats';
-
 /** Le nombre de dépôts simultanés de la tâche. */
 export const DEPOTS_SIMULTANES = 50;
 
@@ -40,6 +39,8 @@ export type LigneMesuree = {
 export type MesureDeCharge = {
   /** Le nombre de dépôts lancés. */
   depots: number;
+  /** Les places de la file derrière l'occupant (`PLACES_DE_LA_FILE`), passées par le banc. */
+  places: number;
   /** Le compte des issues rendues, par nom d'issue. */
   issues: Record<string, number>;
   /** Les dépôts qui ont levé une erreur ou rendu « réessayer ». */
@@ -57,7 +58,7 @@ export function jugerLaCharge(m: MesureDeCharge): string[] {
   const fautes: string[] = [];
   const enFile = m.lignes.filter((l) => l.statut === STATUTS_DE_LA_FILE);
   const occupants = m.lignes.filter((l) => l.statut !== STATUTS_DE_LA_FILE);
-  const refuses = m.depots - 1 - PLACES_DE_LA_FILE;
+  const refuses = m.depots - 1 - m.places;
 
   if (m.echecs > 0) fautes.push(`échec : ${m.echecs} dépôt(s) en erreur ou à réessayer`);
   if (occupants.length !== 1) {
@@ -65,8 +66,8 @@ export function jugerLaCharge(m: MesureDeCharge): string[] {
       `occupant : ${occupants.length} lignes occupantes sur le SIREN, une seule attendue`
     );
   }
-  if (enFile.length !== PLACES_DE_LA_FILE) {
-    fautes.push(`file : ${enFile.length} en attente, ${PLACES_DE_LA_FILE} attendues`);
+  if (enFile.length !== m.places) {
+    fautes.push(`file : ${enFile.length} en attente, ${m.places} attendues`);
   }
   const rangs = enFile.map((l) => l.rangAttente);
   const attendus = enFile.map((_, i) => i + 1);
@@ -80,7 +81,7 @@ export function jugerLaCharge(m: MesureDeCharge): string[] {
 
   const attendues: Record<string, number> = {
     enregistree: 1,
-    en_attente: PLACES_DE_LA_FILE,
+    en_attente: m.places,
     file_complete: refuses,
   };
   const noms = new Set([...Object.keys(attendues), ...Object.keys(m.issues)]);

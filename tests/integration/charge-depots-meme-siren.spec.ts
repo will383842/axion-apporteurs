@@ -15,6 +15,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { demarrerBase, type Base } from './harnais';
 import { clesPii } from '../../src/server/securite/pii';
 import { NOMS_DES_SECRETS } from '../../src/lib/env';
+import { PLACES_DE_LA_FILE } from '../../src/domain/verification/etats';
 import { deposer, type DemandeDeDepot, type PortsDuDepot } from '../../src/server/depot/deposer';
 import {
   DEPOTS_SIMULTANES,
@@ -136,6 +137,7 @@ describe('REQ-QA-005 — QA-T29 : cinquante dépôts simultanés sur un même SI
     });
     const mesure: MesureDeCharge = {
       depots: DEPOTS_SIMULTANES,
+      places: PLACES_DE_LA_FILE,
       issues,
       echecs,
       lignes: lignes.map((l) => ({
