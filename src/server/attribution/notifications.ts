@@ -199,7 +199,7 @@ export function dateEnClair(instant: Instant | Date): string {
 /** Les paramètres d'une clé de la machine, EXACTEMENT ceux de ses textes. */
 export function parametresDeLaNotification(
   cle: string,
-  c: { entreprise: string; motif?: string; envoyeLe: Date }
+  c: { entreprise: string; motif?: string; date?: string; envoyeLe: Date }
 ): Record<string, string> {
   if (cle === 'decision_attribution') {
     if (c.motif === undefined) throw new Error('motif_manquant : decision_attribution sans motif');
@@ -216,6 +216,11 @@ export function parametresDeLaNotification(
   // DM-25 : l'entreprise SEULE ; {delaiReponse} vient de la SSOT, posé par l'envoi. Aucun critère
   // d'antériorité n'entre dans le texte (règle de SEC-12).
   if (cle === 'attribution_annulee_anteriorite') return { entreprise: c.entreprise };
+  // UX-P1-61 : l'entreprise et le terme, rien de l'occupant qui aurait cédé (juriste).
+  if (cle === 'attribution_retablie') {
+    if (c.date === undefined) throw new Error('date_manquante : attribution_retablie sans terme');
+    return { entreprise: c.entreprise, date: c.date };
+  }
   throw new Error(`cle_hors_passage : ${cle}`);
 }
 
@@ -321,7 +326,7 @@ export async function rendreDepuisLaBase(
   if (n.attributionId === null) return nonRendue('attribution_introuvable');
   const a = await tx.attribution.findUnique({
     where: { id: n.attributionId },
-    select: { apporteurId: true, raisonSociale: true, siren: true },
+    select: { apporteurId: true, raisonSociale: true, siren: true, fenetreFinAt: true },
   });
   if (a === null) return nonRendue('attribution_introuvable');
   if (a.apporteurId !== n.apporteurId) return nonRendue('apporteur_different');
@@ -342,6 +347,10 @@ export async function rendreDepuisLaBase(
       entreprise,
       envoyeLe,
       ...(motif === undefined ? {} : { motif }),
+      // UX-P1-61 : le terme du dépôt rétabli, lu sur l'attribution à l'heure de l'envoi.
+      ...(n.cle === 'attribution_retablie' && a.fenetreFinAt !== null
+        ? { date: dateEnClair(a.fenetreFinAt) }
+        : {}),
     });
     return s.composer(n.cle, rendreLaNotification(n.cle, parametres));
   } catch (e) {

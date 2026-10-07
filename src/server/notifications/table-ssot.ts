@@ -204,6 +204,22 @@ export const GABARITS = {
     route: '/mes-entreprises',
     routeEnAttente: null,
   },
+  /** UX-P1-61 (art. 3.4 al. 2) : l'apporteur est informé du rétablissement de son dépôt (juriste). */
+  attribution_retablie: {
+    destinataire: 'apporteur',
+    req: 'REQ-DM-007',
+    emetteur: 'UX-P1-61',
+    fondement:
+      'art. 3.4 al. 2 — l’absence d’échange tenait à la Société : le dépôt périmé est rétabli jusqu’à son terme',
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: false,
+    canaux: ['email', 'espace'],
+    desactivable: false,
+    actions: action('attribution_retablie'),
+    route: '/mes-entreprises',
+    routeEnAttente: null,
+  },
   attribution_annulee_anteriorite: {
     destinataire: 'apporteur',
     req: 'REQ-JUR-007',

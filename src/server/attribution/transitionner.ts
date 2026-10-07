@@ -362,6 +362,18 @@ export async function transitionnerUneAttribution(
       },
     });
   }
+  // UX-P1-61 (juriste, #803 6039744045) : le rétablissement est notifié à l'APPORTEUR, une fois, avec
+  // son événement ; le MÊME avis, qu'une prise en charge de la Société ait cédé ou non.
+  if (l.apporteur_id !== null && transition === 'retablie_absence_imputable') {
+    await tx.notificationEspace.create({
+      data: {
+        apporteurId: l.apporteur_id,
+        cle: 'attribution_retablie',
+        attributionId,
+        evenementId: BigInt(inscrit.id),
+      },
+    });
+  }
   if (occupe(de) && !occupe(vers)) {
     await notifierLePremierRang(tx, attributionId, BigInt(inscrit.id));
   }

@@ -32,6 +32,18 @@ export const TEXTES_DES_NOTIFICATIONS = {
   },
   // DM-25 — l'annulation pour antériorité de la Société (art. 3.3) : texte de la juriste, MOT POUR
   // MOT. Le critère n'y figure pas (règle de SEC-12) ; {delaiReponse} vient de la SSOT.
+  /**
+   * UX-P1-61 (art. 3.4 al. 2) : le rétablissement d'un dépôt périmé faute d'échange, quand l'absence
+   * d'échange tenait à Axion-IA. Le corps est celui de la juriste (#803, 6039744045, point 3), mot pour
+   * mot ; il ne dit rien d'une prise en charge qui aurait cédé. {date} : le terme, posé par l'émettrice.
+   * Titre et appel retenus par la juriste (#803, 6041520663).
+   */
+  attribution_retablie: {
+    titre: '{entreprise} : votre dépôt est rétabli',
+    appel: 'Voir Mes entreprises',
+    corps:
+      "Votre dépôt de {entreprise} est rétabli jusqu'au {date} : l'absence d'échange tenait à Axion-IA (contrat, article 3.4).",
+  },
   attribution_annulee_anteriorite: {
     titre: '{entreprise} : votre dépôt est annulé — antériorité de la Société',
     appel: 'Voir Mes entreprises',

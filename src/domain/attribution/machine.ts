@@ -85,6 +85,11 @@ export const EVENEMENTS_ATTRIBUTION = [
   // d'identification de l'entreprise ou pour fraude de l'apporteur (forme d'A02, #806 6039768837).
   'annulee_erreur_identification',
   'fraude_etablie',
+  // UX-P1-61 (art. 3.4 al. 2 du v2 ; forme d'A02, #803 6039776225) : le RÉTABLISSEMENT d'une attribution
+  // d'apporteur périmée faute d'échange, quand l'absence d'échange tenait à la Société ; et la CESSION
+  // d'une prise en charge de la Société survenue depuis, qui s'efface devant lui, dans la même transaction.
+  'retablie_absence_imputable',
+  'cedee_au_retablissement',
 ] as const;
 export type TransitionAttribution = (typeof EVENEMENTS_ATTRIBUTION)[number];
 
@@ -105,6 +110,7 @@ const SUITES_SANS_PERTE = {
   // DM-71 : l'antériorité n'annule plus après la confirmation ; seules les deux exceptions humaines.
   annulee_erreur_identification: 'annulee',
   fraude_etablie: 'annulee',
+  cedee_au_retablissement: 'annulee',
 } as const;
 
 /** La matrice : pour chaque état, les seules transitions acceptées et leur état d'arrivée. */
@@ -131,6 +137,7 @@ export const TRANSITIONS_ATTRIBUTION: {
     liberee_sans_confirmation: 'perimee',
     fin_de_contrat: 'annulee',
     anteriorite_etablie: 'annulee',
+    cedee_au_retablissement: 'annulee',
   },
   active: { rdv_pris: 'rdv_pris', perimee: 'perimee', ...SUITES_SANS_PERTE },
   rdv_pris: SUITES_SANS_PERTE,
@@ -142,6 +149,7 @@ export const TRANSITIONS_ATTRIBUTION: {
     fin_de_contrat: 'expiree',
     annulee_erreur_identification: 'annulee',
     fraude_etablie: 'annulee',
+    cedee_au_retablissement: 'annulee',
   },
   signee: {
     paiement_recu: 'convertie',
@@ -151,21 +159,25 @@ export const TRANSITIONS_ATTRIBUTION: {
     commande_caduque_hors_fenetre: 'expiree',
     annulee_erreur_identification: 'annulee',
     fraude_etablie: 'annulee',
+    cedee_au_retablissement: 'annulee',
   },
   convertie: {
     expiree: 'expiree',
     figee: 'figee_resiliation',
     annulee_erreur_identification: 'annulee',
     fraude_etablie: 'annulee',
+    cedee_au_retablissement: 'annulee',
   },
   figee_resiliation: {
     expiree: 'expiree',
     annulee_erreur_identification: 'annulee',
     fraude_etablie: 'annulee',
+    cedee_au_retablissement: 'annulee',
   },
   invalidee: {},
   perdue: {},
-  perimee: {},
+  // UX-P1-61 : périmée faute d'échange, l'attribution est rétablie si l'absence tenait à la Société.
+  perimee: { retablie_absence_imputable: 'active' },
   expiree: {},
   annulee: {},
 };
@@ -209,6 +221,8 @@ export const fondeeSurUneAnomalie = (t: unknown): boolean =>
 export const EXCEPTION_DE_LA_TRANSITION = {
   annulee_erreur_identification: 'erreur_identification',
   fraude_etablie: 'fraude',
+  // UX-P1-61 : une prise en charge CONFIRMÉE de la Société ne s'annule qu'avec cette exception.
+  cedee_au_retablissement: 'retablissement_apporteur',
 } as const satisfies Partial<Record<TransitionAttribution, ExceptionAnnulation>>;
 
 /** Le type de porteur, DÉRIVÉ de la population de l'attribution (W19 (1)). */
@@ -232,10 +246,16 @@ export const REFUSEES_AU_CONSEILLER = [
   // DM-71 : les deux exceptions de l'art. 3.3 visent l'attribution d'un APPORTEUR.
   'annulee_erreur_identification',
   'fraude_etablie',
+  // UX-P1-61 : le rétablissement est celui d'une attribution d'APPORTEUR périmée faute d'échange.
+  'retablie_absence_imputable',
 ] as const satisfies readonly TransitionAttribution[];
 
 /** La prise en charge est la naissance du conseiller, et de lui seul. */
-const REFUSEES_A_L_APPORTEUR: readonly TransitionAttribution[] = ['prise_en_charge'];
+const REFUSEES_A_L_APPORTEUR: readonly TransitionAttribution[] = [
+  'prise_en_charge',
+  // UX-P1-61 : seule une prise en charge de la Société cède au rétablissement d'un apporteur.
+  'cedee_au_retablissement',
+];
 
 /**
  * DM-67 (REQ-DM-006) : le critère de l'antériorité établie après coup, en enum INTERNE de l'événement
