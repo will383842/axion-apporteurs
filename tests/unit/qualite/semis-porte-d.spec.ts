@@ -201,7 +201,8 @@ describe('REQ-QA-021 — le semeur remplit DEUX groupes de nullables ensemble', 
  * NULLABLES (le gel), alors que ces tables référencent `apporteurs` par une clé OBLIGATOIRE. L'ordre
  * des clés étrangères formait un CYCLE, que le semeur rompait par l'ordre alphabétique : `anomalies`
  * passait avant `apporteurs`, sa sous-requête de clé rendait NULL, et la table n'était pas semée (CI de
- * #815, REQ-QA-021). Une clé nullable peut rester NULL : elle n'impose aucun ordre.
+ * #815, REQ-QA-021). La clé nullable reste une dépendance DOUCE : elle n'est lâchée qu'à la rupture
+ * d'un cycle, et c'est la table de la clé OBLIGATOIRE qui passe après sa cible.
  */
 const CYCLE_DU_GEL: SchemaVu = {
   colonnes: [
@@ -216,7 +217,7 @@ const CYCLE_DU_GEL: SchemaVu = {
   ],
 };
 
-describe('REQ-QA-021 — une clé étrangère NULLABLE n’impose aucun ordre de semis', () => {
+describe('REQ-QA-021 — une clé nullable est une dépendance douce, lâchée seulement à la rupture d’un cycle', () => {
   it('REQ-QA-021 : TÉMOIN — dans le cycle du gel, la table de la clé OBLIGATOIRE est semée après sa cible', () => {
     const { tables } = semis(CYCLE_DU_GEL);
     expect(tables.indexOf('apporteurs')).toBeLessThan(tables.indexOf('anomalies'));
@@ -257,14 +258,14 @@ describe('REQ-QA-021 — une clé étrangère NULLABLE n’impose aucun ordre de
     ],
   });
 
-  it('REQ-QA-021 : TÉMOIN — une clé composite MIXTE (une colonne nullable) ne crée pas de dépendance : MATCH SIMPLE suspend son contrôle', () => {
+  it('REQ-QA-021 : TÉMOIN — une clé composite MIXTE (une colonne nullable) est une dépendance DOUCE, lâchée à la rupture du cycle : MATCH SIMPLE suspend son contrôle', () => {
     // « actes » précède « contestations » à l'alphabet ; seule la clé obligatoire d'actes vers
     // contestations ordonne : contestations d'abord.
     const { tables } = semis(composite(false, 'actes'));
     expect(tables.indexOf('contestations')).toBeLessThan(tables.indexOf('actes'));
   });
 
-  it('REQ-QA-021 : TÉMOIN — une clé composite TOUTE obligatoire crée une dépendance', () => {
+  it('REQ-QA-021 : TÉMOIN — une clé composite TOUTE obligatoire est une dépendance DURE', () => {
     // « registre » suit « contestations » à l'alphabet ; la clé composite obligatoire le place avant.
     const avecUneSeule: SchemaVu = {
       ...composite(true, 'registre'),
@@ -281,14 +282,14 @@ describe('REQ-QA-021 — une clé étrangère NULLABLE n’impose aucun ordre de
 });
 
 /**
- * La CI de cdab3adb (REQ-QA-023) : « attributions est vide ». Une table dont TOUTES les clés sont
+ * La CI de cdab3adb (son témoin de restauration, qui sème le vidage N−1) : « attributions est vide ». Une table dont TOUTES les clés sont
  * nullables (attributions : le porteur exclusif, la grille, le jeton, la personne) ne dépendait plus de
  * rien, passait avant apporteurs, ses sous-requêtes de clé rendaient NULL et le CHECK « exactement un
  * porteur » refusait chaque candidat. Toute clé ordonne ; seule la RUPTURE d'un cycle ignore les clés
  * nullables.
  */
-describe('REQ-QA-023 — une clé nullable ordonne, hors d’un cycle', () => {
-  it('REQ-QA-023 : TÉMOIN — une table aux seules clés NULLABLES est semée après sa cible, hors cycle', () => {
+describe('REQ-QA-021 — une clé nullable ordonne, hors d’un cycle', () => {
+  it('REQ-QA-021 : TÉMOIN — une table aux seules clés NULLABLES est semée après sa cible, hors cycle', () => {
     const schema: SchemaVu = {
       colonnes: [
         // « attributions » précède « utilisateurs » à l'alphabet : seule la clé l'ordonne après.
@@ -302,7 +303,7 @@ describe('REQ-QA-023 — une clé nullable ordonne, hors d’un cycle', () => {
     expect(tables.indexOf('utilisateurs')).toBeLessThan(tables.indexOf('attributions'));
   });
 
-  it('REQ-QA-023 : TÉMOIN — dans le cycle du gel, une table aux seules clés nullables vers apporteurs ne part pas avec lui, trop tôt', () => {
+  it('REQ-QA-021 : TÉMOIN — dans le cycle du gel, une table aux seules clés nullables vers apporteurs ne part pas avec lui, trop tôt', () => {
     const schema: SchemaVu = {
       colonnes: [
         ...CYCLE_DU_GEL.colonnes,
@@ -316,7 +317,7 @@ describe('REQ-QA-023 — une clé nullable ordonne, hors d’un cycle', () => {
     expect(tables.indexOf('apporteurs')).toBeLessThan(tables.indexOf('anomalies'));
   });
 
-  it('REQ-QA-023 : un cycle de clés TOUTES obligatoires retombe dans l’ordre alphabétique, et la base dira laquelle refuse', () => {
+  it('REQ-QA-021 : un cycle de clés TOUTES obligatoires retombe dans l’ordre alphabétique, et la base dira laquelle refuse', () => {
     const schema: SchemaVu = {
       colonnes: [
         col('zetas', 'id', 'uuid', true),
