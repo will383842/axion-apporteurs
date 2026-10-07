@@ -91,6 +91,15 @@ function entrepriseDe(
   }
 }
 
+/**
+ * Le refus de la garde qu'une page de contestation rend comme une contestation INCONNUE : un niveau
+ * qui n'ouvre pas le segment (un résilié, arbitrage de la coordination sur #775). Les autres refus
+ * (pas de session, politique à accepter, base illisible) gardent leur redirection.
+ */
+export function refusRenduIndisponible(motif: string): boolean {
+  return motif === 'hors_ouverture_limitee';
+}
+
 export async function relireLaContestation(
   client: ClientDesContestations,
   q: { contestationId: string; apporteurId: string },

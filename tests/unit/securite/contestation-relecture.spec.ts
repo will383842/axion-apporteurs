@@ -24,6 +24,7 @@ import {
 } from '../../../src/app/(espace)/contestations/[id]/ecran';
 import {
   MODELE_DE_LA_CONTESTATION,
+  refusRenduIndisponible,
   relireLaContestation,
   type ClientDesContestations,
   type ContestationRelue,
@@ -228,11 +229,11 @@ describe('REQ-DM-043 — l’apporteur relit SA contestation, et seulement la si
 });
 
 /**
- * LA GARDE DE L'ESPACE (sécurité, #775, 6032748282) : un résilié dont les droits courent (`lecture`)
- * relit ses contestations ; aucune action ne lui est ouverte ; `ferme` et `limite` n'ouvrent pas le
- * segment ; `ACTIONS_PERMISES_EN_LECTURE` ne gagne rien.
+ * LA GARDE DE L'ESPACE (arbitrage de la coordination sur #775 : le contrat v2 fait foi, art. 12.3,
+ * SEC-70) : « contestations » s'ouvre en PLEIN seulement ; un résilié reçoit la même page qu'une
+ * contestation inconnue ; aucune action n'est ouverte en lecture.
  */
-describe('REQ-DM-043 — le segment « contestations » : lu en lecture, jamais écrit', () => {
+describe('REQ-DM-043 — le segment « contestations » : ouverture pleine seulement', () => {
   const MAINTENANT = new Date('2026-10-07T10:00:00Z');
   function ports(statut: string, droitsEnCours: boolean) {
     return {
@@ -269,24 +270,36 @@ describe('REQ-DM-043 — le segment « contestations » : lu en lecture, jamais 
     };
   }
 
-  it('REQ-DM-043 : TÉMOIN — « contestations » est dans SEGMENTS_LECTURE ET dans SEGMENTS_PLEINS, jamais dans SEGMENTS_LIMITES', async () => {
+  it('REQ-DM-043 : TÉMOIN — « contestations » est dans SEGMENTS_PLEINS, ni dans SEGMENTS_LECTURE ni dans SEGMENTS_LIMITES', async () => {
     const m = await import('../../../src/domain/apporteur/acces-espace');
-    expect(m.SEGMENTS_LECTURE).toContain('contestations');
     expect(m.SEGMENTS_PLEINS).toContain('contestations');
+    expect(m.SEGMENTS_LECTURE).not.toContain('contestations');
     expect(m.SEGMENTS_LIMITES).not.toContain('contestations');
     expect(m.routeOuverte('plein', 'contestations')).toBe(true);
-    expect(m.routeOuverte('lecture', 'contestations')).toBe(true);
+    expect(m.routeOuverte('lecture', 'contestations')).toBe(false);
     expect(m.routeOuverte('limite', 'contestations')).toBe(false);
     expect(m.routeOuverte('ferme', 'contestations')).toBe(false);
   });
 
-  it('REQ-DM-043 : TÉMOIN — un résilié dont les droits courent ouvre la page, en lecture ; sans droits en cours (ferme), refusé', async () => {
+  it('REQ-DM-043 : TÉMOIN — un résilié est refusé, et la page lui rend la MÊME réponse qu’une contestation inconnue', async () => {
     const { pageEspace } = await import('../../../src/server/auth/session');
-    const lu = await pageEspace('contestations', 'jeton', ports('resilie', true));
-    expect(lu.ok && lu.session.niveau).toBe('lecture');
-    expect(await pageEspace('contestations', 'jeton', ports('resilie', false))).toMatchObject({
-      ok: false,
-    });
+    const resilie = await pageEspace('contestations', 'jeton', ports('resilie', true));
+    expect(resilie).toEqual({ ok: false, motif: 'hors_ouverture_limitee' });
+    expect(refusRenduIndisponible('hors_ouverture_limitee')).toBe(true);
+    // Les autres refus gardent leur redirection : sans session, vers la connexion.
+    expect(refusRenduIndisponible('absente')).toBe(false);
+    expect(refusRenduIndisponible('acceptation_requise')).toBe(false);
+    const date = (d: Date) => d.toISOString();
+    const page = (c: ContestationRelue) =>
+      renderToStaticMarkup(createElement(EcranContestation, { contestationId: ID, c, date }));
+    const inconnue = await relire([]);
+    expect(page({ etat: 'indisponible' })).toBe(page(inconnue));
+  });
+
+  it('REQ-DM-043 : un apporteur signé ouvre la page, en plein', async () => {
+    const { pageEspace } = await import('../../../src/server/auth/session');
+    const v = await pageEspace('contestations', 'jeton', ports('signe', true));
+    expect(v.ok && v.session.niveau).toBe('plein');
   });
 
   // @no-red-first: avant l'ajout, le segment inconnu était déjà refusé à tout niveau, défaut fermé
@@ -297,16 +310,9 @@ describe('REQ-DM-043 — le segment « contestations » : lu en lecture, jamais 
     });
   });
 
-  it('REQ-DM-043 : TÉMOIN — toute action de contestation est refusée en lecture (lecture_seule), sans exécuter le corps', async () => {
-    const { actionEspace, ACTIONS_PERMISES_EN_LECTURE } =
-      await import('../../../src/server/auth/session');
+  it('REQ-DM-043 : TÉMOIN — aucune action de contestation n’est permise en lecture', async () => {
+    const { ACTIONS_PERMISES_EN_LECTURE } = await import('../../../src/server/auth/session');
     expect(ACTIONS_PERMISES_EN_LECTURE).not.toContain('contestations');
-    const corps = vi.fn(async () => 'ecrit');
-    expect(await actionEspace('contestations', 'jeton', ports('resilie', true), corps)).toEqual({
-      ok: false,
-      motif: 'lecture_seule',
-    });
-    expect(corps).not.toHaveBeenCalled();
   });
 });
 
