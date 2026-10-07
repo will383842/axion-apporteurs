@@ -24612,7 +24612,12 @@
         "tests/integration/dossier-de-conformite.spec.ts",
         "tests/unit/securite/rib-quatre-yeux.spec.ts",
         "src/server/evenement/journal.ts",
-        "scripts/gates/schema-pii.ts"
+        "scripts/gates/schema-pii.ts",
+        "src/server/acces/for-apporteur.ts",
+        "tests/integration/iban-et-session.spec.ts",
+        "tests/integration/pieces-kyc.spec.ts",
+        "tests/integration/pieces-kyc-figees.spec.ts",
+        "tests/integration/anti-auto-parrainage.spec.ts"
       ],
       "schema": true,
       "sensible": [
