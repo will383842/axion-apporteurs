@@ -309,12 +309,15 @@ model Apporteur {
   /// art. 3.7 al. 3. Posé et levé par la seule fonction de `src/server/apporteur/suspension.ts` ; la
   /// garde `apporteurs_gel_garde` (SQL brut) n'admet que la pose et la levée. L'instant est celui de la
   /// pose ET de la notification : les quinze jours en courent.
-  etatGel           EtatGel             @default(libre) @map("etat_gel")
-  depotsGelesDepuis DateTime?           @map("depots_geles_depuis") @db.Timestamptz(3)
-  gelAnomalieId     String?             @map("gel_anomalie_id") @db.Uuid
-  gelAnomalie       Anomalie?           @relation("GelDesDepots", fields: [gelAnomalieId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  gelPoseParId      String?             @map("gel_pose_par_id") @db.Uuid
-  gelPosePar        UtilisateurConsole? @relation("GelsPoses", fields: [gelPoseParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  etatGel              EtatGel             @default(libre) @map("etat_gel")
+  depotsGelesDepuis    DateTime?           @map("depots_geles_depuis") @db.Timestamptz(3)
+  gelAnomalieId        String?             @map("gel_anomalie_id") @db.Uuid
+  gelAnomalie          Anomalie?           @relation("GelDesDepots", fields: [gelAnomalieId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  gelPoseParId         String?             @map("gel_pose_par_id") @db.Uuid
+  gelPosePar           UtilisateurConsole? @relation("GelsPoses", fields: [gelPoseParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// La décision `suspension` du même apporteur, qui porte les faits notifiés (voie (a), A02, 6036131730).
+  gelDecisionContratId String?             @map("gel_decision_contrat_id") @db.Uuid
+  gelDecisionContrat   DecisionDeContrat?  @relation("GelParDecision", fields: [gelDecisionContratId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   /// L'acceptation de la politique de confidentialité (REQ-JUR-025) : la date et la version, ensemble
   /// ou aucune (CHECK en SQL brut).
@@ -332,7 +335,7 @@ model Apporteur {
   personnesDeclarees      PersonneDeclaree[]
   piecesKyc               PieceKyc[]
   notificationsEspace     NotificationEspace[]
-  decisionsDeContrat      DecisionDeContrat[]
+  decisionsDeContrat      DecisionDeContrat[]      @relation("DecisionsDeLApporteur")
   preferencesNotification PreferenceNotification[]
   verifications           Verification[]
   alertesLiberation       AlerteLiberation[]
@@ -1560,6 +1563,8 @@ model DevisConnu {
 enum GesteDecisionContrat {
   mise_en_demeure
   resiliation
+  /// SEC-15 : la suspension de vérification (art. 3.7 al. 3), notifiée avec ses faits (migration 004922).
+  suspension
 
   @@map("geste_decision_contrat")
 }
@@ -1570,7 +1575,7 @@ enum GesteDecisionContrat {
 model DecisionDeContrat {
   id                  String               @id @default(uuid()) @db.Uuid
   apporteurId         String               @map("apporteur_id") @db.Uuid
-  apporteur           Apporteur            @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  apporteur           Apporteur            @relation("DecisionsDeLApporteur", fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   geste               GesteDecisionContrat
   /// La liste FERMÉE de l'art. 11.2, pour la mise en demeure seule (CHECK).
   article             String?              @db.VarChar(4)
@@ -1590,6 +1595,8 @@ model DecisionDeContrat {
   /// avec le texte (CHECK et garde) ; jamais de clair pour comparer.
   faitsEmpreinte      String?              @map("faits_empreinte") @db.Char(64)
   notificationsEspace NotificationEspace[]
+  /// SEC-15 : l'apporteur dont cette suspension fonde le gel, tant qu'il dure.
+  gelsDesDepots       Apporteur[]          @relation("GelParDecision")
 
   @@index([apporteurId])
   @@map("decisions_de_contrat")
