@@ -83,6 +83,10 @@ enum TypeEvenementJournal {
   utilisateur_console_modifie
   journal_acces_gel_modifie
   apporteur_mis_en_demeure
+  /// EXT-T07 (20261003005040) : la prolongation, décidée ou réputée (art. 3.4 al. 3).
+  attribution_prolongee
+  /// EXT-T07 (20261003005042) : le constat qu'aucune condition de l'art. 3.4 al. 3 n'est remplie.
+  attribution_prolongation_refusee
 
   @@map("type_evenement_journal")
 }
@@ -459,6 +463,8 @@ model UtilisateurConsole {
   sessionsEspace           SessionEspace[]
   attributions             Attribution[]            @relation("AttributionsDuConseiller")
   suspensionsDePeremption  Attribution[]            @relation("SuspensionsDePeremption")
+  prolongations            Attribution[]            @relation("ProlongationsDecidees")
+  refusDeProlongation      Attribution[]            @relation("RefusDeProlongation")
   verifications            Verification[]
   anomaliesTraitees        Anomalie[]
   rattachementsDecides     RattachementManuel[]
@@ -958,24 +964,36 @@ model Attribution {
   lienInteretPrecisionChiffre Bytes?            @map("lien_interet_precision_chiffre")
 
   // Le temps de la machine (REQ-DM-004, REQ-DM-007, REQ-UX-022).
-  aQualifierDepuisAt               DateTime?           @map("a_qualifier_depuis_at") @db.Timestamptz(3)
-  premierContactAt                 DateTime?           @map("premier_contact_at") @db.Timestamptz(3)
-  confirmeeAt                      DateTime?           @map("confirmee_at") @db.Timestamptz(3)
-  fenetreFinAt                     DateTime?           @map("fenetre_fin_at") @db.Timestamptz(3)
-  peremptionAt                     DateTime?           @map("peremption_at") @db.Timestamptz(3)
+  aQualifierDepuisAt               DateTime?              @map("a_qualifier_depuis_at") @db.Timestamptz(3)
+  premierContactAt                 DateTime?              @map("premier_contact_at") @db.Timestamptz(3)
+  confirmeeAt                      DateTime?              @map("confirmee_at") @db.Timestamptz(3)
+  fenetreFinAt                     DateTime?              @map("fenetre_fin_at") @db.Timestamptz(3)
+  peremptionAt                     DateTime?              @map("peremption_at") @db.Timestamptz(3)
   /// La suspension de péremption : les trois ensemble ou aucune (CHECK).
-  peremptionSuspendueAt            DateTime?           @map("peremption_suspendue_at") @db.Timestamptz(3)
-  peremptionSuspendueParId         String?             @map("peremption_suspendue_par_id") @db.Uuid
-  peremptionSuspenduePar           UtilisateurConsole? @relation("SuspensionsDePeremption", fields: [peremptionSuspendueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  peremptionSuspendueJustification String?             @map("peremption_suspendue_justification") @db.Text
-  fenetreRedeclarationFinAt        DateTime?           @map("fenetre_redeclaration_fin_at") @db.Timestamptz(3)
-  purgeContactAt                   DateTime?           @map("purge_contact_at") @db.Timestamptz(3)
-  contactPurgeAt                   DateTime?           @map("contact_purge_at") @db.Timestamptz(3)
+  peremptionSuspendueAt            DateTime?              @map("peremption_suspendue_at") @db.Timestamptz(3)
+  peremptionSuspendueParId         String?                @map("peremption_suspendue_par_id") @db.Uuid
+  peremptionSuspenduePar           UtilisateurConsole?    @relation("SuspensionsDePeremption", fields: [peremptionSuspendueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  peremptionSuspendueJustification String?                @map("peremption_suspendue_justification") @db.Text
+  /// EXT-T07 (contrat v2, art. 3.4 al. 3 ; forme d'A02, #809) : la prolongation, UNE fois. L'instant et
+  /// la condition ensemble ; l'auteur pour un geste de la console, nul pour la réputée (CHECK) ; la fin
+  /// de fenêtre recule dans la même écriture (garde `attributions_prolongation_garde`, SQL brut).
+  prolongeeAt                      DateTime?              @map("prolongee_at") @db.Timestamptz(3)
+  prolongationCondition            ConditionProlongation? @map("prolongation_condition")
+  prolongeeParId                   String?                @map("prolongee_par_id") @db.Uuid
+  prolongeePar                     UtilisateurConsole?    @relation("ProlongationsDecidees", fields: [prolongeeParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// Le constat qu'aucune condition n'est remplie : l'instant et l'auteur ensemble, une fois, exclusifs
+  /// de la prolongation, refusés après le terme (CHECK et garde).
+  prolongationRefuseeAt            DateTime?              @map("prolongation_refusee_at") @db.Timestamptz(3)
+  prolongationRefuseeParId         String?                @map("prolongation_refusee_par_id") @db.Uuid
+  prolongationRefuseePar           UtilisateurConsole?    @relation("RefusDeProlongation", fields: [prolongationRefuseeParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  fenetreRedeclarationFinAt        DateTime?              @map("fenetre_redeclaration_fin_at") @db.Timestamptz(3)
+  purgeContactAt                   DateTime?              @map("purge_contact_at") @db.Timestamptz(3)
+  contactPurgeAt                   DateTime?              @map("contact_purge_at") @db.Timestamptz(3)
   /// L'empreinte HMAC du jeton de la page des droits du contact, jamais le jeton (DM-59). Unique
   /// quand posée (index partiel en SQL), effacée par la purge du contact.
-  jetonDroitsHash                  String?             @map("jeton_droits_hash") @db.Char(64)
+  jetonDroitsHash                  String?                @map("jeton_droits_hash") @db.Char(64)
   /// Verrou optimiste de la fiche (REQ-CPL-024).
-  versionQualification             Int                 @default(0) @map("version_qualification")
+  versionQualification             Int                    @default(0) @map("version_qualification")
 
   courrielsEnvoyes      CourrielEnvoye[]
   demandeConfirmation   DemandeConfirmation?
@@ -992,6 +1010,8 @@ model Attribution {
   @@index([jetonDepotId])
   @@index([personneDeclareeId])
   @@index([peremptionSuspendueParId])
+  @@index([prolongeeParId])
+  @@index([prolongationRefuseeParId])
   @@index([emailHash])
   @@index([phoneHash])
   @@map("attributions")
@@ -1492,6 +1512,18 @@ enum OrigineEntrepriseConnue {
 }
 
 /// Le motif d'inscription d'un SIREN sur la liste tenue par la Société (REQ-DM-028).
+/// EXT-T07 (contrat v2, art. 3.4 al. 3 ; forme d'A02, #809) : la condition d'une prolongation. Les trois
+/// premières sont les conditions du contrat, posées par un administrateur ; `reputee` est la prolongation
+/// acquise faute de décision au terme (juriste, #809 6039901134).
+enum ConditionProlongation {
+  devis_en_cours
+  echange_recent
+  financement_en_instruction
+  reputee
+
+  @@map("condition_prolongation")
+}
+
 enum MotifListeNoire {
   administration
   financeur_public
