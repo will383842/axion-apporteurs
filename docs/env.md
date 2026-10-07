@@ -29,6 +29,7 @@ posée est jugée comme les autres.
 | `TELEGRAM_CHAT_ID` | facultative, jamais requise au démarrage | entier signé, au plus 20 chiffres | salon du canal d'alerte du serveur ; voir TELEGRAM_BOT_TOKEN |
 | `PARTNERS_SINCERITE_REGLAGE` | facultative, jamais requise au démarrage | paires `clé=entier` séparées par `;`, clés de la liste fermée de `src/server/anomalie/sincerite.ts` | réglage des signaux de sincérité (poids, seuil, paramètres), hors dépôt ; absent, aucun dépôt n'est jugé |
 | `PARTNERS_VERIFICATION_PLAFONDS` | facultative, jamais requise au démarrage | paires `clé=entier` séparées par `;`, cinq clés fermées de `src/server/securite/rate-limit.ts`, fenêtres en minutes | plafonds de « Vérifier une entreprise » (limites et fenêtres), hors dépôt ; absent ou illisible, toute vérification est refusée |
+| `PARTNERS_ECRIT_PLAFONDS` | facultative, jamais requise au démarrage | paires `clé=entier` séparées par `;`, quatre clés fermées de `src/server/securite/rate-limit.ts`, fenêtres en minutes | plafonds de l'envoi d'un écrit de l'apporteur (limites et fenêtres), hors dépôt ; absent ou illisible, tout envoi est refusé |
 
 ## Configuration
 

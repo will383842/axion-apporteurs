@@ -152,6 +152,9 @@ export const schemaSecretsConditionnels = z.object({
   // SEC-72 (REQ-SEC-021) : les plafonds de « Vérifier une entreprise ». Un SECRET, pour la même raison
   // que le réglage de sincérité. Absent ou illisible, toute vérification est refusée — défaut fermé.
   PARTNERS_VERIFICATION_PLAFONDS: reglageHorsDepot.optional(),
+  // UX-P1-62 : les plafonds de l'envoi d'un écrit. Un SECRET, pour la même raison. Absent ou illisible,
+  // tout envoi est refusé — défaut fermé.
+  PARTNERS_ECRIT_PLAFONDS: reglageHorsDepot.optional(),
 });
 export type SecretsConditionnels = z.infer<typeof schemaSecretsConditionnels>;
 export const NOMS_DES_SECRETS_CONDITIONNELS: readonly string[] = Object.keys(
@@ -591,6 +594,8 @@ const ROLES: Record<NomDeVariable, string> = {
     "réglage des signaux de sincérité (poids, seuil, paramètres), hors dépôt ; absent, aucun dépôt n'est jugé",
   PARTNERS_VERIFICATION_PLAFONDS:
     'plafonds de « Vérifier une entreprise » (limites et fenêtres), hors dépôt ; absent ou illisible, toute vérification est refusée',
+  PARTNERS_ECRIT_PLAFONDS:
+    "plafonds de l'envoi d'un écrit de l'apporteur (limites et fenêtres), hors dépôt ; absent ou illisible, tout envoi est refusé",
   ZEPTOMAIL_API_URL:
     "URL d'envoi du relais de courriels, d'un hôte de la liste fermée ; exigée quand l'envoi réel est allumé",
 };
@@ -601,6 +606,9 @@ function regleDe(nom: NomDeVariable): string {
   if (nom === 'TELEGRAM_CHAT_ID') return 'entier signé, au plus 20 chiffres';
   if (nom === 'PARTNERS_SINCERITE_REGLAGE') {
     return 'paires `clé=entier` séparées par `;`, clés de la liste fermée de `src/server/anomalie/sincerite.ts`';
+  }
+  if (nom === 'PARTNERS_ECRIT_PLAFONDS') {
+    return 'paires `clé=entier` séparées par `;`, quatre clés fermées de `src/server/securite/rate-limit.ts`, fenêtres en minutes';
   }
   if (nom === 'PARTNERS_VERIFICATION_PLAFONDS') {
     return 'paires `clé=entier` séparées par `;`, cinq clés fermées de `src/server/securite/rate-limit.ts`, fenêtres en minutes';

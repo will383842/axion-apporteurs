@@ -364,11 +364,13 @@ describe('REQ-QA-030 — le module rechargé : les listes dérivées du schéma,
       'PARTNERS_SINCERITE_REGLAGE',
       // SEC-72 (REQ-SEC-021) : les plafonds de la vérification, hors dépôt.
       'PARTNERS_VERIFICATION_PLAFONDS',
+      // UX-P1-62 : les plafonds de l'écrit, hors dépôt.
+      'PARTNERS_ECRIT_PLAFONDS',
     ]);
     // Douze secrets toujours exigés, lus au schéma : leurs noms ne sont pas retapés ici.
     expect(m.NOMS_DES_SECRETS).toHaveLength(12);
     expect(m.NOMS_DES_SECRETS).toContain(CLE_HEX);
-    expect(m.NOMS_DES_VARIABLES).toHaveLength(29);
+    expect(m.NOMS_DES_VARIABLES).toHaveLength(30);
     expect(m.NOMS_DES_VARIABLES).toEqual([
       ...m.NOMS_DES_SECRETS,
       ...m.NOMS_DES_SECRETS_CONDITIONNELS,

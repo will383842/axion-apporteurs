@@ -82,8 +82,10 @@ import {
   COMPTEURS,
   CONDUITES_SUR_PANNE,
   LIMITE_HORS_DEPOT,
+  CLES_DES_PLAFONDS_DE_L_ECRIT,
+  PLAFONDS_DE_L_ECRIT_EN_CONFIGURATION,
   PLAFONDS_EN_CONFIGURATION,
-  VARIABLE_DES_PLAFONDS,
+  SECRET_DU_COMPTEUR,
   PREFIXES_DE_FAMILLE,
   limiter,
   sujetDepuisEmpreinte,
@@ -210,8 +212,8 @@ export interface Univers {
   readonly seuils: Readonly<Record<string, unknown>>;
   /** SEC-72 : les clés de chaque compteur hors dépôt ; par défaut, `PLAFONDS_EN_CONFIGURATION`. */
   readonly configuration?: Readonly<Record<string, unknown>>;
-  /** SEC-72 : le nom du secret des plafonds ; par défaut, `VARIABLE_DES_PLAFONDS`. */
-  readonly variableDesPlafonds?: string;
+  /** SEC-72, UX-P1-62 : le secret lu par chaque compteur ; par défaut, `SECRET_DU_COMPTEUR`. */
+  readonly secretDuCompteur?: Readonly<Record<string, string>>;
   /** SEC-72 : les secrets conditionnels de `src/lib/env.ts` ; par défaut, ceux du schéma. */
   readonly secretsConditionnels?: readonly string[];
 }
@@ -227,9 +229,23 @@ export const COMPTEURS_EN_CONFIGURATION = [
   'verif:identite-jour',
   'verif:identite-court',
   'verif:ip-jour',
+  // UX-P1-62 (la sécurité élargit sa condition 1 de deux noms) : l'écrit de l'apporteur.
+  'ecrit:session',
+  'ecrit:apporteur',
 ] as const;
-const EXIGENCE_DE_LA_CONFIGURATION = 'REQ-SEC-021';
-const SECRET_DES_PLAFONDS = 'PARTNERS_VERIFICATION_PLAFONDS';
+/**
+ * La correspondance FERMÉE de chaque compteur : son exigence et SON secret (condition de la sécurité).
+ * Un compteur qui lit le secret d'un autre rougit.
+ */
+const ATTENDUS_DE_LA_CONFIGURATION: Readonly<
+  Record<(typeof COMPTEURS_EN_CONFIGURATION)[number], { source: string; secret: string }>
+> = {
+  'verif:identite-jour': { source: 'REQ-SEC-021', secret: 'PARTNERS_VERIFICATION_PLAFONDS' },
+  'verif:identite-court': { source: 'REQ-SEC-021', secret: 'PARTNERS_VERIFICATION_PLAFONDS' },
+  'verif:ip-jour': { source: 'REQ-SEC-021', secret: 'PARTNERS_VERIFICATION_PLAFONDS' },
+  'ecrit:session': { source: 'REQ-SEC-016', secret: 'PARTNERS_ECRIT_PLAFONDS' },
+  'ecrit:apporteur': { source: 'REQ-SEC-016', secret: 'PARTNERS_ECRIT_PLAFONDS' },
+};
 
 export interface Releve {
   readonly fautes: readonly Faute[];
@@ -527,10 +543,9 @@ function confronterALaConfiguration(
     });
     return;
   }
-  if (d.source !== EXIGENCE_DE_LA_CONFIGURATION) {
-    faute(
-      `déclare la source ${JSON.stringify(d.source)} au lieu de ${EXIGENCE_DE_LA_CONFIGURATION}.`
-    );
+  const attendu = ATTENDUS_DE_LA_CONFIGURATION[nom as (typeof COMPTEURS_EN_CONFIGURATION)[number]];
+  if (d.source !== attendu.source) {
+    faute(`déclare la source ${JSON.stringify(d.source)} au lieu de ${attendu.source}.`);
   }
   if (d.limite !== LIMITE_HORS_DEPOT || d.fenetreSecondes !== LIMITE_HORS_DEPOT) {
     faute(`déclare une valeur au dépôt : sa limite et sa fenêtre sont la sentinelle hors dépôt.`);
@@ -538,20 +553,26 @@ function confronterALaConfiguration(
   if (d.surPanne !== 'refuser') {
     faute(`déclare surPanne ${JSON.stringify(d.surPanne)} : seul \`refuser\` est admis.`);
   }
-  const cles = (u.configuration ?? PLAFONDS_EN_CONFIGURATION)[nom];
-  const fermees = CLES_DES_PLAFONDS as readonly string[];
+  const ecrit = attendu.secret === 'PARTNERS_ECRIT_PLAFONDS';
+  const cles = (u.configuration ?? {
+    ...PLAFONDS_EN_CONFIGURATION,
+    ...PLAFONDS_DE_L_ECRIT_EN_CONFIGURATION,
+  })[nom];
+  const fermees = (ecrit ? CLES_DES_PLAFONDS_DE_L_ECRIT : CLES_DES_PLAFONDS) as readonly string[];
   if (
     !estObjet(cles) ||
     !fermees.includes(String(cles.limite)) ||
     !fermees.includes(String(cles.fenetreMinutes))
   ) {
-    faute(`n'a pas ses deux clés fermées dans \`PLAFONDS_EN_CONFIGURATION\`.`);
+    faute(`n'a pas ses deux clés fermées dans la table de SON secret.`);
   }
-  const variable = u.variableDesPlafonds ?? VARIABLE_DES_PLAFONDS;
+  const variable = (u.secretDuCompteur ?? (SECRET_DU_COMPTEUR as Readonly<Record<string, string>>))[
+    nom
+  ];
   const secrets = u.secretsConditionnels ?? NOMS_DES_SECRETS_CONDITIONNELS;
-  if (variable !== SECRET_DES_PLAFONDS || !secrets.includes(variable)) {
+  if (variable !== attendu.secret || !secrets.includes(variable)) {
     faute(
-      `lit \`${variable}\`, qui n'est pas le secret \`${SECRET_DES_PLAFONDS}\` déclaré dans ` +
+      `lit \`${String(variable)}\`, qui n'est pas SON secret \`${attendu.secret}\` déclaré dans ` +
         `\`src/lib/env.ts\`.`
     );
   }
@@ -1401,7 +1422,13 @@ export const TEMOINS: readonly Temoin[] = [
   {
     famille: 'configuration_mal_declaree',
     libelle: 'les plafonds lus dans un autre nom que le secret déclaré dans « src/lib/env.ts »',
-    univers: (b) => ({ ...b, variableDesPlafonds: 'PARTNERS_AUTRES_PLAFONDS' }),
+    univers: (b) => ({
+      ...b,
+      secretDuCompteur: {
+        ...SECRET_DU_COMPTEUR,
+        'verif:identite-jour': 'PARTNERS_AUTRES_PLAFONDS',
+      },
+    }),
     nomme: ['verif:identite-jour', 'PARTNERS_AUTRES_PLAFONDS'],
   },
 ];
