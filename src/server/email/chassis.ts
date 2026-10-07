@@ -120,9 +120,10 @@ function piedLegal(
   const e = entiteContractante(registre);
   const contact = T.adresseDeContact;
   const lignes = [
-    `${e.denomination} · ${e.formeJuridique}`,
+    // Art. R.123-238 C. com. (juriste, #819 6042302938) : le capital et le RCS, lus au registre.
+    `${e.denomination} · ${e.formeJuridique} au capital de ${e.capitalSocial}`,
     e.siege,
-    `SIREN ${e.siren} · TVA ${e.tvaIntracommunautaire}`,
+    `RCS ${e.rcsVille} ${e.siren} · TVA ${e.tvaIntracommunautaire}`,
   ];
   const fin =
     famille === 'A'
@@ -155,6 +156,8 @@ export function habillerLeCourriel(
   const appel = c.appel === undefined ? undefined : { ...c.appel, href: adresseSure(c.appel.href) };
   const opposition = c.opposition === undefined ? undefined : adresseSure(c.opposition);
   const pied = piedLegal(c.famille, registre);
+  // La signature lit le représentant au registre de l'entité, jamais un nom écrit ici (juriste).
+  const signataire = entiteContractante(registre).representant;
 
   const paragraphe = enLigne({
     fontSize: '16px',
@@ -190,7 +193,7 @@ export function habillerLeCourriel(
     ? `<p class="ax-muted" style="${discret};margin:22px 0 0 0;padding-top:16px;border-top:1px solid ${P.bordure}">${echapperHtml(T.soupape)}</p>`
     : '';
   const signature = regime.signature
-    ? `<p style="${enLigne({ fontSize: '14px', lineHeight: '1.7', color: P.texte, margin: '24px 0 0 0', borderLeft: `3px solid ${P.terracotta}`, paddingLeft: '14px' })}"><span style="${enLigne({ fontFamily: SERIF, fontSize: '16px', fontWeight: '700', color: P.titre })}">${echapperHtml(T.signatureNom)}</span><br /><span class="ax-muted" style="color:${P.discret}">${echapperHtml(T.signatureRole)}</span></p>`
+    ? `<p style="${enLigne({ fontSize: '14px', lineHeight: '1.7', color: P.texte, margin: '24px 0 0 0', borderLeft: `3px solid ${P.terracotta}`, paddingLeft: '14px' })}"><span style="${enLigne({ fontFamily: SERIF, fontSize: '16px', fontWeight: '700', color: P.titre })}">${echapperHtml(signataire)}</span><br /><span class="ax-muted" style="color:${P.discret}">${echapperHtml(T.signatureRole)}</span></p>`
     : '';
   const lienOpposition =
     opposition === undefined
@@ -231,7 +234,7 @@ ${corps}${bouton}${soupape}${signature}
     ...c.paragraphes.flatMap((p) => [p, '']),
     ...(appel === undefined ? [] : [`${appel.libelle} : ${appel.href}`, '']),
     ...(regime.soupape ? [T.soupape, ''] : []),
-    ...(regime.signature ? [T.signatureNom, T.signatureRole, ''] : []),
+    ...(regime.signature ? [signataire, T.signatureRole, ''] : []),
     '—',
     ...pied.texte,
     ...(opposition === undefined ? [] : [`${LIEN_OPPOSITION.libelle} : ${opposition}`]),

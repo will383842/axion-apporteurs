@@ -69,7 +69,7 @@ describe('REQ-UX-047 — le châssis commun : ce que chaque famille rend', () =>
     const { html, texte } = habillerLeCourriel(A);
     const t = texteDe(html);
     expect(t).not.toContain(T.soupape);
-    expect(t).not.toContain(T.signatureNom);
+    expect(t).not.toContain(T.signatureRole);
     expect(t).not.toContain(LIEN_OPPOSITION.libelle);
     expect(t).not.toContain(T.repliDuBouton);
     expect(t).toContain(T.envoiAutomatique);
@@ -81,11 +81,11 @@ describe('REQ-UX-047 — le châssis commun : ce que chaque famille rend', () =>
   it('REQ-UX-047 : TÉMOIN — famille B : la soupape, la signature courte, le lien d’opposition ; famille C : sans opposition', () => {
     const b = texteDe(habillerLeCourriel(B).html);
     expect(b).toContain(T.soupape);
-    expect(b).toContain(`${T.signatureNom} ${T.signatureRole}`);
+    expect(b).toContain(`${entiteContractante().representant} ${T.signatureRole}`);
     expect(b).toContain(LIEN_OPPOSITION.libelle);
     const c = texteDe(habillerLeCourriel(C).html);
     expect(c).toContain(T.soupape);
-    expect(c).toContain(T.signatureNom);
+    expect(c).toContain(entiteContractante().representant);
     expect(c).not.toContain(LIEN_OPPOSITION.libelle);
     expect(c).toContain(T.repliDuBouton);
     expect(REGIME_DES_FAMILLES.C.opposition).toBe(false);
@@ -95,6 +95,9 @@ describe('REQ-UX-047 — le châssis commun : ce que chaque famille rend', () =>
     const e = entiteContractante();
     const t = texteDe(habillerLeCourriel(C).html);
     for (const v of [e.denomination, e.siren, e.tvaIntracommunautaire]) expect(t).toContain(v);
+    // Art. R.123-238 C. com. : le capital et le RCS, lus au registre (sous sentinelle d'ici le geste).
+    expect(t).toContain(`au capital de ${e.capitalSocial}`);
+    expect(t).toContain(`RCS ${e.rcsVille} ${e.siren}`);
     expect(t).toContain(T.adresseDeContact);
   });
 
