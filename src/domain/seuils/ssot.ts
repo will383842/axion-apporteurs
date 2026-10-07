@@ -197,6 +197,16 @@ export const SEUILS = {
     renvois: art('3.4'),
     verifieLe: '2026-10-07',
   },
+  // EXT-T07 — l'avance avec laquelle la liste « Prolongations à décider » s'ouvre avant le terme d'une
+  // attribution ; sans décision au terme, la prolongation est réputée (juriste, #809 6039901134).
+  PROLONGATION_DECISION_AVANCE_JOURS: {
+    valeur: 15,
+    unite: 'jours',
+    source:
+      "contrat art. 3.4 al. 3 : la liste « à décider » s'ouvre ce nombre de jours avant le terme (juriste, #809 6039901134 ; arbitrage de la coordination, #809 6039931639)",
+    renvois: art('3.4'),
+    verifieLe: '2026-10-07',
+  },
   FILE_FENETRE_REDECLARATION_JOURS: {
     valeur: 15,
     unite: 'jours',

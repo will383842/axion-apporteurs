@@ -45,6 +45,7 @@ import {
   STATUTS_ANOMALIE,
 } from '../anomalie/regles';
 import { GESTES_UTILISATEUR_CONSOLE, ROLES_CONSOLE } from '../console/roles';
+import { CONDITIONS_PROLONGATION } from '../attribution/prolongation';
 
 /**
  * Les codes d'événement que porte `apporteur_statut_modifie` : la NAISSANCE (`creer`, `de` nul), puis
@@ -109,7 +110,9 @@ export type TypeEvenementJournal =
   | 'anomalie_gel_modifie'
   | 'utilisateur_console_modifie'
   | 'journal_acces_gel_modifie'
-  | 'apporteur_mis_en_demeure';
+  | 'apporteur_mis_en_demeure'
+  | 'attribution_prolongee'
+  | 'attribution_prolongation_refusee';
 
 /**
  * SEC-61 : le gel du journal des accès à la console — ses gestes, ses motifs (les valeurs de
@@ -413,6 +416,44 @@ export const CHARGES_PAR_TYPE = {
   apporteur_mis_en_demeure: z
     .object({
       article: z.enum(ARTICLES_MISE_EN_DEMEURE),
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
+    })
+    .strict(),
+  /**
+   * EXT-T07 (art. 3.4 al. 3 ; forme d'A02, #809 6039970008) : la prolongation, la condition et les deux
+   * termes. RÉPUTÉE, elle vient du système ; décidée, d'un utilisateur de la console. Ni montant, ni
+   * devis, ni dossier.
+   */
+  attribution_prolongee: z
+    .object({
+      condition: z.enum(CONDITIONS_PROLONGATION),
+      finAvant: FORMES.horodatage(),
+      finApres: FORMES.horodatage(),
+      acteur: FORMES.acteur(),
+    })
+    .strict()
+    .superRefine(({ condition, acteur, finAvant, finApres }, ctx) => {
+      const attendu = condition === 'reputee' ? 'systeme' : 'utilisateur_console';
+      if (acteur.par !== attendu) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['acteur'],
+          message: 'acteur_incoherent',
+        });
+      }
+      if (!(Date.parse(finApres) > Date.parse(finAvant))) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['finApres'],
+          message: 'fin_non_reculee',
+        });
+      }
+    }),
+  /** EXT-T07 : le constat qu'aucune condition n'est remplie ; la fin de fenêtre ne bouge pas. */
+  attribution_prolongation_refusee: z
+    .object({
       acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
         message: 'acteur_console_attendu',
       }),

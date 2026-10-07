@@ -198,7 +198,7 @@ export function dateEnClair(instant: Instant | Date): string {
 /** Les paramètres d'une clé de la machine, EXACTEMENT ceux de ses textes. */
 export function parametresDeLaNotification(
   cle: string,
-  c: { entreprise: string; motif?: string; envoyeLe: Date }
+  c: { entreprise: string; motif?: string; date?: string; envoyeLe: Date }
 ): Record<string, string> {
   if (cle === 'decision_attribution') {
     if (c.motif === undefined) throw new Error('motif_manquant : decision_attribution sans motif');
@@ -215,6 +215,12 @@ export function parametresDeLaNotification(
   // DM-25 : l'entreprise SEULE ; {delaiReponse} vient de la SSOT, posé par l'envoi. Aucun critère
   // d'antériorité n'entre dans le texte (règle de SEC-12).
   if (cle === 'attribution_annulee_anteriorite') return { entreprise: c.entreprise };
+  // EXT-T07 : le NOUVEAU terme, lu dans la charge de l'événement ; ni la condition, ni le caractère
+  // réputé ou décidé de la prolongation (juriste, #809 6039901134).
+  if (cle === 'attribution_prolongee') {
+    if (c.date === undefined) throw new Error('date_manquante : attribution_prolongee sans terme');
+    return { entreprise: c.entreprise, date: c.date };
+  }
   throw new Error(`cle_hors_passage : ${cle}`);
 }
 
@@ -306,6 +312,20 @@ async function motifDuFait(
   }
 }
 
+/** EXT-T07 : le nouveau terme d'une prolongation, lu dans la charge de SON événement, en clair. */
+async function termeDeLaProlongation(
+  tx: Tx,
+  n: NotificationARendre,
+  s: SourcesDuRendu
+): Promise<{ date: string } | { nonRendue: MotifDeNonRendu }> {
+  if (n.evenementId === null) return nonRendue('fait_introuvable');
+  const brute = await s.chargeDuFait(tx, n.evenementId);
+  if (brute === null || brute === undefined) return nonRendue('fait_introuvable');
+  const lue = CHARGES_PAR_TYPE.attribution_prolongee.safeParse(brute);
+  if (!lue.success) return nonRendue('charge_illisible');
+  return { date: dateEnClair(new Date(lue.data.finApres)) };
+}
+
 /**
  * Le texte d'une notification de la machine, rendu DEPUIS LA BASE à l'heure de l'envoi : l'entreprise
  * de l'attribution (qui doit être celle du destinataire), le motif lu dans la charge de l'événement, la
@@ -336,11 +356,18 @@ export async function rendreDepuisLaBase(
     if ('nonRendue' in lu) return lu;
     motif = lu.motif;
   }
+  let date: string | undefined;
+  if (n.cle === 'attribution_prolongee') {
+    const lu = await termeDeLaProlongation(tx, n, s);
+    if ('nonRendue' in lu) return lu;
+    date = lu.date;
+  }
   try {
     const parametres = parametresDeLaNotification(n.cle, {
       entreprise,
       envoyeLe,
       ...(motif === undefined ? {} : { motif }),
+      ...(date === undefined ? {} : { date }),
     });
     return s.composer(n.cle, rendreLaNotification(n.cle, parametres));
   } catch (e) {

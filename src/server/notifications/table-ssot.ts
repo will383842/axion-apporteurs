@@ -234,6 +234,24 @@ export const GABARITS = {
     route: '/mes-entreprises',
     routeEnAttente: null,
   },
+  /**
+   * EXT-T07 (forme de l'émettrice, rattrapage 64) : l'Apporteur est informé de la prolongation, décidée
+   * ou réputée (art. 3.4 al. 3 : « L'Apporteur est informé de la prolongation »).
+   */
+  attribution_prolongee: {
+    destinataire: 'apporteur',
+    req: 'REQ-EXT-020',
+    emetteur: 'EXT-T07',
+    fondement: 'art. 3.4 al. 3 — l’Apporteur est informé de la prolongation',
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: false,
+    canaux: ['email', 'espace'],
+    desactivable: false,
+    actions: action('attribution_prolongee'),
+    route: '/mes-entreprises',
+    routeEnAttente: null,
+  },
   decision_attribution: {
     destinataire: 'apporteur',
     req: 'REQ-DM-006',

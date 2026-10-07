@@ -156,6 +156,8 @@ export const CLES_ENVOYEES_PAR_LE_PASSAGE = [
   'resiliation',
   // DM-25 : l'annulation pour antériorité de la Société, écrite avec son événement par la transition.
   'attribution_annulee_anteriorite',
+  // EXT-T07 : la prolongation, décidée ou réputée, écrite avec son événement ; le terme vient de sa charge.
+  'attribution_prolongee',
 ] as const;
 
 /** Les clés du contrat : leur texte se rend depuis la décision liée, jamais depuis une attribution. */

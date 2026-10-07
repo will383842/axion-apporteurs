@@ -48,6 +48,8 @@ export const MATRICE_DES_ROLES = {
   'action:lever_gel': { roles: ['admin'], stepUp: true },
   'action:suspendre_apporteur': { roles: ['admin'], stepUp: false },
   'action:resilier_apporteur': { roles: ['admin'], stepUp: false },
+  // EXT-T07 (art. 3.4 al. 3) : décider de la prolongation (prolonger ou constater), sous step-up.
+  'action:decider_prolongation': { roles: ['admin'], stepUp: true },
   'action:exporter_das2': { roles: ['admin'], stepUp: true },
   // DM-12 (REQ-DM-034, amendement A1-01) : le rattachement manuel motivé, au qualifieur (glossaire §7)
   // et à l'admin ; jamais au comptable ni au lecteur.
@@ -103,6 +105,8 @@ export const MATRICE_DES_ROLES = {
   // à admin seul et sans step-up (lire ne change rien, chaque page se trace) ; l'administrateur
   // VALIDÉ est relu en base par la lecture elle-même.
   'ecran:gels_journal_acces': { roles: ['admin'], stepUp: false },
+  // EXT-T07 : la liste « Prolongations à décider », à l'administrateur seul.
+  'ecran:prolongations': { roles: ['admin'], stepUp: false },
   // UX-P1-57 (conditions de la sécurité, #703) : la mise en demeure est un acte juridique qui ouvre la
   // voie à la résiliation sans préavis ; à l'admin seul, sous step-up. Son écran, à l'admin seul : le
   // relèvement est exigé par le geste, que l'action rejuge.

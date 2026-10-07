@@ -43,6 +43,17 @@ export const TEXTES_DES_NOTIFICATIONS = {
     appel: 'Voir Mes entreprises',
     corps: null,
   },
+  /**
+   * EXT-T07 (art. 3.4 al. 3) : la prolongation, décidée ou réputée. Le corps est celui de la juriste
+   * (#809, 6039901134), mot pour mot : il ne dit ni la condition, ni si la prolongation est réputée.
+   * {date} : le nouveau terme, posé par l'émettrice. Titre et appel PROPOSÉS, à relire par la juriste.
+   */
+  attribution_prolongee: {
+    titre: '{entreprise} : votre dépôt est prolongé',
+    appel: 'Voir Mes entreprises',
+    corps:
+      "Votre dépôt de {entreprise} est prolongé jusqu'au {date}, une seule fois et sans démarche de votre part (contrat, article 3.4).",
+  },
   decision_attribution: {
     titre: '{entreprise} : une décision concerne votre dépôt',
     appel: 'Contester cette décision par écrit',
