@@ -133,6 +133,8 @@ const sansAvoirs: Implementation = (s) => depot({ ...s, avoirsCents: [] });
 
 const TIRAGES = scenarios(500);
 const MARS = { annee: 2027, mois: 3, jour: 5 };
+const PRIX = 100_000;
+const AVOIR = PRIX / 5;
 
 describe('REQ-ARG-004, REQ-DM-017 — l’acquisition au paiement intégral, invariants prouvés sur 500 tirages', () => {
   it('REQ-ARG-004, REQ-DM-017 : l’implémentation du dépôt tient les cinq invariants sur chaque tirage', () => {
@@ -143,9 +145,9 @@ describe('REQ-ARG-004, REQ-DM-017 — l’acquisition au paiement intégral, inv
 
   it('REQ-ARG-004 — TÉMOIN : une acquisition à 99 % est prise, invariant nommé', () => {
     const s: Scenario = {
-      prixFactureCents: 100_000,
+      prixFactureCents: PRIX,
       avoirsCents: [],
-      encaissements: [{ montantCents: 99_500, payeur: 'client', creditLe: MARS }],
+      encaissements: [{ montantCents: PRIX - PRIX / 200, payeur: 'client', creditLe: MARS }],
     };
     expect(violations(a99pourcent, s)).toContain('si_et_seulement_si_solde');
     expect(violations(depot, s)).toEqual([]);
@@ -153,9 +155,9 @@ describe('REQ-ARG-004, REQ-DM-017 — l’acquisition au paiement intégral, inv
 
   it('REQ-ARG-004 — TÉMOIN : un solde jugé sans les avoirs est pris, invariant nommé', () => {
     const s: Scenario = {
-      prixFactureCents: 100_000,
-      avoirsCents: [20_000],
-      encaissements: [{ montantCents: 80_000, payeur: 'opco', creditLe: MARS }],
+      prixFactureCents: PRIX,
+      avoirsCents: [AVOIR],
+      encaissements: [{ montantCents: PRIX - AVOIR, payeur: 'opco', creditLe: MARS }],
     };
     expect(violations(sansAvoirs, s)).toContain('si_et_seulement_si_solde');
     expect(violations(depot, s)).toEqual([]);

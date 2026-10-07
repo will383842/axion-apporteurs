@@ -24,6 +24,7 @@
  * W19 : le refus propre au porteur est jugé sur le triplet (état, transition, type de porteur) ; un
  * conseiller ne déclenche ni la confirmation tacite, ni `non_confirme`, ni le gel, ni la file.
  */
+import { ETATS_OCCUPANTS, type EtatOccupant } from './etats';
 import { SEUILS } from '../seuils/ssot';
 import { MS_PAR_JOUR, joursDeLaDate } from '../temps/calendrier-civil';
 import { depuisParis, versParis } from '../temps/paris';
@@ -174,14 +175,10 @@ export const TRANSITIONS_ATTRIBUTION: {
  * deux exceptions humaines le font. La base tient la même règle par `confirmee_at`
  * (garde `attributions_annulation_apres_confirmation`).
  */
-export const ETATS_CONFIRMES = [
-  'active',
-  'rdv_pris',
-  'proposition',
-  'signee',
-  'convertie',
-  'figee_resiliation',
-] as const satisfies readonly EtatAttribution[];
+export type EtatConfirme = Exclude<EtatOccupant, 'provisoire'>;
+export const ETATS_CONFIRMES: readonly EtatConfirme[] = ETATS_OCCUPANTS.filter(
+  (e): e is EtatConfirme => e !== 'provisoire'
+);
 
 /**
  * DM-71 : la liste FERMÉE des exceptions d'annulation, celle de l'enum `exception_annulation` en base.

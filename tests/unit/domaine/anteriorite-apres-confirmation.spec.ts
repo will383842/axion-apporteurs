@@ -51,15 +51,18 @@ describe('REQ-JUR-007 — l’antériorité n’annule plus après la confirmati
     'signee',
     'convertie',
     'figee_resiliation',
-  ] as const)('REQ-JUR-007 : TÉMOIN — depuis %s, `anteriorite_etablie` est REFUSÉE', (de) => {
-    expect(
-      code(() =>
-        transitionnerAttribution({ de, transition: 'anteriorite_etablie', porteur: 'apporteur' })
-      )
-    ).toBe('transition_refusee');
-  });
+  ] as const)(
+    'REQ-DM-043 : TÉMOIN — depuis %s (confirmée), `anteriorite_etablie` est REFUSÉE',
+    (de) => {
+      expect(
+        code(() =>
+          transitionnerAttribution({ de, transition: 'anteriorite_etablie', porteur: 'apporteur' })
+        )
+      ).toBe('transition_refusee');
+    }
+  );
 
-  it('REQ-JUR-007 : TÉMOIN à deux faces — depuis `provisoire`, l’antériorité annule toujours', () => {
+  it('REQ-DM-043 : TÉMOIN à deux faces — depuis `provisoire`, l’antériorité établie après coup annule toujours', () => {
     expect(
       transitionnerAttribution({
         de: 'provisoire',

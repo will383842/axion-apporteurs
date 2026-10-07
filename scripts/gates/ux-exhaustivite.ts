@@ -263,6 +263,9 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   // DM-55 : les faits retenus contre SON dépôt (art. 3.7), saisis par la console et lus au rendu ;
   // sans lien, sans nom de tiers, sans les mots refusés (sécurité, rattrapage 64).
   'courriels/notifications.ts › MOTIFS_DES_DECISIONS › anomalie_confirmee': ['faits'],
+  // DM-71 (art. 3.3 du v2) : la fraude établie annule SON attribution confirmée ; ses faits sont ceux de
+  // SON anomalie confirmée, saisis et lus comme ceux de `anomalie_confirmee` (juriste, 6039893112).
+  'courriels/notifications.ts › MOTIFS_DES_DECISIONS › fraude_etablie': ['faits'],
   // SEC-19 (juriste, #703) : SA mise en demeure — l'article de la liste fermée de l'art. 11.2, les
   // faits saisis par la console (règles de DM-55), le délai venu de la SSOT (RM-10).
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure': [
