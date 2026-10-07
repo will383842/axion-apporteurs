@@ -33,7 +33,7 @@ import {
   type Livraison,
   type Tache,
 } from '../../../scripts/lot/cloture';
-import { controler, vuesDeLaPasse } from '../../../scripts/gates/gov-tasks';
+import { CHEMIN_GEL, controler, vuesDeLaPasse } from '../../../scripts/gates/gov-tasks';
 import { chargerRegistre, CHEMIN_REGISTRE } from '../../../scripts/lot/registre-decisions';
 import { CHEMIN_CHARTE, cheminsSchema } from '../../../scripts/lot/revues';
 import { DEPOT_LOCAL } from '../../../scripts/lot/attestation';
@@ -144,7 +144,8 @@ const fautesDuRegistre = (doc: Doc) =>
  */
 function lancerLaGarde(doc: Doc): { code: number | null; sortie: string } {
   const bac = mkdtempSync(join(tmpdir(), 'gov-057-'));
-  for (const f of [CHEMIN_SCHEMA, CHEMIN_REGISTRE, CHEMIN_CHARTE]) {
+  // GOV-150 : la garde lit aussi la liste du gel de la phase 1 (`CHEMIN_GEL`), en échec fermé.
+  for (const f of [CHEMIN_SCHEMA, CHEMIN_REGISTRE, CHEMIN_CHARTE, CHEMIN_GEL]) {
     mkdirSync(join(bac, dirname(f)), { recursive: true });
     copyFileSync(f, join(bac, f));
   }

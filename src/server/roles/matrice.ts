@@ -92,6 +92,10 @@ export const MATRICE_DES_ROLES = {
   // VALIDÉ, sous step-up ; la levée par un AUTRE que l'auteur et que la personne visée (CHECK).
   'action:poser_gel_journal_acces': { roles: ['admin'], stepUp: true },
   'action:lever_gel_journal_acces': { roles: ['admin'], stepUp: true },
+  // UX-P1-53 (validé par la sécurité) : l'écran des gels, un seul droit pour l'onglet et la lecture,
+  // à admin seul et sans step-up (lire ne change rien, chaque page se trace) ; l'administrateur
+  // VALIDÉ est relu en base par la lecture elle-même.
+  'ecran:gels_journal_acces': { roles: ['admin'], stepUp: false },
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, EntreeDeLaMatrice>>;
 
 /**
