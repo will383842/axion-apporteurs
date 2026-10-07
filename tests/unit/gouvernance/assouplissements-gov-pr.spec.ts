@@ -45,7 +45,11 @@ describe('REQ-GOV-011 — GOV-145 (3) : une ligne de journal de la PR ne périme
   let TautreEntree = '';
   let Tcode = '';
   const git = (...a: string[]): string =>
-    execFileSync('git', a, { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    execFileSync('git', a, {
+      cwd: dir,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
   const ecrire = (f: string, t: string): void => {
     mkdirSync(dirname(join(dir, f)), { recursive: true });
     writeFileSync(join(dir, f), t);
@@ -66,7 +70,10 @@ describe('REQ-GOV-011 — GOV-145 (3) : une ligne de journal de la PR ne périme
     git('commit', '-q', '-m', 'base');
     git('checkout', '-q', '-b', 'pr');
     ecrire('src/code.ts', 'ligne 1 changee par la PR\nligne 2\n');
-    ecrire('docs/journal/2026-10-pr-7.md', '## PR #7 — 2026-10-04 — la PR jugée\n\n**Fait.** une phrase.\n');
+    ecrire(
+      'docs/journal/2026-10-pr-7.md',
+      '## PR #7 — 2026-10-04 — la PR jugée\n\n**Fait.** une phrase.\n'
+    );
     git('add', '-A');
     git('commit', '-q', '-m', 'pr');
     C = git('rev-parse', 'HEAD');
@@ -141,7 +148,9 @@ describe('REQ-GOV-011 — GOV-145 (3) : la lecture des revues exclut l’entrée
     expect(l.survivantes.map((s) => s.lentille).sort()).toEqual(['exactitude', 'securite']);
     expect(l.survivantes.every((s) => s.journalExclu === true)).toBe(true);
     expect(l.coche).toBe(true);
-    expect(LECTEUR.direLaSurvivance(l.survivantes[0]!)).toContain('entrée de journal de la PR jugée exclue');
+    expect(LECTEUR.direLaSurvivance(l.survivantes[0]!)).toContain(
+      'entrée de journal de la PR jugée exclue'
+    );
   });
 
   it('REQ-GOV-011 — un titre d’une AUTRE PR glissé dans son entrée : l’empreinte reste complète, tout PÉRIME', () => {
@@ -181,8 +190,23 @@ describe('REQ-GOV-011 — GOV-145 (3) : la lecture des revues exclut l’entrée
 // ── (2) l'auteur déclare ses chemins dans sa PR ─────────────────────────────────────────────────
 
 describe('REQ-GOV-010 — GOV-145 (2) : une PR d’auteur n’ajoute que SES chemins au registre', () => {
-  const tache = (id: string, zone: string, paths: string[], prose = 'une acceptation'): GARDE.Tache => {
-    const brute = { id, zone, sensible: [], schema: false, pr: null, paths, tests: null, statut: 'a_faire', acceptance: prose };
+  const tache = (
+    id: string,
+    zone: string,
+    paths: string[],
+    prose = 'une acceptation'
+  ): GARDE.Tache => {
+    const brute = {
+      id,
+      zone,
+      sensible: [],
+      schema: false,
+      pr: null,
+      paths,
+      tests: null,
+      statut: 'a_faire',
+      acceptance: prose,
+    };
     return GARDE.projeter([brute])[0]!;
   };
   const BASE = [
@@ -216,18 +240,30 @@ describe('REQ-GOV-010 — GOV-145 (2) : une PR d’auteur n’ajoute que SES che
   const NEUF = 'src/app/(espace)/nouveau.tsx';
 
   it('REQ-GOV-010 — ajouter à SA tâche un chemin qui couvre un fichier qu’elle touche : AUCUN écart', () => {
-    const tete = [tache('UX-P1-01', 'espace', ['src/app/(espace)/page.tsx', NEUF]), BASE[1]!, BASE[2]!];
+    const tete = [
+      tache('UX-P1-01', 'espace', ['src/app/(espace)/page.tsx', NEUF]),
+      BASE[1]!,
+      BASE[2]!,
+    ];
     expect(juger(tete, ['docs/tasks.json', NEUF])).toEqual([]);
   });
 
   it('REQ-GOV-010 — un chemin ajouté qui ne couvre aucun fichier de la PR : écart NOMMÉ', () => {
-    const tete = [tache('UX-P1-01', 'espace', ['src/app/(espace)/page.tsx', NEUF]), BASE[1]!, BASE[2]!];
+    const tete = [
+      tache('UX-P1-01', 'espace', ['src/app/(espace)/page.tsx', NEUF]),
+      BASE[1]!,
+      BASE[2]!,
+    ];
     expect(juger(tete, ['docs/tasks.json']).join(' ')).toContain('ne couvrent aucun fichier');
   });
 
   it('REQ-GOV-010 — la tâche d’une AUTRE PR réécrite : écart NOMMÉ', () => {
-    const tete = [BASE[0]!, tache('UX-P1-02', 'espace', ['src/app/(espace)/autre.tsx', NEUF]), BASE[2]!];
-    expect(juger(tete, ['docs/tasks.json', NEUF]).join(' ')).toContain("UX-P1-02 est réécrite");
+    const tete = [
+      BASE[0]!,
+      tache('UX-P1-02', 'espace', ['src/app/(espace)/autre.tsx', NEUF]),
+      BASE[2]!,
+    ];
+    expect(juger(tete, ['docs/tasks.json', NEUF]).join(' ')).toContain('UX-P1-02 est réécrite');
   });
 
   it('REQ-GOV-010 — un autre champ que paths réécrit sur SA tâche : écart NOMMÉ', () => {
@@ -236,7 +272,9 @@ describe('REQ-GOV-010 — GOV-145 (2) : une PR d’auteur n’ajoute que SES che
       BASE[1]!,
       BASE[2]!,
     ];
-    expect(juger(tete, ['docs/tasks.json', NEUF]).join(' ')).toContain('un autre champ que `paths`');
+    expect(juger(tete, ['docs/tasks.json', NEUF]).join(' ')).toContain(
+      'un autre champ que `paths`'
+    );
   });
 
   it('REQ-GOV-010 — un chemin RETIRÉ, une tâche versée ou supprimée : écarts NOMMÉS', () => {
@@ -249,7 +287,11 @@ describe('REQ-GOV-010 — GOV-145 (2) : une PR d’auteur n’ajoute que SES che
   });
 
   it('REQ-GOV-010 — registre de base illisible : écart (échec FERMÉ)', () => {
-    const tete = [tache('UX-P1-01', 'espace', ['src/app/(espace)/page.tsx', NEUF]), BASE[1]!, BASE[2]!];
+    const tete = [
+      tache('UX-P1-01', 'espace', ['src/app/(espace)/page.tsx', NEUF]),
+      BASE[1]!,
+      BASE[2]!,
+    ];
     const ecarts = GARDE.ecartsDuRegistreDUnePrDAuteur(
       depotAvec(tete),
       { ...pr(['docs/tasks.json', NEUF]), tachesBase: null },
@@ -294,25 +336,65 @@ describe('REQ-GOV-013 — GOV-145 (5) : la case « Relecteur ≠ auteur » compt
 
 describe('REQ-GOV-010 — GOV-145 : sans rattrapage, une PR d’auteur qui n’ajoute que ses chemins se passe du label', () => {
   const tache = (id: string, zone: string, paths: string[]): GARDE.Tache =>
-    GARDE.projeter([{ id, zone, sensible: [], schema: false, pr: null, paths, tests: null, statut: 'a_faire', acceptance: 'a' }])[0]!;
-  const depot = (taches: GARDE.Tache[]): GARDE.Depot => ({ gabarit: '', codeowners: '', charte: '', fiches: [], architecte: '', taches });
-  const pr = (fichiers: string[]): GARDE.Pr => ({ titre: 't', corps: '', labels: [], fichiers, revues: null, tachesBase: null });
-  const TETE = [tache('UX-P1-01', 'espace', ['src/app/x.tsx']), tache('GOV-012', 'gouvernance', ['docs/tasks.json'])];
+    GARDE.projeter([
+      {
+        id,
+        zone,
+        sensible: [],
+        schema: false,
+        pr: null,
+        paths,
+        tests: null,
+        statut: 'a_faire',
+        acceptance: 'a',
+      },
+    ])[0]!;
+  const depot = (taches: GARDE.Tache[]): GARDE.Depot => ({
+    gabarit: '',
+    codeowners: '',
+    charte: '',
+    fiches: [],
+    architecte: '',
+    taches,
+  });
+  const pr = (fichiers: string[]): GARDE.Pr => ({
+    titre: 't',
+    corps: '',
+    labels: [],
+    fichiers,
+    revues: null,
+    tachesBase: null,
+  });
+  const TETE = [
+    tache('UX-P1-01', 'espace', ['src/app/x.tsx']),
+    tache('GOV-012', 'gouvernance', ['docs/tasks.json']),
+  ];
 
   it('REQ-GOV-010 — registre touché, tâche d’auteur, AUCUN écart : le label n’est plus exigé', () => {
-    expect(GARDE.cheminsDAuteurSeuls(depot(TETE), pr(['docs/tasks.json', 'src/app/x.tsx']), 'UX-P1-01', [])).toBe(true);
+    expect(
+      GARDE.cheminsDAuteurSeuls(
+        depot(TETE),
+        pr(['docs/tasks.json', 'src/app/x.tsx']),
+        'UX-P1-01',
+        []
+      )
+    ).toBe(true);
   });
 
   it('REQ-GOV-010 — un seul écart, une PR de gouvernance, un titre inconnu ou sans tâche : le label reste exigé', () => {
     const f = ['docs/tasks.json'];
-    expect(GARDE.cheminsDAuteurSeuls(depot(TETE), pr(f), 'UX-P1-01', ['UX-P1-02 est réécrite'])).toBe(false);
+    expect(
+      GARDE.cheminsDAuteurSeuls(depot(TETE), pr(f), 'UX-P1-01', ['UX-P1-02 est réécrite'])
+    ).toBe(false);
     expect(GARDE.cheminsDAuteurSeuls(depot(TETE), pr(f), 'GOV-012', [])).toBe(false);
     expect(GARDE.cheminsDAuteurSeuls(depot(TETE), pr(f), 'UX-P1-99', [])).toBe(false);
     expect(GARDE.cheminsDAuteurSeuls(depot(TETE), pr(f), null, [])).toBe(false);
   });
 
   it('REQ-GOV-010 — une PR qui ne touche pas le registre n’en tire aucune levée', () => {
-    expect(GARDE.cheminsDAuteurSeuls(depot(TETE), pr(['src/app/x.tsx']), 'UX-P1-01', [])).toBe(false);
+    expect(GARDE.cheminsDAuteurSeuls(depot(TETE), pr(['src/app/x.tsx']), 'UX-P1-01', [])).toBe(
+      false
+    );
   });
 });
 

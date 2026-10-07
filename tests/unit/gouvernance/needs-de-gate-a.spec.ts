@@ -7,7 +7,12 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { checksCouvertsParLesRequis, checksProduits, controler, VUE_CONFORME } from '../../../scripts/gates/gov-depot';
+import {
+  checksCouvertsParLesRequis,
+  checksProduits,
+  controler,
+  VUE_CONFORME,
+} from '../../../scripts/gates/gov-depot';
 
 const familles = (v: typeof VUE_CONFORME): string[] => controler(v).map((f) => f.famille);
 

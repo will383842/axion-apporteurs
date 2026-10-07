@@ -1515,7 +1515,9 @@ export const RACINES_SANS_DONNEES: readonly string[] = ['src/content/micro-copy/
 /** GOV-124 — un fichier qu'une seule lentille peut relire : autorisé, et jamais exclu. */
 export function fichierAUneLentille(f: string): boolean {
   const exclu = EXCLUS_D_UNE_LENTILLE.some((x) => (x.endsWith('/') ? f.startsWith(x) : f === x));
-  return !exclu && [...RACINES_A_UNE_LENTILLE, ...RACINES_SANS_DONNEES].some((r) => f.startsWith(r));
+  return (
+    !exclu && [...RACINES_A_UNE_LENTILLE, ...RACINES_SANS_DONNEES].some((r) => f.startsWith(r))
+  );
 }
 
 /**
@@ -1526,7 +1528,12 @@ export function fichierAUneLentille(f: string): boolean {
  * 2026-10-07, 6032068586) : pour les fichiers sans données seulement (`docs/`,
  * `RACINES_SANS_DONNEES`), et jamais pour une tâche `sensible`.
  */
-export const ZONES_A_UNE_LENTILLE: readonly string[] = ['gouvernance', 'qualite', 'espace', 'console'];
+export const ZONES_A_UNE_LENTILLE: readonly string[] = [
+  'gouvernance',
+  'qualite',
+  'espace',
+  'console',
+];
 
 /**
  * LE TITRE D'UNE PR : `<type>(<ID-TÂCHE>): <titre>` (`docs/CONVENTIONS.md` §5). Écrit UNE fois :

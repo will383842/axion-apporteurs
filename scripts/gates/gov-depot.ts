@@ -198,7 +198,14 @@ export function checksCouvertsParLesRequis(yml: string, requis: readonly string[
     if (besoins) {
       const v = besoins[1] as string;
       enBloc = v === '';
-      if (!enBloc) courant.besoins.push(...v.replace(/^\[|\]$/g, '').split(',').map((x) => x.trim()).filter(Boolean));
+      if (!enBloc)
+        courant.besoins.push(
+          ...v
+            .replace(/^\[|\]$/g, '')
+            .split(',')
+            .map((x) => x.trim())
+            .filter(Boolean)
+        );
       continue;
     }
     const item = /^ {6}- *([A-Za-z0-9_-]+)\s*$/.exec(l);

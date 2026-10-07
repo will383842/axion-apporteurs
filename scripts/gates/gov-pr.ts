@@ -278,7 +278,9 @@ export function ecartsDuRegistreDUnePrDAuteur(
     }
     const hors = t.empreinteHorsPaths ?? null;
     if (hors === null || hors !== (avant.empreinteHorsPaths ?? null)) {
-      ecarts.push(`${t.id} : un autre champ que \`paths\` est réécrit (ou son empreinte est incalculable)`);
+      ecarts.push(
+        `${t.id} : un autre champ que \`paths\` est réécrit (ou son empreinte est incalculable)`
+      );
       continue;
     }
     const retires = avant.paths.filter((p) => !t.paths.includes(p));
@@ -1093,7 +1095,12 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
   }
 
   // ── GOV-145 (décision orale de Williams du 2026-10-04, #319, 6032352874, point 2) : L'AUTEUR DÉCLARE SES CHEMINS DANS SA PR ──
-  const ecartsDeLAuteur = ecartsDuRegistreDUnePrDAuteur(depot, pr, titre ? titre[2]! : null, tachesCitees);
+  const ecartsDeLAuteur = ecartsDuRegistreDUnePrDAuteur(
+    depot,
+    pr,
+    titre ? titre[2]! : null,
+    tachesCitees
+  );
   for (const m of ecartsDeLAuteur) ajouter('registre_reecrit_par_une_pr_d_auteur', m);
 
   // ── Décision de Williams du 2026-10-05 (#319, 5988252245), point 3 : LA FIN DES RATTRAPAGES DE
@@ -1928,13 +1935,13 @@ if (LANCE_EN_SCRIPT) {
     const FICHIER_NEUF_DE_QA_T01 = (() => {
       const voisin = cheminsDe('QA-T01').find((f) => f.startsWith('tests/unit/gouvernance/'));
       if (voisin === undefined) {
-        throw new Error('gov:pr --prove — QA-T01 ne déclare plus de test de gouvernance : le témoin de GOV-145 ne mesure rien.');
+        throw new Error(
+          'gov:pr --prove — QA-T01 ne déclare plus de test de gouvernance : le témoin de GOV-145 ne mesure rien.'
+        );
       }
       return voisin.replace(/[^/]+$/, 'gov-145-temoin.spec.ts');
     })();
-    const PR_D_AUTEUR_QUI_TOUCHE_LE_REGISTRE = (
-      reecrire: (t: Tache) => Tache
-    ): [Depot, Pr] => {
+    const PR_D_AUTEUR_QUI_TOUCHE_LE_REGISTRE = (reecrire: (t: Tache) => Tache): [Depot, Pr] => {
       const d = copieDepot();
       const base = d.taches;
       d.taches = base.map(reecrire);
@@ -2496,7 +2503,9 @@ if (LANCE_EN_SCRIPT) {
         famille: 'registre_reecrit_par_une_pr_d_auteur',
         defaut: () =>
           PR_D_AUTEUR_QUI_TOUCHE_LE_REGISTRE((t) =>
-            t.id === 'GOV-011' ? { ...t, empreinte: 'f'.repeat(64), empreinteHorsPaths: 'f'.repeat(64) } : t
+            t.id === 'GOV-011'
+              ? { ...t, empreinte: 'f'.repeat(64), empreinteHorsPaths: 'f'.repeat(64) }
+              : t
           ),
       },
       {
