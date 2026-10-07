@@ -152,14 +152,17 @@ describe('REQ-DM-042 — les délais de l’art. 3.2 : la SSOT dit ce que le reg
   it.each(['LIBERATION_SIGNALEE_JOURS', 'CARENCE_REDEPOT_APRES_LIBERATION_JOURS'] as const)(
     'REQ-DM-042 : %s — la valeur de la SSOT est celle du registre',
     (nom) => {
-      // Le nom, puis au plus soixante caractères sans parenthèse, puis « (= N, SSOT) ».
-      const debut = REGISTRE.indexOf('`' + nom + '`');
-      const ecrite =
-        debut === -1
-          ? null
-          : /^[^(]{0,60}\(= (\d+), SSOT\)/.exec(REGISTRE.slice(debut + nom.length + 2));
-      expect(ecrite, `${nom} : aucune valeur « (= N, SSOT) » au registre`).not.toBeNull();
-      expect(SEUILS[nom].valeur).toBe(Number(ecrite![1]));
+      // Le nom, puis au plus soixante caractères sans parenthèse, puis « (= N, SSOT) ». Le registre peut
+      // nommer la constante plusieurs fois (une ligne réécrite par un geste la cite en tête) : on lit
+      // TOUTES ses occurrences, et chacune qui porte une valeur doit dire celle de la SSOT.
+      const marque = '`' + nom + '`';
+      const valeurs: number[] = [];
+      for (let i = REGISTRE.indexOf(marque); i !== -1; i = REGISTRE.indexOf(marque, i + 1)) {
+        const m = /^[^(]{0,60}\(= (\d+), SSOT\)/.exec(REGISTRE.slice(i + marque.length));
+        if (m !== null) valeurs.push(Number(m[1]));
+      }
+      expect(valeurs, `${nom} : aucune valeur « (= N, SSOT) » au registre`).not.toHaveLength(0);
+      for (const v of valeurs) expect(v, nom).toBe(SEUILS[nom].valeur);
     }
   );
 });
