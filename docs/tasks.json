@@ -23775,7 +23775,8 @@
         "tests/unit/gouvernance/glossaire-enums.spec.ts",
         "src/server/roles/matrice.ts",
         "tests/unit/securite/matrice-des-roles.spec.ts",
-        "src/domain/apporteur/effets-de-la-fin.ts"
+        "src/domain/apporteur/effets-de-la-fin.ts",
+        "src/server/apporteur/resiliation.ts"
       ],
       "schema": false,
       "sensible": [
