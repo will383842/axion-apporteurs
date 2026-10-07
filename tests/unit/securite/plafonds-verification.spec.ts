@@ -76,7 +76,7 @@ describe('REQ-SEC-021 — le secret des plafonds : cinq clés fermées, bornées
     ],
     [
       'rafale au-dessus du plafond',
-      FACTICES.replace('identite_court=2', 'identite_court=8'),
+      FACTICES.replace('identite_court=2', 'identite_court=7'),
       'identite_court',
       'incoherente',
     ],
