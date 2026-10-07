@@ -47,6 +47,21 @@ export const ETATS_ATTRIBUTION = [
 ] as const;
 export type EtatAttribution = (typeof ETATS_ATTRIBUTION)[number];
 
+/**
+ * EXT-T06 (conditions de la sécurité) — les états TERMINÉS : la liste FERMÉE, à côté de l'enum. Une
+ * attribution terminée n'occupe plus le SIREN et n'attend plus rien. Chaque état est d'une seule classe :
+ * occupant (`ETATS_OCCUPANTS`), en file (`en_attente`) ou terminé ; un témoin rougit sur un état neuf
+ * non classé.
+ */
+export const ETATS_TERMINES = [
+  'invalidee',
+  'perdue',
+  'perimee',
+  'expiree',
+  'annulee',
+] as const satisfies readonly EtatAttribution[];
+export type EtatTermine = (typeof ETATS_TERMINES)[number];
+
 /** Toutes les transitions : les naissances, puis les flèches. Égale à l'union des deux (test). */
 export const EVENEMENTS_ATTRIBUTION = [
   'deposee',

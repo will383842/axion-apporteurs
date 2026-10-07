@@ -37,6 +37,7 @@
  */
 import type { Prisma, PrismaClient, TypeEvenementJournal, AgregatJournal } from '@prisma/client';
 import { CHARGES_PAR_TYPE, TRANSITIONS_DU_JOURNAL_APPORTEUR } from '../../domain/evenement/charges';
+import { ETATS_TERMINES } from '../../domain/attribution/machine';
 import { calculerSelfHash, type LigneJournal } from '../../domain/evenement/journal';
 
 /**
@@ -228,4 +229,43 @@ export async function acteursDUneTransition(
     if (!lu.success) throw new Error('lecture_du_journal_refusee : charge hors schéma');
     return lu.data.acteur.id ?? null;
   });
+}
+
+/**
+ * EXT-T06 — LECTEUR RÉSERVÉ du signal « Déjà déclarée par le passé » (conditions de la sécurité, relayées
+ * par la coordination). Il rend la date de fin de la DERNIÈRE attribution terminée sur ce SIREN, quel
+ * qu'en soit le porteur, ou `null` ; RIEN d'autre : ni porteur, ni identifiant, ni charge, ni nombre.
+ *   — Les événements se trouvent par les ATTRIBUTIONS du SIREN (`agregat_id` parmi leurs ids), jamais
+ *     en lisant un SIREN dans une charge.
+ *   — Une attribution compte si son état est dans la liste FERMÉE `ETATS_TERMINES`, et si son DERNIER
+ *     `attribution_etat_modifie` dit, lisiblement, qu'elle y est passée ; la fin est son `survenuAt`.
+ *   — ÉCHEC FERMÉ : une charge illisible, un événement absent ou discordant, une erreur de lecture
+ *     rendent `null`, donc AUCUN signal : échouer ne rend rien de différent de « jamais déclarée ».
+ * Seul le service de la vérification l'appelle ; le booléen se calcule en mémoire, jamais stocké ni
+ * journalisé.
+ */
+export async function derniereFinSurLeSiren(
+  client: Pick<PrismaClient, 'attribution' | 'evenement'> | Prisma.TransactionClient,
+  siren: string
+): Promise<Date | null> {
+  try {
+    const terminees = await client.attribution.findMany({
+      where: { siren, statut: { in: [...ETATS_TERMINES] } },
+      select: { id: true, statut: true },
+    });
+    let fin: Date | null = null;
+    for (const a of terminees) {
+      const e = await client.evenement.findFirst({
+        where: { type: 'attribution_etat_modifie', agregat: 'attribution', agregatId: a.id },
+        orderBy: [{ survenuAt: 'desc' }, { id: 'desc' }],
+        select: { survenuAt: true, charge: true },
+      });
+      const lue = CHARGES_PAR_TYPE.attribution_etat_modifie.safeParse(e?.charge);
+      if (e === null || !lue.success || lue.data.vers !== a.statut) return null;
+      if (fin === null || e.survenuAt > fin) fin = e.survenuAt;
+    }
+    return fin;
+  } catch {
+    return null;
+  }
 }

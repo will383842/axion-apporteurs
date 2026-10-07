@@ -61,6 +61,17 @@ export const FORMULES = {
  * Les actions que plusieurs écrans partagent : leur libellé s'écrit ICI, une fois. Un écran qui
  * mène ailleurs avec le même libellé reprend l'action et ne change que sa route.
  */
+/**
+ * EXT-T06 (REQ-EXT-006) — le signal « Déjà déclarée par le passé » de la vérification d'une entreprise
+ * disponible : texte FIXE de la juriste (#474, 6036611999), MOT POUR MOT, sans porteur, date, durée,
+ * nombre ni issue. Il ne s'affiche qu'avec l'état « disponible ».
+ */
+export const DEJA_DECLAREE = {
+  titre: 'Déjà déclarée par le passé',
+  phrase:
+    "Cette entreprise a déjà fait l'objet d'une déclaration, aujourd'hui terminée. Elle est disponible : vous pouvez la déclarer.",
+} as const;
+
 export const ACTIONS_COMMUNES = {
   retourAccueil: { libelle: "Retour à l'accueil", route: '/' },
   envoyerLeDepot: { libelle: 'Envoyer le dépôt', route: null },
