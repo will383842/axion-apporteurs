@@ -53,6 +53,8 @@ export type Registre = {
     rcsVille: string;
     capitalSocial: string;
     representant: string;
+    /** UX-P1-64 : l'adresse de contact du pied légal (et l'appel « Écrire à Axion-IA » de SEC-70). */
+    adresseDeContact: string;
   };
   domaines: { servi: string; envoi: string };
   perimetre: { modeleTetesDeReseau: string; residenceFiscaleExigee: string; tenance: string };
@@ -182,6 +184,15 @@ export const CHAMPS: Champ[] = [
   {
     cle: 'entite.representant',
     libelle: 'représentant légal',
+    reqs: ['REQ-CPL-001'],
+    ancre: null,
+    secret: false,
+    env: null,
+    identifiant: false,
+  },
+  {
+    cle: 'entite.adresseDeContact',
+    libelle: 'adresse de contact',
     reqs: ['REQ-CPL-001'],
     ancre: null,
     secret: false,
@@ -460,6 +471,7 @@ export function entiteContractante(registre: Registre = registreDuDepot()) {
     rcsVille: lire(registre, 'entite.rcsVille'),
     capitalSocial: lire(registre, 'entite.capitalSocial'),
     representant: lire(registre, 'entite.representant'),
+    adresseDeContact: lire(registre, 'entite.adresseDeContact'),
   };
 }
 

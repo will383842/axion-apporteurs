@@ -118,7 +118,7 @@ function piedLegal(
   registre: Registre
 ): { html: string; texte: string[] } {
   const e = entiteContractante(registre);
-  const contact = T.adresseDeContact;
+  const contact = e.adresseDeContact;
   const lignes = [
     // Art. R.123-238 C. com. (juriste, #819 6042302938) : le capital et le RCS, lus au registre.
     `${e.denomination} · ${e.formeJuridique} au capital de ${e.capitalSocial}`,

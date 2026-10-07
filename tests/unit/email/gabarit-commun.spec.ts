@@ -100,7 +100,7 @@ describe('REQ-UX-063 — le châssis commun : ce que chaque famille rend', () =>
     // Art. R.123-238 C. com. : le capital et le RCS, lus au registre (sous sentinelle d'ici le geste).
     expect(t).toContain(`au capital de ${e.capitalSocial}`);
     expect(t).toContain(`RCS ${e.rcsVille} ${e.siren}`);
-    expect(t).toContain(T.adresseDeContact);
+    expect(t).toContain(e.adresseDeContact);
   });
 
   it('REQ-UX-063 : TÉMOIN — tout texte est échappé : aucune valeur ne devient une balise', () => {

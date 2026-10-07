@@ -27,6 +27,4 @@ export const CHASSIS_DES_COURRIELS = {
   droits: 'Tous droits réservés.',
   /** axion-ia (`legal-footer.ts`) : le rôle de la signature ; le nom se lit au registre de l'entité. */
   signatureRole: 'Fondateur & CEO · Axion-IA',
-  /** axion-ia (`legal-footer.ts`) : l'adresse de contact du pied légal. */
-  adresseDeContact: 'contact@axion-ia.com',
 } as const;
