@@ -23331,7 +23331,8 @@
         "src/content/micro-copy/espace/issues-depot.ts",
         "scripts/gates/ux-exhaustivite.ts",
         "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts",
-        "perf/budgets.json"
+        "perf/budgets.json",
+        "tests/integration/idor.spec.ts"
       ],
       "schema": false,
       "sensible": [
