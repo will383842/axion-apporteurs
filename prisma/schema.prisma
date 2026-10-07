@@ -70,8 +70,6 @@ enum ConsoleRole {
 enum TypeEvenementJournal {
   journal_ouvert
   apporteur_statut_modifie
-  /// SEC-15 : la pose et la levée du gel des dépôts (migration 004920).
-  apporteur_gel_modifie
   attribution_contact_purge
   attribution_etat_modifie
   attribution_peremption_suspendue
@@ -85,6 +83,8 @@ enum TypeEvenementJournal {
   utilisateur_console_modifie
   journal_acces_gel_modifie
   apporteur_mis_en_demeure
+  /// SEC-15 : la pose et la levée du gel des dépôts (migration 004920), en fin d'enum comme en base.
+  apporteur_gel_modifie
 
   @@map("type_evenement_journal")
 }

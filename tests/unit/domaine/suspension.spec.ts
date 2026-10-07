@@ -20,6 +20,7 @@ import {
   jugerLaPose,
   leveeDePleinDroitDue,
 } from '../../../src/domain/apporteur/suspension';
+import { CHARGES_PAR_TYPE } from '../../../src/domain/evenement/charges';
 
 const RACINE = join(__dirname, '..', '..', '..');
 const ANOMALIE = '0190f0c2-0000-7000-8000-000000000001';
@@ -154,5 +155,49 @@ describe('REQ-SEC-019 — quinze jours au plus, à compter de la notification, p
       etatGel: 'libre',
     });
     expect(refus(() => jugerLaLevee({ statut: 'signe', etatGel: 'libre' }))).toBe('non_suspendu');
+  });
+});
+
+describe('REQ-SEC-019 — la charge fermée du journal du gel (forme d’A02, #794, 6035951154)', () => {
+  const ADMIN = '0190f0c2-0000-7000-8000-0000000000ad';
+  const charge = (c: Record<string, unknown>) =>
+    CHARGES_PAR_TYPE.apporteur_gel_modifie.safeParse(c).success;
+  const POSE = {
+    de: 'libre',
+    vers: 'gele_non_confirmation',
+    par: 'role',
+    acteur: { par: 'utilisateur_console', id: ADMIN },
+  };
+
+  it('REQ-SEC-019 : TÉMOIN — la pose par un rôle, et la levée de plein droit par le système, passent', () => {
+    expect(charge(POSE)).toBe(true);
+    expect(
+      charge({ de: 'gele_fraude', vers: 'libre', par: 'plein_droit', acteur: { par: 'systeme' } })
+    ).toBe(true);
+    expect(charge({ ...POSE, vers: 'gele_fraude' })).toBe(true);
+  });
+
+  it('REQ-SEC-019 : TÉMOIN — un gel vers un gel, un « libre » vers « libre », une clé en trop : refusés', () => {
+    expect(charge({ ...POSE, de: 'gele_fraude', vers: 'gele_non_confirmation' })).toBe(false);
+    expect(charge({ ...POSE, de: 'libre', vers: 'libre' })).toBe(false);
+    expect(charge({ ...POSE, nombre: 2 })).toBe(false);
+  });
+
+  it('REQ-SEC-019 : TÉMOIN — aucune charge du gel ne porte l’anomalie, même pour la fraude (DM-12, décision (d))', () => {
+    expect(charge({ ...POSE, vers: 'gele_fraude', anomalieId: ANOMALIE })).toBe(false);
+    expect(charge({ ...POSE, anomalieId: ANOMALIE })).toBe(false);
+  });
+
+  it('REQ-SEC-019 : TÉMOIN — un rôle est une personne de la console ; le plein droit est le système, et seulement pour lever', () => {
+    expect(charge({ ...POSE, acteur: { par: 'systeme' } })).toBe(false);
+    expect(charge({ ...POSE, par: 'plein_droit', acteur: { par: 'systeme' } })).toBe(false);
+    expect(
+      charge({
+        de: 'gele_fraude',
+        vers: 'libre',
+        par: 'plein_droit',
+        acteur: { par: 'utilisateur_console', id: ADMIN },
+      })
+    ).toBe(false);
   });
 });
