@@ -43,7 +43,7 @@ import {
 } from '../../src/server/auth/lien-magique-production';
 import { horlogeFigee } from '../../src/domain/temps/horloge';
 import type { DemandeDEnvoi } from '../../src/server/integrations/zeptomail/emetteur';
-import { depotDeSessions, exigerSession } from '../../src/server/auth/session';
+import { depotDeSessions } from '../../src/server/auth/session';
 import {
   cleDesAppareils,
   depotDAppareils,
@@ -138,8 +138,9 @@ async function apporteur(): Promise<string> {
 }
 
 /**
- * Un RÉSILIÉ AUX DROITS EN COURS (SEC-19) : une attribution `figee_resiliation` le garde en LECTURE
- * (A02, #703). Sa grille est une version d'essai, propre au témoin.
+ * Un RÉSILIÉ AUX DROITS EN COURS : une attribution `figee_resiliation`, qui le gardait en LECTURE sous
+ * SEC-19. SEC-70 (contrat v2, art. 12.3) : il n'ouvre plus rien. Sa grille est une version d'essai,
+ * propre au témoin.
  */
 async function resilieAuxDroitsEnCours(): Promise<string> {
   const a = await apporteur();
@@ -564,24 +565,16 @@ describe('REQ-SEC-003 — voie (b) de la lentille sécurité, en base réelle : 
   });
 });
 
-describe('REQ-SEC-003 — SEC-62 sur SEC-19 : une session en LECTURE ne fait connaître aucun appareil (A09, #563 5983094689)', () => {
-  it('REQ-SEC-003 : TÉMOIN à deux faces — un résilié aux droits en cours consomme un lien sur un appareil neuf : l’avis part, la session s’ouvre en LECTURE, `non_confirme`, aucune ligne d’appareil ; le même parcours pour un apporteur `signe` confirme l’appareil', async () => {
+describe('REQ-SEC-003 — SEC-62 sur SEC-70 : un résilié n’ouvre aucune session et ne fait connaître aucun appareil', () => {
+  it('REQ-SEC-032 : TÉMOIN à deux faces — un résilié aux droits en cours consomme un lien déjà émis : INVALIDE comme un lien inconnu, aucun avis, aucune session, aucune ligne d’appareil ; le même parcours pour un apporteur `signe` confirme l’appareil', async () => {
     const maintenant = d('2026-10-03T14:00:00.000Z');
 
     const resilie = await resilieAuxDroitsEnCours();
-    const enLecture = await connecter(resilie, tirerIdentifiantDAppareil(), maintenant);
-    expect(enLecture.resultat).toMatchObject({
-      etat: 'ouverte',
-      appareil: { issue: 'non_confirme' },
-    });
-    expect(enLecture.aviser).toHaveBeenCalledTimes(1);
+    const ferme = await connecter(resilie, tirerIdentifiantDAppareil(), maintenant);
+    expect(ferme.resultat).toEqual({ etat: 'lien_invalide' });
+    expect(ferme.aviser).not.toHaveBeenCalled();
     expect(await appareilsDe(resilie)).toEqual([]);
-    const jeton =
-      enLecture.resultat.etat === 'ouverte' ? enLecture.resultat.jetonSession : undefined;
-    expect(await exigerSession(jeton, ports(maintenant).session)).toMatchObject({
-      ok: true,
-      session: { apporteurId: resilie, niveau: 'lecture' },
-    });
+    expect(await base.prisma.sessionEspace.count({ where: { apporteurId: resilie } })).toBe(0);
 
     const signe = await apporteur();
     const pleine = await connecter(signe, tirerIdentifiantDAppareil(), maintenant);

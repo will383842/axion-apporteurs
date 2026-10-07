@@ -198,11 +198,6 @@ export interface NouvelleSessionConsole {
 /** Tout ce qui dépend du compte : n'est appelé qu'APRÈS la réponse. */
 export interface PortsDEmission {
   trouverApporteur(emailHash: string): Promise<{ id: string; statut: string } | null>;
-  /**
-   * SEC-19 : les droits d'un RÉSILIÉ courent-ils (au moins une attribution `figee_resiliation`) ? Lu
-   * seulement pour un résilié. Absent : aucun droit — défaut fermé.
-   */
-  droitsEnCours?(apporteurId: string): Promise<boolean>;
   /** L'adresse déchiffrée du compte : c'est à elle, jamais à la saisie, que le lien part. */
   adresseStockee(apporteurId: string): Promise<string>;
   annulerLiensActifs(apporteurId: string, maintenant: Date): Promise<void>;
@@ -341,8 +336,7 @@ async function emettreLien(
 ): Promise<void> {
   const compte = await emission.trouverApporteur(emailHash);
   if (compte === null) return;
-  if (!(await ouvertureDuCompte(compte.statut, compte.id, emission.droitsEnCours?.bind(emission))))
-    return;
+  if (!(await ouvertureDuCompte(compte.statut))) return;
   const l = tirerUnLien(maintenant, configuration);
   await emission.annulerLiensActifs(compte.id, maintenant);
   await emission.insererLien({ apporteurId: compte.id, ...l.ligne });
@@ -452,8 +446,6 @@ export interface TransactionDeConsommation {
    */
   dejaConsomme?(tokenHash: string, kid: string): Promise<boolean>;
   statutApporteur(apporteurId: string): Promise<string | null>;
-  /** SEC-19 : comme `PortsDEmission.droitsEnCours`, dans la transaction. Absent : aucun droit. */
-  droitsEnCours?(apporteurId: string): Promise<boolean>;
   /** Enregistre une session neuve. */
   ouvrirSession(s: NouvelleSession): Promise<void>;
   /**
@@ -663,16 +655,13 @@ export function consommerLienConsole(
  * de session, ou `null` si l'apporteur ne peut pas ouvrir l'espace.
  */
 async function ouvrirLaSession(
-  tx: Pick<
-    TransactionDeConsommation,
-    'statutApporteur' | 'ouvrirSession' | 'appareils' | 'droitsEnCours'
-  >,
+  tx: Pick<TransactionDeConsommation, 'statutApporteur' | 'ouvrirSession' | 'appareils'>,
   lien: { id: string; apporteurId: string },
   o: OuvertureDeSession
 ): Promise<SessionOuverteParLeLien | null> {
   const statut = await tx.statutApporteur(lien.apporteurId);
   // Un apporteur introuvable (`null`) est jugé par le prédicat, fermé comme un statut inconnu.
-  if (!(await ouvertureDuCompte(statut, lien.apporteurId, tx.droitsEnCours?.bind(tx)))) return null;
+  if (!(await ouvertureDuCompte(statut))) return null;
   const jetonSession = tirerJeton();
   const { secret, kid } = o.configuration.session;
   await tx.ouvrirSession({
@@ -748,7 +737,7 @@ export type MotifDuCode = 'code_refuse' | 'code_epuise' | 'debit';
 
 export interface TransactionDuCode extends Pick<
   TransactionDeConsommation,
-  'statutApporteur' | 'ouvrirSession' | 'appareils' | 'droitsEnCours'
+  'statutApporteur' | 'ouvrirSession' | 'appareils'
 > {
   /**
    * Le SEUL lien actif le plus récent de l'apporteur dont l'empreinte de courriel est donnée :
@@ -935,17 +924,10 @@ async function verifier<
 }
 
 /**
- * SEC-19 (sécurité, #703, 5981521068) : le compte peut-il recevoir ou consommer un lien ? Le jugement
- * de l'espace (`peutOuvrirLEspace`), avec les droits en cours lus pour un RÉSILIÉ seulement — un
- * résilié dont les droits courent se reconnecte en LECTURE. Sans lecteur, aucun droit : défaut fermé.
- * Le niveau de la session (`lecture`, jamais `plein`) est rejugé à chaque requête par `session.ts`.
+ * Le compte peut-il recevoir ou consommer un lien ? Le jugement de l'espace (`peutOuvrirLEspace`). SEC-70
+ * (contrat v2, art. 12.3) : un RÉSILIÉ ne reçoit ni ne consomme plus aucun lien, quels que soient ses
+ * droits en cours ; sa demande reçoit la même réponse qu'une adresse inconnue (le travail est différé).
  */
-export async function ouvertureDuCompte(
-  statut: string | null,
-  apporteurId: string,
-  droitsEnCours: ((apporteurId: string) => Promise<boolean>) | undefined
-): Promise<boolean> {
-  const droits =
-    statut === 'resilie' && droitsEnCours !== undefined && (await droitsEnCours(apporteurId));
-  return peutOuvrirLEspace(statut, droits);
+export async function ouvertureDuCompte(statut: string | null): Promise<boolean> {
+  return peutOuvrirLEspace(statut);
 }

@@ -266,8 +266,9 @@ model Apporteur {
   qualiteExercice       QualiteExercice?       @map("qualite_exercice")
   professionReglementee ProfessionReglementee? @map("profession_reglementee")
 
-  /// Surcharge manuelle du seuil de vérification prioritaire (REQ-DM-010). NULLE = le défaut,
-  /// DÉRIVÉ du palier par `seuilPrioritaire()` (HYP-D3) — aucun défaut littéral en base (RM-10).
+  /// Surcharge manuelle du seuil de vérification prioritaire (REQ-DM-010). SEC-56 : aucun code ne la
+  /// lit ni ne l'écrit plus, aucun palier ni seuil de dépôts n'existe par apporteur (REQ-JUR-032) ;
+  /// la colonne et son CHECK tombent à la seconde PR de SEC-56, après le déploiement de celle-ci.
   seuilVerificationPrioritaire   Int?      @map("seuil_verification_prioritaire")
   /// La trace de la surcharge : présente si et seulement si la surcharge l'est (CHECK en SQL brut).
   seuilVerificationPrioritaireAt DateTime? @map("seuil_verification_prioritaire_at") @db.Timestamptz(3)
