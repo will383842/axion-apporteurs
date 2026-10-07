@@ -1611,12 +1611,14 @@ model DecisionDeContrat {
 /// 6038168915). Sa date de RÉCEPTION est posée par la BASE (déclencheur), jamais fournie. Ajout seul :
 /// seul le texte se purge, une fois, avec sa date. L'id naît côté applicatif (randomUUID), sans défaut.
 model EcritApporteur {
-  id           String    @id @db.Uuid
-  apporteurId  String    @map("apporteur_id") @db.Uuid
-  apporteur    Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  recuAt       DateTime  @default(dbgenerated("clock_timestamp()")) @map("recu_at") @db.Timestamptz(3)
-  texteChiffre Bytes?    @map("texte_chiffre")
-  textePurgeAt DateTime? @map("texte_purge_at") @db.Timestamptz(3)
+  id             String    @id @db.Uuid
+  apporteurId    String    @map("apporteur_id") @db.Uuid
+  apporteur      Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  recuAt         DateTime  @default(dbgenerated("clock_timestamp()")) @map("recu_at") @db.Timestamptz(3)
+  texteChiffre   Bytes?    @map("texte_chiffre")
+  textePurgeAt   DateTime? @map("texte_purge_at") @db.Timestamptz(3)
+  /// La clé d'idempotence, tirée par le serveur au rendu : UNIQUE, immuable, jamais purgée ni rendue.
+  cleIdempotence String    @unique(map: "ecrits_apporteur_cle_idempotence_key") @map("cle_idempotence") @db.Uuid
 
   @@unique([id, apporteurId], map: "ecrits_apporteur_id_apporteur_key")
   @@index([apporteurId])

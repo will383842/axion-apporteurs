@@ -437,7 +437,7 @@ export const CHAMPS_TUS = {
     'gelLitigeLeveAt',
     'gelLitigeRef',
   ],
-  ecritApporteur: ['apporteurId', 'texteChiffre', 'textePurgeAt'],
+  ecritApporteur: ['apporteurId', 'texteChiffre', 'textePurgeAt', 'cleIdempotence'],
   verification: [
     'apporteurId',
     'utilisateurConsoleId',

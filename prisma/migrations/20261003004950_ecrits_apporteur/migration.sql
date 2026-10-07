@@ -9,6 +9,7 @@ CREATE TABLE "ecrits_apporteur" (
     "recu_at" TIMESTAMPTZ(3) NOT NULL DEFAULT clock_timestamp(),
     "texte_chiffre" BYTEA,
     "texte_purge_at" TIMESTAMPTZ(3),
+    "cle_idempotence" UUID NOT NULL,
     CONSTRAINT "ecrits_apporteur_pkey" PRIMARY KEY ("id")
 );
 ALTER TABLE "ecrits_apporteur" ADD CONSTRAINT "ecrits_apporteur_apporteur_id_fkey"
@@ -16,6 +17,10 @@ ALTER TABLE "ecrits_apporteur" ADD CONSTRAINT "ecrits_apporteur_apporteur_id_fke
 -- La clé composite que `contestations` cite (écrit + apporteur).
 CREATE UNIQUE INDEX "ecrits_apporteur_id_apporteur_key" ON "ecrits_apporteur" ("id", "apporteur_id");
 CREATE INDEX "ecrits_apporteur_apporteur_id_idx" ON "ecrits_apporteur" ("apporteur_id");
+-- La clé d'idempotence (amendement d'A02, #319 6039339072, condition e de la sécurité) : tirée par le
+-- serveur au rendu de /aide, distincte de l'id, GLOBALE (une même clé chez deux apporteurs est un rejeu),
+-- immuable (le gabarit ne l'admet pas), jamais purgée, jamais rendue.
+CREATE UNIQUE INDEX "ecrits_apporteur_cle_idempotence_key" ON "ecrits_apporteur" ("cle_idempotence");
 -- La purge lit les écrits non purgés par date de réception.
 CREATE INDEX "ecrits_apporteur_recu_at_idx" ON "ecrits_apporteur" ("recu_at") WHERE "texte_purge_at" IS NULL;
 -- Un écrit naît avec son texte ; seule la purge le retire, et elle pose sa date dans la même écriture.
