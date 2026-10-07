@@ -9,17 +9,18 @@
  * réserve (aucun acte, acte exempté, réserve échue) → aucun ; l'échec du jugement vaut réservé (échec
  * fermé) ; la trace précède la lecture et son échec ne laisse rien lire ; une cible inconnue est refusée sans
  * rien écrire ; et AUCUNE autre voie de la console ne lit les coordonnées du contact (témoin dérivé des
- * fichiers suivis).
+ * sources du dépôt).
  */
 import { describe, it, expect } from 'vitest';
-import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { PrismaClient } from '@prisma/client';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
 import { clesPii } from '../../../src/server/securite/pii';
 import { CibleInconnue } from '../../../src/server/console/journal-des-acces';
 import {
+  echeanceDeLaReserve,
   lireLesCoordonneesDuContactDeLaConsole,
   tracerSiReservee,
 } from '../../../src/server/securite/acces-coordonnees';
@@ -243,14 +244,45 @@ describe('REQ-SEC-042 — la trace précède la lecture', () => {
   });
 });
 
+describe('REQ-SEC-042 — art. 3.5 : la console affiche l’échéance de la réserve, et rien de l’apporteur', () => {
+  it('REQ-SEC-042 : l’échéance est la date de fin du dernier acte non exempté, seule', () => {
+    const faits = {
+      actes: [
+        { at: ilYa(10), exempte: false },
+        { at: ilYa(2), exempte: false },
+        { at: ilYa(1), exempte: true },
+      ],
+    };
+    const e = echeanceDeLaReserve(faits, MAINTENANT);
+    expect(e).toEqual({ jusqua: new Date(ilYa(2).getTime() + DUREE * JOUR) });
+    // Rien d'autre que la date : ni identifiant, ni nom, ni nature de l'acte.
+    expect(Object.keys(e!)).toEqual(['jusqua']);
+  });
+
+  it('REQ-SEC-042 : aucune échéance sans réserve (aucun acte, acte exempté, réserve échue)', () => {
+    expect(echeanceDeLaReserve({ actes: [] }, MAINTENANT)).toBeNull();
+    expect(echeanceDeLaReserve({ actes: [{ at: ilYa(1), exempte: true }] }, MAINTENANT)).toBeNull();
+    expect(
+      echeanceDeLaReserve({ actes: [{ at: ilYa(DUREE + 1), exempte: false }] }, MAINTENANT)
+    ).toBeNull();
+    // À la seconde de l'échéance, la réserve est échue.
+    expect(
+      echeanceDeLaReserve({ actes: [{ at: ilYa(DUREE), exempte: false }] }, MAINTENANT)
+    ).toBeNull();
+  });
+});
+
 describe('REQ-SEC-042 — TÉMOIN DU DISQUE : aucune autre voie de la console ne lit les coordonnées du contact', () => {
-  const suivis = (): string[] =>
-    execFileSync('git', ['ls-files', 'src'], { encoding: 'utf8' })
-      .split('\n')
-      .filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'));
+  /** Les sources du dépôt, lues sur le DISQUE (le bac à sable de la mutation n'a pas de dépôt git). */
+  const sources = (dossier = 'src'): string[] =>
+    readdirSync(dossier, { withFileTypes: true }).flatMap((e) => {
+      const chemin = join(dossier, e.name).replaceAll('\\', '/');
+      if (e.isDirectory()) return sources(chemin);
+      return chemin.endsWith('.ts') || chemin.endsWith('.tsx') ? [chemin] : [];
+    });
 
   it('REQ-SEC-042 : seul l’accesseur importe le lecteur des coordonnées du contact', () => {
-    const lecteurs = suivis().filter((f) =>
+    const lecteurs = sources().filter((f) =>
       /\blireCoordonneesDuContact\b/.test(readFileSync(f, 'utf8'))
     );
     expect(lecteurs.sort()).toEqual([

@@ -8,7 +8,7 @@
  * LA LECTURE n'est PAS du démarchage et reste permise : la vérification en a besoin. Cette voie ne refuse
  * jamais ; elle TRACE. Elle ne déchiffre rien elle-même : le déchiffrement des coordonnées du contact reste
  * celui du lecteur de SEC-58 (`lireCoordonneesDuContact`, qui trace aussi la lecture au journal des accès à
- * la console). Cette voie est la SEULE de la console à l'appeler : un témoin dérivé des fichiers suivis le
+ * la console). Cette voie est la SEULE de la console à l'appeler : un témoin dérivé des sources du dépôt le
  * garde (`tests/unit/securite/acces-coordonnees.spec.ts`).
  *
  * L'ORDRE. Le jugement de la réserve (la définition de SEC-51, `portSousVerrou` : le verrou du SIREN que le
@@ -23,7 +23,8 @@
  */
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { ajouterEvenement } from '../evenement/journal';
-import { jugerLaReserve, portSousVerrou } from '../demarchage/garde-reserve';
+import { SEUILS } from '../../domain/seuils/ssot';
+import { jugerLaReserve, portSousVerrou, type FaitsDeReserve } from '../demarchage/garde-reserve';
 import {
   CibleInconnue,
   lireCoordonneesDuContact,
@@ -32,6 +33,26 @@ import {
 import type { ClesPii } from './pii';
 
 type Tx = Prisma.TransactionClient;
+
+const MS_PAR_JOUR = 24 * 60 * 60 * 1000;
+
+/**
+ * Le TÉMOIN DE L'ART. 3.5 du contrat (rattrapage 120) : ce que la console affiche d'une entreprise réservée
+ * est l'ÉCHÉANCE de la réserve, et RIEN d'autre — ni l'identifiant ni le nom de l'apporteur, ni la nature de
+ * l'acte. L'écran qui l'affiche ne lit que cette valeur. `null` quand aucune réserve ne court.
+ */
+export function echeanceDeLaReserve(
+  faits: FaitsDeReserve,
+  maintenant: Date
+): { jusqua: Date } | null {
+  const duree = SEUILS.RESERVE_APRES_ACTE_APPORTEUR_JOURS.valeur * MS_PAR_JOUR;
+  const fins = faits.actes
+    .filter((a) => !a.exempte)
+    .map((a) => a.at.getTime() + duree)
+    .filter((fin) => maintenant.getTime() < fin);
+  if (fins.length === 0) return null;
+  return { jusqua: new Date(Math.max(...fins)) };
+}
 
 /** La nature de l'accès tracé : la lecture n'est jamais du démarchage, mais on juge comme lui (SEC-51). */
 const NATURE_DU_JUGEMENT = 'demarchage' as const;
