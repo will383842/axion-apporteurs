@@ -70,6 +70,11 @@ export const TACHES = {
    */
   auto_parrainage_ouvrir: { req: 'REQ-SEC-031' },
   /**
+   * SEC-14 — l'ouverture DIFFÉRÉE des anomalies de sincérité, jamais dans la transaction du dépôt
+   * (`ouvrirLesAnomaliesDeSincerite`, `src/server/anomalie/sincerite.ts`).
+   */
+  sincerite_ouvrir: { req: 'REQ-SEC-017' },
+  /**
    * DM-62 — l'anonymisation des anomalies à leur échéance, et le NOMBRE des mesures ouvertes au-delà
    * de `MESURE_OUVERTE_ALERTE_JOURS` (`anonymiserLesAnomalies`).
    */
