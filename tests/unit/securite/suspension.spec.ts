@@ -8,6 +8,8 @@
  * `tests/integration/suspension.spec.ts`. Ce fichier existe aussi pour la mutation.
  */
 import { describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { PrismaClient } from '@prisma/client';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 import { clesPii } from '../../../src/server/securite/pii';
@@ -464,5 +466,26 @@ describe('REQ-SEC-019 — la levée, par un rôle ou de plein droit', () => {
       orderBy: { depotsGelesDepuis: 'asc' },
     });
     expect(d.appels.filter((a) => a.quoi === 'ecrire')).toHaveLength(1);
+  });
+});
+
+describe('REQ-SEC-018 — la suspension ne touche JAMAIS une attribution (juriste, #474 6037559862)', () => {
+  // L'automatisation seule fonde la suspension ; une fabrication confirmée annule l'attribution, mais
+  // par l'annulation pour fraude (art. 3.3), décidée ailleurs, dans sa propre transaction.
+  const TOUCHE_UNE_ATTRIBUTION =
+    /\.attribution\.|transitionnerUneAttribution|confirmerUneAttribution|attribution_etat_modifie/;
+  const sansCommentaires = (s: string) => s.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, ' ');
+  const SOURCE = readFileSync(
+    join(__dirname, '..', '..', '..', 'src/server/apporteur/suspension.ts'),
+    'utf8'
+  );
+
+  it('REQ-SEC-018 : le module de la suspension n’écrit ni ne transitionne aucune attribution', () => {
+    expect(sansCommentaires(SOURCE)).not.toMatch(TOUCHE_UNE_ATTRIBUTION);
+  });
+
+  it('REQ-SEC-018 : TÉMOIN — une suspension qui annulerait l’attribution rougit', () => {
+    const glisse = `${SOURCE}\nawait transitionnerUneAttribution(tx, { transition: 'anomalie_confirmee' });\n`;
+    expect(sansCommentaires(glisse)).toMatch(TOUCHE_UNE_ATTRIBUTION);
   });
 });
