@@ -222,6 +222,58 @@ describe('REQ-QA-021 — une clé étrangère NULLABLE n’impose aucun ordre de
     expect(tables.indexOf('apporteurs')).toBeLessThan(tables.indexOf('anomalies'));
   });
 
+  /** Une clé composite, comme (decision_contrat_id, apporteur_id) sur contestations. */
+  const cleComposite = (
+    table: string,
+    colonnes: string[],
+    cible: string,
+    colonnesCibles: string[]
+  ): ContrainteVue => ({
+    table,
+    genre: 'f',
+    definition: `FOREIGN KEY (${colonnes.join(', ')}) REFERENCES ${cible}(${colonnesCibles.join(', ')})`,
+    colonnes,
+    cible,
+    colonnesCibles,
+  });
+  /** La table qui porte la clé composite, et celle qu'elle vise : obligatoire ou non, selon le cas. */
+  // La cible est nommée pour que l'ordre ALPHABÉTIQUE (le repli d'un cycle) place les tables à l'ENVERS
+  // de l'ordre juste : le témoin ne passe que par la règle.
+  const composite = (decisionObligatoire: boolean, cible: string): SchemaVu => ({
+    colonnes: [
+      col(cible, 'id', 'uuid', true),
+      col(cible, 'apporteur_id', 'uuid', true),
+      col('contestations', 'id', 'uuid', true),
+      col('contestations', 'apporteur_id', 'uuid', true),
+      col('contestations', 'decision_contrat_id', 'uuid', decisionObligatoire),
+    ],
+    contraintes: [
+      cleComposite('contestations', ['decision_contrat_id', 'apporteur_id'], cible, [
+        'id',
+        'apporteur_id',
+      ]),
+      // Le sens inverse, par une clé obligatoire : sans la règle, un cycle.
+      cleComposite(cible, ['apporteur_id'], 'contestations', ['apporteur_id']),
+    ],
+  });
+
+  it('REQ-QA-021 : TÉMOIN — une clé composite MIXTE (une colonne nullable) ne crée pas de dépendance : MATCH SIMPLE suspend son contrôle', () => {
+    // « actes » précède « contestations » à l'alphabet ; seule la clé obligatoire d'actes vers
+    // contestations ordonne : contestations d'abord.
+    const { tables } = semis(composite(false, 'actes'));
+    expect(tables.indexOf('contestations')).toBeLessThan(tables.indexOf('actes'));
+  });
+
+  it('REQ-QA-021 : TÉMOIN — une clé composite TOUTE obligatoire crée une dépendance', () => {
+    // « registre » suit « contestations » à l'alphabet ; la clé composite obligatoire le place avant.
+    const avecUneSeule: SchemaVu = {
+      ...composite(true, 'registre'),
+      contraintes: composite(true, 'registre').contraintes.slice(0, 1),
+    };
+    const { tables } = semis(avecUneSeule);
+    expect(tables.indexOf('registre')).toBeLessThan(tables.indexOf('contestations'));
+  });
+
   it('REQ-QA-021 : la clé nullable du cycle reste NULL dans le premier candidat', () => {
     const [premier] = candidatsDe(CYCLE_DU_GEL, 'apporteurs');
     expect(premier!.get('gel_anomalie_id')).toBe('NULL');
