@@ -79,6 +79,13 @@ export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction
   'tache:dementis_purger': 'sans_contact',
   // DM-70 : la purge du texte d'une décision de contrat n'est une prise de contact avec personne.
   'tache:decisions_contrat_purger': 'sans_contact',
+  // DM-65 : tenir la liste des organismes (ajouter, retirer un SIREN) est un geste d'administration de la
+  // Société ; la liste ne porte que des organismes, et aucune entreprise n'est contactée.
+  'action:tenir_liste_noire': 'sans_contact',
+  // DM-65 : la purge des périodes fermées de la trace de la liste efface des lignes, sans contacter personne.
+  'tache:traces_liste_noire_purger': 'sans_contact',
+  // SEC-14 : l'ouverture d'un signalement de sincérité est un passage interne, qui ne contacte aucune entreprise.
+  'tache:sincerite_ouvrir': 'sans_contact',
 };
 
 /** Les actions et tâches qui doivent appeler la garde de la réserve. */
