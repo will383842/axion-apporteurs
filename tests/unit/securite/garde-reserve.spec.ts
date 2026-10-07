@@ -1,9 +1,9 @@
 // @req REQ-SEC-042
 /**
  * SEC-51 — la GARDE UNIQUE de la réserve : la console ne démarche aucune entreprise réservée par un
- * apporteur. La garde juge des FAITS (les actes de l'apporteur et leurs exceptions, ), lus par un port ; ce spec juge la règle, l'échec fermé et le refus non révélateur.
+ * apporteur. La garde juge des FAITS (les actes de l'apporteur et leurs exemptions), lus par un port ; ce spec juge la règle, l'échec fermé et le refus non révélateur.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   CODE_ENTREPRISE_RESERVEE,
@@ -11,9 +11,11 @@ import {
   cleDuVerrouDuSiren,
   exigerHorsReserve,
   jugerLaReserve,
+  portSousVerrou,
   type FaitsDeReserve,
   type RefusDeReserve,
 } from '../../../src/server/demarchage/garde-reserve';
+import { naturesDeDemarchage } from '../../../src/server/demarchage/actions-classees';
 import { REFUS_DE_LA_CONSOLE } from '../../../src/content/micro-copy/console/refus';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
 import { MS_PAR_JOUR } from '../../../src/domain/temps/calendrier-civil';
@@ -212,5 +214,164 @@ describe('REQ-SEC-042 — le refus est journalisé sous les identifiants seuls',
     const depot = readFileSync('src/server/depot/deposer.ts', 'utf8');
     expect(depot).toContain('verrou-du-depot.siren.${siren}');
     expect(cleDuVerrouDuSiren('123456789')).toBe('verrou-du-depot.siren.123456789');
+  });
+});
+
+describe('REQ-SEC-042 — le refus est une erreur nommée, et le journal est facultatif', () => {
+  it('REQ-SEC-042 : le refus porte son nom et son code, et rien d’autre', () => {
+    const e = new EntrepriseReservee();
+    expect(e.name).toBe('EntrepriseReservee');
+    expect(e.code).toBe(CODE_ENTREPRISE_RESERVEE);
+    expect(e.message).toBe(CODE_ENTREPRISE_RESERVEE);
+  });
+
+  it('REQ-SEC-042 : sans port de journal, la garde refuse quand même, sous le même code', async () => {
+    await expect(
+      exigerHorsReserve(
+        { lireLesFaits: async () => ({ actes: [{ at: avant(MS_PAR_JOUR), exempte: false }] }) },
+        { siren: '123456789', action: ACTION, nature: 'demarchage' },
+        MAINTENANT
+      )
+    ).rejects.toMatchObject({ name: 'EntrepriseReservee', code: CODE_ENTREPRISE_RESERVEE });
+  });
+
+  it('REQ-SEC-042 : la liste des actions de démarchage se dérive de son classement', () => {
+    expect(
+      naturesDeDemarchage({
+        'action:a': 'demarchage',
+        'action:b': 'sans_contact',
+        'action:c': 'verification',
+        'tache:d': 'demarchage',
+      })
+    ).toEqual(['action:a', 'tache:d']);
+  });
+});
+
+describe('REQ-SEC-042 — le port de production lit les actes, avec leur exemption, sous le verrou du SIREN', () => {
+  const A = new Date('2026-10-02T10:00:00.000Z');
+  const B = new Date('2026-10-01T10:00:00.000Z');
+  const C = new Date('2026-09-30T10:00:00.000Z');
+
+  /** Un client de transaction factice : ce que les trois tables rendent, et l'ordre des appels. */
+  function fausseTransaction(
+    lignes: {
+      verifications?: { resultat: string; verifieeAt: Date }[];
+      refuses?: { motif: string; refuseAt: Date }[];
+      enAttente?: { deposeeAt: Date }[];
+    } = {}
+  ) {
+    const appels: string[] = [];
+    const executeRaw = vi.fn(async (_chaines: TemplateStringsArray, ...valeurs: unknown[]) => {
+      appels.push(`verrou:${String(valeurs[0])}`);
+      return 1;
+    });
+    const tx = {
+      $executeRaw: executeRaw,
+      verification: {
+        findMany: vi.fn(async (q: unknown) => {
+          appels.push('verifications');
+          expect(q).toEqual({
+            where: { siren: '123456789', apporteurId: { not: null } },
+            select: { resultat: true, verifieeAt: true },
+          });
+          return lignes.verifications ?? [];
+        }),
+      },
+      depotRefuse: {
+        findMany: vi.fn(async (q: unknown) => {
+          appels.push('refuses');
+          expect(q).toEqual({
+            where: { siren: '123456789' },
+            select: { motif: true, refuseAt: true },
+          });
+          return lignes.refuses ?? [];
+        }),
+      },
+      attribution: {
+        findMany: vi.fn(async (q: unknown) => {
+          appels.push('en_attente');
+          expect(q).toEqual({
+            where: { siren: '123456789', apporteurId: { not: null }, statut: 'en_attente' },
+            select: { deposeeAt: true },
+          });
+          return lignes.enAttente ?? [];
+        }),
+      },
+    };
+    return { tx, appels, executeRaw };
+  }
+
+  it('REQ-SEC-042 : TÉMOIN — le verrou du SIREN est pris AVANT toute lecture, sous la clé du dépôt', async () => {
+    const { tx, appels } = fausseTransaction();
+    const faits = await portSousVerrou(tx as never).lireLesFaits('123456789');
+    expect(faits).toEqual({ actes: [] });
+    expect(appels[0]).toBe(`verrou:${cleDuVerrouDuSiren('123456789')}`);
+    expect(appels.slice(1).sort()).toEqual(['en_attente', 'refuses', 'verifications']);
+  });
+
+  it('REQ-SEC-042 : TÉMOIN — une vérification réserve, sauf si l’entreprise est suivie, cliente ou sur la liste de la Société', async () => {
+    const resultats = ['libre', 'fermee', 'suivie', 'cliente', 'liste_noire'];
+    const { tx } = fausseTransaction({
+      verifications: resultats.map((resultat) => ({ resultat, verifieeAt: A })),
+    });
+    const { actes } = await portSousVerrou(tx as never).lireLesFaits('123456789');
+    expect(actes).toEqual([
+      { at: A, exempte: false },
+      { at: A, exempte: false },
+      { at: A, exempte: true },
+      { at: A, exempte: true },
+      { at: A, exempte: true },
+    ]);
+  });
+
+  it('REQ-SEC-042 : TÉMOIN — un dépôt refusé réserve, sauf pour une antériorité de la Société ou une entreprise occupée', async () => {
+    const motifs = [
+      'insincerite',
+      'etablissement_cesse',
+      'entreprise_hors_perimetre',
+      'opposition_demarchage',
+      'anteriorite_client',
+      'anteriorite_devis',
+      'file_complete',
+    ];
+    const { tx } = fausseTransaction({
+      refuses: motifs.map((motif) => ({ motif, refuseAt: B })),
+    });
+    const { actes } = await portSousVerrou(tx as never).lireLesFaits('123456789');
+    expect(actes.map((a) => a.exempte)).toEqual([false, false, false, false, true, true, true]);
+    expect(actes.every((a) => a.at === B)).toBe(true);
+  });
+
+  it('REQ-SEC-042 : TÉMOIN — un dépôt en attente est un acte non exempté, daté de son dépôt', async () => {
+    const { tx } = fausseTransaction({ enAttente: [{ deposeeAt: C }] });
+    const { actes } = await portSousVerrou(tx as never).lireLesFaits('123456789');
+    expect(actes).toEqual([{ at: C, exempte: false }]);
+  });
+
+  it('REQ-SEC-042 : le port rend aussi le journal de l’appelant, tel quel', () => {
+    const journaliser = vi.fn();
+    expect(portSousVerrou(fausseTransaction().tx as never, journaliser).journaliser).toBe(
+      journaliser
+    );
+    expect(portSousVerrou(fausseTransaction().tx as never).journaliser).toBeUndefined();
+  });
+
+  it('REQ-SEC-042 : TÉMOIN — de bout en bout : la garde, sur ce port, refuse pour un acte non exempté et passe pour un exempté', async () => {
+    const refus = fausseTransaction({ verifications: [{ resultat: 'libre', verifieeAt: A }] });
+    await expect(
+      exigerHorsReserve(
+        portSousVerrou(refus.tx as never),
+        { siren: '123456789', action: ACTION, nature: 'demarchage' },
+        MAINTENANT
+      )
+    ).rejects.toMatchObject({ code: CODE_ENTREPRISE_RESERVEE });
+    const passe = fausseTransaction({ verifications: [{ resultat: 'cliente', verifieeAt: A }] });
+    await expect(
+      exigerHorsReserve(
+        portSousVerrou(passe.tx as never),
+        { siren: '123456789', action: ACTION, nature: 'demarchage' },
+        MAINTENANT
+      )
+    ).resolves.toBeUndefined();
   });
 });

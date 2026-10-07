@@ -78,8 +78,10 @@ export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction
 };
 
 /** Les actions et tâches qui doivent appeler la garde de la réserve. */
-export function naturesDeDemarchage(): string[] {
-  return Object.entries(CLASSEMENT_DES_ACTIONS)
+export function naturesDeDemarchage(
+  classement: Readonly<Record<string, NatureDeLAction>> = CLASSEMENT_DES_ACTIONS
+): string[] {
+  return Object.entries(classement)
     .filter(([, nature]) => nature === 'demarchage')
     .map(([cle]) => cle);
 }
