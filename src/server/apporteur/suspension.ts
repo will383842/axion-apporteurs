@@ -33,6 +33,7 @@ import { transitionner } from '../../domain/apporteur/matrice';
 import type { StatutApporteur } from '../../domain/apporteur/statut';
 import { ajouterEvenement } from '../evenement/journal';
 import { roleAutorise } from '../roles/matrice';
+import { creerJournal, type Journal } from '../../lib/logger';
 import { jugerLesFaitsSaisis } from '../attribution/notifications';
 import { MODELE_DECISION_DE_CONTRAT } from './resiliation';
 import {
@@ -302,7 +303,7 @@ export const GELS_ECHUS_PAR_PASSAGE = 200;
 export async function leverLesSuspensionsEchues(
   prisma: PrismaClient,
   maintenant: Date,
-  p: { ecrireUnFait?: EcrireUnEvenement } = {}
+  p: { ecrireUnFait?: EcrireUnEvenement; journal?: Pick<Journal, 'warn'> } = {}
 ): Promise<{ levees: number; echecs: number }> {
   const poses = await prisma.apporteur.findMany({
     where: { etatGel: { not: 'libre' }, depotsGelesDepuis: { lte: maintenant } },
@@ -330,5 +331,7 @@ export async function leverLesSuspensionsEchues(
       echecs += 1;
     }
   }
+  // L'alerte d'exploitation (sécurité, note sur #802) : le nom et le NOMBRE seuls, aucun identifiant.
+  if (echecs > 0) (p.journal ?? creerJournal()).warn('suspensions_lever_echecs', { echecs });
   return { levees, echecs };
 }

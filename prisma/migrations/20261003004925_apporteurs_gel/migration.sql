@@ -46,9 +46,10 @@ ALTER TABLE "decisions_de_contrat" ADD CONSTRAINT "decisions_de_contrat_forme_du
   CHECK (CASE "geste"
            WHEN 'mise_en_demeure' THEN "article" IS NOT NULL AND "date_reception" IS NULL AND "date_effet" IS NULL
            WHEN 'resiliation'     THEN "article" IS NULL AND "date_reception" IS NOT NULL AND "date_effet" IS NOT NULL
-           WHEN 'suspension'      THEN "article" = '3.7' AND "date_reception" IS NULL AND "date_effet" IS NULL
+           WHEN 'suspension'      THEN "article" IS NOT NULL AND "article" = '3.7' AND "date_reception" IS NULL AND "date_effet" IS NULL
          END) NOT VALID;
 
+-- (« IS NOT NULL » d'abord : un article NULL rendrait la branche INCONNUE, que le CHECK admet.)
 -- La suspension NAÎT avec ses faits (« notifiée avec les faits qui la motivent ») ; seule la purge les retire.
 ALTER TABLE "decisions_de_contrat" ADD CONSTRAINT "decisions_de_contrat_faits_de_la_suspension"
   CHECK ("geste" <> 'suspension' OR "texte_chiffre" IS NOT NULL OR "texte_purge_at" IS NOT NULL) NOT VALID;

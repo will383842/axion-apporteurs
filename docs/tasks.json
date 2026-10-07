@@ -5529,7 +5529,12 @@
         "tests/unit/securite/suspension.spec.ts",
         "src/server/taches/purger-textes-des-decisions.ts",
         "tests/unit/integration/purge-decisions-de-contrat.spec.ts",
-        "src/server/roles/matrice.ts"
+        "src/server/roles/matrice.ts",
+        "tests/integration/gel-en-base.ts",
+        "tests/integration/concurrence.spec.ts",
+        "tests/integration/jeton-depot.spec.ts",
+        "tests/integration/sessions-revocables.spec.ts",
+        "tests/integration/code-de-parrainage.spec.ts"
       ],
       "schema": true,
       "sensible": [

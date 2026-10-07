@@ -634,3 +634,26 @@ describe('REQ-SEC-019 — une levée de plein droit n’en bloque jamais une aut
     expect(lu.orderBy).toEqual([{ depotsGelesDepuis: 'asc' }, { id: 'asc' }]);
   });
 });
+
+describe('REQ-SEC-019 — une alerte d’exploitation quand la levée de plein droit compte des échecs (sécurité, note sur #802)', () => {
+  const POSE = new Date('2026-09-01T07:30:00.000Z');
+  const ECHU = new Date('2026-10-01T07:30:00.000Z');
+
+  it('REQ-SEC-019 : TÉMOIN — un échec : un warn NOMMÉ « suspensions_lever_echecs », avec le nombre SEUL', async () => {
+    const d = unDouble({
+      echues: [{ id: 'apporteur-a', depotsGelesDepuis: POSE }],
+      lignes: [{ statut: 'signe', etat_gel: 'libre' }],
+    });
+    const journal = { warn: vi.fn() };
+    await leverLesSuspensionsEchues(d.prisma, ECHU, { ecrireUnFait: d.ecrireUnFait, journal });
+    expect(journal.warn).toHaveBeenCalledWith('suspensions_lever_echecs', { echecs: 1 });
+    expect(JSON.stringify(journal.warn.mock.calls)).not.toContain('apporteur-a');
+  });
+
+  it('REQ-SEC-019 : sans échec, aucune alerte', async () => {
+    const d = unDouble({});
+    const journal = { warn: vi.fn() };
+    await leverLesSuspensionsEchues(d.prisma, ECHU, { journal });
+    expect(journal.warn).not.toHaveBeenCalled();
+  });
+});
