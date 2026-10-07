@@ -192,20 +192,20 @@ export async function lireLaChargeDUnFait(
 }
 
 /**
- * SEC-66 (A02, #561, 5988107744) — la trace DURABLE de l'opposabilité d'une résiliation par la
+ * SEC-66 (A02, #561, 5988205180) — la trace DURABLE de l'opposabilité d'une résiliation par la
  * Société : le passage à `resilie` qui CITE ce fait `apporteur_resiliation_notifiee`
- * (`decisionEvenementId`), ou `null` s'il n'est cité par aucun passage — la décision est alors
+ * (`decisionContratId`), ou `null` s'il n'est cité par aucun passage — la décision est alors
  * caduque, sans aucune colonne d'état. Le journal n'est jamais purgé : la réponse survit à la purge
  * de la notification et de son courriel. Une lecture seule, par le module du journal.
  */
 export async function passageQuiCiteLaDecision(
   client: PrismaClient | Prisma.TransactionClient,
-  decisionEvenementId: string
+  decisionContratId: string
 ): Promise<string | null> {
   const l = await client.evenement.findFirst({
     where: {
       type: 'apporteur_statut_modifie',
-      charge: { path: ['decisionEvenementId'], equals: decisionEvenementId },
+      charge: { path: ['decisionContratId'], equals: decisionContratId },
     },
     select: { id: true },
     orderBy: { id: 'asc' },
@@ -214,9 +214,9 @@ export async function passageQuiCiteLaDecision(
 }
 
 /**
- * SEC-66 — la décision OPPOSÉE à un apporteur résilié par la Société : le `decisionEvenementId` de son
- * passage à `resilie` pour `ordinaire_axion`, lu dans le journal (DM-70 en lit la date d'effet par
- * `decisions_de_contrat.evenement_id`) ; `null` sinon.
+ * SEC-66 — la décision OPPOSÉE à un apporteur résilié par la Société : le `decisionContratId` de son
+ * passage à `resilie` pour `ordinaire_axion`, lu dans le journal (DM-70 en lit la date d'effet sur la
+ * ligne `decisions_de_contrat` citée) ; `null` sinon.
  */
 export async function decisionOpposeeALApporteur(
   client: PrismaClient | Prisma.TransactionClient,
@@ -232,6 +232,6 @@ export async function decisionOpposeeALApporteur(
     select: { charge: true },
     orderBy: { id: 'desc' },
   });
-  const cite = (l?.charge as { decisionEvenementId?: unknown } | undefined)?.decisionEvenementId;
+  const cite = (l?.charge as { decisionContratId?: unknown } | undefined)?.decisionContratId;
   return typeof cite === 'string' ? cite : null;
 }

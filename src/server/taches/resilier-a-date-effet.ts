@@ -3,7 +3,8 @@
  * du lanceur (forme (b) d'A02, #703, 5983008261, point 4).
  *
  * Les candidats sont les apporteurs SOUS CONTRAT qui portent une décision `resiliation` dont la date
- * d'effet est atteinte (jour civil de Paris). Pour chacun, dans SA transaction et sous le verrou de sa
+ * d'effet est atteinte : le jour civil de Paris est STRICTEMENT après (juriste, #762,
+ * 6032315865). Pour chacun, dans SA transaction et sous le verrou de sa
  * ligne, `resilierALaDateDEffetUnApporteur` relit la décision OPPOSABLE la plus récente — son courriel
  * parti le jour de la décision — et ne résilie que si c'est elle dont la date est atteinte. Une
  * décision caduque, ou supplantée par une plus récente, ne produit rien : aucune date d'effet n'est
@@ -29,7 +30,7 @@ export async function resilierALaDateDEffet(
   const candidats = await prisma.decisionDeContrat.findMany({
     where: {
       geste: 'resiliation',
-      dateEffet: { lte: aujourdhui },
+      dateEffet: { lt: aujourdhui },
       apporteur: { statut: { in: [...STATUTS_SOUS_CONTRAT] } },
     },
     select: { apporteurId: true },

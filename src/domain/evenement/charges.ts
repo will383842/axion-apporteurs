@@ -14,8 +14,6 @@
  *   — enum / littéral   `z.enum`, `z.nativeEnum`, `z.literal` d'une chaîne
  *   — montant           `z.number().int()` sur un champ suffixé `Cents`       → `FORMES.montantCents()`
  *   — horodatage        `z.string().datetime()`                               → `FORMES.horodatage()`
- *   — jour civil        `z.string().date()` (`AAAA-MM-JJ`, sans heure)        → `FORMES.jourCivil()`
- *   — fait du journal   `z.string().regex(ID_DU_JOURNAL)` — CETTE constante   → `FORMES.identifiantDuJournal()`
  *   — `optional` / `nullable` d'une forme admise ; objet imbriqué `.strict()`.
  * Tout le reste est refusé — `z.string()` nu compris : une chaîne libre peut porter un courriel.
  * C'est `scripts/gates/journal-sans-pii.ts` (`pnpm journal:sans-pii`) qui le vérifie, sur le schéma
@@ -58,22 +56,12 @@ export const TRANSITIONS_DU_JOURNAL_APPORTEUR = ['creer', ...EVENEMENTS_APPORTEU
 /** L'empreinte admise : SHA-256 en hexadécimal minuscule. La SEULE expression d'empreinte admise. */
 export const HASH_HEX_64 = /^[0-9a-f]{64}$/;
 
-/**
- * SEC-66 (A02, #561, 5988107744) : l'identifiant d'un fait du journal, en chaîne décimale d'un BIGINT
- * positif. La SEULE expression admise pour citer un autre fait ; elle ne peut porter aucun texte.
- */
-export const ID_DU_JOURNAL = /^[1-9][0-9]{0,18}$/;
-
 /** Les constructeurs des formes admises — un raccourci, pas une obligation : la garde lit le schéma. */
 export const FORMES = {
   identifiant: () => z.string().uuid(),
   empreinte: () => z.string().regex(HASH_HEX_64),
   montantCents: () => z.number().int(),
   horodatage: () => z.string().datetime(),
-  /** SEC-66 : un jour civil `AAAA-MM-JJ`, sans heure ; un jour qui n'existe pas est refusé. */
-  jourCivil: () => z.string().date(),
-  /** SEC-66 : l'identifiant d'un AUTRE fait du journal, cité (`ID_DU_JOURNAL`). */
-  identifiantDuJournal: () => z.string().regex(ID_DU_JOURNAL),
   /**
    * HYP-A02-ACTEUR-JOURNAL — QUI a produit l'événement : OBLIGATOIRE dans la charge hachée de tout
    * type sauf la genèse, et sous CETTE forme seule. `id` est présent si et seulement si l'acteur
@@ -158,15 +146,16 @@ export const CHARGES_PAR_TYPE = {
       transition: z.enum(TRANSITIONS_DU_JOURNAL_APPORTEUR),
       resiliationMotif: z.enum(MOTIFS_RESILIATION).optional(),
       /**
-       * SEC-66 (A02, #561, 5988107744) : le fait `apporteur_resiliation_notifiee` de la décision
-       * OPPOSABLE qui fonde le passage à `resilie` pour `ordinaire_axion` — et lui seul. Le journal,
-       * jamais purgé, garde ainsi quelle décision a été opposée, après la purge de sa notification.
+       * SEC-66 (A02, #561, 5988205180, voie 2) : l'UUID de la ligne `decisions_de_contrat` (geste
+       * `resiliation`) de la décision OPPOSABLE qui fonde le passage à `resilie` pour `ordinaire_axion`
+       * — et lui seul. Cette ligne est aussi permanente que le journal : il garde ainsi quelle décision
+       * a été opposée, après la purge de sa notification. Un UUID ne peut rien porter d'autre.
        */
-      decisionEvenementId: FORMES.identifiantDuJournal().optional(),
+      decisionContratId: FORMES.identifiant().optional(),
       acteur: FORMES.acteur(),
     })
     .strict()
-    .superRefine(({ de, transition, vers, resiliationMotif, decisionEvenementId }, ctx) => {
+    .superRefine(({ de, transition, vers, resiliationMotif, decisionContratId }, ctx) => {
       if ((de === null) !== (transition === 'creer')) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -175,10 +164,10 @@ export const CHARGES_PAR_TYPE = {
         });
       }
       const exigee = vers === 'resilie' && resiliationMotif === 'ordinaire_axion';
-      if (exigee !== (decisionEvenementId !== undefined)) {
+      if (exigee !== (decisionContratId !== undefined)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['decisionEvenementId'],
+          path: ['decisionContratId'],
           message: 'citation_de_la_decision_incoherente',
         });
       }
@@ -454,7 +443,8 @@ export const CHARGES_PAR_TYPE = {
   apporteur_resiliation_notifiee: z
     .object({
       motif: z.literal('ordinaire_axion'),
-      dateEffet: FORMES.jourCivil(),
+      /** Minuit, heure de Paris, du jour d'effet, en ISO 8601 UTC (A02, 5988205180). */
+      dateEffet: FORMES.horodatage(),
       acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
         message: 'acteur_console_attendu',
       }),

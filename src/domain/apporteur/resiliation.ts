@@ -99,9 +99,29 @@ export function estUneResiliationOpposable(d: {
 }
 
 /**
- * La date d'effet est-elle ATTEINTE ? Le contrat prend fin le jour de la date d'effet : à partir de
- * minuit, heure de Paris, de ce jour (comparaison de jours `AAAA-MM-JJ`, lexicographique).
+ * L'instant de minuit, heure de Paris, d'un jour civil `AAAA-MM-JJ` : la forme `horodatage` de la
+ * charge de `apporteur_resiliation_notifiee` (A02, #561, 5988205180). 23 h 00 UTC la veille en hiver,
+ * 22 h 00 UTC en été ; son jour de Paris est le jour d'effet.
+ */
+export function minuitDeParisDuJour(jour: string): Instant {
+  const [annee, mois, j] = jour.split('-').map(Number);
+  return depuisParis({
+    annee: annee!,
+    mois: mois!,
+    jour: j!,
+    heure: 0,
+    minute: 0,
+    seconde: 0,
+    milliseconde: 0,
+  });
+}
+
+/**
+ * La date d'effet est-elle ATTEINTE ? Elle l'est au minuit, heure de Paris, qui SUIT le jour de la date
+ * d'effet (juriste, #762, 6032315865) : le contrat est en vigueur pendant TOUT ce jour, et le passage à
+ * `resilie` comme les effets de l'art. 12 n'ont lieu qu'à partir du lendemain. Comparaison de jours
+ * `AAAA-MM-JJ` (lexicographique) : STRICTEMENT après.
  */
 export function dateEffetAtteinte(dateEffet: string, maintenant: Instant): boolean {
-  return jourCivilDeParis(maintenant) >= dateEffet;
+  return jourCivilDeParis(maintenant) > dateEffet;
 }

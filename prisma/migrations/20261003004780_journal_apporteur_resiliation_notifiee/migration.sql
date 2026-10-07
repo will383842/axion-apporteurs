@@ -5,7 +5,7 @@
 -- Le fait daté de la DÉCISION de résilier (`ordinaire_axion`), sur l'agrégat `apporteur`, à la charge
 -- fermée `{ motif, dateEffet, acteur }`. Ce n'est PAS un changement de statut : l'apporteur reste
 -- `signe` pendant le préavis, et le passage à `resilie` est écrit à la date d'effet, par la tâche
--- planifiée, en citant ce fait (`decisionEvenementId`, A02, 5988107744).
+-- planifiée, en citant ce fait (`decisionContratId`, A02, 5988205180).
 --
 -- Retour arrière (commentaire) : aucun. La valeur d'enum ne se retire pas (Postgres) ; elle reste
 -- inerte, sans emploi.

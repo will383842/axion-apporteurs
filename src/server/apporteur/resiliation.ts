@@ -36,6 +36,7 @@ import {
   estUneResiliationOpposable,
   jourCivilDeParis,
   jugerLaResiliationPourManquement,
+  minuitDeParisDuJour,
   STATUTS_SOUS_CONTRAT,
   type ArticleMiseEnDemeure,
 } from '../../domain/apporteur/resiliation';
@@ -440,7 +441,7 @@ export async function resilierUnApporteur(
 /**
  * Le PASSAGE à `resilie` : le statut, le motif, `sessionVersion` incrémentée (toutes les sessions
  * d'avant tombent) et l'événement `apporteur_statut_modifie`, par l'écrivain unique du journal. Pour
- * `ordinaire_axion`, la charge CITE le fait de la décision opposable (`decisionEvenementId`). Rend
+ * `ordinaire_axion`, la charge CITE le fait de la décision opposable (`decisionContratId`). Rend
  * l'identifiant de l'événement.
  */
 async function passerEnResilie(
@@ -452,7 +453,7 @@ async function passerEnResilie(
     resiliationMotif: MotifResiliation | null;
     acteur: ActeurDeResiliation;
     maintenant: Date;
-    decisionEvenementId?: string;
+    decisionContratId?: string;
   }
 ): Promise<bigint> {
   await tx.apporteur.update({
@@ -473,9 +474,7 @@ async function passerEnResilie(
       vers: p.vers,
       transition: 'resilier',
       ...(p.resiliationMotif === null ? {} : { resiliationMotif: p.resiliationMotif }),
-      ...(p.decisionEvenementId === undefined
-        ? {}
-        : { decisionEvenementId: p.decisionEvenementId }),
+      ...(p.decisionContratId === undefined ? {} : { decisionContratId: p.decisionContratId }),
       acteur: p.acteur,
     },
   });
@@ -546,7 +545,11 @@ export async function notifierLaResiliationParLaSociete(
     agregat: 'apporteur',
     agregatId: apporteurId,
     survenuAt: maintenant,
-    charge: { motif: 'ordinaire_axion', dateEffet, acteur },
+    charge: {
+      motif: 'ordinaire_axion',
+      dateEffet: new Date(minuitDeParisDuJour(dateEffet)).toISOString(),
+      acteur,
+    },
   });
   const evenementId = BigInt(inscrit.id);
   const effet = new Date(`${dateEffet}T00:00:00.000Z`);
@@ -623,7 +626,7 @@ async function laDecisionOpposable(
  * LA DATE D'EFFET (forme (b), point 4), pour UN apporteur, dans la transaction de la tâche : sous le
  * verrou de sa ligne, la décision opposable la plus récente est lue ; si sa date d'effet est atteinte,
  * l'apporteur passe en `resilie` (`ordinaire_axion`), l'événement CITE la décision
- * (`decisionEvenementId`, A02, 5988107744), et les effets de l'art. 12 s'appliquent. L'acteur est
+ * (`decisionContratId`, A02, 5988205180), et les effets de l'art. 12 s'appliquent. L'acteur est
  * celui de la DÉCISION : la résiliation reste un acte humain, que la tâche exécute à sa date. Sans
  * décision opposable, ou avant sa date, rien. Une décision ne se cite qu'UNE fois
  * (`decision_deja_citee`). Rend vrai si l'apporteur a été résilié.
@@ -639,8 +642,7 @@ export async function resilierALaDateDEffetUnApporteur(
   if (decision === null || !dateEffetAtteinte(decision.dateEffet, maintenant.getTime())) {
     return false;
   }
-  const decisionEvenementId = decision.evenementId.toString();
-  if ((await passageQuiCiteLaDecision(tx, decisionEvenementId)) !== null) {
+  if ((await passageQuiCiteLaDecision(tx, decision.id)) !== null) {
     throw new ErreurResiliation('decision_deja_citee', 'cette décision fonde déjà un passage');
   }
   const { statut: vers, resiliationMotif } = transitionner({
@@ -655,7 +657,7 @@ export async function resilierALaDateDEffetUnApporteur(
     resiliationMotif,
     acteur: decision.acteur,
     maintenant,
-    decisionEvenementId,
+    decisionContratId: decision.id,
   });
   await appliquerLesEffetsDeLArticle12(tx, apporteurId, decision.acteur, maintenant);
   return true;

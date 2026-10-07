@@ -47,7 +47,7 @@ export const MATRICE_DES_ROLES = {
   // SEC-30 (texte de la sécurité, point 4) : la levée d'un gel est sous step-up dès maintenant.
   'action:lever_gel': { roles: ['admin'], stepUp: true },
   'action:suspendre_apporteur': { roles: ['admin'], stepUp: false },
-  'action:resilier_apporteur': { roles: ['admin'], stepUp: false },
+  'action:resilier_apporteur': { roles: ['admin'], stepUp: true },
   'action:exporter_das2': { roles: ['admin'], stepUp: true },
   // DM-12 (REQ-DM-034, amendement A1-01) : le rattachement manuel motivé, au qualifieur (glossaire §7)
   // et à l'admin ; jamais au comptable ni au lecteur.
