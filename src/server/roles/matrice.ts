@@ -104,6 +104,9 @@ export const MATRICE_DES_ROLES = {
   // relèvement est exigé par le geste, que l'action rejuge.
   'ecran:mise_en_demeure': { roles: ['admin'], stepUp: false },
   'action:mettre_en_demeure': { roles: ['admin'], stepUp: true },
+  // DM-71 (art. 3.3 du v2) : l'annulation après la confirmation, pour erreur d'identification ou pour
+  // fraude, est un geste humain de l'administrateur, sous step-up (sécurité, rattrapage 119).
+  'action:annuler_apres_confirmation': { roles: ['admin'], stepUp: true },
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, EntreeDeLaMatrice>>;
 
 /**
