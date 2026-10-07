@@ -37,7 +37,7 @@ describe('REQ-DM-010 — aucun palier ni seuil de dépôts par apporteur dans le
     expect(lecteurs).toStrictEqual(['src/server/acces/for-apporteur.ts']);
   });
 
-  it('REQ-DM-010 : TÉMOIN — palierConfiance n’existe plus que dans le refus nommé de seuilPrioritaire()', () => {
+  it('REQ-DM-009 REQ-DM-010 : TÉMOIN — palierConfiance n’existe plus que dans le refus nommé de seuilPrioritaire()', () => {
     const porteurs = FICHIERS_DE_CODE.filter((f) => /palierConfiance/.test(lire(f)));
     expect(porteurs).toStrictEqual(['src/domain/attribution/seuil-prioritaire.ts']);
   });

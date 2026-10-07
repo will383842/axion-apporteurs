@@ -282,13 +282,13 @@ describe('REQ-CPL-027 — `actif` et `dormant` sont dérivés, jamais stockés',
 });
 
 describe('REQ-DM-010 — le seuil de vérification prioritaire est une colonne entière', () => {
-  it('REQ-DM-010 : `seuilVerificationPrioritaire` est un Int nullable — nul, le défaut dérive du palier', () => {
+  it('REQ-DM-010 : `seuilVerificationPrioritaire` est un Int nullable, que plus aucun code ne lit ni n’écrit (SEC-56)', () => {
     const champs = modele('Apporteur').champs;
     expect(champs.find((c) => c.nom === 'seuilVerificationPrioritaire')).toMatchObject({
       type: 'Int',
       optionnel: true,
     });
-    // Aucun défaut littéral en base : la valeur par défaut est CALCULÉE depuis le palier (RM-10).
+    // Aucun défaut littéral en base (RM-10) ; SEC-56 : aucun palier par apporteur ne la calcule plus.
     const seuil = champs.find((c) => c.nom === 'seuilVerificationPrioritaire')!;
     expect(seuil.attributs.join(' ')).not.toContain('@default');
   });
@@ -300,10 +300,10 @@ describe('REQ-DM-010 — le seuil de vérification prioritaire est une colonne e
     expect(trace).toMatchObject({ type: 'DateTime', optionnel: true });
   });
 
-  it('REQ-DM-010 : la colonne nulle laisse le palier décider, une surcharge le remplace', () => {
-    // La colonne est l'entrée `surchargeManuelle` de la fonction unique : rien n'est rejugé ici.
-    const nulle = { palierConfiance: 5, capaciteRestante: 9, surchargeManuelle: null };
-    expect(seuilPrioritaire(nulle)).toBe(5);
+  it('REQ-DM-010 : la surcharge nulle laisse la capacité décider, une surcharge la remplace, sans palier', () => {
+    // La surcharge est l'entrée `surchargeManuelle` de la fonction unique : rien n'est rejugé ici.
+    const nulle = { capaciteRestante: 9, surchargeManuelle: null };
+    expect(seuilPrioritaire(nulle)).toBe(9);
     expect(seuilPrioritaire({ ...nulle, surchargeManuelle: 12 })).toBe(12);
   });
 });
