@@ -65,6 +65,11 @@ export const VARIABLES: Readonly<Record<string, SourceDeVariable>> = {
   PEREMPTION_JOURS: { ...SSOT_SEUILS, constante: 'PEREMPTION_JOURS' },
   SEUIL_VERSEMENT: { ...SSOT_SEUILS, constante: 'SEUIL_VERSEMENT' },
   PREAVIS_JOURS: { ...SSOT_SEUILS, constante: 'PREAVIS_JOURS' },
+  // JUR-T54 — la condition (b) de la prolongation de l'art. 3.4 al. 3.
+  PROLONGATION_FAITS_RECENTS_JOURS: {
+    ...SSOT_SEUILS,
+    constante: 'PROLONGATION_FAITS_RECENTS_JOURS',
+  },
   // JUR-T40 — les cinq délais de l'art. 3.2 (W20), tous dans la SSOT (`src/domain/seuils/ssot.ts`),
   // source « contrat art. 3.2 » ; le gabarit les résout. DM-13 les lit sans les redéclarer.
   CONFIRMATION_TACITE_JOURS: { ...SSOT_SEUILS, constante: 'CONFIRMATION_TACITE_JOURS' },

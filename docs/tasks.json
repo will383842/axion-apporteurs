@@ -21909,7 +21909,8 @@
         "docs/contrat/CONTRAT-APPORTEUR-V1.md",
         "src/domain/seuils/ssot.ts",
         "src/domain/contrat/variables.ts",
-        "tests/unit/contrat/prolongation-sur-demande.spec.ts"
+        "tests/unit/contrat/prolongation-sur-demande.spec.ts",
+        "tests/unit/contrat/contract-template-complete.spec.ts"
       ],
       "schema": false,
       "sensible": [],

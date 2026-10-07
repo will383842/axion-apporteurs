@@ -958,6 +958,55 @@ describe('REQ-JUR-003 — les lecteurs du gabarit et du registre, sur leurs cas 
     });
     expect(motifs2).toContain('clause CL-INVENTEE absente de la table de correspondance');
   });
+
+  // @no-red-first: main a le même verdict ; JUR-T54 a donné un al. 4 à l'art. 3.4, et l'ancrage W9 ne passait plus par ce cas
+  it('REQ-JUR-003 — un ancrage qui cite un alinéa absent de son article rend un écart nommé, jamais un silence', () => {
+    const synthetique = [
+      '### Article 3 — Attribution <!-- CL-DUREE -->',
+      '',
+      '**3.4 — Durée.** L’attribution est prolongée de trois mois, une seule fois.',
+      '',
+    ].join('\n');
+    const r = controlerConcordances({
+      registre: [{ id: 'T-AL', texte: 'prolongée', tranchee: null, avenant: false }],
+      gabarit: synthetique,
+      concordances: [
+        {
+          decision: 'T-AL',
+          article: '3.4',
+          alinea: 4,
+          registre: ['prolongée'],
+          gabarit: ['prolongée'],
+          absents: [],
+        },
+      ],
+      divergences: [],
+      questions: [],
+    });
+    expect(r.fautes.find((f) => f.message.startsWith('T-AL:3.4:al4'))?.famille).toBe(
+      'divergence_non_declaree'
+    );
+    const ecart = r.ecarts.find((e) => e.cle === 'T-AL:3.4:al4');
+    expect(ecart?.message).toContain("« prolongée » absent de l'art. 3.4 al. 4");
+    // Le même ancrage, sur l'alinéa qui existe, ne rend aucun écart.
+    const present = controlerConcordances({
+      registre: [{ id: 'T-AL', texte: 'prolongée', tranchee: null, avenant: false }],
+      gabarit: synthetique,
+      concordances: [
+        {
+          decision: 'T-AL',
+          article: '3.4',
+          alinea: 1,
+          registre: ['prolongée'],
+          gabarit: ['prolongée'],
+          absents: [],
+        },
+      ],
+      divergences: [],
+      questions: [],
+    });
+    expect(present.ecarts).toEqual([]);
+  });
 });
 
 // ── JUR-T31 — l'art. 3.5 : l'entreprise déjà prise par un autre apporteur ou par la Société ──────
