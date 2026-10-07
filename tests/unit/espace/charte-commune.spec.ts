@@ -9,7 +9,7 @@
  *   (1) LE BLOC IDENTIQUE. Il n'existe ni feuille de style commune ni jetons séparés : la charte est
  *       un bloc `charte:debut … charte:fin` recopié dans chaque maquette. Une copie qui dérive est une
  *       charte qui ment. Le bloc est le MÊME dans les quatorze maquettes de l'espace, et le même dans
- *       les treize de la console (la console a ses jetons propres, REQ-UX-034, et sa barre latérale
+ *       les quatorze de la console (la console a ses jetons propres, REQ-UX-034, et sa barre latérale
  *       viendra avec sa propre refonte).
  *
  *   (2) LES COULEURS DE LA MARQUE, dans le thème clair de l'espace : terracotta pour l'action, ivoire
@@ -103,8 +103,8 @@ describe('REQ-UX-017 — la charte commune, un seul bloc par famille', () => {
     for (const f of ESPACE) expect(charte(lire(f)), f).toBe(reference);
   });
 
-  it('REQ-UX-017 — le bloc charte est IDENTIQUE dans les treize maquettes de la console', () => {
-    expect(CONSOLE).toHaveLength(13);
+  it('REQ-UX-017 — le bloc charte est IDENTIQUE dans les quatorze maquettes de la console', () => {
+    expect(CONSOLE).toHaveLength(14);
     const reference = charte(lire(CONSOLE[0]!));
     expect(reference.length).toBeGreaterThan(1000);
     for (const f of CONSOLE) expect(charte(lire(f)), f).toBe(reference);
