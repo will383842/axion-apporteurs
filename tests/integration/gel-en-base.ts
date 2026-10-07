@@ -2,7 +2,7 @@
  * SEC-15 — un GEL posé en base réelle, pour les témoins qui ont besoin d'un apporteur `suspendu`. Le
  * statut `suspendu` ne s'écrit plus seul : le CHECK `apporteurs_suspendu_si_gele` l'exige avec un gel,
  * et la garde `apporteurs_gel_garde` exige, à la pose, la date, l'auteur et une décision `suspension`
- * du MÊME apporteur. Ce helper écrit donc, sous le propriétaire : un administrateur validé, le fait du
+ * du MÊME apporteur. Ce helper écrit donc, sous le propriétaire : un administrateur validé (repris s'il existe), le fait du
  * gel au journal, la décision, puis la pose complète.
  */
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -17,13 +17,22 @@ export async function poserUnGelEnBase(
   apporteurId: string,
   maintenant: Date
 ): Promise<void> {
-  const [admin] = await prisma.$queryRawUnsafe<{ id: string }[]>(
-    `INSERT INTO utilisateurs_console (id, role, email_chiffre, email_hash, cree_at, valide_at)
-     VALUES ($1::uuid, 'admin'::console_role, '\\x01'::bytea, $2, $3, $3) RETURNING id`,
-    randomUUID(),
-    hex(32),
-    maintenant
+  // Un administrateur validé et actif déjà en base est REPRIS : la garde des quatre yeux exige un
+  // validateur dès qu'il en existe un, et une même base sert à plusieurs gels. Sinon, le premier naît.
+  const [existant] = await prisma.$queryRawUnsafe<{ id: string }[]>(
+    `SELECT id FROM utilisateurs_console
+     WHERE role = 'admin'::console_role AND valide_at IS NOT NULL AND desactive_at IS NULL
+     ORDER BY cree_at, id LIMIT 1`
   );
+  const [admin] = existant
+    ? [existant]
+    : await prisma.$queryRawUnsafe<{ id: string }[]>(
+        `INSERT INTO utilisateurs_console (id, role, email_chiffre, email_hash, cree_at, valide_at)
+         VALUES ($1::uuid, 'admin'::console_role, '\\x01'::bytea, $2, $3, $3) RETURNING id`,
+        randomUUID(),
+        hex(32),
+        maintenant
+      );
   const fait = await prisma.$transaction((tx) =>
     ajouterEvenement(tx, {
       type: 'apporteur_gel_modifie',
