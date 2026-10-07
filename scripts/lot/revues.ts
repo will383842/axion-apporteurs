@@ -1553,7 +1553,7 @@ export function idDuTitre(titre: string | null): string | null {
  * écrit `docs/tasks.json` — et se relirait en ordinaire. Toute erreur rend `null`, jamais une
  * liste vide : l'absence est un fait que `risqueDeLaPr()` convertit en ÉLEVÉ.
  */
-export function tachesDeLaBase(ref: string): TacheDeLaPr[] | null {
+export function tachesDeLaBase(ref: string, cwd?: string): TacheDeLaPr[] | null {
   if (!/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(ref)) return null;
   try {
     const doc = JSON.parse(
@@ -1561,9 +1561,37 @@ export function tachesDeLaBase(ref: string): TacheDeLaPr[] | null {
         encoding: 'utf8',
         maxBuffer: 64e6,
         stdio: ['ignore', 'pipe', 'ignore'],
+        ...(cwd === undefined ? {} : { cwd }),
       })
     ) as { taches?: unknown };
     return Array.isArray(doc.taches) ? (doc.taches as TacheDeLaPr[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * GOV-152 — LE REGISTRE DE LA BASE DE FUSION (`git merge-base <base> <tête>`), et non celui de la
+ * base COURANTE. Une PR ne se juge que sur ce qu'ELLE change : comparée à `main` courante, elle
+ * paraissait « réécrire » toute tâche que `main` a changée depuis son départ (des chemins ajoutés par
+ * une autre PR fusionnée entre-temps), et rougissait `registre_reecrit_par_une_pr_d_auteur` et
+ * `fichier_reserve_sans_label` sans avoir rien écrit. Échec FERMÉ : une base de fusion introuvable
+ * rend `null`, que le risque et la garde des écarts lisent comme un registre illisible.
+ */
+export function tachesDeLaBaseDeFusion(
+  base: string,
+  tete: string,
+  cwd?: string
+): TacheDeLaPr[] | null {
+  const ref = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+  if (!ref.test(base) || !ref.test(tete)) return null;
+  try {
+    const fusion = execFileSync('git', ['merge-base', base, tete], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      ...(cwd === undefined ? {} : { cwd }),
+    }).trim();
+    return /^[0-9a-f]{40}$/.test(fusion) ? tachesDeLaBase(fusion, cwd) : null;
   } catch {
     return null;
   }
@@ -1791,6 +1819,13 @@ export type EntreeDuRisque = {
   taches: readonly TacheDeLaPr[];
   /** Le registre de la BASE — `null` s'il est illisible, et c'est un risque élevé. */
   tachesBase: readonly TacheDeLaPr[] | null;
+  /**
+   * GOV-152, condition de la sécurité (6036322341) : le registre de la base COURANTE, quand `tachesBase`
+   * est celui de la base de FUSION. Le risque lit l'UNION des trois registres : une tâche rendue
+   * sensible sur la base courante après le départ de la PR élève toujours son risque (aucun
+   * contournement par ancienneté). Absent : non fourni ; `null` : illisible, donc risque élevé.
+   */
+  tachesBaseCourante?: readonly TacheDeLaPr[] | null;
   fichiers: readonly string[];
   /** D'où vient `fichiers`, et si la liste est complète — `null` : inconnu, donc ÉLEVÉ. */
   liste: ListeDesFichiers | null;
@@ -1823,6 +1858,7 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
       [
         ...tachesDeLaPr(e.taches, e.pr, id, e.idsDuLot ?? []),
         ...tachesDeLaPr(e.tachesBase ?? [], e.pr, id, e.idsDuLot ?? []),
+        ...tachesDeLaPr(e.tachesBaseCourante ?? [], e.pr, id, e.idsDuLot ?? []),
       ].map((t) => t.id)
     ),
   ];
@@ -1830,6 +1866,7 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
     raisons.push('aucune tâche résolue (ni par le titre, ni par le champ `pr`, ni par `Lot:`)');
   }
   if (e.tachesBase === null) raisons.push('registre de base illisible');
+  if (e.tachesBaseCourante === null) raisons.push('registre de la base courante illisible');
 
   let tachesSchema = false;
   const prouvees: string[] = [];
@@ -1841,6 +1878,7 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
     const versions: [string, TacheDeLaPr | undefined][] = [
       ['tête', surLaTete],
       ['base', surLaBase],
+      ['base courante', e.tachesBaseCourante?.find((t) => t.id === idT)],
     ];
     let ordinaire = true;
     for (const [ou, t] of versions) {
@@ -1869,6 +1907,7 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
   }
   const declares = fichiersDesTachesAElever(e.fichiers, [
     { ou: 'base', taches: e.tachesBase ?? [] },
+    { ou: 'base courante', taches: e.tachesBaseCourante ?? [] },
     { ou: 'tête', taches: e.taches },
   ]);
   if (declares.length > 0) {
