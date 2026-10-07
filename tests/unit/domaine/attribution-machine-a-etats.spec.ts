@@ -933,6 +933,42 @@ describe('REQ-DM-006 — l’écrivain des transitions, en processus (client sim
     });
   });
 
+  it('REQ-JUR-007 : TÉMOIN — DM-71 : une exception humaine écrit SON marqueur et son auteur avec l’annulation, et l’exception dans la charge', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const ADMIN = '0190a5c0-0000-7000-8000-0000000000c1';
+    const { tx, mises } = txSimule([ligneDe({ statut: 'signee', confirmee_at: MAINTENANT })]);
+    const r = await transitionnerUneAttribution(tx, {
+      attributionId: ID,
+      transition: 'annulee_erreur_identification',
+      acteur: { par: 'utilisateur_console', id: ADMIN },
+      maintenant: MAINTENANT,
+    });
+    expect(r).toStrictEqual({ de: 'signee', vers: 'annulee' });
+    expect((mises[0] as { data: Record<string, unknown> }).data).toMatchObject({
+      statut: 'annulee',
+      annulationException: 'erreur_identification',
+      annulationParId: ADMIN,
+    });
+    expect(evenementsEcrits()[0]!.charge).toMatchObject({
+      transition: 'annulee_erreur_identification',
+      exception: 'erreur_identification',
+    });
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — DM-71 : une exception humaine par le SYSTÈME est refusée, nommée, avant tout verrou', async () => {
+    const { transitionnerUneAttribution } = await ecrivain();
+    const { tx, mises } = txSimule([ligneDe({ statut: 'signee', confirmee_at: MAINTENANT })]);
+    const e = await transitionnerUneAttribution(tx, {
+      attributionId: ID,
+      transition: 'annulee_erreur_identification',
+      acteur: { par: 'systeme' },
+      maintenant: MAINTENANT,
+    }).catch((x: unknown) => x);
+    expect((e as { code: string }).code).toBe('acteur_refuse');
+    expect(mises).toStrictEqual([]);
+    expect(evenementsEcrits()).toStrictEqual([]);
+  });
+
   it.each([
     [
       'un utilisateur de la console',

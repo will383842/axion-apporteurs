@@ -418,6 +418,19 @@ describe('REQ-UX-047 — la liste de l’espace porte la décision, pour l’app
     expect(rendues[0]!.route).toBe(GABARITS.decision_attribution.route);
   });
 
+  it('REQ-JUR-007 : TÉMOIN — DM-71 : une FRAUDE établie va chercher les faits de SON anomalie, comme anomalie_confirmee', async () => {
+    const rendues = await notificationsDeLEspace(clientDeLaListe([ligne()], anomalie()), APP, {
+      cles: CLES,
+      lireUnFait: async () => ({
+        type: 'attribution_etat_modifie',
+        charge: { ...charge('fraude_etablie'), exception: 'fraude' },
+      }),
+    });
+    expect(rendues).toHaveLength(1);
+    expect(rendues[0]!.corps).toContain(`deux dépôts le même jour ${MARQUEUR}`);
+    expect(rendues[0]!.corps).toContain('il est annulé (article 3.3)');
+  });
+
   it('REQ-UX-047 : TÉMOIN — purgée, la décision reste affichée avec le texte fermé ; refusée, elle est écartée', async () => {
     const purgee = await notificationsDeLEspace(
       clientDeLaListe([ligne()], anomalie({ justificationChiffre: null })),
