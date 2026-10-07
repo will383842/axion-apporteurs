@@ -2881,6 +2881,31 @@ const ETAPES_FIGEES: readonly EtapeFigee[] = [
     nom: 'La garde des agregats du reseau sait rougir',
     run: 'pnpm jur:aucun-agregat-reseau:prove',
   },
+  // JUR-T30 — les trois gardes de l'art. 2.7, chacune avec sa preuve, par paire.
+  {
+    nom: 'Charte — la date du contact reste inerte',
+    run: 'pnpm jur:date-contact-inerte',
+  },
+  {
+    nom: 'La garde de la date du contact sait rougir',
+    run: 'pnpm jur:date-contact-inerte:prove',
+  },
+  {
+    nom: 'Charte — aucun support de presentation servi',
+    run: 'pnpm jur:supports-de-presentation',
+  },
+  {
+    nom: 'La garde des supports de presentation sait rougir',
+    run: 'pnpm jur:supports-de-presentation:prove',
+  },
+  {
+    nom: 'Charte — aucune instruction, aucune activite mesuree',
+    run: 'pnpm jur:aucune-instruction',
+  },
+  {
+    nom: 'La garde des instructions sait rougir',
+    run: 'pnpm jur:aucune-instruction:prove',
+  },
   // SEC-46 — la garde des styles en ligne, et sa preuve, par paire.
   {
     nom: 'Securite — aucun style en ligne sous src/app',
@@ -3154,6 +3179,12 @@ export const PORTE_A_FIGEE: PorteFigee = {
         'La garde du lexique sait rougir, et laisse passer la negation qui protege',
         'Charte — aucun agregat du reseau dans l espace',
         'La garde des agregats du reseau sait rougir',
+        'Charte — la date du contact reste inerte',
+        'La garde de la date du contact sait rougir',
+        'Charte — aucun support de presentation servi',
+        'La garde des supports de presentation sait rougir',
+        'Charte — aucune instruction, aucune activite mesuree',
+        'La garde des instructions sait rougir',
         'Securite — aucun style en ligne sous src/app',
         'La garde des styles en ligne sait rougir',
         'Charte — aucune progression vers un seuil dans l espace',
@@ -3456,6 +3487,13 @@ export const PORTE_A_FIGEE: PorteFigee = {
     //    Dérivés de `package.json` par le MÊME calcul que le témoin, lu dans son code. ──
     'jur:aucun-agregat-reseau': 'tsx scripts/gates/jur-aucun-agregat-reseau.ts',
     'jur:aucun-agregat-reseau:prove': 'tsx scripts/gates/jur-aucun-agregat-reseau.ts --prove',
+    'jur:date-contact-inerte': 'tsx scripts/gates/jur-date-contact-inerte.ts',
+    'jur:date-contact-inerte:prove': 'tsx scripts/gates/jur-date-contact-inerte.ts --prove',
+    'jur:supports-de-presentation': 'tsx scripts/gates/jur-supports-de-presentation.ts',
+    'jur:supports-de-presentation:prove':
+      'tsx scripts/gates/jur-supports-de-presentation.ts --prove',
+    'jur:aucune-instruction': 'tsx scripts/gates/jur-aucune-instruction.ts',
+    'jur:aucune-instruction:prove': 'tsx scripts/gates/jur-aucune-instruction.ts --prove',
     'csp:inline': 'tsx scripts/gates/csp-inline.ts',
     'csp:inline:prove': 'tsx scripts/gates/csp-inline.ts --prove',
     'jur:aucune-progression': 'tsx scripts/gates/jur-aucune-progression.ts',

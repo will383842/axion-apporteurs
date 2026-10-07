@@ -10036,7 +10036,8 @@
         ".github/workflows/ci.yml",
         "package.json",
         "scripts/gates/lexique-apporteurs.ts",
-        "tests/unit/gouvernance/lexique.spec.ts"
+        "tests/unit/gouvernance/lexique.spec.ts",
+        "scripts/gates/gov-conventions.ts"
       ],
       "schema": false,
       "sensible": [
