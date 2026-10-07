@@ -17,11 +17,11 @@
  * de Paris et l'heure écoulée avancent ensemble, et aucune échéance ne tombe dans une heure
  * inexistante ni dans une heure ambiguë. Le test le vérifie sur 1996-2099, il ne le suppose pas.
  */
-import { MS_PAR_HEURE, MS_PAR_JOUR } from './calendrier-civil';
+import { MS_PAR_HEURE, MS_PAR_JOUR, dateDepuisJours, joursDeLaDate } from './calendrier-civil';
 import { ErreurTemps } from './erreurs';
 import { CALENDRIER_FERIES_FR, jourOuvre, type CalendrierFeries } from './feries';
 import type { Instant } from './horloge';
-import { instantDepuisLocal, localDepuisInstant } from './paris';
+import { depuisParis, instantDepuisLocal, localDepuisInstant, versParis } from './paris';
 
 /** Le premier instant où `heures` heures ouvrées se sont écoulées depuis `debut`. */
 export function echeanceOuvree(
@@ -65,4 +65,17 @@ export function heuresOuvreesEcoulees(
     }
   }
   return total / MS_PAR_HEURE;
+}
+
+/**
+ * DM-24 (amendement A1-09 de l'audit du plan de la Phase 1) — la même heure légale de Paris, `jours`
+ * jours CIVILS plus tard : un délai du contrat compté en jours, dimanches et fériés compris. À travers
+ * un changement d'heure, l'heure de Paris est gardée, pas la durée écoulée.
+ */
+export function ajouterJoursCivilsParis(debut: Instant, jours: number): Instant {
+  if (!Number.isInteger(jours) || jours < 0) {
+    throw new ErreurTemps('duree_invalide', `${jours} j n'est pas un nombre entier de jours >= 0`);
+  }
+  const p = versParis(debut);
+  return depuisParis({ ...p, ...dateDepuisJours(joursDeLaDate(p) + jours) });
 }
