@@ -130,6 +130,9 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
   'public/confirmation-contact.ts':
     'page publique du contact, hors de l’espace : couverte par le témoin confirmation-par-courriel',
   'console/a-appeler.ts': 'lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
+  // SEC-51 : les messages des refus de la console, lus par Axion-IA seul, jamais par l'apporteur.
+  'console/refus.ts':
+    'refus de la garde de la réserve, lus par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
   // SEC-30 : l'écran des utilisateurs de la console et ses courriels, lus par ses utilisateurs seuls.
   'console/utilisateurs.ts':
     'administration des utilisateurs de la console et ses courriels, lus par ses utilisateurs seuls (portée dépôt, REQ-GOV-017)',
@@ -204,6 +207,12 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   'espace/vocabulaire.ts › FORMULES › droitACommissionJusquau': ['dateFin'],
   'espace/vocabulaire.ts › FORMULES › courrierDeSuspension': ['dateCourrier'],
   'espace/vocabulaire.ts › FORMULES › limiteDeVerification': ['limiteParJour'],
+  // UX-P1-51 : SA contestation — la réception de SON écrit, la date de la réponse qui LUI est faite, et
+  // l'échéance de cette réponse, dérivée de la réception ; le délai vient de la SSOT (RM-10).
+  'espace/vocabulaire.ts › CONTESTATION › votreEcrit': ['date'],
+  'espace/vocabulaire.ts › CONTESTATION › reponse': ['date'],
+  'espace/vocabulaire.ts › CONTESTATION › contestationRecue': ['date'],
+  'espace/vocabulaire.ts › CONTESTATION › attente › phrase': ['delaiReponse', 'dateLimite'],
   // UX-P1-10 : les notifications de l'apporteur, clé par clé (textes d'A07). Chaque paramètre dit
   // SON entreprise, SON contact, et la décision, le motif ou la date qui le concernent ; jamais un
   // autre apporteur ni l'occupant d'une entreprise (art. 3.5).

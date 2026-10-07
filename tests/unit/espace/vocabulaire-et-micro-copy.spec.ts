@@ -680,6 +680,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › quoiFaire : Il part tout seul dès le retour du réseau ; le téléphone de {contact} vous sera alors demandé. S'il n'est pas parti le {dateEffacement}, il s'efface de ce téléphone.
       espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › actionPrincipale › libelle : Retour à l'accueil
       espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › actionPrincipale › route : /
+      espace/issues-depot.ts › INFORMATION_LISTE_TENUE : Axion-IA tient une liste d'organismes avec lesquels elle est déjà en relation : administrations, financeurs publics ou paritaires, et organismes de formation. Une entreprise qui y figure ne peut pas être déposée, et le refus vous indique cette catégorie (contrat, article 3.3 bis).
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › titre : Bienvenue dans votre espace
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › phrase : Quand vous rencontrez une entreprise qui pourrait former ses salariés, vous pouvez taper son nom ci-dessous. Vous vérifiez qu'elle est libre, vous dites qui vous avez rencontré, et Axion-IA l'appelle. Si elle passe commande pendant la durée de votre droit à commission, une commission vous revient au fil des paiements.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › action › libelle : Vérifier
@@ -746,6 +747,10 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › phrase : Il est préparé quand vos pièces sont vérifiées. Vous le lirez ici avant de le signer ; rien n’est à faire d’ici là.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › action › libelle : Voir mes vérifications
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › action › route : /conformite
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /contestations/[id] › titre : Cette contestation n’est pas disponible
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /contestations/[id] › phrase : Vos contestations se retrouvent depuis Mes entreprises.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /contestations/[id] › action › libelle : Voir Mes entreprises
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /contestations/[id] › action › route : /mes-entreprises
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /notifications › titre : Aucune notification
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /notifications › phrase : Les nouvelles de vos entreprises apparaîtront ici. Rien n’est à consulter régulièrement : les avis importants arrivent aussi par e-mail.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /notifications › action › libelle : Retour à l'accueil
@@ -781,6 +786,8 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/vocabulaire.ts › ACTIONS_COMMUNES › deposerUneEntreprise › route : /deposer
       espace/vocabulaire.ts › ACTIONS_COMMUNES › ecrireAAxionIA › libelle : Écrire à Axion-IA
       espace/vocabulaire.ts › ACTIONS_COMMUNES › ecrireAAxionIA › route : /aide
+      espace/vocabulaire.ts › ACTIONS_COMMUNES › voirMesEntreprises › libelle : Voir Mes entreprises
+      espace/vocabulaire.ts › ACTIONS_COMMUNES › voirMesEntreprises › route : /mes-entreprises
       espace/vocabulaire.ts › NAVIGATION_AVANT_SIGNATURE › 0 : Ma conformité
       espace/vocabulaire.ts › NAVIGATION_AVANT_SIGNATURE › 1 : Mon contrat
       espace/vocabulaire.ts › CONNEXION › champCourriel : Adresse électronique
@@ -826,6 +833,29 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/vocabulaire.ts › CONFIDENTIALITE › erreur › action : Réessayer
       espace/vocabulaire.ts › CONFIDENTIALITE › horsLigne › titre : Vous êtes hors ligne
       espace/vocabulaire.ts › CONFIDENTIALITE › horsLigne › phrase : La politique de confidentialité s’affichera dès le retour du réseau.
+      espace/vocabulaire.ts › CONTESTATION › titre : Ma contestation
+      espace/vocabulaire.ts › CONTESTATION › retour : ← Mes entreprises
+      espace/vocabulaire.ts › CONTESTATION › objets › refus_depot : Refus d’un dépôt
+      espace/vocabulaire.ts › CONTESTATION › objets › annulation_attribution : Annulation d’un dépôt
+      espace/vocabulaire.ts › CONTESTATION › objets › demande_rattachement : Demande de rattachement
+      espace/vocabulaire.ts › CONTESTATION › votreEcrit : Votre écrit, reçu le {date}
+      espace/vocabulaire.ts › CONTESTATION › reponse : Réponse d’Axion-IA, le {date}
+      espace/vocabulaire.ts › CONTESTATION › attente › titre : La réponse n’est pas encore arrivée
+      espace/vocabulaire.ts › CONTESTATION › attente › phrase : Axion-IA vous répond de façon motivée dans les {delaiReponse} qui suivent la réception de votre écrit, au plus tard le {dateLimite}.
+      espace/vocabulaire.ts › CONTESTATION › attente › action › libelle : Voir Mes entreprises
+      espace/vocabulaire.ts › CONTESTATION › attente › action › route : /mes-entreprises
+      espace/vocabulaire.ts › CONTESTATION › contestationRecue : Contestation reçue le {date}
+      espace/vocabulaire.ts › CONTESTATION › statut › repondue : réponse donnée
+      espace/vocabulaire.ts › CONTESTATION › statut › enAttente : en attente de réponse
+      espace/vocabulaire.ts › CONTESTATION › purgee : Le texte de cette contestation et la réponse d'Axion-IA ne sont plus conservés, leur durée de conservation ayant pris fin.
+      espace/vocabulaire.ts › CONTESTATION › indisponible › titre : Cette contestation n’est pas disponible
+      espace/vocabulaire.ts › CONTESTATION › indisponible › phrase : Vos contestations se retrouvent depuis Mes entreprises.
+      espace/vocabulaire.ts › CONTESTATION › indisponible › action › libelle : Voir Mes entreprises
+      espace/vocabulaire.ts › CONTESTATION › indisponible › action › route : /mes-entreprises
+      espace/vocabulaire.ts › CONTESTATION › chargement : Chargement…
+      espace/vocabulaire.ts › CONTESTATION › erreur › titre : Votre contestation ne s’affiche pas
+      espace/vocabulaire.ts › CONTESTATION › erreur › phrase : Rien n’est perdu : elle s’affichera au prochain essai.
+      espace/vocabulaire.ts › CONTESTATION › erreur › action : Réessayer
       espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › titre : Qui avez-vous rencontré ?
       espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › nom : Nom et prénom
       espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › fonction : Fonction

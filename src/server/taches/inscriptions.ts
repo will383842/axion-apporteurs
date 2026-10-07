@@ -78,11 +78,14 @@ import {
 import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
 import { purgerLesSessions } from './purger-sessions-espace';
 import { effacerLesComptesDesactives } from './purger-utilisateurs-console';
+import { purgerLesTracesDeLaListe } from './purger-traces-liste-noire';
+import { purgerLesTextesDesDecisions } from './purger-textes-des-decisions';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
 import {
   ouvrirLesAnomaliesDAutoParrainage,
   precedentDuBattement,
 } from './ouvrir-anomalies-auto-parrainage';
+import { lireReglageDeSincerite, ouvrirLesAnomaliesDeSincerite } from '../anomalie/sincerite';
 import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
 import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
 import { clientDuTiers } from '../integrations/recherche-entreprises/tiers';
@@ -258,6 +261,14 @@ export function inscriptions(
         maintenant: () => new Date(horlogeSysteme.maintenant()),
         precedent: precedentDuBattement(prisma),
       }),
+    // SEC-14 (REQ-SEC-017) : les détecteurs de sincérité, en traitement DISTINCT et DIFFÉRÉ du dépôt.
+    // Le réglage vit hors du dépôt ; absent, rien n'est jugé.
+    sincerite_ouvrir: () =>
+      ouvrirLesAnomaliesDeSincerite(prisma, {
+        maintenant: new Date(horlogeSysteme.maintenant()),
+        reglage: lireReglageDeSincerite(process.env.PARTNERS_SINCERITE_REGLAGE),
+        cles: clesPii(process.env),
+      }),
     // DM-62 (REQ-DM-033, REQ-DM-043) : les anomalies, les contestations et le démenti d'un contact,
     // chacun à son échéance, à l'heure du système. Le passage des anomalies ne rend qu'un NOMBRE de
     // mesures ouvertes : les anomalies en cause ne sont nommées qu'en console.
@@ -276,6 +287,12 @@ export function inscriptions(
     sessions_purger: () => purgerLesSessions(prisma, new Date(horlogeSysteme.maintenant())),
     utilisateurs_console_effacer: () =>
       effacerLesComptesDesactives(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-65 : la trace de la liste de la Société, effacée cinq ans après le retrait.
+    traces_liste_noire_purger: () =>
+      purgerLesTracesDeLaListe(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-70 (REQ-JUR-029) : le texte d'une décision de contrat, purgé le lendemain de son échéance.
+    decisions_contrat_purger: () =>
+      purgerLesTextesDesDecisions(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>

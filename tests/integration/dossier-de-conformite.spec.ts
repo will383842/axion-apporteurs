@@ -49,6 +49,51 @@ const QUALIFIEUR: ActeurDuDossier = { id: randomUUID(), role: 'qualifieur' };
 const ADMIN: ActeurDuDossier = { id: randomUUID(), role: 'admin' };
 const LECTEUR: ActeurDuDossier = { id: randomUUID(), role: 'lecteur' };
 
+/**
+ * Un RIB VALIDE, tel que la base l'exige depuis la migration 004750 : il naît `a_verifier`, SANS
+ * regard, puis un administrateur le vérifie et un AUTRE le confirme ; la confirmation le passe à
+ * `valide` dans la même écriture, et pose `remplacee_at` quand la fixture le demande (un regard ne se
+ * pose jamais sur une pièce écartée).
+ */
+/** Un client qui exécute du SQL paramétré : le propriétaire, `partners_app` ou une transaction. */
+type ClientSql = { $executeRawUnsafe(sql: string, ...valeurs: unknown[]): Promise<number> };
+const VERIFICATEUR_DU_RIB = randomUUID();
+const CONFIRMATEUR_DU_RIB = randomUUID();
+
+/** Les deux administrateurs actifs et validés des regards, sous le propriétaire. */
+async function deuxAdministrateursDuRib(proprietaire: ClientSql) {
+  for (const [id, par] of [
+    [VERIFICATEUR_DU_RIB, null],
+    [CONFIRMATEUR_DU_RIB, VERIFICATEUR_DU_RIB],
+  ] as const) {
+    await proprietaire.$executeRawUnsafe(
+      `INSERT INTO utilisateurs_console (id, role, email_chiffre, email_hash, cree_at, valide_at, valide_par_id)
+       VALUES ($1::uuid, 'admin'::console_role, $2, $3, clock_timestamp(), clock_timestamp(), $4::uuid)`,
+      id,
+      randomBytes(40),
+      randomBytes(32).toString('hex'),
+      par
+    );
+  }
+}
+
+/** Les deux regards d'un RIB inséré sans eux : vérifié, puis confirmé et passé à `valide`. */
+async function confirmerLeRib(client: ClientSql, id: string, remplaceeAt: Date | null = null) {
+  await client.$executeRawUnsafe(
+    `UPDATE pieces_kyc SET rib_verifie_par_id = $1::uuid, rib_verifie_at = clock_timestamp()
+     WHERE id = $2::uuid`,
+    VERIFICATEUR_DU_RIB,
+    id
+  );
+  await client.$executeRawUnsafe(
+    `UPDATE pieces_kyc SET rib_confirme_par_id = $1::uuid, rib_confirme_at = clock_timestamp(),
+       statut = 'valide', remplacee_at = $3 WHERE id = $2::uuid`,
+    CONFIRMATEUR_DU_RIB,
+    id,
+    remplaceeAt
+  );
+}
+
 beforeAll(async () => {
   base = await demarrerBase();
   const u = new URL(base.url);
@@ -56,6 +101,7 @@ beforeAll(async () => {
   u.password = randomBytes(24).toString('hex');
   await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: u.toString() });
   app = new PrismaClient({ datasourceUrl: u.toString() });
+  await deuxAdministrateursDuRib(base.prisma);
 }, 180_000);
 
 afterAll(async () => {
@@ -97,7 +143,11 @@ async function unePiece(
   expireAt: Date | null = type === 'rc_pro' || type === 'vigilance' ? DANS_UN_AN : null
 ): Promise<string> {
   const id = randomUUID();
-  await base.prisma.pieceKyc.create({ data: { id, apporteurId, type, statut, expireAt } });
+  const ribValide = type === 'rib' && statut === 'valide';
+  await base.prisma.pieceKyc.create({
+    data: { id, apporteurId, type, statut: ribValide ? 'a_verifier' : statut, expireAt },
+  });
+  if (ribValide) await confirmerLeRib(base.prisma, id);
   return id;
 }
 
@@ -365,13 +415,28 @@ describe('REQ-DM-027 — aucun chemin de code ne valide un RIB (condition de la 
   const ECRITURE_DE_PIECE =
     /pieceKyc\.(create|createMany|update|updateMany|upsert)\b|(UPDATE|INSERT\s+INTO)\s+"?pieces_kyc/;
 
-  it('REQ-DM-027 : TÉMOIN — le SEUL écrivain des pièces est le dossier de conformité, et il refuse le RIB avant toute écriture', () => {
-    const ecrivains = sources().filter((f) => ECRITURE_DE_PIECE.test(readFileSync(f, 'utf8')));
-    expect(ecrivains).toEqual(['src/server/conformite/dossier.ts']);
+  it('REQ-DM-027 : TÉMOIN — les SEULS écrivains des pièces sont le dossier de conformité, qui refuse le RIB avant toute écriture, et le RIB à quatre yeux, qui refuse tout autre type avant toute écriture', () => {
+    // CPL-T24 (sécurité, #705, 5981204995) : `rib.ts`, ET LUI SEUL, est admis comme second écrivain ;
+    // jamais un motif (`src/server/conformite/*`).
+    const ecrivains = sources()
+      .filter((f) => ECRITURE_DE_PIECE.test(readFileSync(f, 'utf8')))
+      .sort();
+    expect(ecrivains).toEqual(['src/server/conformite/dossier.ts', 'src/server/conformite/rib.ts']);
     const texte = readFileSync('src/server/conformite/dossier.ts', 'utf8');
     const refus = texte.indexOf("if (piece.type === 'rib') throw");
     expect(refus).toBeGreaterThan(0);
     expect(refus).toBeLessThan(texte.search(ECRITURE_DE_PIECE));
+    // La règle symétrique : dans CHAQUE geste de rib.ts qui écrit une pièce, le refus d'un autre type
+    // précède la première écriture.
+    const gestes = readFileSync('src/server/conformite/rib.ts', 'utf8')
+      .split(/\n(?=export async function )/)
+      .filter((g) => ECRITURE_DE_PIECE.test(g));
+    expect(gestes.length).toBe(2);
+    for (const g of gestes) {
+      const refusDuType = g.indexOf("if (piece.type !== 'rib') throw");
+      expect(refusDuType, g.slice(0, 60)).toBeGreaterThan(0);
+      expect(refusDuType, g.slice(0, 60)).toBeLessThan(g.search(ECRITURE_DE_PIECE));
+    }
   });
 
   it('REQ-DM-027 : TÉMOIN — la règle rougit sur un second écrivain', () => {
