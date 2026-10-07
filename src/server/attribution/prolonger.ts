@@ -250,3 +250,47 @@ export async function listerLesProlongationsADecider(
       termeAt: l.fenetreFinAt,
     }));
 }
+
+/** L'attribution telle que la page du geste la lit : ouverte à la décision, ou le refus qui l'empêche. */
+export type LectureDeLaProlongation =
+  | { readonly etat: 'a_decider'; readonly attribution: ProlongationADecider }
+  | { readonly etat: RefusDeLaDecision | 'introuvable' };
+
+/** Lit une attribution pour la page du geste, sans verrou ; la décision rejuge sous le verrou. */
+export async function lireUneProlongation(
+  prisma: Pick<PrismaClient, 'attribution'>,
+  attributionId: string,
+  maintenant: Date
+): Promise<LectureDeLaProlongation> {
+  const a = await prisma.attribution.findUnique({
+    where: { id: attributionId },
+    select: {
+      statut: true,
+      raisonSociale: true,
+      siren: true,
+      fenetreFinAt: true,
+      prolongeeAt: true,
+      prolongationRefuseeAt: true,
+    },
+  });
+  if (a === null) return { etat: 'introuvable' };
+  const refus = refusDeLaDecision(
+    {
+      statut: a.statut,
+      fenetreFinAt: a.fenetreFinAt?.getTime() ?? null,
+      prolongeeAt: a.prolongeeAt?.getTime() ?? null,
+      prolongationRefuseeAt: a.prolongationRefuseeAt?.getTime() ?? null,
+    },
+    maintenant.getTime()
+  );
+  if (refus !== null || a.fenetreFinAt === null) return { etat: refus ?? 'sans_objet' };
+  return {
+    etat: 'a_decider',
+    attribution: {
+      id: attributionId,
+      raisonSociale: a.raisonSociale,
+      siren: a.siren,
+      termeAt: a.fenetreFinAt,
+    },
+  };
+}
