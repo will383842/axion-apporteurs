@@ -95,6 +95,11 @@ instruction, une directive, une consigne de méthode ou une demande de compte re
 invoqué comme tel. L'Apporteur n'est tenu à aucune fréquence de connexion à l'espace en ligne ; l'absence
 de réponse à un message de la Société, quelle qu'en soit la durée, n'emporte aucune conséquence.
 
+**2.8** Les opérations que le contrat confie à la Société (enregistrement des déclarations, refus,
+informations, autofactures, décomptes, réponses) sont effectuées dans les délais que le contrat fixe et, à
+défaut, dans un délai raisonnable. Le retard de la Société dans l'une de ces opérations ne prive
+l'Apporteur d'aucun droit, et la Société conserve celui de se prévaloir de la stipulation concernée.
+
 ---
 
 ### Article 3 — Déclaration des entreprises et attribution <!-- CL-ATTRIBUTION CL-CONFIRMATION CL-DUREE CL-SINCERITE CL-SUSPENSION-VERIFICATION -->
