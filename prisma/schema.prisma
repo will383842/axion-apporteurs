@@ -83,6 +83,7 @@ enum TypeEvenementJournal {
   utilisateur_console_modifie
   journal_acces_gel_modifie
   apporteur_mis_en_demeure
+  apporteur_acces_revoque
 
   @@map("type_evenement_journal")
 }

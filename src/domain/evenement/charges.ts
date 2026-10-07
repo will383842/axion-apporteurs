@@ -109,7 +109,8 @@ export type TypeEvenementJournal =
   | 'anomalie_gel_modifie'
   | 'utilisateur_console_modifie'
   | 'journal_acces_gel_modifie'
-  | 'apporteur_mis_en_demeure';
+  | 'apporteur_mis_en_demeure'
+  | 'apporteur_acces_revoque';
 
 /**
  * SEC-61 : le gel du journal des accès à la console — ses gestes, ses motifs (les valeurs de
@@ -118,6 +119,13 @@ export type TypeEvenementJournal =
 export const GESTES_GEL_JOURNAL = ['poser', 'lever'] as const;
 export const MOTIFS_GEL_JOURNAL = ['incident', 'litige'] as const;
 export const PORTEES_GEL_JOURNAL = ['utilisateur', 'cible'] as const;
+
+/**
+ * SEC-71 (contrat v2, art. 3.8) : les DEUX motifs fermés de la révocation de l'accès d'un apporteur
+ * (juriste, #474, 6034003544) — son signalement d'un usage qu'il n'a pas autorisé, ou un motif de
+ * sécurité de la Société. Aucun texte libre.
+ */
+export const MOTIFS_REVOCATION_ACCES = ['signalement_apporteur', 'securite'] as const;
 
 /** DM-08 : le porteur d'une attribution, une forme UNIQUE — sa population et son identifiant. */
 const PORTEUR = () =>
@@ -413,6 +421,20 @@ export const CHARGES_PAR_TYPE = {
   apporteur_mis_en_demeure: z
     .object({
       article: z.enum(ARTICLES_MISE_EN_DEMEURE),
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
+    })
+    .strict(),
+  /**
+   * SEC-71 (forme d'A02, #779) : la révocation de l'accès d'un apporteur (art. 3.8), agrégat
+   * `apporteur`, à l'instant du GESTE — jamais celui du signalement, qu'elle ne prétend pas porter. Le
+   * motif fermé et l'acteur de la console : ni adresse, ni empreinte, ni appareil, ni compteur. Le
+   * renouvellement se lit dans la notification `acces_renouvele` liée par `evenement_id`.
+   */
+  apporteur_acces_revoque: z
+    .object({
+      motif: z.enum(MOTIFS_REVOCATION_ACCES),
       acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
         message: 'acteur_console_attendu',
       }),

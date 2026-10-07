@@ -2,6 +2,7 @@
 // @req REQ-DM-031
 // @req REQ-DM-027
 // @req REQ-SEC-058
+// @req REQ-SEC-073
 /**
  * `journal-charges.spec.ts` — les charges FERMÉES du journal (`src/domain/evenement/charges.ts`),
  * jugées valeur par valeur : la forme d'une empreinte, les constructeurs de formes, la charge de
@@ -45,6 +46,8 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
     expect(Object.keys(CHARGES_PAR_TYPE).sort()).toEqual([
       'anomalie_gel_modifie',
       'anomalie_statut_modifie',
+      // SEC-71 (A02, #779) : la révocation de l'accès d'un apporteur, à l'instant du geste.
+      'apporteur_acces_revoque',
       // SEC-19 (A02, #703) : la mise en demeure datée d'un apporteur, par article.
       'apporteur_mis_en_demeure',
       'apporteur_statut_modifie',
@@ -437,5 +440,32 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
     expect(
       refus('apporteur_mis_en_demeure', { article: '6', acteur: { par: 'apporteur', id: ID } })
     ).toEqual(['acteur:acteur_console_attendu']);
+  });
+
+  it('REQ-SEC-073 : TÉMOIN — la révocation de l’accès ne porte que le motif FERMÉ et l’acteur de la console', () => {
+    for (const motif of ['signalement_apporteur', 'securite'])
+      passe('apporteur_acces_revoque', { motif, acteur: CONSOLE });
+    // Un motif hors des deux.
+    for (const motif of ['sanction', 'suspension', '', 'SECURITE'])
+      expect(refus('apporteur_acces_revoque', { motif, acteur: CONSOLE })[0]).toMatch(/^motif:/);
+    // Une clé de plus : ni adresse, ni appareil, ni compteur, ni « renouvelé ».
+    for (const cle of ['renouvele', 'adresse', 'appareil', 'sessions'])
+      expect(
+        refus('apporteur_acces_revoque', { motif: 'securite', acteur: CONSOLE, [cle]: 'x' })
+      ).toHaveLength(1);
+    // Un utilisateur de la console, jamais le système ni l'apporteur.
+    expect(
+      refus('apporteur_acces_revoque', { motif: 'securite', acteur: { par: 'systeme' } })
+    ).toEqual(['acteur:acteur_console_attendu']);
+    expect(
+      refus('apporteur_acces_revoque', { motif: 'securite', acteur: { par: 'apporteur', id: ID } })
+    ).toEqual(['acteur:acteur_console_attendu']);
+    // La charge sérialisée ne porte que l'identifiant de l'acteur, que FORMES.acteur() admet ailleurs.
+    const lue = CHARGES_PAR_TYPE.apporteur_acces_revoque.parse({
+      motif: 'securite',
+      acteur: CONSOLE,
+    });
+    expect(Object.keys(lue).sort()).toEqual(['acteur', 'motif']);
+    expect(JSON.stringify(lue).match(/[0-9a-f]{8}-[0-9a-f]{4}-/g) ?? []).toHaveLength(1);
   });
 });

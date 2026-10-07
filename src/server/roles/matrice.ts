@@ -101,6 +101,11 @@ export const MATRICE_DES_ROLES = {
   // relèvement est exigé par le geste, que l'action rejuge.
   'ecran:mise_en_demeure': { roles: ['admin'], stepUp: false },
   'action:mettre_en_demeure': { roles: ['admin'], stepUp: true },
+  // SEC-71 (contrat v2, art. 3.8 ; conditions de la sécurité, #474, 6033889353) : révoquer et
+  // renouveler l'accès d'un apporteur, à l'admin seul, sous step-up ; le droit est relu en base par le
+  // geste. Son écran, à l'admin seul : le relèvement est exigé par le geste, que l'action rejuge.
+  'ecran:acces_apporteur': { roles: ['admin'], stepUp: false },
+  'action:revoquer_acces_apporteur': { roles: ['admin'], stepUp: true },
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, EntreeDeLaMatrice>>;
 
 /**
