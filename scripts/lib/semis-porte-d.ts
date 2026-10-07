@@ -248,35 +248,53 @@ function valeurDeType(c: ColonneVue, motif: string | undefined, rang = 0): strin
 
 /**
  * Les tables dans l'ordre des clés étrangères : une table référencée se sème avant qui la référence.
- * Seule une clé OBLIGATOIRE (toutes ses colonnes non nulles) impose cet ordre : une clé nullable peut
- * rester NULL. Sans cette règle, deux tables qui se référencent l'une l'autre, l'une par une clé
- * nullable, formaient un cycle rompu par l'ordre alphabétique (SEC-15 : `apporteurs.gel_anomalie_id`
- * vers `anomalies`, qui référence `apporteurs`), et la table semée trop tôt ne l'était pas.
+ * TOUTE clé ordonne : une table aux seules clés nullables (attributions, son porteur exclusif) doit
+ * trouver ses cibles déjà semées, sinon ses sous-requêtes rendent NULL et ses CHECK la refusent (CI de
+ * cdab3adb, REQ-QA-023). Seule la RUPTURE d'un cycle ignore les clés NULLABLES — une clé n'est
+ * obligatoire que si TOUTES ses colonnes le sont, car sous MATCH SIMPLE une colonne NULL suspend son
+ * contrôle : deux tables liées dans les deux sens, l'une par une clé nullable (SEC-15 :
+ * `apporteurs.gel_anomalie_id` vers `anomalies`, qui référence `apporteurs`), se sèment dans l'ordre
+ * de la clé obligatoire. L'ordre alphabétique ne rompt plus qu'un cycle de clés toutes obligatoires.
  */
 function ordreDesTables(schema: SchemaVu): string[] {
   const tables = [...new Set(schema.colonnes.map((c) => c.table))].sort();
-  const dependances = new Map(tables.map((t) => [t, new Set<string>()]));
+  /** Pour chaque table, ses cibles : vrai si l'une de ses clés vers elle est obligatoire. */
+  const dependances = new Map(tables.map((t) => [t, new Map<string, boolean>()]));
   const obligatoire = (table: string, colonne: string): boolean =>
     schema.colonnes.some((c) => c.table === table && c.colonne === colonne && c.nonNul);
   for (const k of schema.contraintes) {
-    if (
-      k.genre === 'f' &&
-      k.cible !== null &&
-      k.cible !== k.table &&
-      dependances.has(k.cible) &&
-      k.colonnes.every((c) => obligatoire(k.table, c))
-    ) {
-      dependances.get(k.table)?.add(k.cible);
+    if (k.genre !== 'f' || k.cible === null || k.cible === k.table || !dependances.has(k.cible)) {
+      continue;
     }
+    const deps = dependances.get(k.table);
+    if (deps === undefined) continue;
+    const toutesObligatoires = k.colonnes.every((c) => obligatoire(k.table, c));
+    deps.set(k.cible, (deps.get(k.cible) ?? false) || toutesObligatoires);
   }
   const ordre: string[] = [];
   const restantes = new Set(tables);
-  while (restantes.size > 0) {
-    const pretes = [...restantes].filter((t) =>
-      [...dependances.get(t)!].every((d) => !restantes.has(d))
+  const pretes = (seulesObligatoires: boolean): string[] =>
+    [...restantes].filter((t) =>
+      [...dependances.get(t)!].every(
+        ([cible, oblig]) => !restantes.has(cible) || (seulesObligatoires && !oblig)
+      )
     );
-    // Un cycle : ses tables passent dans l'ordre alphabétique, et la base dira laquelle refuse.
-    for (const t of pretes.length > 0 ? pretes : [...restantes]) {
+  while (restantes.size > 0) {
+    let lot = pretes(false);
+    // Un cycle : il se rompt d'abord par ses clés NULLABLES, qui peuvent rester NULL — UNE table à
+    // la fois, la plus ATTENDUE (celle dont le plus de tables restantes dépendent par une clé
+    // obligatoire), pour qu'une table aux seules clés nullables ne parte pas avec elle, trop tôt.
+    if (lot.length === 0) {
+      const attendue = (t: string): number =>
+        [...restantes].filter((r) => dependances.get(r)!.get(t) === true).length;
+      const [premiere] = pretes(true).sort(
+        (x, y) => attendue(y) - attendue(x) || x.localeCompare(y)
+      );
+      lot = premiere === undefined ? [] : [premiere];
+    }
+    // Un cycle de clés toutes obligatoires : l'ordre alphabétique, et la base dira laquelle refuse.
+    if (lot.length === 0) lot = [...restantes];
+    for (const t of lot) {
       ordre.push(t);
       restantes.delete(t);
     }

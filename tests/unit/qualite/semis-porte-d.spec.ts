@@ -279,3 +279,53 @@ describe('REQ-QA-021 — une clé étrangère NULLABLE n’impose aucun ordre de
     expect(premier!.get('gel_anomalie_id')).toBe('NULL');
   });
 });
+
+/**
+ * La CI de cdab3adb (REQ-QA-023) : « attributions est vide ». Une table dont TOUTES les clés sont
+ * nullables (attributions : le porteur exclusif, la grille, le jeton, la personne) ne dépendait plus de
+ * rien, passait avant apporteurs, ses sous-requêtes de clé rendaient NULL et le CHECK « exactement un
+ * porteur » refusait chaque candidat. Toute clé ordonne ; seule la RUPTURE d'un cycle ignore les clés
+ * nullables.
+ */
+describe('REQ-QA-023 — une clé nullable ordonne, hors d’un cycle', () => {
+  it('REQ-QA-023 : TÉMOIN — une table aux seules clés NULLABLES est semée après sa cible, hors cycle', () => {
+    const schema: SchemaVu = {
+      colonnes: [
+        // « attributions » précède « utilisateurs » à l'alphabet : seule la clé l'ordonne après.
+        col('utilisateurs', 'id', 'uuid', true),
+        col('attributions', 'id', 'uuid', true),
+        col('attributions', 'utilisateur_id', 'uuid', false),
+      ],
+      contraintes: [cle('attributions', 'utilisateur_id', 'utilisateurs')],
+    };
+    const { tables } = semis(schema);
+    expect(tables.indexOf('utilisateurs')).toBeLessThan(tables.indexOf('attributions'));
+  });
+
+  it('REQ-QA-023 : TÉMOIN — dans le cycle du gel, une table aux seules clés nullables vers apporteurs ne part pas avec lui, trop tôt', () => {
+    const schema: SchemaVu = {
+      colonnes: [
+        ...CYCLE_DU_GEL.colonnes,
+        col('attributions', 'id', 'uuid', true),
+        col('attributions', 'apporteur_id', 'uuid', false),
+      ],
+      contraintes: [...CYCLE_DU_GEL.contraintes, cle('attributions', 'apporteur_id', 'apporteurs')],
+    };
+    const { tables } = semis(schema);
+    expect(tables.indexOf('apporteurs')).toBeLessThan(tables.indexOf('attributions'));
+    expect(tables.indexOf('apporteurs')).toBeLessThan(tables.indexOf('anomalies'));
+  });
+
+  it('REQ-QA-023 : un cycle de clés TOUTES obligatoires retombe dans l’ordre alphabétique, et la base dira laquelle refuse', () => {
+    const schema: SchemaVu = {
+      colonnes: [
+        col('zetas', 'id', 'uuid', true),
+        col('zetas', 'alpha_id', 'uuid', true),
+        col('alphas', 'id', 'uuid', true),
+        col('alphas', 'zeta_id', 'uuid', true),
+      ],
+      contraintes: [cle('zetas', 'alpha_id', 'alphas'), cle('alphas', 'zeta_id', 'zetas')],
+    };
+    expect(semis(schema).tables).toEqual(['alphas', 'zetas']);
+  });
+});
