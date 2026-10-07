@@ -27,6 +27,8 @@ const journal = vi.hoisted(() => ({
   ecrits: [] as { type: string; survenuAt: Date; charge: unknown; agregat?: unknown }[],
   lire: vi.fn(),
   ajouter: vi.fn(),
+  /** L'ordre des gestes dans la transaction d'écriture : le verrou, la relecture, l'écriture. */
+  ordre: [] as string[],
 }));
 
 vi.mock('../../../src/server/evenement/journal', () => ({
@@ -40,6 +42,7 @@ import {
   verifierLesResumesDuJournalDesAcces,
 } from '../../../src/server/taches/resumer-journal-acces-console';
 import { TACHES } from '../../../src/server/taches/registre';
+import { PARAMETRES } from '../../../src/domain/seuils/ssot';
 
 const U = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const hex = (n: number) => String(n).padStart(12, '0');
@@ -56,7 +59,13 @@ type Ligne = ReturnType<typeof ligne>;
 
 /** La table simulée : l'interrogation du jour et la plus ancienne ligne, comme la tâche les lit. */
 function unMonde(lignes: Ligne[]) {
-  const tx = { marqueur: 'tx' };
+  const tx = {
+    marqueur: 'tx',
+    $executeRaw: vi.fn(async () => {
+      journal.ordre.push('verrou');
+      return 1;
+    }),
+  };
   const lectures: unknown[] = [];
   const prisma = {
     journalAccesConsole: {
@@ -82,20 +91,28 @@ const resumeDe = (jourUtc: string, lignes: Ligne[]): Resume => ({
 });
 
 const MAINTENANT = new Date('2027-01-12T03:00:00.000Z');
+/** La marge après minuit UTC, lue de la SSOT : jamais recopiée dans un témoin (RM-01). */
+const MARGE_MS = PARAMETRES.JOURNAL_ACCES_CONSOLE_RESUME_MARGE_MINUTES.valeur * 60_000;
+const MINUIT_J12 = Date.UTC(2027, 0, 12, 0, 0, 0);
 
 beforeEach(() => {
   journal.ecrits.length = 0;
+  journal.ordre.length = 0;
   journal.lire.mockReset();
   journal.ajouter.mockReset();
   journal.ajouter.mockImplementation(
     async (_tx: unknown, e: { type: string; survenuAt: Date; charge: unknown }) => {
+      journal.ordre.push('ecriture');
       journal.ecrits.push(e);
       return { id: String(journal.ecrits.length), selfHash: 'x' };
     }
   );
-  journal.lire.mockImplementation(async () =>
-    journal.ecrits.filter((e) => e.type === 'journal_acces_console_resume').map((e) => e.charge)
-  );
+  journal.lire.mockImplementation(async (client: unknown) => {
+    if ((client as { marqueur?: string }).marqueur === 'tx') journal.ordre.push('relecture');
+    return journal.ecrits
+      .filter((e) => e.type === 'journal_acces_console_resume')
+      .map((e) => e.charge);
+  });
 });
 
 describe('REQ-SEC-058 — la tâche est au registre et s’inscrit au lanceur', () => {
@@ -194,6 +211,68 @@ describe('REQ-SEC-058 — chaque jour clos reçoit son résumé', () => {
   });
 });
 
+describe('REQ-SEC-058 — une MARGE après minuit UTC, en SSOT (condition de la sécurité, #688, 6033913854)', () => {
+  it('REQ-SEC-058 : la marge est une valeur de la SSOT, sourcée, datée, en minutes, et positive', () => {
+    const m = PARAMETRES.JOURNAL_ACCES_CONSOLE_RESUME_MARGE_MINUTES;
+    expect(m.unite).toBe('minutes');
+    expect(m.valeur).toBeGreaterThan(0);
+    expect(m.source.length).toBeGreaterThan(0);
+    expect(m.verifieLe).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — une ligne écrite juste avant minuit et rendue visible juste après est COMPTÉE', async () => {
+    // Écrite à 23:59:59,999 le 11, validée après minuit : visible à la lecture du passage de 00:00 + marge.
+    const tard = ligne(1, '2027-01-11T23:59:59.999Z');
+    const m = unMonde([ligne(0, '2027-01-11T08:00:00.000Z'), tard]);
+    // Pendant la marge (une milliseconde avant sa fin) : le 11 n'est PAS clos, rien n'est résumé.
+    const pendant = new Date(MINUIT_J12 + MARGE_MS - 1);
+    expect((await resumerLeJournalDesAccesConsole(m.prisma as never, pendant)).resumes).toBe(0);
+    expect(journal.ecrits).toHaveLength(0);
+    // À la fin de la marge : le 11 est résumé, avec ses DEUX lignes, la tardive comprise.
+    const apres = new Date(MINUIT_J12 + MARGE_MS);
+    expect((await resumerLeJournalDesAccesConsole(m.prisma as never, apres)).resumes).toBe(1);
+    expect((journal.ecrits[0]!.charge as Resume).jourUtc).toBe('2027-01-11');
+    expect((journal.ecrits[0]!.charge as Resume).lignesNombre).toBe(2);
+  });
+
+  it('REQ-SEC-058 : un succès DANS la marge n’est pas un succès du jour : le passage suivant résume la veille', async () => {
+    const m = unMonde([ligne(1, '2027-01-11T08:00:00.000Z')]);
+    const passage = passageDuResumeDuJournalDesAcces(m.prisma as never, {
+      maintenant: () => new Date(MINUIT_J12 + MARGE_MS),
+      // Réussi à 00:00:30, pendant la marge : il n'a rien résumé de la veille.
+      dernierSucces: async () => new Date(MINUIT_J12 + 30_000),
+    });
+    expect(await passage()).toEqual({ resumes: 1, verifies: 1 });
+  });
+});
+
+describe('REQ-SEC-058 — un verrou de transaction ferme le trou de deux résumés du même jour (condition de la sécurité)', () => {
+  it('REQ-SEC-058 : TÉMOIN — le verrou est pris DANS la transaction d’écriture, AVANT la relecture, puis l’écriture', async () => {
+    const m = unMonde([ligne(1, '2027-01-11T08:00:00.000Z')]);
+    await resumerLeJournalDesAccesConsole(m.prisma as never, MAINTENANT);
+    expect(journal.ordre).toEqual(['verrou', 'relecture', 'ecriture']);
+    expect(m.tx.$executeRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it('REQ-SEC-058 : un jour déjà résumé prend le verrou, relit, et n’écrit pas', async () => {
+    const lignes = [ligne(1, '2027-01-11T08:00:00.000Z')];
+    const m = unMonde(lignes);
+    journal.ecrits.push({
+      type: 'journal_acces_console_resume',
+      survenuAt: MAINTENANT,
+      charge: resumeDe('2027-01-10', []),
+    });
+    journal.lire.mockImplementation(async (client: unknown) => {
+      if ((client as { marqueur?: string }).marqueur === 'tx') journal.ordre.push('relecture');
+      return client === m.prisma ? [] : [resumeDe('2027-01-11', lignes as never)];
+    });
+    await resumerLeJournalDesAccesConsole(m.prisma as never, MAINTENANT);
+    // Le 11 est déjà écrit pour la transaction : verrou puis relecture, aucune écriture pour lui.
+    expect(journal.ordre.slice(0, 2)).toEqual(['verrou', 'relecture']);
+    expect(journal.ordre).not.toContain('ecriture');
+  });
+});
+
 describe('REQ-SEC-058 — la vérification confronte chaque résumé à la table', () => {
   const jour = '2027-01-10';
   const saines = () => [ligne(1, '2027-01-10T08:00:00.000Z'), ligne(2, '2027-01-10T09:00:00.000Z')];
@@ -268,7 +347,7 @@ describe('REQ-SEC-058 — le passage est dû une fois par jour civil UTC', () =>
 
   it('REQ-SEC-058 : déjà réussi ce jour (UTC), il ne lit ni n’écrit rien — il se DIFFÈRE', async () => {
     const m = unMonde([ligne(1, '2027-01-10T08:00:00.000Z')]);
-    const r = await passage(m, new Date('2027-01-12T00:00:01.000Z'))();
+    const r = await passage(m, new Date(Date.UTC(2027, 0, 12, 0, 0, 0) + MARGE_MS))();
     expect(r).toEqual({ differee: 1 });
     expect(m.prisma.journalAccesConsole.findMany).not.toHaveBeenCalled();
     expect(journal.lire).not.toHaveBeenCalled();

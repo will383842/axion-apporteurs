@@ -125,7 +125,7 @@ describe('REQ-SEC-058 — le résumé de la veille entre au journal chaîné', (
     const b = await uneTrace(u, new Date('2027-01-10T23:59:59.999Z'));
     await uneTrace(u, new Date('2027-01-11T00:00:00.000Z')); // le lendemain : pas encore clos
 
-    const r = await resumerLeJournalDesAccesConsole(app, new Date('2027-01-11T00:05:00.000Z'));
+    const r = await resumerLeJournalDesAccesConsole(app, new Date('2027-01-11T00:20:00.000Z'));
     expect(r).toEqual({ resumes: 1 });
 
     const [e] = await resumes();
@@ -163,7 +163,7 @@ describe('REQ-SEC-058 — le résumé de la veille entre au journal chaîné', (
     ).toEqual({ resumes: 0 });
     // Deux jours plus tard : le 11 (une trace) et le 12 (aucune) sont clos, chacun reçoit son résumé.
     expect(
-      await resumerLeJournalDesAccesConsole(app, new Date('2027-01-13T00:05:00.000Z'))
+      await resumerLeJournalDesAccesConsole(app, new Date('2027-01-13T00:20:00.000Z'))
     ).toEqual({ resumes: 2 });
     const [, onze, douze] = await resumes();
     expect(onze?.charge).toMatchObject({ jourUtc: '2027-01-11', lignesNombre: 1 });
@@ -178,7 +178,7 @@ describe('REQ-SEC-058 — le résumé de la veille entre au journal chaîné', (
   it('REQ-SEC-058 : TÉMOIN — le résumé ne porte AUCUN identifiant d’employé, ni cible, ni empreinte réseau', async () => {
     const u = await unUtilisateur();
     const t = await uneTrace(u, new Date('2027-01-13T09:00:00.000Z'));
-    await resumerLeJournalDesAccesConsole(app, new Date('2027-01-14T00:05:00.000Z'));
+    await resumerLeJournalDesAccesConsole(app, new Date('2027-01-14T00:20:00.000Z'));
     const dernier = (await resumes()).at(-1);
     expect(dernier?.charge).toMatchObject({ jourUtc: '2027-01-13', lignesNombre: 1 });
     const texte = JSON.stringify(dernier?.charge);
@@ -200,7 +200,7 @@ describe('REQ-SEC-058 — une suppression ou une modification contredit le résu
     const u = await unUtilisateur();
     const t = await uneTrace(u, new Date('2027-01-14T10:00:00.000Z'));
     await uneTrace(u, new Date('2027-01-14T11:00:00.000Z'));
-    await resumerLeJournalDesAccesConsole(app, new Date('2027-01-15T00:05:00.000Z'));
+    await resumerLeJournalDesAccesConsole(app, new Date('2027-01-15T00:20:00.000Z'));
     expect(await contradictionsDu('2027-01-14')).toEqual([]);
 
     await aLaMain(`DELETE FROM "journal_acces_console" WHERE "id" = '${t.id}'`);
@@ -215,7 +215,7 @@ describe('REQ-SEC-058 — une suppression ou une modification contredit le résu
   it('REQ-SEC-058 : TÉMOIN — une ligne modifiée à la main fait rougir la vérification du résumé', async () => {
     const u = await unUtilisateur();
     const t = await uneTrace(u, new Date('2027-01-15T10:00:00.000Z'));
-    await resumerLeJournalDesAccesConsole(app, new Date('2027-01-16T00:05:00.000Z'));
+    await resumerLeJournalDesAccesConsole(app, new Date('2027-01-16T00:20:00.000Z'));
     expect(await contradictionsDu('2027-01-15')).toEqual([]);
 
     await aLaMain(
@@ -227,7 +227,7 @@ describe('REQ-SEC-058 — une suppression ou une modification contredit le résu
 
   it('REQ-SEC-058 : TÉMOIN — le passage quotidien échoue en nommant le jour contredit, jamais une donnée', async () => {
     const passage = passageDuResumeDuJournalDesAcces(app, {
-      maintenant: () => new Date('2027-01-16T00:05:00.000Z'),
+      maintenant: () => new Date('2027-01-16T00:20:00.000Z'),
       dernierSucces: async () => null,
     });
     const refus = await passage().then(
@@ -243,8 +243,8 @@ describe('REQ-SEC-058 — une suppression ou une modification contredit le résu
   it('REQ-SEC-058 : le passage est quotidien — déjà réussi ce jour, il ne lit ni n’écrit rien', async () => {
     const avant = (await resumes()).length;
     const passage = passageDuResumeDuJournalDesAcces(app, {
-      maintenant: () => new Date('2027-01-20T00:05:00.000Z'),
-      dernierSucces: async () => new Date('2027-01-20T00:01:00.000Z'),
+      maintenant: () => new Date('2027-01-20T00:20:00.000Z'),
+      dernierSucces: async () => new Date('2027-01-20T00:15:00.000Z'),
     });
     expect(await passage()).toEqual({ differee: 1 });
     expect(await resumes()).toHaveLength(avant);
@@ -254,7 +254,7 @@ describe('REQ-SEC-058 — une suppression ou une modification contredit le résu
     const u = await unUtilisateur();
     const purgee = await uneTrace(u, new Date('2027-01-20T10:00:00.000Z'));
     const nue = await uneTrace(u, new Date('2027-01-20T11:00:00.000Z'));
-    await resumerLeJournalDesAccesConsole(app, new Date('2027-01-21T00:05:00.000Z'));
+    await resumerLeJournalDesAccesConsole(app, new Date('2027-01-21T00:20:00.000Z'));
     expect(await contradictionsDu('2027-01-20')).toEqual([]);
 
     // Douze mois et un jour plus tard, la purge vide les identifiants ; la ligne nue reste.
@@ -274,5 +274,22 @@ describe('REQ-SEC-058 — une suppression ou une modification contredit le résu
       'nombre_contredit',
       'empreinte_survivante_contredite',
     ]);
+  });
+});
+
+describe('REQ-SEC-058 — deux passages simultanés n’écrivent qu’UN résumé du même jour', () => {
+  it('REQ-SEC-058 : TÉMOIN — deux écritures concurrentes du même jour ne donnent qu’un résumé', async () => {
+    const u = await unUtilisateur();
+    await uneTrace(u, new Date('2027-02-01T10:00:00.000Z'));
+    const avant = (await resumes()).length;
+    const quand = new Date('2027-02-02T00:20:00.000Z');
+    await Promise.all([
+      resumerLeJournalDesAccesConsole(app, quand),
+      resumerLeJournalDesAccesConsole(app, quand),
+    ]);
+    const nouveaux = (await resumes()).slice(avant);
+    const jours = nouveaux.map((r) => (r.charge as { jourUtc: string }).jourUtc);
+    expect(new Set(jours).size).toBe(jours.length);
+    expect(jours.filter((j) => j === '2027-02-01')).toHaveLength(1);
   });
 });
