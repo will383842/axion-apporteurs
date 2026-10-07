@@ -92,6 +92,9 @@ export const MATRICE_DES_ROLES = {
   'action:verifier_piece': { roles: ['admin', 'qualifieur'], stepUp: false },
   'action:ouvrir_kyc': { roles: ['admin'], stepUp: false },
   'action:valider_kyc': { roles: ['admin'], stepUp: true },
+  // CPL-T24 (REQ-UX-027, REQ-DM-027) : vérifier puis confirmer un RIB, à quatre yeux, chacun par un
+  // administrateur VALIDÉ, sous step-up (condition de la sécurité).
+  'action:verifier_rib': { roles: ['admin'], stepUp: true },
   // SEC-61 (conditions de la sécurité) : poser et lever un gel du journal des accès, à un admin
   // VALIDÉ, sous step-up ; la levée par un AUTRE que l'auteur et que la personne visée (CHECK).
   'action:poser_gel_journal_acces': { roles: ['admin'], stepUp: true },

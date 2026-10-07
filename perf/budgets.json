@@ -50,6 +50,12 @@
       "path": ".next/server/app/(espace)/notifications/page_client-reference-manifest.js",
       "limit": "75 KB",
       "gzip": true
+    },
+    {
+      "name": "/contestations/[id]",
+      "path": ".next/server/app/(espace)/contestations/[id]/page_client-reference-manifest.js",
+      "limit": "75 KB",
+      "gzip": true
     }
   ],
   "socle": {

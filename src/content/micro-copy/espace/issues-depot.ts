@@ -45,10 +45,7 @@ const DEPOSER_UNE_AUTRE: ActionEcran = {
   libelle: 'Déposer une autre entreprise',
   route: '/deposer',
 };
-const VOIR_MES_ENTREPRISES: ActionEcran = {
-  libelle: 'Voir Mes entreprises',
-  route: '/mes-entreprises',
-};
+const VOIR_MES_ENTREPRISES: ActionEcran = ACTIONS_COMMUNES.voirMesEntreprises;
 const RETOUR_ACCUEIL: ActionEcran = ACTIONS_COMMUNES.retourAccueil;
 
 /** Les deux antériorités partagent UN libellé (REQ-UX-002) : l'apporteur ne sait pas laquelle. */
