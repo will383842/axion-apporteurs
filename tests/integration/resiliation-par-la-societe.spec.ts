@@ -71,9 +71,12 @@ const ENVOI_LE_JOUR_MEME = new Date('2026-10-04T21:45:00.000Z'); // 23 h 45 à P
 const DERNIER_INSTANT_DU_JOUR = new Date('2026-10-04T21:59:59.999Z'); // 23 h 59 à Paris, le 4
 const MINUIT_LE_LENDEMAIN = new Date('2026-10-04T22:00:00.000Z'); // 0 h 00 à Paris, le 5
 const ENVOI_LE_LENDEMAIN = new Date('2026-10-04T22:10:00.000Z'); // 0 h 10 à Paris, le 5
-const VEILLE_DE_L_EFFET = new Date('2026-11-02T22:59:59.999Z'); // 23 h 59 à Paris, le 2 novembre
-const JOUR_DE_L_EFFET = new Date('2026-11-02T23:00:00.000Z'); // minuit à Paris, le 3 novembre
+// Juriste (#762, 6032315865) : le contrat est en vigueur pendant TOUT le jour de la date d'effet.
+const VEILLE_DE_L_EFFET = new Date('2026-11-03T22:59:59.999Z'); // 23 h 59 à Paris, le 3 novembre
+const JOUR_DE_L_EFFET = new Date('2026-11-03T23:00:00.000Z'); // minuit à Paris, le 4 novembre
 const DATE_EFFET = '2026-11-03';
+// A02 (#561, 5988205180) : la charge porte l'instant de minuit, heure de Paris, du jour d'effet.
+const DATE_EFFET_HORODATEE = '2026-11-02T23:00:00.000Z';
 
 beforeAll(async () => {
   base = await demarrerBase();
@@ -234,7 +237,7 @@ describe('REQ-JUR-015 — à la décision : la date d’effet, sans changement d
     );
     expect(fait).toEqual({
       type: 'apporteur_resiliation_notifiee',
-      charge: { motif: 'ordinaire_axion', dateEffet: DATE_EFFET, acteur: ACTEUR() },
+      charge: { motif: 'ordinaire_axion', dateEffet: DATE_EFFET_HORODATEE, acteur: ACTEUR() },
     });
     const notifications = await base.prisma.notificationEspace.findMany({
       where: { apporteurId },
@@ -338,13 +341,13 @@ describe('REQ-JUR-015 — pendant le préavis, le contrat court normalement', ()
        WHERE agregat_id = $1::uuid AND type = 'apporteur_statut_modifie'`,
       apporteurId
     );
-    // La charge CITE le fait de la décision opposable (A02, 5988107744).
+    // La charge CITE le fait de la décision opposable (A02, 5988205180).
     expect(fait!.charge).toEqual({
       de: 'signe',
       vers: 'resilie',
       transition: 'resilier',
       resiliationMotif: 'ordinaire_axion',
-      decisionEvenementId: r.evenementId.toString(),
+      decisionContratId: r.decisionId,
       acteur: ACTEUR(),
     });
     expect(fait!.survenu.toISOString()).toBe(JOUR_DE_L_EFFET.toISOString());
@@ -436,7 +439,7 @@ describe('REQ-JUR-015 — sans courriel parti le jour de la décision, aucune da
     await tache(new Date('2026-12-01T08:00:00.000Z'));
     expect(await statutDe(apporteurId)).toMatchObject({ statut: 'signe' });
     // La caducité se lit par l'absence de citation, sans colonne d'état.
-    expect(await passageQuiCiteLaDecision(base.prisma, r.evenementId.toString())).toBeNull();
+    expect(await passageQuiCiteLaDecision(base.prisma, r.decisionId)).toBeNull();
   });
 });
 
@@ -460,7 +463,7 @@ describe('REQ-ARG-026 — une nouvelle notification est une nouvelle décision',
     await tache(JOUR_DE_L_EFFET);
     expect(await statutDe(apporteurId)).toMatchObject({ statut: 'signe' });
     // Celle de la seconde, opposable, résilie.
-    await tache(new Date('2026-11-09T23:00:00.000Z'));
+    await tache(new Date('2026-11-10T23:00:00.000Z'));
     expect(await statutDe(apporteurId)).toMatchObject({ statut: 'resilie' });
   });
 
@@ -475,17 +478,15 @@ describe('REQ-ARG-026 — une nouvelle notification est une nouvelle décision',
     });
     await tache(JOUR_DE_L_EFFET);
     expect(await statutDe(apporteurId)).toMatchObject({ statut: 'signe' });
-    await tache(new Date('2026-11-09T23:00:00.000Z'));
+    await tache(new Date('2026-11-10T23:00:00.000Z'));
     expect(await statutDe(apporteurId)).toMatchObject({ statut: 'resilie' });
     // Seule la seconde est citée ; la première, supplantée, ne l'est par aucun passage.
-    expect(await decisionOpposeeALApporteur(base.prisma, apporteurId)).toBe(
-      seconde.evenementId.toString()
-    );
-    expect(await passageQuiCiteLaDecision(base.prisma, premiere.evenementId.toString())).toBeNull();
+    expect(await decisionOpposeeALApporteur(base.prisma, apporteurId)).toBe(seconde.decisionId);
+    expect(await passageQuiCiteLaDecision(base.prisma, premiere.decisionId)).toBeNull();
   });
 });
 
-describe('REQ-JUR-015 — la trace durable de l’opposabilité, dans le journal (A02, 5988107744)', () => {
+describe('REQ-JUR-015 — la trace durable de l’opposabilité, dans le journal (A02, 5988205180)', () => {
   it('REQ-JUR-015 : TÉMOIN — après la purge de la notification et de ses courriels, la décision opposée se retrouve par le journal', async () => {
     const apporteurId = await unApporteur();
     const r = await notifier(apporteurId);
@@ -496,9 +497,9 @@ describe('REQ-JUR-015 — la trace durable de l’opposabilité, dans le journal
     await base.prisma.notificationEspace.deleteMany({ where: { apporteurId } });
     expect(await base.prisma.notificationEspace.count({ where: { apporteurId } })).toBe(0);
     const cite = await decisionOpposeeALApporteur(base.prisma, apporteurId);
-    expect(cite).toBe(r.evenementId.toString());
+    expect(cite).toBe(r.decisionId);
     const d = await base.prisma.decisionDeContrat.findUniqueOrThrow({
-      where: { evenementId: BigInt(cite!) },
+      where: { id: cite! },
       select: { id: true, dateEffet: true },
     });
     expect({ id: d.id, dateEffet: jour(d.dateEffet) }).toEqual({
@@ -524,7 +525,7 @@ describe('REQ-JUR-015 — la trace durable de l’opposabilité, dans le journal
           vers: 'resilie',
           transition: 'resilier',
           resiliationMotif: 'ordinaire_axion',
-          decisionEvenementId: r.evenementId.toString(),
+          decisionContratId: r.decisionId,
           acteur: ACTEUR(),
         },
       })

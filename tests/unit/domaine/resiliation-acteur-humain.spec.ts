@@ -1548,11 +1548,29 @@ describe('REQ-JUR-015 — SEC-66 : la date d’effet et l’opposabilité, règl
     expect(juge(a('echec', null), a('envoye', '2026-10-04T09:00:00.000Z'))).toBe(true);
   });
 
-  it('REQ-JUR-015 : TÉMOIN — la date d’effet est atteinte à minuit, heure de Paris, de son jour', async () => {
+  it('REQ-JUR-015 : TÉMOIN — la date d’effet est atteinte au minuit, heure de Paris, qui SUIT son jour : tout ce jour est encore au contrat', async () => {
     const { dateEffetAtteinte } = await import('../../../src/domain/apporteur/resiliation');
-    expect(dateEffetAtteinte('2026-11-03', Date.parse('2026-11-02T22:59:59.999Z'))).toBe(false);
-    expect(dateEffetAtteinte('2026-11-03', Date.parse('2026-11-02T23:00:00.000Z'))).toBe(true);
+    // Heure d'hiver : le 3 novembre se termine à 23 h 00 UTC.
+    expect(dateEffetAtteinte('2026-11-03', Date.parse('2026-11-02T23:00:00.000Z'))).toBe(false);
+    expect(dateEffetAtteinte('2026-11-03', Date.parse('2026-11-03T22:59:59.999Z'))).toBe(false);
+    expect(dateEffetAtteinte('2026-11-03', Date.parse('2026-11-03T23:00:00.000Z'))).toBe(true);
     expect(dateEffetAtteinte('2026-11-03', Date.parse('2026-12-01T08:00:00.000Z'))).toBe(true);
+    // Heure d'été : le 3 juillet se termine à 22 h 00 UTC.
+    expect(dateEffetAtteinte('2026-07-03', Date.parse('2026-07-03T21:59:59.999Z'))).toBe(false);
+    expect(dateEffetAtteinte('2026-07-03', Date.parse('2026-07-03T22:00:00.000Z'))).toBe(true);
+  });
+
+  it('REQ-JUR-015 : TÉMOIN — la date d’effet de la charge est EXACTEMENT minuit, heure de Paris, en hiver comme en été', async () => {
+    const { minuitDeParisDuJour, jourCivilDeParis } =
+      await import('../../../src/domain/apporteur/resiliation');
+    expect(new Date(minuitDeParisDuJour('2026-11-03')).toISOString()).toBe(
+      '2026-11-02T23:00:00.000Z'
+    );
+    expect(new Date(minuitDeParisDuJour('2026-07-03')).toISOString()).toBe(
+      '2026-07-02T22:00:00.000Z'
+    );
+    expect(jourCivilDeParis(minuitDeParisDuJour('2026-11-03'))).toBe('2026-11-03');
+    expect(jourCivilDeParis(minuitDeParisDuJour('2026-07-03'))).toBe('2026-07-03');
   });
 });
 
@@ -1585,13 +1603,14 @@ function mondeDeLaTache(
   return { ...t, lecturesDesDecisions: lectures };
 }
 
-const NOTIFIEE = (dateEffet = '2026-11-03', acteur: unknown = CONSOLE) => ({
+const NOTIFIEE = (dateEffet = '2026-11-02T23:00:00.000Z', acteur: unknown = CONSOLE) => ({
   type: 'apporteur_resiliation_notifiee',
   charge: { motif: 'ordinaire_axion', dateEffet, acteur },
 });
 const JOUR = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const ENVOYE_LE_4 = { statut: 'envoye', envoyeAt: new Date('2026-10-04T08:00:00.000Z') };
-const EFFET = new Date('2026-11-02T23:00:00.000Z');
+// Le lendemain de la date d'effet (3 novembre), à minuit de Paris : elle est atteinte.
+const EFFET = new Date('2026-11-03T23:00:00.000Z');
 
 describe('REQ-JUR-015 — SEC-66 : le geste « notifier la résiliation par la Société »', () => {
   beforeEach(() => {
@@ -1617,7 +1636,11 @@ describe('REQ-JUR-015 — SEC-66 : le geste « notifier la résiliation par la S
       agregat: 'apporteur',
       agregatId: ID,
       survenuAt: decision,
-      charge: { motif: 'ordinaire_axion', dateEffet: '2026-11-03', acteur: CONSOLE },
+      charge: {
+        motif: 'ordinaire_axion',
+        dateEffet: '2026-11-02T23:00:00.000Z',
+        acteur: CONSOLE,
+      },
     });
     const ecrit = t.ecrits[0] as { decision: { data: Record<string, unknown> } };
     expect(ecrit.decision.data).toMatchObject({
@@ -1719,7 +1742,7 @@ describe('REQ-JUR-015 — SEC-66 : la date d’effet, pour un apporteur', () => 
       orderBy: { evenementId: 'desc' },
     });
     expect(journalSimule.lireLaChargeDUnFait).toHaveBeenCalledWith(m.tx, '41');
-    expect(journalSimule.passageQuiCiteLaDecision).toHaveBeenCalledWith(m.tx, '41');
+    expect(journalSimule.passageQuiCiteLaDecision).toHaveBeenCalledWith(m.tx, 'd-1');
     expect(m.mises).toStrictEqual([
       {
         where: { id: ID },
@@ -1740,7 +1763,7 @@ describe('REQ-JUR-015 — SEC-66 : la date d’effet, pour un apporteur', () => 
         vers: 'resilie',
         transition: 'resilier',
         resiliationMotif: 'ordinaire_axion',
-        decisionEvenementId: '41',
+        decisionContratId: 'd-1',
         acteur: CONSOLE,
       },
     });
@@ -1816,7 +1839,7 @@ describe('REQ-JUR-015 — SEC-66 : la date d’effet, pour un apporteur', () => 
       courriels: [{ statut: 'envoye', envoyeAt: new Date('2026-10-11T08:00:00.000Z') }],
     };
     // La plus récente, opposable, n'est pas échue : rien, même si l'ancienne l'est.
-    journalSimule.lireLaChargeDUnFait.mockResolvedValue(NOTIFIEE('2026-11-10'));
+    journalSimule.lireLaChargeDUnFait.mockResolvedValue(NOTIFIEE('2026-11-09T23:00:00.000Z'));
     const m1 = mondeDeLaTache('signe', [plusRecente, OPPOSABLE]);
     expect(await resilierALaDateDEffetUnApporteur(m1.tx, ID, EFFET)).toBe(false);
     expect(journalSimule.lireLaChargeDUnFait).toHaveBeenCalledTimes(1);
@@ -1826,7 +1849,7 @@ describe('REQ-JUR-015 — SEC-66 : la date d’effet, pour un apporteur', () => 
     const m2 = mondeDeLaTache('signe', [{ ...plusRecente, courriels: [] }, OPPOSABLE]);
     expect(await resilierALaDateDEffetUnApporteur(m2.tx, ID, EFFET)).toBe(true);
     expect(journalSimule.ajouterEvenement.mock.calls[0]![1]).toMatchObject({
-      charge: { decisionEvenementId: '41' },
+      charge: { decisionContratId: 'd-1' },
     });
   });
 
@@ -1938,7 +1961,7 @@ describe('REQ-JUR-015 — SEC-66 : le passage du lanceur à la date d’effet', 
     expect(lus[0]).toStrictEqual({
       where: {
         geste: 'resiliation',
-        dateEffet: { lte: JOUR('2026-11-03') },
+        dateEffet: { lt: JOUR('2026-11-04') },
         apporteur: { statut: { in: ['signe', 'suspendu'] } },
       },
       select: { apporteurId: true },

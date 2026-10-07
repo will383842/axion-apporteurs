@@ -13,7 +13,6 @@ import {
   CHARGES_PAR_TYPE,
   FORMES,
   HASH_HEX_64,
-  ID_DU_JOURNAL,
   naissanceDApporteur,
 } from '../../../src/domain/evenement/charges';
 import { ALGORITHME } from '../../../src/domain/evenement/journal';
@@ -39,22 +38,6 @@ describe('REQ-DM-024 — les formes admises dans une charge', () => {
     expect(FORMES.horodatage().safeParse(INSTANT).success).toBe(true);
     expect(FORMES.horodatage().safeParse('2 octobre').success).toBe(false);
     expect(FORMES.identifiant().safeParse(ID).success).toBe(true);
-  });
-
-  it('REQ-JUR-015 : SEC-66 — un jour civil est AAAA-MM-JJ, sans heure, et existe', () => {
-    expect(FORMES.jourCivil().safeParse('2026-11-03').success).toBe(true);
-    expect(FORMES.jourCivil().safeParse('2026-02-30').success).toBe(false);
-    expect(FORMES.jourCivil().safeParse(INSTANT).success).toBe(false);
-    expect(FORMES.jourCivil().safeParse('3 novembre 2026').success).toBe(false);
-  });
-
-  it('REQ-JUR-015 : SEC-66 — un fait du journal se cite en entier décimal positif, ancré aux deux bouts', () => {
-    for (const ok of ['1', '42', '9223372036854775807']) {
-      expect(FORMES.identifiantDuJournal().safeParse(ok).success, ok).toBe(true);
-    }
-    for (const ko of ['0', '07', '-1', '1.5', ' 1', '1 ', 'a1', '', '12345678901234567890']) {
-      expect(ID_DU_JOURNAL.test(ko), ko).toBe(false);
-    }
   });
 });
 
@@ -459,14 +442,18 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
     ).toEqual(['acteur:acteur_console_attendu']);
   });
 
-  it('REQ-JUR-015 : SEC-66 — la décision de la Société porte le motif ordinaire_axion, un jour civil et l’acteur de la console, rien d’autre', () => {
-    const juste = { motif: 'ordinaire_axion', dateEffet: '2026-11-03', acteur: CONSOLE };
+  it('REQ-JUR-015 : SEC-66 — la décision de la Société porte le motif ordinaire_axion, un horodatage de minuit et l’acteur de la console, rien d’autre', () => {
+    const juste = {
+      motif: 'ordinaire_axion',
+      dateEffet: '2026-11-02T23:00:00.000Z',
+      acteur: CONSOLE,
+    };
     passe('apporteur_resiliation_notifiee', juste);
     for (const motif of ['ordinaire_apporteur', 'manquement_grave', 'fin_de_plein_droit']) {
       expect(refus('apporteur_resiliation_notifiee', { ...juste, motif }), motif).toHaveLength(1);
     }
     expect(
-      refus('apporteur_resiliation_notifiee', { ...juste, dateEffet: '2026-11-03T00:00:00.000Z' })
+      refus('apporteur_resiliation_notifiee', { ...juste, dateEffet: '2026-11-03' })
     ).toHaveLength(1);
     expect(refus('apporteur_resiliation_notifiee', { ...juste, texte: 'x' })).toHaveLength(1);
     expect(
@@ -482,13 +469,13 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
       resiliationMotif: 'ordinaire_axion',
       acteur: CONSOLE,
     };
-    passe('apporteur_statut_modifie', { ...resilie, decisionEvenementId: '42' });
+    passe('apporteur_statut_modifie', { ...resilie, decisionContratId: ID });
     // Sans citation, refusé ; une citation hors forme aussi.
     expect(refus('apporteur_statut_modifie', resilie)).toEqual([
-      'decisionEvenementId:citation_de_la_decision_incoherente',
+      'decisionContratId:citation_de_la_decision_incoherente',
     ]);
-    expect(refus('apporteur_statut_modifie', { ...resilie, decisionEvenementId: '0' })[0]).toMatch(
-      /^decisionEvenementId:/
+    expect(refus('apporteur_statut_modifie', { ...resilie, decisionContratId: '42' })[0]).toMatch(
+      /^decisionContratId:/
     );
     // Une citation sur un autre motif, ou sur un autre passage, refusée.
     for (const resiliationMotif of [
@@ -501,10 +488,10 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
         refus('apporteur_statut_modifie', {
           ...resilie,
           resiliationMotif,
-          decisionEvenementId: '42',
+          decisionContratId: ID,
         }),
         resiliationMotif
-      ).toEqual(['decisionEvenementId:citation_de_la_decision_incoherente']);
+      ).toEqual(['decisionContratId:citation_de_la_decision_incoherente']);
     }
     expect(
       refus('apporteur_statut_modifie', {
@@ -512,8 +499,8 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
         vers: 'suspendu',
         transition: 'suspendre',
         acteur: CONSOLE,
-        decisionEvenementId: '42',
+        decisionContratId: ID,
       })
-    ).toEqual(['decisionEvenementId:citation_de_la_decision_incoherente']);
+    ).toEqual(['decisionContratId:citation_de_la_decision_incoherente']);
   });
 });
