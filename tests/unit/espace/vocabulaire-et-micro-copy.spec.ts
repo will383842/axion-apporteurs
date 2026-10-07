@@ -680,6 +680,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › quoiFaire : Il part tout seul dès le retour du réseau ; le téléphone de {contact} vous sera alors demandé. S'il n'est pas parti le {dateEffacement}, il s'efface de ce téléphone.
       espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › actionPrincipale › libelle : Retour à l'accueil
       espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › actionPrincipale › route : /
+      espace/issues-depot.ts › INFORMATION_LISTE_TENUE : Axion-IA tient une liste d'organismes avec lesquels elle est déjà en relation : administrations, financeurs publics ou paritaires, et organismes de formation. Une entreprise qui y figure ne peut pas être déposée, et le refus vous indique cette catégorie (contrat, article 3.3 bis).
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › titre : Bienvenue dans votre espace
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › phrase : Quand vous rencontrez une entreprise qui pourrait former ses salariés, vous pouvez taper son nom ci-dessous. Vous vérifiez qu'elle est libre, vous dites qui vous avez rencontré, et Axion-IA l'appelle. Si elle passe commande pendant la durée de votre droit à commission, une commission vous revient au fil des paiements.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › action › libelle : Vérifier
