@@ -5566,7 +5566,38 @@
         "src/server/apporteur/suspension.ts",
         "tests/integration/suspension.spec.ts",
         "src/server/taches/purger-textes-des-decisions.ts",
-        "tests/unit/integration/purge-decisions-de-contrat.spec.ts"
+        "tests/unit/integration/purge-decisions-de-contrat.spec.ts",
+        "prisma/migrations/20261003004920_journal_apporteur_gel_modifie/migration.sql",
+        "prisma/migrations/20261003004922_geste_decision_contrat_suspension/migration.sql",
+        "prisma/migrations/20261003004925_apporteurs_gel/migration.sql",
+        "scripts/gates/ux-exhaustivite.ts",
+        "src/content/micro-copy/espace/notifications.ts",
+        "src/domain/apporteur/acces-espace.ts",
+        "src/server/acces/for-apporteur.ts",
+        "src/server/apporteur/resiliation.ts",
+        "src/server/evenement/journal.ts",
+        "src/server/notifications/envoyer.ts",
+        "src/server/notifications/notifications-de-l-espace.ts",
+        "src/server/securite/pii.ts",
+        "src/server/taches/envoyer-notifications-espace.ts",
+        "src/server/taches/inscriptions.ts",
+        "src/server/taches/registre.ts",
+        "tests/unit/domaine/journal-charges.spec.ts",
+        "tests/unit/domaine/resiliation-acteur-humain.spec.ts",
+        "tests/unit/domaine/suspension.spec.ts",
+        "tests/unit/espace/notifications-fin-de-contrat.spec.ts",
+        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts",
+        "tests/unit/integration/attribution-notifications.spec.ts",
+        "tests/unit/integration/inscriptions-des-taches.spec.ts",
+        "tests/unit/securite/journal-fin-de-suspension.spec.ts",
+        "tests/unit/securite/suspension.spec.ts",
+        "src/server/roles/matrice.ts",
+        "tests/integration/gel-en-base.ts",
+        "tests/integration/concurrence.spec.ts",
+        "tests/integration/jeton-depot.spec.ts",
+        "tests/integration/sessions-revocables.spec.ts",
+        "tests/integration/code-de-parrainage.spec.ts",
+        "src/server/demarchage/actions-classees.ts"
       ],
       "schema": true,
       "sensible": [
@@ -27010,6 +27041,36 @@
       }
     },
     {
+      "id": "GOV-153",
+      "titre": "gov:pr lit en CI le registre de la PR à sa tête (head.sha), et non sur le commit de fusion, pour l'apparier à la base de fusion",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-pr.ts",
+        "config/gel-phase-1.json",
+        "tests/unit/gouvernance/registre-de-la-base-de-fusion.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-152"
+      ],
+      "reqs": [
+        "REQ-GOV-010"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "acceptance": "Versée par sa propre PR (A01), sur l'arbitrage de la coordination ; EXCEPTION AU GEL de la phase 1 (GOV-150), décidée par la coordination sous la délégation d'arbitrage de Williams (#319, commentaire 6042120798), au périmètre fermé : en CI, le registre de la PR est lu à head.sha et apparié à la base de fusion ; en local, la lecture du disque reste ; un témoin de la paire CI. Défaut corrigé : en CI, actions/checkout sert le commit de FUSION (main courante + PR), et GOV-152 l'appariait à la base de fusion, si bien que tout ce que main avait changé depuis le départ de la PR lui était imputé (registre_reecrit_par_une_pr_d_auteur sur #812). TÉMOINS : le registre du commit de fusion apparié à la base de fusion rougit (le défaut) ; le registre lu à la tête ne rougit pas ; une tête illisible arrête la garde (échec fermé) ; sans tête, le disque fait foi.",
+      "tests": {
+        "REQ-GOV-010": [
+          "tests/unit/gouvernance/registre-de-la-base-de-fusion.spec.ts"
+        ]
+      }
+    },
+    {
       "id": "QA-T74",
       "titre": "L'installation des navigateurs attend que le verrou d'apt du runner se libère, et marque une pause entre deux tentatives",
       "phase": 1,
@@ -27032,7 +27093,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Versée par sa propre PR (A01), EXPRESS, sur la demande de la coordination ; EXCEPTION AU GEL de la phase 1 (GOV-150), décidée par la coordination sous la délégation d'arbitrage de Williams (#319, commentaire 6044754455). Depuis le 2026-10-07 vers 18 h 25 UTC, environ la moitié des runs tombent sur le runner : la mise à jour automatique d'apt tient /var/lib/dpkg/lock-frontend, et playwright install --with-deps sort en 100 (« Could not get lock »). Les trois tentatives de QA-T59 s'enchaînaient sans pause. QA-T74 : avant chaque tentative, sous Linux, attendre que le verrou se libère (sudo -n fuser, toutes les 5 s, borné à 120 s) ; entre deux tentatives, une pause de 45 s puis de 90 s ; le pire cas reste sous les quinze minutes de l'étape. Le runner n'est pas touché (unattended-upgrades n'est pas arrêté). Échec fermé inchangé : trois échecs sortent en 1, aucun test n'est sauté. TÉMOINS : une pause entre deux tentatives échouées et aucune après la dernière, le verrou attendu avant chacune ; le pire cas sous quinze minutes ; un verrou encore tenu ne saute pas la tentative et il est nommé.",
+      "acceptance": "Versée par sa propre PR (A01), EXPRESS, sur la demande de la coordination ; EXCEPTION AU GEL de la phase 1 (GOV-150), décidée par la coordination sous la délégation d'arbitrage de Williams (#319, commentaire 6044754455). Depuis le 2026-10-07 vers 18 h 25 UTC, environ la moitié des runs tombent sur le runner : la mise à jour automatique d'apt tient /var/lib/dpkg/lock-frontend, et playwright install --with-deps sort en 100 (« Could not get lock »). Les trois tentatives de QA-T59 s'enchaînaient sans pause. QA-T74 : avant chaque tentative, sous Linux, attendre que le verrou se libère (sudo -n fuser, toutes les 5 s, borné à 75 s) ; chaque tentative tuée à 180 s (240 s avant, QA-T59) ; entre deux tentatives, une pause de 30 s puis de 60 s, aucune après la dernière ; le pire cas, attente du verrou ET tentative ADDITIONNÉES (refus de l'exactitude sur #842), vaut 3 × (75 + 180) + 90 = 855 s, sous les quinze minutes de l'étape avec 45 s de marge. Le runner n'est pas touché (unattended-upgrades n'est pas arrêté). Échec fermé inchangé : trois échecs sortent en 1, aucun test n'est sauté. TÉMOINS : une pause entre deux tentatives échouées et aucune après la dernière, le verrou attendu avant chacune ; le pire cas calculé sur la SOMME, sous quinze minutes avec une marge ; un verrou encore tenu ne saute pas la tentative et il est nommé. DETTE NOMMÉE : les commentaires de .github/workflows/ci.yml (étape « Navigateurs des passes d accessibilite », dans les deux éclats) disent encore « quatre minutes » ; ils seront corrigés par la prochaine tâche qui touche ce workflow (GOV-155), sans étape neuve. QA-T59 garde son acceptance : ses 240 s se lisent 180 s depuis QA-T74 (note au prochain rattrapage).",
       "tests": {
         "REQ-QA-016": [
           "tests/unit/qualite/navigateurs-bornes.spec.ts"

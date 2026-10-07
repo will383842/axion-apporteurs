@@ -246,10 +246,12 @@
     "UX-P1-58",
     "UX-P1-59",
     "UX-P1-60",
+    "GOV-153",
     "QA-T74"
   ],
   "exceptions": {
     "GOV-152": "Exception au gel : garde bloquante de gov:pr, décision de la coordination sous délégation de Williams, #319, 6035611932.",
+    "GOV-153": "Exception au gel : correctif de la garde bloquante gov:pr (défaut de GOV-152 en CI), périmètre fermé, décision de la coordination sous délégation de Williams, #319, 6042120798.",
     "QA-T74": "Exception au gel : correctif express de la CI (le verrou d apt du runner fait tomber la moitié des runs), décision de la coordination sous délégation de Williams, #319, 6044754455."
   }
 }

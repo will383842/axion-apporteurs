@@ -373,6 +373,8 @@ describe('REQ-UX-016 — une clé, un seul chemin d’envoi : le passage ou noti
       // SEC-19 : la mise en demeure (A02, #713, 5981780677), puis la résiliation (A02, #703).
       'mise_en_demeure',
       'resiliation',
+      // SEC-15 : la suspension, rendue depuis sa décision.
+      'suspension_declarations',
       // DM-25 : l'annulation pour antériorité de la Société, envoyée par le passage.
       'attribution_annulee_anteriorite',
     ]);
