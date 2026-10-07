@@ -508,18 +508,7 @@ export type ExceptionLexicale = {
  * familles de portée `depot`. La première exception qu'on posera devra donc s'expliquer devant
  * une garde qui était verte sans elle.
  */
-export const EXCEPTIONS_DECLAREES: readonly ExceptionLexicale[] = [
-  {
-    chemin: 'src/content/micro-copy/console/refus.ts',
-    forme: 'commerciale',
-    justification:
-      'le message du refus de la garde de la réserve dit, mot pour mot, « prise de contact commerciale » : ' +
-      'l’adjectif qualifie le démarchage que la Société s’interdit envers une entreprise réservée, il ne ' +
-      'désigne ni une fonction ni un salarié, et le texte est celui de l’avis de la sécurité (REQ-SEC-042).',
-    reference: 'REQ-SEC-042',
-    poseeLe: '2026-10-07',
-  },
-];
+export const EXCEPTIONS_DECLAREES: readonly ExceptionLexicale[] = [];
 
 /** Les familles applicables selon la portée d'un fichier : `apporteur` est le sur-ensemble. */
 export function famillesPourPortee(portee: PorteeLexicale): readonly FamilleInterdite[] {

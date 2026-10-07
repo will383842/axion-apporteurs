@@ -6,7 +6,7 @@
  * du dépôt.
  */
 export const REFUS_DE_LA_CONSOLE = {
-  entreprise_reservee: 'Entreprise indisponible pour une prise de contact commerciale',
+  entreprise_reservee: 'Entreprise indisponible pour un démarchage',
 } as const satisfies Readonly<Record<string, string>>;
 
 export type CodeDeRefusDeLaConsole = keyof typeof REFUS_DE_LA_CONSOLE;

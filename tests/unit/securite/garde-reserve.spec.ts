@@ -138,7 +138,7 @@ describe('REQ-SEC-042 — la garde à l’appel : échec fermé, refus non rév�
 
   it('REQ-SEC-042 : l’écran affiche un message GÉNÉRIQUE de la micro-copie, sans apporteur, cause ni date', () => {
     expect(REFUS_DE_LA_CONSOLE[CODE_ENTREPRISE_RESERVEE]).toBe(
-      'Entreprise indisponible pour une prise de contact commerciale'
+      'Entreprise indisponible pour un démarchage'
     );
   });
 });
