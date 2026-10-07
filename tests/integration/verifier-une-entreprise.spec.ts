@@ -2,6 +2,7 @@
 // @req REQ-UX-007
 // @req REQ-JUR-011
 // @req REQ-SEC-022
+// @req REQ-EXT-006
 /**
  * « Vérifier une entreprise » (SEC-16) sur la vraie base : l'occupation et la file se lisent dans
  * `attributions`, la vérification se journalise dans `verifications`, et rien d'autre ne s'écrit —
@@ -15,6 +16,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { demarrerBase, type Base } from './harnais';
 import { portsDeLaBase } from '../../src/server/verification/ports-prisma';
+import { ajouterEvenement } from '../../src/server/evenement/journal';
 import {
   verifierUneEntreprise,
   type PortsDeVerification,
@@ -79,19 +81,21 @@ afterAll(async () => {
 });
 
 async function inserer(apporteurId: string, siren: string, statut: string, rang: number | null) {
+  const id = randomUUID();
   await base.prisma.$executeRawUnsafe(
     `INSERT INTO attributions (id, apporteur_id, statut, rang_attente, siren, canal,
        grille_commission_id, date_contact, verification_prioritaire, entreprise_a_verifier,
        lien_interet_declare)
      VALUES ($1::uuid, $2::uuid, $3::etat_attribution, $4, $5, 'espace'::canal_depot, $6::uuid,
        '2026-10-01', false, false, false)`,
-    randomUUID(),
+    id,
     apporteurId,
     statut,
     rang,
     siren,
     grilleId
   );
+  return id;
 }
 
 function ports(): PortsDeVerification {
@@ -99,6 +103,7 @@ function ports(): PortsDeVerification {
     ...portsDeLaBase(base.prisma),
     compter: async () => ({ autorise: true }),
     entreprise: async () => 'active',
+    maintenant: () => MAINTENANT,
   };
 }
 
@@ -120,22 +125,22 @@ describe('REQ-UX-007 — l’occupation et la file, lues dans attributions', () 
     const siren = unSiren();
     expect(await verifierUneEntreprise(ports(), demande(siren))).toEqual({
       ok: true,
-      dto: { etat: 'libre' },
+      dto: { etat: 'libre', dejaDeclaree: false },
     });
     await inserer(apporteurA, siren, 'active', null);
     expect(await verifierUneEntreprise(ports(), demande(siren))).toEqual({
       ok: true,
-      dto: { etat: 'suivie_place_disponible' },
+      dto: { etat: 'suivie_place_disponible', dejaDeclaree: false },
     });
     await inserer(apporteurB, siren, 'en_attente', 1);
     expect(await verifierUneEntreprise(ports(), demande(siren))).toEqual({
       ok: true,
-      dto: { etat: 'suivie_place_disponible' },
+      dto: { etat: 'suivie_place_disponible', dejaDeclaree: false },
     });
     await inserer(apporteurC, siren, 'en_attente', 2);
     expect(await verifierUneEntreprise(ports(), demande(siren))).toEqual({
       ok: true,
-      dto: { etat: 'suivie_file_complete' },
+      dto: { etat: 'suivie_file_complete', dejaDeclaree: false },
     });
   });
 
@@ -144,7 +149,7 @@ describe('REQ-UX-007 — l’occupation et la file, lues dans attributions', () 
     await inserer(apporteurA, siren, 'perdue', null);
     expect(await verifierUneEntreprise(ports(), demande(siren))).toEqual({
       ok: true,
-      dto: { etat: 'libre' },
+      dto: { etat: 'libre', dejaDeclaree: false },
     });
   });
 });
@@ -156,7 +161,7 @@ describe('REQ-JUR-011 REQ-SEC-022 — la liste de la Société et l’antériori
       data: { siren, motif: 'financeur_public', ajouteParId: utilisateurConsole },
     });
     const r = await verifierUneEntreprise(ports(), demande(siren));
-    expect(r).toEqual({ ok: true, dto: { etat: 'non_disponible' } });
+    expect(r).toEqual({ ok: true, dto: { etat: 'non_disponible', dejaDeclaree: false } });
     // La catégorie ne se dit qu'au refus d'un DÉPÔT : jamais dans une vérification.
     expect(JSON.stringify(r)).not.toContain('financeur_public');
     expect(await base.prisma.verification.findFirst({ where: { siren } })).toMatchObject({
@@ -176,7 +181,9 @@ describe('REQ-JUR-011 REQ-SEC-022 — la liste de la Société et l’antériori
     });
     const cliente = JSON.stringify(await verifierUneEntreprise(ports(), demande(siren)));
     expect(cliente).toBe(JSON.stringify(await verifierUneEntreprise(ports(), demande(surLaListe))));
-    expect(cliente).toBe(JSON.stringify({ ok: true, dto: { etat: 'non_disponible' } }));
+    expect(cliente).toBe(
+      JSON.stringify({ ok: true, dto: { etat: 'non_disponible', dejaDeclaree: false } })
+    );
     expect(await base.prisma.verification.findFirst({ where: { siren } })).toMatchObject({
       resultat: 'cliente',
     });
@@ -206,5 +213,59 @@ describe('REQ-SEC-021 — journalisée, et rien d’autre ne s’écrit (W20)', 
     const p = { ...ports(), compter: portsDeLaBase(base.prisma).compter };
     expect(await verifierUneEntreprise(p, demande(siren))).toEqual({ ok: false, refus: 'limite' });
     expect(await base.prisma.verification.count({ where: { siren } })).toBe(0);
+  });
+});
+
+/**
+ * EXT-T06 (REQ-EXT-006) — le lecteur RÉSERVÉ de la dernière fin, sur la base : la fin d'une attribution
+ * terminée est le `survenuAt` de son dernier `attribution_etat_modifie` ; le signal n'apparaît qu'après
+ * plus de `SIGNAL_DEJA_DECLAREE_ANCIENNETE_JOURS` jours civils de Paris, et une fin sans événement
+ * lisible ne donne rien (échec fermé).
+ */
+describe('REQ-EXT-006 — « Déjà déposée par le passé », lu sur la base', () => {
+  const JOUR = 86_400_000;
+  async function terminer(id: string, ilYAJours: number) {
+    await base.prisma.$transaction((tx) =>
+      ajouterEvenement(tx, {
+        type: 'attribution_etat_modifie',
+        agregat: 'attribution',
+        agregatId: id,
+        survenuAt: new Date(MAINTENANT.getTime() - ilYAJours * JOUR),
+        charge: { de: 'active', vers: 'perdue', transition: 'perdue', acteur: { par: 'systeme' } },
+      })
+    );
+  }
+
+  it('REQ-EXT-006 : TÉMOIN — une fin à J-40 donne le signal ; une fin plus récente, à J-10, sur une autre attribution, l’éteint : seule la DERNIÈRE compte', async () => {
+    const siren = unSiren();
+    const ancienne = await inserer(apporteurA, siren, 'perdue', null);
+    await terminer(ancienne, 40);
+    expect(await verifierUneEntreprise(ports(), demande(siren))).toEqual({
+      ok: true,
+      dto: { etat: 'libre', dejaDeclaree: true },
+    });
+    const recente = await inserer(apporteurB, siren, 'perdue', null);
+    await terminer(recente, 10);
+    expect(await verifierUneEntreprise(ports(), demande(siren))).toEqual({
+      ok: true,
+      dto: { etat: 'libre', dejaDeclaree: false },
+    });
+  });
+
+  it('REQ-EXT-006 : TÉMOIN — une attribution non terminée ne compte pas, et la console ne reçoit jamais le signal', async () => {
+    const siren = unSiren();
+    const fin = await inserer(apporteurA, siren, 'perdue', null);
+    await terminer(fin, 40);
+    expect(
+      await verifierUneEntreprise(ports(), {
+        ...demande(siren),
+        porteur: { utilisateurConsoleId: utilisateurConsole },
+      })
+    ).toEqual({ ok: true, dto: { etat: 'libre', dejaDeclaree: false } });
+    await inserer(apporteurB, siren, 'active', null);
+    expect(await verifierUneEntreprise(ports(), demande(siren))).toEqual({
+      ok: true,
+      dto: { etat: 'suivie_place_disponible', dejaDeclaree: false },
+    });
   });
 });

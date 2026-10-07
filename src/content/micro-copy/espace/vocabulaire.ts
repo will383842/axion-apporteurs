@@ -62,14 +62,14 @@ export const FORMULES = {
  * mène ailleurs avec le même libellé reprend l'action et ne change que sa route.
  */
 /**
- * EXT-T06 (REQ-EXT-006) — le signal « Déjà déclarée par le passé » de la vérification d'une entreprise
- * disponible : texte FIXE de la juriste (#474, 6036611999), MOT POUR MOT, sans porteur, date, durée,
+ * EXT-T06 (REQ-EXT-006) — le signal « Déjà déposée par le passé » de la vérification d'une entreprise
+ * disponible : texte FIXE de la juriste (#474, 6036611999, rectifié en 6036797355), MOT POUR MOT, sans porteur, date, durée,
  * nombre ni issue. Il ne s'affiche qu'avec l'état « disponible ».
  */
-export const DEJA_DECLAREE = {
-  titre: 'Déjà déclarée par le passé',
+export const DEJA_DEPOSEE = {
+  titre: 'Déjà déposée par le passé',
   phrase:
-    "Cette entreprise a déjà fait l'objet d'une déclaration, aujourd'hui terminée. Elle est disponible : vous pouvez la déclarer.",
+    "Cette entreprise a déjà fait l'objet d'un dépôt, aujourd'hui terminé. Elle est disponible : vous pouvez la déposer.",
 } as const;
 
 export const ACTIONS_COMMUNES = {

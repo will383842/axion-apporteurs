@@ -646,7 +646,7 @@ export function budgetUx(nom: string): BudgetUx {
  * n'est qu'un filet : au-delà, aucun courriel, jamais une troncature.
  */
 /**
- * EXT-T06 (REQ-EXT-006) — l'ancienneté minimale du signal « Déjà déclarée par le passé » : il n'apparaît
+ * EXT-T06 (REQ-EXT-006) — l'ancienneté minimale du signal « Déjà déposée par le passé » : il n'apparaît
  * que si la DERNIÈRE attribution terminée sur le SIREN l'est depuis PLUS de ce nombre de jours civils de
  * Paris ; avant, l'état « disponible » est rendu tel quel (juriste, à la demande de la sécurité).
  */

@@ -566,11 +566,11 @@ describe('REQ-SEC-022 — la catégorie de la liste ne se dit qu’au refus d’
 
 /**
  * EXT-T06 (REQ-EXT-006 ; juriste, #474, 6036611999 et #319, 6036622439 ; conditions de la sécurité) — le
- * signal « Déjà déclarée par le passé » : un BOOLÉEN seul, toujours présent, à la même place ; vrai
+ * signal « Déjà déposée par le passé » : un BOOLÉEN seul, toujours présent, à la même place ; vrai
  * seulement pour `libre`, pour un apporteur, et si la DERNIÈRE fin d'une attribution terminée date de
  * PLUS de `SIGNAL_DEJA_DECLAREE_ANCIENNETE_JOURS` jours civils de Paris ; ni stocké, ni journalisé.
  */
-describe('REQ-EXT-006 — « Déjà déclarée par le passé » : un booléen, de même forme vrai ou faux', () => {
+describe('REQ-EXT-006 — « Déjà déposée par le passé » : un booléen, de même forme vrai ou faux', () => {
   const dto = async (
     o: Parameters<typeof ports>[1],
     f: FaitsDeVerification = LIBRE,
@@ -617,7 +617,7 @@ describe('REQ-EXT-006 — « Déjà déclarée par le passé » : un booléen, d
     expect(console.dejaDeclaree).toBe(false);
   });
 
-  it('REQ-EXT-006 : TÉMOIN — une lecture de la dernière fin qui ÉCHOUE rend « jamais déclarée », et la vérification se poursuit sans erreur', async () => {
+  it('REQ-EXT-006 : TÉMOIN — une lecture de la dernière fin qui ÉCHOUE rend « jamais déposée », et la vérification se poursuit sans erreur', async () => {
     const echec = await dto({ derniereFin: 'echec' });
     expect(echec).toEqual(await dto({ derniereFin: null }));
   });

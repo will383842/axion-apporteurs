@@ -60,7 +60,7 @@ export function causeDuJournal(f: FaitsDeVerification): CauseDeVerification {
 }
 
 /**
- * EXT-T06 (REQ-EXT-006, REQ-EXT-007) — le signal « Déjà déclarée par le passé » : un BOOLÉEN seul, au
+ * EXT-T06 (REQ-EXT-006, REQ-EXT-007) — le signal « Déjà déposée par le passé » : un BOOLÉEN seul, au
  * texte fixe (sécurité). Il n'est vrai que si l'entreprise est `libre` ET que la DERNIÈRE attribution
  * terminée sur ce SIREN, quel qu'en soit le porteur (sa propre attribution comme celle d'un autre),
  * l'est depuis PLUS de `SIGNAL_DEJA_DECLAREE_ANCIENNETE_JOURS` jours civils de Paris. Il ne porte ni

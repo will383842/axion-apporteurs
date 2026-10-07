@@ -232,7 +232,7 @@ export async function acteursDUneTransition(
 }
 
 /**
- * EXT-T06 — LECTEUR RÉSERVÉ du signal « Déjà déclarée par le passé » (conditions de la sécurité, relayées
+ * EXT-T06 — LECTEUR RÉSERVÉ du signal « Déjà déposée par le passé » (conditions de la sécurité, relayées
  * par la coordination). Il rend la date de fin de la DERNIÈRE attribution terminée sur ce SIREN, quel
  * qu'en soit le porteur, ou `null` ; RIEN d'autre : ni porteur, ni identifiant, ni charge, ni nombre.
  *   — Les événements se trouvent par les ATTRIBUTIONS du SIREN (`agregat_id` parmi leurs ids), jamais
@@ -240,7 +240,7 @@ export async function acteursDUneTransition(
  *   — Une attribution compte si son état est dans la liste FERMÉE `ETATS_TERMINES`, et si son DERNIER
  *     `attribution_etat_modifie` dit, lisiblement, qu'elle y est passée ; la fin est son `survenuAt`.
  *   — ÉCHEC FERMÉ : une charge illisible, un événement absent ou discordant, une erreur de lecture
- *     rendent `null`, donc AUCUN signal : échouer ne rend rien de différent de « jamais déclarée ».
+ *     rendent `null`, donc AUCUN signal : échouer ne rend rien de différent de « jamais déposée ».
  * Seul le service de la vérification l'appelle ; le booléen se calcule en mémoire, jamais stocké ni
  * journalisé.
  */
