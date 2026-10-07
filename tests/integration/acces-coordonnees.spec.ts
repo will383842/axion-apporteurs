@@ -73,7 +73,7 @@ beforeAll(async () => {
   ).id;
   consoleId = (
     await base.prisma.utilisateurConsole.create({
-      data: { role: 'conseiller_salarie', creeAt: new Date('2026-01-01T00:00:00.000Z') },
+      data: { role: 'qualifieur', creeAt: new Date('2026-01-01T00:00:00.000Z') },
     })
   ).id;
 }, 180_000);
