@@ -77,6 +77,8 @@ describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles'
       // DM-25 : l'annulation pour antériorité de la Société (art. 3.3), clé NEUVE (coordination).
       'attribution_annulee_anteriorite',
       'attribution_liberee',
+      // UX-P1-61 : le rétablissement d'un dépôt périmé faute d'échange imputable à la Société.
+      'attribution_retablie',
       'decision_attribution',
       'depot_injoignable_j5',
       'lien_magique',
@@ -144,6 +146,7 @@ describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles'
       depot_injoignable_j5: 'F/F',
       attribution_liberee: 'T/F',
       attribution_annulee_anteriorite: 'T/F',
+      attribution_retablie: 'T/F',
       decision_attribution: 'T/F',
       premier_rang_libere: 'T/T',
       refus_declaration: 'T/F',
@@ -699,5 +702,39 @@ describe('REQ-JUR-007 — la notification de l’annulation pour antériorité (
       `${SEUILS.REPONSE_CONTESTATION_JOURS.valeur} ${SEUILS.REPONSE_CONTESTATION_JOURS.unite}`
     );
     expect(r.titre).toContain('Atelier Dupont');
+  });
+});
+
+describe('REQ-DM-007 — la notification du rétablissement (UX-P1-61, juriste)', () => {
+  it('REQ-DM-007 : la fiche — art. 3.4 al. 2, émise par UX-P1-61, courriel et espace, obligatoire, non désactivable, vers Mes entreprises', () => {
+    expect(GABARITS.attribution_retablie).toMatchObject({
+      destinataire: 'apporteur',
+      req: 'REQ-DM-007',
+      emetteur: 'UX-P1-61',
+      declencheur: 'evenement',
+      notificationObligatoire: true,
+      faitCourirUnDelai: false,
+      canaux: ['email', 'espace'],
+      desactivable: false,
+      route: '/mes-entreprises',
+      routeEnAttente: null,
+    });
+    expect(GABARITS.attribution_retablie.fondement).toMatch(/art. 3.4 al. 2/);
+  });
+
+  it('REQ-DM-007 : TÉMOIN — le texte de la juriste, MOT POUR MOT (#803, 6039744045 et 6041520663) : rien de l’occupant qui aurait cédé', () => {
+    expect(TEXTES_DES_NOTIFICATIONS.attribution_retablie).toEqual({
+      titre: '{entreprise} : votre dépôt est rétabli',
+      appel: 'Voir Mes entreprises',
+      corps:
+        "Votre dépôt de {entreprise} est rétabli jusqu'au {date} : l'absence d'échange tenait à Axion-IA (contrat, article 3.4).",
+    });
+    expect(JSON.stringify(TEXTES_DES_NOTIFICATIONS.attribution_retablie)).not.toMatch(
+      /prise en charge|cédé|cession|conseiller|occup/i
+    );
+  });
+
+  it('REQ-DM-007 : l’entreprise et le terme sont les seuls paramètres de l’émettrice', () => {
+    expect(parametresDe('attribution_retablie').sort()).toEqual(['date', 'entreprise']);
   });
 });

@@ -33,6 +33,7 @@ import { roleAutorise } from '../roles/matrice';
 import { ajouterEvenement } from '../evenement/journal';
 import { transitionnerUneAttribution } from './transitionner';
 import { ETATS_OCCUPANTS } from '../../domain/attribution/etats';
+import { CHARGES_PAR_TYPE } from '../../domain/evenement/charges';
 import {
   MOTIFS_SUSPENSION_PEREMPTION,
   type MotifSuspensionPeremption,
@@ -86,18 +87,22 @@ type LigneLue = {
   siren: string;
   suspendue: boolean;
   fenetre_fin_at: Date | null;
-  derniere_transition: string | null;
+  derniere_charge: unknown;
 };
 
-/** L'attribution, verrouillée, et la transition qui l'a menée là (lue au journal). */
+/**
+ * L'attribution, verrouillée, et la charge du DERNIER `attribution_etat_modifie` qui l'a menée là, lue
+ * au journal (ajout seul, source durable ; A02 #803) : elle seule distingue la péremption faute
+ * d'échange de `liberee_sans_confirmation`, qui arrive aussi en `perimee`.
+ */
 async function lireSousLeVerrou(tx: Tx, attributionId: string): Promise<LigneLue | undefined> {
   const [a] = await tx.$queryRaw<LigneLue[]>`
     SELECT a.statut::text AS statut, a.siren, (a.peremption_suspendue_at IS NOT NULL) AS suspendue,
            a.fenetre_fin_at,
-           (SELECT e.charge->>'transition' FROM evenements e
+           (SELECT e.charge FROM evenements e
              WHERE e.type = 'attribution_etat_modifie' AND e.agregat = 'attribution'
                AND e.agregat_id = a.id
-             ORDER BY e.survenu_at DESC, e.id DESC LIMIT 1) AS derniere_transition
+             ORDER BY e.survenu_at DESC, e.id DESC LIMIT 1) AS derniere_charge
     FROM attributions a WHERE a.id = ${attributionId}::uuid FOR UPDATE`;
   return a;
 }
@@ -138,7 +143,10 @@ export async function poserLAbsenceImputable(
     const a = await lireSousLeVerrou(tx, d.attributionId);
     if (a === undefined) throw new ErreurAbsenceImputable('attribution_inconnue');
     if (a.suspendue) throw new ErreurAbsenceImputable('deja_pose');
-    const retablir = a.statut === 'perimee' && a.derniere_transition === 'perimee';
+    // Une charge illisible ne rétablit jamais : l'attribution est alors sans objet (échec fermé).
+    const derniere = CHARGES_PAR_TYPE.attribution_etat_modifie.safeParse(a.derniere_charge);
+    const retablir =
+      a.statut === 'perimee' && derniere.success && derniere.data.transition === 'perimee';
     if (a.statut !== 'active' && !retablir) throw new ErreurAbsenceImputable('sans_objet');
     if (retablir) {
       if (a.fenetre_fin_at === null || a.fenetre_fin_at <= d.maintenant)

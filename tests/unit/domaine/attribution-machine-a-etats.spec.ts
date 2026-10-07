@@ -65,6 +65,8 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     liberee_sans_confirmation: 'perimee',
     fin_de_contrat: 'annulee',
     anteriorite_etablie: 'annulee',
+    // UX-P1-61 : une prise en charge de la Société cède au rétablissement d'un apporteur.
+    cedee_au_retablissement: 'annulee',
   },
   active: {
     rdv_pris: 'rdv_pris',
@@ -77,6 +79,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     fin_de_contrat: 'expiree',
     annulee_erreur_identification: 'annulee',
     fraude_etablie: 'annulee',
+    cedee_au_retablissement: 'annulee',
   },
   rdv_pris: {
     devis_envoye: 'proposition',
@@ -87,6 +90,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     fin_de_contrat: 'expiree',
     annulee_erreur_identification: 'annulee',
     fraude_etablie: 'annulee',
+    cedee_au_retablissement: 'annulee',
   },
   proposition: {
     devis_signe: 'signee',
@@ -96,6 +100,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     fin_de_contrat: 'expiree',
     annulee_erreur_identification: 'annulee',
     fraude_etablie: 'annulee',
+    cedee_au_retablissement: 'annulee',
   },
   signee: {
     paiement_recu: 'convertie',
@@ -105,6 +110,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     commande_caduque_hors_fenetre: 'expiree',
     annulee_erreur_identification: 'annulee',
     fraude_etablie: 'annulee',
+    cedee_au_retablissement: 'annulee',
   },
   // DM-71 : après la confirmation, seules les deux exceptions humaines de l'art. 3.3 annulent.
   convertie: {
@@ -112,15 +118,18 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     figee: 'figee_resiliation',
     annulee_erreur_identification: 'annulee',
     fraude_etablie: 'annulee',
+    cedee_au_retablissement: 'annulee',
   },
   figee_resiliation: {
     expiree: 'expiree',
     annulee_erreur_identification: 'annulee',
     fraude_etablie: 'annulee',
+    cedee_au_retablissement: 'annulee',
   },
   invalidee: {},
   perdue: {},
-  perimee: {},
+  // UX-P1-61 : périmée faute d'échange, rétablie si l'absence d'échange tenait à la Société.
+  perimee: { retablie_absence_imputable: 'active' },
   expiree: {},
   annulee: {},
 };
@@ -140,8 +149,10 @@ const REFUS_CONSEILLER = [
   'retiree',
   'file_expiree',
   'redeclaree',
+  // UX-P1-61
+  'retablie_absence_imputable',
 ];
-const REFUS_APPORTEUR = ['prise_en_charge'];
+const REFUS_APPORTEUR = ['prise_en_charge', 'cedee_au_retablissement'];
 
 const PORTEURS: TypePorteur[] = ['apporteur', 'conseiller'];
 
@@ -164,8 +175,12 @@ function attendu(de: string | null, transition: string, porteur: TypePorteur): s
       de === null ? transition in NAISSANCES : ATTENDUE[de]?.[transition] !== undefined;
     if (existe) return 'refus:refusee_au_porteur';
   }
-  if (porteur === 'apporteur' && REFUS_APPORTEUR.includes(transition) && de === null) {
-    return 'refus:refusee_au_porteur';
+  // La prise en charge (une naissance) et la cession (UX-P1-61, une flèche) : refusées à l'apporteur là
+  // où elles existent ; ailleurs, le refus de la matrice.
+  if (porteur === 'apporteur' && REFUS_APPORTEUR.includes(transition)) {
+    const existe =
+      de === null ? transition in NAISSANCES : ATTENDUE[de]?.[transition] !== undefined;
+    if (existe) return 'refus:refusee_au_porteur';
   }
   if (de === null) return NAISSANCES[transition] ?? 'refus:naissance_refusee';
   return ATTENDUE[de]?.[transition] ?? 'refus:transition_refusee';
@@ -396,7 +411,10 @@ describe('REQ-DM-006 — la charge du journal lit la matrice', () => {
               ? { exception: 'erreur_identification' }
               : transition === 'fraude_etablie'
                 ? { exception: 'fraude' }
-                : {};
+                : // UX-P1-61 : la cession porte l'exception du rétablissement.
+                  transition === 'cedee_au_retablissement'
+                  ? { exception: 'retablissement_apporteur' }
+                  : {};
       expect(
         charge.safeParse({ de, vers: 'active', transition, acteur, ...critere }).success,
         transition
@@ -579,6 +597,8 @@ describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
       'fin_de_contrat',
       'annulee_erreur_identification',
       'fraude_etablie',
+      'retablie_absence_imputable',
+      'cedee_au_retablissement',
     ]);
     expect(m.NAISSANCES_ATTRIBUTION).toEqual(NAISSANCES);
   });
@@ -604,6 +624,7 @@ describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
       'fin_de_contrat',
       'annulee_erreur_identification',
       'fraude_etablie',
+      'retablie_absence_imputable',
     ]);
   });
 
@@ -720,7 +741,13 @@ describe('REQ-DM-006 — les charges rechargées, à la valeur près', () => {
       ['de', 'naissance_incoherente'],
     ]);
     const susp = c.CHARGES_PAR_TYPE.attribution_peremption_suspendue;
-    expect(susp.safeParse({ acteur, suspendueAt: '2026-10-02T12:00:00.000Z' }).success).toBe(true);
+    // UX-P1-61 : le motif FERMÉ est exigé avec l'instant.
+    const suspendueAt = '2026-10-02T12:00:00.000Z';
+    expect(
+      susp.safeParse({ acteur, suspendueAt, motif: 'rdv_annule_par_la_societe' }).success
+    ).toBe(true);
+    expect(susp.safeParse({ acteur, suspendueAt }).success).toBe(false);
+    expect(susp.safeParse({ acteur, suspendueAt, motif: 'autre' }).success).toBe(false);
     expect(susp.safeParse({ acteur }).success).toBe(false);
   });
 
@@ -1878,6 +1905,7 @@ describe('REQ-DM-011 — une attribution figée par la résiliation ne reçoit p
     }
     expect(Object.keys(TRANSITIONS_ATTRIBUTION.figee_resiliation).sort()).toEqual([
       'annulee_erreur_identification',
+      'cedee_au_retablissement',
       'expiree',
       'fraude_etablie',
     ]);

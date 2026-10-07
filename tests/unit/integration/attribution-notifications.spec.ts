@@ -375,6 +375,8 @@ describe('REQ-UX-016 — une clé, un seul chemin d’envoi : le passage ou noti
       'resiliation',
       // DM-25 : l'annulation pour antériorité de la Société, envoyée par le passage.
       'attribution_annulee_anteriorite',
+      // UX-P1-61 : le rétablissement, dont le terme se lit sur l'attribution.
+      'attribution_retablie',
     ]);
     for (const cle of CLES_ENVOYEES_PAR_LE_PASSAGE) {
       expect(GABARITS[cle].canaux, cle).toContain('email');
@@ -1752,5 +1754,23 @@ describe('REQ-JUR-007 — l’annulation pour antériorité part par le passage 
         envoyeLe: MAINTENANT,
       })
     ).toEqual({ entreprise: 'Atelier Dupont' });
+  });
+});
+
+describe('REQ-DM-007 — le rétablissement part par le passage (UX-P1-61)', () => {
+  it('REQ-DM-007 : TÉMOIN — ses paramètres sont l’entreprise et le terme ; sans terme, rien ne se rend', () => {
+    expect(
+      parametresDeLaNotification('attribution_retablie', {
+        entreprise: 'Atelier Dupont',
+        date: '2 novembre 2026',
+        envoyeLe: MAINTENANT,
+      })
+    ).toEqual({ entreprise: 'Atelier Dupont', date: '2 novembre 2026' });
+    expect(() =>
+      parametresDeLaNotification('attribution_retablie', {
+        entreprise: 'Atelier Dupont',
+        envoyeLe: MAINTENANT,
+      })
+    ).toThrow(/date_manquante/);
   });
 });
