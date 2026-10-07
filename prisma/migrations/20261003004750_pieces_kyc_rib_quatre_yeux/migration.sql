@@ -48,8 +48,9 @@ BEGIN
         OR NEW."rib_confirme_par_id" IS DISTINCT FROM OLD."rib_confirme_par_id")) THEN
     RAISE EXCEPTION 'pieces_kyc_rib_quatre_yeux : une vérification ou une confirmation ne se réécrit pas';
   END IF;
-  -- (3) Une pièce rib ne devient `valide` QUE depuis `a_verifier`, dans l'écriture qui pose sa confirmation, une
-  --     fois : jamais depuis un autre statut (périmée, refusée…). Un nouveau RIB est une nouvelle pièce.
+  -- (3) Une pièce rib ne devient `valide` QUE depuis `a_verifier`, et dans l'écriture qui pose sa confirmation, une
+  --     fois. Jamais depuis `refusee`, `perimee` ou `manquante` : un RIB refusé ou périmé ne revient pas, et un nouveau
+  --     RIB est une nouvelle pièce.
   IF NEW."type" = 'rib' AND NEW."statut" = 'valide' AND OLD."statut" IS DISTINCT FROM 'valide'
      AND NOT (OLD."statut" = 'a_verifier' AND OLD."rib_confirme_at" IS NULL AND NEW."rib_confirme_at" IS NOT NULL) THEN
     RAISE EXCEPTION 'pieces_kyc_rib_quatre_yeux : un RIB ne devient valide que depuis a_verifier, par sa confirmation, une fois';
