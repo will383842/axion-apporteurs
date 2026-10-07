@@ -113,19 +113,36 @@ type Candidate = {
   creeAt: Date;
 };
 
-function unDouble(
-  lots: Candidate[][],
-  resiliations: { apporteurId: string; dateEffet: Date | null; creeAt: Date }[]
-) {
+/** Une résiliation du double : son fait fondateur est un changement de statut, sauf `fait` contraire. */
+type Resiliation = { apporteurId: string; dateEffet: Date | null; creeAt: Date; fait?: string };
+
+function unDouble(lots: Candidate[][], resiliations: Resiliation[]) {
   const restants = [...lots];
+  // Chaque résiliation porte son `evenementId` ; le journal du double rend le type de ce fait.
+  const lignes = resiliations.map((r, n) => ({
+    apporteurId: r.apporteurId,
+    dateEffet: r.dateEffet,
+    creeAt: r.creeAt,
+    evenementId: BigInt(1000 + n),
+  }));
+  const faits = new Map(
+    resiliations.map((r, n) => [String(1000 + n), r.fait ?? 'apporteur_statut_modifie'])
+  );
   const findMany = vi.fn(async (args: { where: { geste?: string } }) =>
-    args.where.geste === 'resiliation' ? resiliations : (restants.shift() ?? [])
+    args.where.geste === 'resiliation' ? lignes : (restants.shift() ?? [])
   );
   const updateMany = vi.fn(async (args: { where: { id: { in: string[] } } }) => ({
     count: args.where.id.in.length,
   }));
-  const prisma = { decisionDeContrat: { findMany, updateMany } } as unknown as PrismaClient;
-  return { prisma, findMany, updateMany };
+  const findUnique = vi.fn(async (args: { where: { id: bigint } }) => {
+    const type = faits.get(String(args.where.id));
+    return type === undefined ? null : { type, charge: {} };
+  });
+  const prisma = {
+    decisionDeContrat: { findMany, updateMany },
+    evenement: { findUnique },
+  } as unknown as PrismaClient;
+  return { prisma, findMany, updateMany, findUnique };
 }
 
 const MAINTENANT = new Date('2031-10-06T09:00:00.000Z');
@@ -133,6 +150,36 @@ const A = '00000000-0000-4000-8000-00000000000a';
 const B = '00000000-0000-4000-8000-00000000000b';
 
 describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il rend', () => {
+  it('REQ-JUR-029 : TÉMOIN — une résiliation fondée sur un AUTRE fait qu’un changement de statut ne déplace pas le départ (limite nommée)', async () => {
+    const d = unDouble(
+      [
+        [
+          {
+            id: 'm1',
+            apporteurId: A,
+            geste: 'mise_en_demeure',
+            dateEffet: null,
+            creeAt: new Date('2026-09-01T08:00:00Z'),
+          },
+        ],
+      ],
+      [
+        {
+          apporteurId: A,
+          dateEffet: jour('2026-12-01'),
+          creeAt: new Date('2026-09-02T08:00:00Z'),
+          fait: 'apporteur_mis_en_demeure',
+        },
+      ]
+    );
+    // La résiliation ne compte pas : la mise en demeure court de son jour de Paris, échu au 2031-10-06.
+    expect(await purgerLesTextesDesDecisions(d.prisma, MAINTENANT)).toEqual({ textesPurges: 1 });
+    expect(d.findUnique).toHaveBeenCalledWith({
+      where: { id: BigInt(1000) },
+      select: { type: true, charge: true },
+    });
+  });
+
   it('REQ-JUR-029 : TÉMOIN — seuls les textes échus sont purgés : le texte ET son empreinte vidés, la date posée, dans la même écriture', async () => {
     const d = unDouble(
       [
@@ -338,12 +385,10 @@ describe('REQ-JUR-029 — le passage : sa sélection, son écriture, ce qu’il 
     expect(avec.findMany).toHaveBeenCalledWith({
       // Correction de la juriste (#766, 5988086461, point 1) : seule une résiliation OPPOSABLE compte ;
       // aujourd'hui, celle que fonde un changement de statut (la coupure immédiate).
-      where: {
-        apporteurId: { in: [B] },
-        geste: 'resiliation',
-        faitDuJournal: { type: 'apporteur_statut_modifie' },
-      },
-      select: { apporteurId: true, dateEffet: true, creeAt: true },
+      // Le type du fait fondateur se lit ENSUITE, au module du journal, par `evenementId` : la
+      // relation vers le journal n'est jamais employée par le code (condition d'A02).
+      where: { apporteurId: { in: [B] }, geste: 'resiliation' },
+      select: { apporteurId: true, dateEffet: true, creeAt: true, evenementId: true },
       orderBy: [{ creeAt: 'asc' }, { id: 'asc' }],
     });
   });

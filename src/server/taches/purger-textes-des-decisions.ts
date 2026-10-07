@@ -36,6 +36,7 @@
  */
 import type { GesteDecisionContrat, PrismaClient } from '@prisma/client';
 import { SEUILS } from '../../domain/seuils/ssot';
+import { lireLaChargeDUnFait } from '../evenement/journal';
 import { versParis } from '../../domain/temps/paris';
 import { MS_PAR_JOUR, joursDeLaDate, type DateCivile } from '../../domain/temps/calendrier-civil';
 
@@ -139,19 +140,22 @@ export async function purgerLesTextesDesDecisions(
     const apporteursMisEnDemeure = [
       ...new Set(lot.filter((d) => d.geste === 'mise_en_demeure').map((d) => d.apporteurId)),
     ];
-    const resiliations =
+    const toutes =
       apporteursMisEnDemeure.length === 0
         ? []
         : await prisma.decisionDeContrat.findMany({
-            // LIMITE NOMMÉE (en tête) : seule la résiliation fondée sur un changement de statut compte.
-            where: {
-              apporteurId: { in: apporteursMisEnDemeure },
-              geste: 'resiliation',
-              faitDuJournal: { type: 'apporteur_statut_modifie' },
-            },
-            select: { apporteurId: true, dateEffet: true, creeAt: true },
+            where: { apporteurId: { in: apporteursMisEnDemeure }, geste: 'resiliation' },
+            select: { apporteurId: true, dateEffet: true, creeAt: true, evenementId: true },
             orderBy: [{ creeAt: 'asc' }, { id: 'asc' }],
           });
+    // LIMITE NOMMÉE (en tête) : seule la résiliation fondée sur un changement de statut compte. Le
+    // type de son fait se lit par `evenementId`, au module du journal : la relation vers le journal
+    // n'est jamais employée par le code (condition d'A02).
+    const resiliations: typeof toutes = [];
+    for (const r of toutes) {
+      const fait = await lireLaChargeDUnFait(prisma, r.evenementId.toString());
+      if (fait?.type === 'apporteur_statut_modifie') resiliations.push(r);
+    }
 
     const echus = lot
       .filter((d) => {
