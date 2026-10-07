@@ -182,4 +182,18 @@ export const DUREES_DE_RETENTION = {
     renvois: [],
     verifieLe: '2026-10-04',
   },
+  /**
+   * DM-65 (REQ-DM-028) : la trace d'une période d'inscription sur la liste tenue par la Société
+   * (SIREN, catégorie, auteur, dates), gardée à ce délai de son retrait — preuve du motif d'un refus
+   * si un apporteur le conteste —, puis effacée par la tâche de purge. Une période ouverte ne
+   * s'efface jamais.
+   */
+  LISTE_NOIRE_TRACE_ANS: {
+    valeur: 5,
+    unite: 'ans',
+    source:
+      'REQ-DM-028, texte de la juriste au registre de l’article 30 (rattrapage 98), forme d’A02 (DM-65)',
+    renvois: [],
+    verifieLe: '2026-10-04',
+  },
 } as const satisfies Record<string, Seuil>;
