@@ -246,10 +246,16 @@
     "UX-P1-58",
     "UX-P1-59",
     "UX-P1-60",
-    "GOV-153"
+    "GOV-153",
+    "GOV-154",
+    "GOV-155",
+    "GOV-156"
   ],
   "exceptions": {
     "GOV-152": "Exception au gel : garde bloquante de gov:pr, décision de la coordination sous délégation de Williams, #319, 6035611932.",
-    "GOV-153": "Exception au gel : correctif de la garde bloquante gov:pr (défaut de GOV-152 en CI), périmètre fermé, décision de la coordination sous délégation de Williams, #319, 6042120798."
+    "GOV-153": "Exception au gel : correctif de la garde bloquante gov:pr (défaut de GOV-152 en CI), périmètre fermé, décision de la coordination sous délégation de Williams, #319, 6042120798.",
+    "GOV-154": "Exception au gel : tâche de gouvernance prioritaire, décision de Williams du 2026-10-07 relayée par la coordination, #319, 6043631639.",
+    "GOV-155": "Exception au gel : tâche de gouvernance prioritaire, décision de Williams du 2026-10-07 relayée par la coordination, #319, 6043631639.",
+    "GOV-156": "Exception au gel : tâche de gouvernance prioritaire, décision de Williams du 2026-10-07 relayée par la coordination, #319, 6043631639."
   }
 }
