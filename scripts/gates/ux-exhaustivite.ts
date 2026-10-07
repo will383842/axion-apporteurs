@@ -69,6 +69,7 @@ import * as VOCABULAIRE_DE_L_ESPACE from '../../src/content/micro-copy/espace/vo
 import * as TYPES_DE_LA_MICRO_COPIE from '../../src/content/micro-copy/types';
 import * as NOTIFICATIONS_DE_L_APPORTEUR from '../../src/content/micro-copy/courriels/notifications';
 import * as CONFIRMATION_DU_DEPOT from '../../src/content/micro-copy/espace/confirmation-du-depot';
+import * as INFORMATION_DES_TIERS from '../../src/content/micro-copy/espace/information-tiers';
 import * as ETATS_DES_DEPOTS from '../../src/content/micro-copy/espace/etats-attribution';
 import * as NOTIFICATIONS_DE_L_ESPACE from '../../src/content/micro-copy/espace/notifications';
 import { ETATS_VIDES_CONSOLE } from '../../src/content/micro-copy/console/etats-vides';
@@ -101,6 +102,8 @@ const MICRO_COPIE_DE_L_ESPACE: Readonly<Record<string, unknown>> = {
   'espace/etats-vides.ts': ETATS_VIDES_DE_L_ESPACE,
   'espace/vocabulaire.ts': VOCABULAIRE_DE_L_ESPACE,
   'espace/confirmation-du-depot.ts': CONFIRMATION_DU_DEPOT,
+  // SEC-12 (REQ-JUR-008) : la case que l'apporteur coche au dépôt.
+  'espace/information-tiers.ts': INFORMATION_DES_TIERS,
   'espace/etats-attribution.ts': ETATS_DES_DEPOTS,
   // UX-P1-54 : l'écran des notifications de l'espace.
   'espace/notifications.ts': NOTIFICATIONS_DE_L_ESPACE,
