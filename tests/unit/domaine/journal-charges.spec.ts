@@ -52,6 +52,9 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
       'attribution_etat_modifie',
       'attribution_peremption_suspendue',
       'attribution_porteur_reaffecte',
+      // EXT-T07 (art. 3.4 al. 3) : la prolongation, décidée ou réputée, et le constat.
+      'attribution_prolongation_refusee',
+      'attribution_prolongee',
       'contestation_modifiee',
       'demande_confirmation_etat_modifie',
       // SEC-61 : la pose et la levée d'un gel du journal des accès à la console.
@@ -437,5 +440,75 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
     expect(
       refus('apporteur_mis_en_demeure', { article: '6', acteur: { par: 'apporteur', id: ID } })
     ).toEqual(['acteur:acteur_console_attendu']);
+  });
+
+  it('REQ-EXT-020 : la prolongation porte la condition, les deux termes et l’acteur ; décidée par la console, réputée par le système ; la fin recule', () => {
+    const AVANT = '2026-11-02T11:00:00.000Z';
+    const APRES = '2027-02-02T11:00:00.000Z';
+    for (const condition of ['devis_en_cours', 'echange_recent', 'financement_en_instruction'])
+      passe('attribution_prolongee', {
+        condition,
+        finAvant: AVANT,
+        finApres: APRES,
+        acteur: CONSOLE,
+      });
+    passe('attribution_prolongee', {
+      condition: 'reputee',
+      finAvant: AVANT,
+      finApres: APRES,
+      acteur: { par: 'systeme' },
+    });
+    expect(
+      refus('attribution_prolongee', {
+        condition: 'reputee',
+        finAvant: AVANT,
+        finApres: APRES,
+        acteur: CONSOLE,
+      })
+    ).toEqual(['acteur:acteur_incoherent']);
+    expect(
+      refus('attribution_prolongee', {
+        condition: 'devis_en_cours',
+        finAvant: AVANT,
+        finApres: APRES,
+        acteur: { par: 'systeme' },
+      })
+    ).toEqual(['acteur:acteur_incoherent']);
+    expect(
+      refus('attribution_prolongee', {
+        condition: 'devis_en_cours',
+        finAvant: APRES,
+        finApres: AVANT,
+        acteur: CONSOLE,
+      })
+    ).toEqual(['finApres:fin_non_reculee']);
+    // Ni montant, ni devis, ni dossier : la charge est fermée.
+    expect(
+      refus('attribution_prolongee', {
+        condition: 'devis_en_cours',
+        finAvant: AVANT,
+        finApres: APRES,
+        acteur: CONSOLE,
+        devis: 'x',
+      })
+    ).toHaveLength(1);
+    expect(
+      refus('attribution_prolongee', {
+        condition: 'financement_en_cours',
+        finAvant: AVANT,
+        finApres: APRES,
+        acteur: CONSOLE,
+      })[0]
+    ).toMatch(/^condition:/);
+  });
+
+  it('REQ-EXT-020 : le constat ne porte que l’acteur de la console', () => {
+    passe('attribution_prolongation_refusee', { acteur: CONSOLE });
+    expect(refus('attribution_prolongation_refusee', { acteur: { par: 'systeme' } })).toEqual([
+      'acteur:acteur_console_attendu',
+    ]);
+    expect(refus('attribution_prolongation_refusee', { acteur: CONSOLE, motif: 'x' })).toHaveLength(
+      1
+    );
   });
 });

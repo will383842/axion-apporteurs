@@ -203,8 +203,9 @@ export const SEUILS = {
     valeur: 15,
     unite: 'jours',
     source:
-      "contrat art. 3.4 al. 3 : la liste « à décider » s'ouvre ce nombre de jours avant le terme (juriste, #809 6039901134 ; arbitrage de la coordination, #809 6039931639)",
-    renvois: art('3.4'),
+      "délai interne de la console, au service de l'art. 3.4 al. 3 : la liste « à décider » s'ouvre ce nombre de jours avant le terme (juriste, #809 6039901134 ; arbitrage de la coordination, #809 6039931639)",
+    // Un délai de la console, que le contrat n’écrit pas : aucun renvoi.
+    renvois: [],
     verifieLe: '2026-10-07',
   },
   FILE_FENETRE_REDECLARATION_JOURS: {

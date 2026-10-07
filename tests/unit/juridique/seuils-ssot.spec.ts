@@ -51,6 +51,8 @@ const ATTENDUES: readonly [string, number, Seuil['unite']][] = [
   ['ANTERIORITE_DEVIS_MOIS', 6, 'mois'],
   ['PEREMPTION_JOURS', 90, 'jours'],
   ['PROLONGATION_DEVIS_MOIS', 3, 'mois'],
+  // EXT-T07 : l'avance de la liste « Prolongations à décider », un délai de la console.
+  ['PROLONGATION_DECISION_AVANCE_JOURS', 15, 'jours'],
   ['MISE_EN_DEMEURE_JOURS', 15, 'jours'],
   ['REPONSE_CONTESTATION_JOURS', 15, 'jours'],
   ['CONTESTATION_FACTURE_JOURS', 30, 'jours'],
