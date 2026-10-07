@@ -804,6 +804,15 @@
       "preuveRouge": "pnpm jur:supports-de-presentation:prove — 3 familles sur 5 témoins, 4 contre-témoins verts. Dépôt intact -> EXIT=0, 1433 fichiers suivis, 8 exemptions nommées. Rouge constaté par: A05"
     },
     {
+      "id": "jur:aucune-instruction",
+      "phase": 1,
+      "script": "scripts/gates/jur-aucune-instruction.ts",
+      "tache": "JUR-T30",
+      "verifie": "AST de tout fichier suivi de src/ (.ts, .tsx, hors tests) : une donnée d'activité (derniereVueAt, dernierUsageAt, lastSeenAt, derniereConnexion, et leurs colonnes) nommée hors des deux LISTES FERMÉES — LIEUX_APPORTEUR (l'usage de SES sessions et de SON jeton rendu à lui seul, l'authentification, la purge ; juriste #840 6044978580) et LIEUX_CONSOLE (les utilisateurs de la console, des salariés, hors REQ-JUR-039) — rougit (activite_hors_liste) ; la SSOT du lexique doit porter les familles injonction et compte_rendu en portée apporteur, que gov:lexique applique (famille_lexicale_absente) ; source_illisible. CE QU'ELLE NE TIENT PAS : une donnée copiée sous un autre nom ; un libellé qui présenterait l'usage d'un appareil comme une activité.",
+      "fixtureRouge": "une relance née de la dernière connexion, dans une tâche",
+      "preuveRouge": "pnpm jur:aucune-instruction:prove — 3 familles sur 6 témoins, 3 contre-témoins verts. Dépôt intact -> EXIT=0, 258 fichiers de src/, 9 lieux d'une donnée d'activité, tous dans les listes fermées. Rouge constaté par: A05"
+    },
+    {
       "id": "jur:aucune-progression",
       "phase": 0,
       "script": "scripts/gates/jur-aucune-progression.ts",

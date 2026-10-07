@@ -338,6 +338,12 @@ jobs:
         run: pnpm jur:supports-de-presentation
       - name: La garde des supports de presentation sait rougir
         run: pnpm jur:supports-de-presentation:prove
+      # JUR-T30 (art. 2.7) : aucune instruction ; l activite de l apporteur n entre dans aucun score,
+      # indicateur ni declencheur. La preuve suit, par paire.
+      - name: Charte — aucune instruction, aucune activite mesuree
+        run: pnpm jur:aucune-instruction
+      - name: La garde des instructions sait rougir
+        run: pnpm jur:aucune-instruction:prove
       # SEC-46 : aucun style en ligne ni HTML injecte sous src/app/ — la politique de contenu les
       # refuserait en silence. La preuve suit, par paire.
       - name: Securite — aucun style en ligne sous src/app

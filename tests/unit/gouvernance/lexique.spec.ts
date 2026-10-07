@@ -350,8 +350,9 @@ describe('acceptation de GOV-013 — les deux modes de la gate (REQ-GOV-017)', (
 
   // Dix depuis UX-P0-01 : `jargon_interne` porte les mots de REQ-UX-003 que les neuf premières
   // familles ne couvraient pas (« attribution », « SIREN », « prorata »).
-  it('les treize familles du lexique portent chacune une exigence et une raison', () => {
-    expect(LEXIQUE_INTERDIT.length).toBe(13);
+  // JUR-T30 : la quatorzième, `compte_rendu` (REQ-JUR-039).
+  it('les quatorze familles du lexique portent chacune une exigence et une raison', () => {
+    expect(LEXIQUE_INTERDIT.length).toBe(14);
     for (const f of LEXIQUE_INTERDIT) {
       expect(f.reqs.length).toBeGreaterThanOrEqual(1);
       expect(f.pourquoi.length).toBeGreaterThan(20);

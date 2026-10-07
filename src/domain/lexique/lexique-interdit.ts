@@ -180,6 +180,27 @@ export const LEXIQUE_INTERDIT = [
     aDireALaPlace: null,
   },
   {
+    // JUR-T30 (REQ-JUR-039, art. 2.7) : la demande de compte rendu est une directive ; l'apporteur ne
+    // rend compte de son activité à personne.
+    nom: 'compte_rendu',
+    portee: 'apporteur',
+    reqs: ['REQ-JUR-039'],
+    pourquoi:
+      "une demande de compte rendu fait de l'apporteur un subordonné qui rend compte de son activité : " +
+      "rien de ce que l'outil envoie ne la porte",
+    formes: [
+      'compte rendu',
+      'comptes rendus',
+      'compte-rendu',
+      'comptes-rendus',
+      'rendre compte',
+      'rendez compte',
+      "rapport d'activité",
+      "rapports d'activité",
+    ],
+    aDireALaPlace: null,
+  },
+  {
     nom: 'subordination',
     portee: 'apporteur',
     reqs: ['REQ-JUR-037', 'REQ-JUR-031'],

@@ -1633,6 +1633,12 @@ const TEMOINS: { famille: string; quoi: string; vue: () => Vue }[] = [
     vue: () => vue([COURRIEL('<p>Vous devez déposer une affaire avant le 30.</p>')]),
   },
   {
+    // JUR-T30 (REQ-JUR-039) : l'apporteur ne rend compte de son activité à personne.
+    famille: 'compte_rendu',
+    quoi: 'une notification qui demande un compte rendu d’activité',
+    vue: () => vue([MICRO('{ "corps": "Envoyez-nous votre compte rendu de la semaine." }')]),
+  },
+  {
     famille: 'subordination',
     quoi: 'un manager et un avertissement',
     vue: () => vue([COURRIEL('<p>Votre manager vous a adressé un avertissement.</p>')]),

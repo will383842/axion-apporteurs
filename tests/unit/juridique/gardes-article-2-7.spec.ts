@@ -1,9 +1,14 @@
+// @req REQ-JUR-039
 // @req REQ-JUR-040
 // @req REQ-JUR-041
 /**
  * JUR-T30 — les gardes de l'art. 2.7 du contrat : l'apporteur organise librement son activité, et le
  * produit ne reconstitue ni ne restitue son rythme. Ce fichier juge les gardes en processus, sur des
  * fichiers INJECTÉS (RM-11) ; leur preuve binaire est `pnpm <garde>:prove`.
+ *
+ * (a) `jur:aucune-instruction` — une donnée d'activité (dernière vue, dernier usage) ne se lit que dans
+ * deux listes fermées (l'usage de SES sessions rendu à l'apporteur seul, l'authentification, la purge ;
+ * les salariés de la console à part), et la SSOT du lexique garde `injonction` et `compte_rendu`.
  *
  * (b) `jur:date-contact-inerte` — `dateContact` est la seule donnée du contrat d'où un rythme
  * d'activité peut être reconstitué : elle ne se lit que dans une liste FERMÉE de lieux, sans aucun
@@ -20,6 +25,14 @@ import {
   estJuge,
   jugerLesLectures,
 } from '../../../scripts/gates/jur-date-contact-inerte';
+import {
+  FAMILLES_EXIGEES,
+  LIEUX_APPORTEUR,
+  LIEUX_CONSOLE,
+  jugerLeLexique,
+  jugerLesDonnees,
+} from '../../../scripts/gates/jur-aucune-instruction';
+import { LEXIQUE_INTERDIT } from '../../../src/domain/lexique/lexique-interdit';
 import {
   EXEMPTIONS_KIT_DE_VENTE,
   estServi,
@@ -125,5 +138,52 @@ describe('REQ-JUR-041 — jur:supports-de-presentation : aucun support de prése
     ).toEqual([]);
     expect(estServi('src/app/(console)/console/logo.svg')).toBe(false);
     expect(supports('src/app/(console)/console/logo.svg')).toEqual([]);
+  });
+});
+
+const donnees = (chemin: string, source: string) =>
+  jugerLesDonnees([{ chemin, source }]).fautes.map((f) => f.famille);
+
+describe('REQ-JUR-039 — jur:aucune-instruction : aucune consigne, aucune activité mesurée', () => {
+  it('REQ-JUR-039 : TÉMOIN — une relance née de la dernière vue, un score sur le dernier usage, une colonne lue par la console : rouges', () => {
+    expect(
+      donnees('src/server/taches/relancer.ts', 'export const r = (s: S) => s.derniereVueAt;')
+    ).toEqual(['activite_hors_liste']);
+    expect(
+      donnees('src/domain/score/assiduite.ts', 'export const s = (j: J) => j.dernierUsageAt;')
+    ).toEqual(['activite_hors_liste']);
+    expect(
+      donnees(
+        'src/server/console/apporteurs.ts',
+        'export const q = `SELECT derniere_vue_at FROM s`;'
+      )
+    ).toEqual(['activite_hors_liste']);
+  });
+
+  it('REQ-JUR-039 : les listes fermées sont celles de la juriste (#840, 6044978580), la console À PART', () => {
+    expect(Object.keys(LIEUX_APPORTEUR).sort()).toEqual([
+      'src/domain/apporteur/identifiants.ts',
+      'src/server/acces/for-apporteur.ts',
+      'src/server/auth/appareil.ts',
+      'src/server/auth/lien-magique.ts',
+      'src/server/auth/session.ts',
+      'src/server/taches/purger-appareils.ts',
+    ]);
+    expect(Object.keys(LIEUX_CONSOLE).sort()).toEqual([
+      'src/app/(console)/console/utilisateurs/page.tsx',
+      'src/content/micro-copy/console/utilisateurs.ts',
+      'src/server/roles/require-role.ts',
+    ]);
+    expect(donnees('src/server/acces/for-apporteur.ts', "const c = ['derniereVueAt'];")).toEqual(
+      []
+    );
+  });
+
+  it('REQ-JUR-039 : TÉMOIN — la SSOT du lexique garde « injonction » et « compte_rendu » en portée apporteur', () => {
+    expect([...FAMILLES_EXIGEES]).toEqual(['injonction', 'compte_rendu']);
+    expect(jugerLeLexique(LEXIQUE_INTERDIT)).toEqual([]);
+    expect(
+      jugerLeLexique([{ nom: 'injonction', portee: 'apporteur' }]).map((f) => f.famille)
+    ).toEqual(['famille_lexicale_absente']);
   });
 });
