@@ -50,6 +50,10 @@ const ouvertureAvecDroits = ouvertureDuCompte as (
   droitsEnCours?: (id: string) => Promise<boolean>
 ) => Promise<boolean>;
 
+/** Le paragraphe commun de la juriste (#839, 6044465062), MOT POUR MOT. */
+const PARAGRAPHE_DE_LA_JURISTE =
+  "Vos dépôts en cours de confirmation et vos dépôts en attente sont annulés ; vos réservations sans commande prennent fin. Les commandes signées avant la fin du contrat, ou pendant le préavis, continuent de vous ouvrir droit à commission, même si votre dépôt n'était pas encore confirmé : la commission vous est due quand Axion-IA en a encaissé l'intégralité du prix, quelle que soit la date de cet encaissement. Les commissions déjà acquises vous sont facturées par autofacture et versées dans les conditions du contrat, sans montant minimum. Votre accès à l'espace en ligne prend fin à la date de fin du contrat. Vos autofactures, leurs décomptes et le motif de tout blocage vous sont envoyés par courrier électronique jusqu'à l'extinction de vos droits ; vous pouvez obtenir sur simple demande écrite à Axion-IA la copie de votre contrat, de vos autofactures et de vos contestations, et contester par écrit une commission ou une décision dans les délais du contrat.";
+
 /** La phrase de la juriste (#703, 6033893005), MOT POUR MOT. */
 const PHRASE_DE_LA_JURISTE =
   "Votre accès à l'espace en ligne prend fin à la date de fin du contrat. Vos autofactures, leurs décomptes et le motif de tout blocage vous sont envoyés par courrier électronique jusqu'à l'extinction de vos droits ; vous pouvez obtenir sur simple demande écrite à Axion-IA la copie de votre contrat, de vos autofactures et de vos contestations, et contester par écrit une commission ou une décision dans les délais du contrat.";
@@ -91,13 +95,9 @@ describe('REQ-DM-011 — SEC-70 : le paragraphe commun de la résiliation, réé
     expect(PARAGRAPHE_COMMUN_DE_LA_RESILIATION.endsWith(PHRASE_DE_LA_JURISTE)).toBe(true);
   });
 
-  it('REQ-DM-011 : ses deux premières phrases restent inchangées', () => {
-    expect(PARAGRAPHE_COMMUN_DE_LA_RESILIATION).toContain(
-      'Vos dépôts en cours de confirmation et vos dépôts en attente sont annulés ; vos réservations sans commande prennent fin.'
-    );
-    expect(PARAGRAPHE_COMMUN_DE_LA_RESILIATION).toContain(
-      'Les commissions déjà acquises vous sont payées au dernier relevé.'
-    );
+  it('REQ-DM-011 : TÉMOIN — le paragraphe est EXACTEMENT celui de la juriste (#839, 6044465062) : l’acquisition à l’encaissement intégral (art. 4.2), l’autofacture sans montant minimum (art. 12.2)', () => {
+    expect(PARAGRAPHE_COMMUN_DE_LA_RESILIATION).toBe(PARAGRAPHE_DE_LA_JURISTE);
+    expect(PARAGRAPHE_COMMUN_DE_LA_RESILIATION).not.toMatch(/au fur et à mesure|dernier relevé/);
   });
 });
 

@@ -62,10 +62,12 @@ Ils s'appliquent d'eux-mêmes au geste, dans la même transaction :
 - les attributions **provisoires** et les déclarations **en attente** sont **annulées**, et les entreprises
   redeviennent librement déclarables ;
 - les attributions **définitives sans commande prennent fin** ;
-- une attribution dont une **commande a été signée** avant la fin du contrat **continue d'ouvrir droit** à
-  commission, au fur et à mesure des encaissements, **quelle qu'en soit la date** (art. 12.3) ;
-- les **commissions acquises sont payées** au dernier relevé, sans le seuil de versement de l'art. 5.1
-  (art. 12.2), et **aucune commission acquise n'est perdue** ;
+- une attribution dont une **commande a été signée** avant la fin du contrat, ou pendant le préavis,
+  **continue d'ouvrir droit** à commission, même non encore confirmée : la commission est due quand la
+  Société a encaissé l'intégralité du prix, **quelle que soit la date de cet encaissement** (art. 12.3 et 4.2) ;
+- les **commissions acquises** et non encore facturées **sont facturées par autofacture et versées** dans
+  les conditions des art. 5.1 et 5.3, **sans montant minimum** (art. 12.2), et **aucune commission acquise
+  n'est perdue** ;
 - un **solde négatif** s'impute sur les commissions à venir (art. 12.4) ;
 - **l'accès à l'espace prend fin** à la date de fin du contrat ; ses autofactures, ses avoirs, leurs
   décomptes et le motif de tout blocage lui sont envoyés par courriel jusqu'à l'extinction de ses droits
