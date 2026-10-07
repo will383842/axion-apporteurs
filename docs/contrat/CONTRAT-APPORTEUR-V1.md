@@ -283,7 +283,7 @@ résilier dans les conditions de l'article 11.
 
 **3.8 — Accès.** L'accès à l'espace en ligne et au formulaire de déclaration est personnel.
 L'Apporteur conserve ses moyens d'accès et ne les communique à aucun tiers. **Toute
-déclaration enregistrée au moyen de ses moyens d'accès est réputée émaner de lui**, sauf signalement immédiat d'un usage qu'il n'a
+déclaration enregistrée avec ses moyens d'accès est réputée émaner de lui**, sauf signalement immédiat d'un usage qu'il n'a
 pas autorisé, auquel cas la Société révoque l'accès. La Société peut révoquer et renouveler à tout moment
 un moyen d'accès pour un motif de sécurité, sans que cela n'affecte les attributions ni les commissions
 acquises.
@@ -1068,7 +1068,7 @@ dehors de ce cas.
 | `CL-ANTI-REQUALIF` | 1.2 et 1.4 | Exclusion de l'agence commerciale et du contrat de travail, exclusion de tout pouvoir de négocier |
 | `CL-LIBERTE-EXERCICE` | 2.1 à 2.7 | Indépendance, absence d'objectif, de compte rendu et d'exclusivité ; liberté de moyens humains ; absence de régime salarié ; absence d'instruction |
 | `CL-ATTRIBUTION` | 3.1, 3.3, 3.3 bis, 3.5, 3.6, 3.8 | Clé SIREN, antériorité et autres cas de refus, concours entre apporteurs, file d'attente bornée, groupes de sociétés, accès et identifiants |
-| `CL-CONFIRMATION` | 3.2 al. 3 à 6 | Attribution provisoire, prise de contact de la Société dans un délai fixé, information de l'Apporteur sur son nom, confirmation par la réponse ou l'échange de l'entreprise, confirmation tacite, fin faute d'adresse valide et délai avant une nouvelle déclaration |
+| `CL-CONFIRMATION` | 3.2 al. 3 à 5 | Attribution provisoire, prise de contact de la Société dans un délai fixé, information de l'Apporteur sur son nom, confirmation par la réponse ou l'échange de l'entreprise, confirmation tacite, fin faute d'adresse valide et délai avant une nouvelle déclaration |
 | `CL-DUREE` | 3.4 | Fenêtre d'attribution, péremption courant du premier contact, prolongation |
 | `CL-SINCERITE` | 3.7 al. 1 et 2 | Déclaration sincère, extinction de l'attribution sur démenti exprès de l'entreprise |
 | `CL-SUSPENSION-VERIFICATION` | 3.7 al. 3 | Suspension comme mesure de vérification, motifs fermés, aucun barème, aucun effet sur les droits acquis, durée maximale de 15 jours |
