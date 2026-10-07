@@ -412,6 +412,32 @@ export const SEUILS = {
   },
   // DM-40 (REQ-DM-060, HYP-W20-REBOND) : au-delà, le dépôt reste dans la liste d'appels et l'action
   // « Corriger l'adresse » disparaît.
+  // SEC-12 (REQ-DM-009) : la limite de débit du dépôt, technique et identique pour tous, sur DEUX
+  // compteurs — l'empreinte réseau (`depot:ip`) et l'empreinte de la session (`depot:session`) —, sur
+  // une fenêtre « de l'ordre de la minute » (texte de la juriste, rattrapage 84). Les valeurs sont
+  // celles de l'arbitrage : le plafond réseau tient compte d'une adresse partagée ; la session est
+  // obligatoire, et dix dépôts à quinze secondes d'intervalle passent tous.
+  DEPOT_FENETRE_MINUTES: {
+    valeur: 1,
+    unite: 'minutes',
+    source: 'arbitrage coordination du 2026-10-04, juriste et sécurité ; REQ-DM-009',
+    renvois: [],
+    verifieLe: '2026-10-04',
+  },
+  DEPOT_PAR_IP_PAR_FENETRE: {
+    valeur: 10,
+    unite: 'tentatives',
+    source: 'arbitrage coordination du 2026-10-04, juriste et sécurité ; REQ-DM-009',
+    renvois: [],
+    verifieLe: '2026-10-04',
+  },
+  DEPOT_PAR_SESSION_PAR_FENETRE: {
+    valeur: 5,
+    unite: 'tentatives',
+    source: 'arbitrage coordination du 2026-10-04, juriste et sécurité ; REQ-DM-009',
+    renvois: [],
+    verifieLe: '2026-10-04',
+  },
   CORRECTIONS_ADRESSE_MAX: {
     valeur: 2,
     unite: 'tentatives',

@@ -22,6 +22,10 @@
 
 import { randomUUID } from 'node:crypto';
 import Redis, { type RedisOptions } from 'ioredis';
+import { SEUILS } from '../../domain/seuils/ssot';
+// La conversion d'une fenêtre lue en minutes dans la SSOT : la constante nommée de la table fermée
+// que lit la garde `rate-famille`, jamais un nombre tapé dans la déclaration d'un compteur.
+import { SECONDES_PAR_MINUTE } from '../../domain/seuils/conversions';
 
 // ── Le vocabulaire fermé ────────────────────────────────────────────────────────────────────────
 
@@ -142,23 +146,25 @@ export const COMPTEURS = {
     ancre: 'par email au code de la console',
     verifieLe: '2026-10-03',
   },
+  // SEC-12 : deux compteurs, l'empreinte réseau et l'empreinte de session, sur la même fenêtre ; les
+  // valeurs vivent dans la SSOT (RM-10), confrontées par la garde au texte de REQ-SEC-016.
   'depot:ip': {
     prefixe: 'depot:',
-    limite: 20,
-    fenetreSecondes: 600,
-    surPanne: 'laisser-passer',
-    source: 'REQ-SEC-016',
-    ancre: 'par hash IP',
-    verifieLe: '2026-09-19',
-  },
-  'depot:identite': {
-    prefixe: 'depot:',
-    limite: LIMITE_HORS_DEPOT,
-    fenetreSecondes: LIMITE_HORS_DEPOT,
+    limite: SEUILS.DEPOT_PAR_IP_PAR_FENETRE.valeur,
+    fenetreSecondes: SEUILS.DEPOT_FENETRE_MINUTES.valeur * SECONDES_PAR_MINUTE,
     surPanne: 'refuser',
     source: 'REQ-SEC-016',
-    ancre: 'par identité',
-    verifieLe: '2026-09-19',
+    ancre: "compteur d'IP (hash IP)",
+    verifieLe: '2026-10-04',
+  },
+  'depot:session': {
+    prefixe: 'depot:',
+    limite: SEUILS.DEPOT_PAR_SESSION_PAR_FENETRE.valeur,
+    fenetreSecondes: SEUILS.DEPOT_FENETRE_MINUTES.valeur * SECONDES_PAR_MINUTE,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-016',
+    ancre: 'compteur de SESSION',
+    verifieLe: '2026-10-04',
   },
   // INT-T09 — le mandataire de recherche d'entreprises, un geste du dépôt.
   //
