@@ -23291,7 +23291,8 @@
         "src/content/micro-copy/espace/etats-vides.ts",
         "src/content/micro-copy/espace/issues-depot.ts",
         "scripts/gates/ux-exhaustivite.ts",
-        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts"
+        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts",
+        "perf/budgets.json"
       ],
       "schema": false,
       "sensible": [
