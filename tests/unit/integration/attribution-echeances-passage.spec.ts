@@ -191,3 +191,23 @@ describe('REQ-DM-006 — une échéance n’en bloque jamais une autre', () => {
     expect((c.findMany.mock.calls[0]![0] as { take: number }).take).toBe(ECHEANCES_PAR_PASSAGE);
   });
 });
+
+describe('REQ-DM-006 — une alerte d’exploitation quand le passage compte des échecs (sécurité, note sur #802)', () => {
+  it('REQ-DM-006 : TÉMOIN — un échec : un warn NOMMÉ « attribution_echeances_echecs », avec le nombre SEUL', async () => {
+    const c = unClient([ligne({ id: 'a-1' }), ligne({ id: 'a-2' })]);
+    c.transitionner.mockRejectedValueOnce(new Error('transition_refusee'));
+    const journal = { warn: vi.fn() };
+    await appliquerLesEcheances(c.prisma, FIN_45, { ...options(c), journal });
+    expect(journal.warn).toHaveBeenCalledTimes(1);
+    expect(journal.warn).toHaveBeenCalledWith('attribution_echeances_echecs', { echecs: 1 });
+    // Aucun identifiant ne sort : ni d'attribution, ni d'apporteur.
+    expect(JSON.stringify(journal.warn.mock.calls)).not.toMatch(/a-1|a-2|ap-1/);
+  });
+
+  it('REQ-DM-006 : sans échec, aucune alerte', async () => {
+    const c = unClient([ligne({ id: 'a-1' }), ligne({ id: 'a-2' })]);
+    const journal = { warn: vi.fn() };
+    await appliquerLesEcheances(c.prisma, FIN_45, { ...options(c), journal });
+    expect(journal.warn).not.toHaveBeenCalled();
+  });
+});

@@ -20,6 +20,7 @@ import {
 import type { EtatDemandeConfirmation } from '../../domain/confirmation/demande';
 import { MS_PAR_JOUR } from '../../domain/temps/calendrier-civil';
 import { SEUILS } from '../../domain/seuils/ssot';
+import { creerJournal, type Journal } from '../../lib/logger';
 import { confirmerUneAttribution } from '../attribution/transitionner';
 
 type Tx = Prisma.TransactionClient;
@@ -70,7 +71,7 @@ async function relireSousLeVerrou(
 export async function confirmerTacitementLesEchues(
   prisma: PrismaClient,
   maintenant: Date,
-  p: { confirmer?: Confirmer } = {}
+  p: { confirmer?: Confirmer; journal?: Pick<Journal, 'warn'> } = {}
 ): Promise<{ confirmees: number; echecs: number }> {
   const confirmer = p.confirmer ?? confirmerUneAttribution;
   const candidates = await prisma.attribution.findMany({
@@ -109,5 +110,7 @@ export async function confirmerTacitementLesEchues(
     if (fait === null) echecs += 1;
     else if (fait) confirmees += 1;
   }
+  // L'alerte d'exploitation (sécurité, note sur #802) : le nom et le NOMBRE seuls, aucun identifiant.
+  if (echecs > 0) (p.journal ?? creerJournal()).warn('confirmation_tacite_echecs', { echecs });
   return { confirmees, echecs };
 }

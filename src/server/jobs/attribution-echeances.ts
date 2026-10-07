@@ -25,6 +25,7 @@ import type { EtatAttribution } from '../../domain/attribution/machine';
 import type { EtatDemandeConfirmation } from '../../domain/confirmation/demande';
 import { MS_PAR_JOUR } from '../../domain/temps/calendrier-civil';
 import { SEUILS } from '../../domain/seuils/ssot';
+import { creerJournal, type Journal } from '../../lib/logger';
 import { transitionnerUneAttribution } from '../attribution/transitionner';
 import { expirerLaDemandeDe } from '../confirmation/demandes';
 
@@ -91,6 +92,7 @@ export async function appliquerLesEcheances(
   p: {
     transitionner?: typeof transitionnerUneAttribution;
     expirerLaDemande?: typeof expirerLaDemandeDe;
+    journal?: Pick<Journal, 'warn'>;
   } = {}
 ): Promise<{ appliquees: number; echecs: number }> {
   const transitionner = p.transitionner ?? transitionnerUneAttribution;
@@ -143,5 +145,7 @@ export async function appliquerLesEcheances(
     if (fait === null) echecs += 1;
     else if (fait) appliquees += 1;
   }
+  // L'alerte d'exploitation (sécurité, note sur #802) : le nom et le NOMBRE seuls, aucun identifiant.
+  if (echecs > 0) (p.journal ?? creerJournal()).warn('attribution_echeances_echecs', { echecs });
   return { appliquees, echecs };
 }
