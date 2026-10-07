@@ -16,9 +16,10 @@
  * le même code. Les faits sont lus par un PORT, que l'appelant lie à SA transaction (sous verrou de
  * l'attribution) : la garde se rejuge au moment de l'envoi, jamais seulement à la mise en file.
  */
+import type { MotifRefusDepot, Prisma, ResultatVerification } from '@prisma/client';
 import { SEUILS } from '../../domain/seuils/ssot';
 import { MS_PAR_JOUR } from '../../domain/temps/calendrier-civil';
-import type { NatureDeLAction } from './actions-classees';
+import type { CleDeLAction, NatureDeLAction } from './actions-classees';
 
 export const CODE_ENTREPRISE_RESERVEE = 'entreprise_reservee';
 
@@ -53,26 +54,133 @@ export function jugerLaReserve(
   return { permis: true };
 }
 
-/** Le port : la lecture des faits d'un SIREN, dans la transaction de l'appelant. */
+/**
+ * Ce que la garde écrit au journal d'un refus : les identifiants SEULS (l'entreprise visée et l'action
+ * de la liste fermée), jamais la cause, l'apporteur ni la date de fin (REQ-SEC-042). Comme
+ * `acces_espace_refuse` : un signal, pas une cause.
+ */
+export interface RefusDeReserve {
+  signal: 'demarchage_refuse';
+  code: typeof CODE_ENTREPRISE_RESERVEE;
+  siren: string;
+  action: CleDeLAction;
+}
+
+/**
+ * Le port : la lecture des faits d'un SIREN, dans la transaction de l'appelant, et la ligne de journal
+ * d'un refus. Un journal qui échoue ne change jamais le verdict.
+ */
 export interface PortsDeLaGarde {
   lireLesFaits(siren: string): Promise<FaitsDeReserve>;
+  journaliser?(ligne: RefusDeReserve): void | Promise<void>;
 }
 
 /**
  * La garde à l'appel : chaque action de démarchage l'appelle, dans sa transaction, au moment de
- * l'envoi. Lève `EntrepriseReservee` ; une vérification passe sans lire l'état.
+ * l'envoi. Lève `EntrepriseReservee` ; une vérification passe sans lire l'état. Un refus, de quelque
+ * cause qu'il soit, s'écrit au journal sous les identifiants seuls.
  */
 export async function exigerHorsReserve(
   ports: PortsDeLaGarde,
-  demande: { siren: string; nature: Exclude<NatureDeLAction, 'sans_contact'> },
+  demande: {
+    siren: string;
+    action: CleDeLAction;
+    nature: Exclude<NatureDeLAction, 'sans_contact'>;
+  },
   maintenant: Date
 ): Promise<void> {
   if (demande.nature === 'verification') return;
-  let faits: FaitsDeReserve;
+  let reservee: boolean;
   try {
-    faits = await ports.lireLesFaits(demande.siren);
+    const faits = await ports.lireLesFaits(demande.siren);
+    reservee = !jugerLaReserve(faits, demande.nature, maintenant).permis;
   } catch {
-    throw new EntrepriseReservee();
+    reservee = true;
   }
-  if (!jugerLaReserve(faits, demande.nature, maintenant).permis) throw new EntrepriseReservee();
+  if (!reservee) return;
+  try {
+    await ports.journaliser?.({
+      signal: 'demarchage_refuse',
+      code: CODE_ENTREPRISE_RESERVEE,
+      siren: demande.siren,
+      action: demande.action,
+    });
+  } catch {
+    // Le refus ne dépend pas de son journal.
+  }
+  throw new EntrepriseReservee();
+}
+
+// ── le port de production ────────────────────────────────────────────────────────────────────────
+
+/**
+ * La clé du verrou du SIREN que le dépôt prend lui-même (`verrou-du-depot.siren.<siren>`,
+ * `src/server/depot/deposer.ts`) : la garde et le dépôt se sérialisent sur ce SIREN, donc un acte qui
+ * naît entre la lecture et l'envoi est vu, ou l'envoi précède l'acte. Un témoin confronte les deux
+ * sources.
+ */
+export const cleDuVerrouDuSiren = (siren: string): string => `verrou-du-depot.siren.${siren}`;
+
+/** Les résultats d'une vérification qui n'ouvrent PAS de réserve : l'entreprise est déjà connue de la Société, ou occupée. */
+const VERIFICATION_EXEMPTEE: ReadonlySet<ResultatVerification> = new Set([
+  'suivie',
+  'cliente',
+  'liste_noire',
+]);
+
+/** Les motifs d'un dépôt refusé qui n'ouvrent PAS de réserve : antériorité de la Société, ou entreprise occupée. */
+const REFUS_EXEMPTE: ReadonlySet<MotifRefusDepot> = new Set([
+  'anteriorite_client',
+  'anteriorite_devis',
+  'file_complete',
+]);
+
+/** Les états de la demande de confirmation qui tiennent le délai de confirmation. */
+const CONFIRMATION_EN_COURS = ['planifiee', 'envoyee'] as const;
+
+/**
+ * Le port de PRODUCTION, lié à la transaction de l'appelant : il prend le verrou du SIREN, puis lit les
+ * actes de l'apporteur sur l'entreprise — une vérification, un dépôt refusé, un dépôt en attente — avec
+ * leur exemption, et la demande de confirmation en cours. L'appelant ne fournit que sa transaction : la
+ * définition de la réserve ne se recopie nulle part.
+ */
+export function portSousVerrou(
+  tx: Prisma.TransactionClient,
+  journaliser?: PortsDeLaGarde['journaliser']
+): PortsDeLaGarde {
+  return {
+    journaliser,
+    async lireLesFaits(siren) {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${cleDuVerrouDuSiren(siren)}, 0))`;
+      const [verifications, refuses, enAttente, confirmations] = await Promise.all([
+        tx.verification.findMany({
+          where: { siren, apporteurId: { not: null } },
+          select: { resultat: true, verifieeAt: true },
+        }),
+        tx.depotRefuse.findMany({ where: { siren }, select: { motif: true, refuseAt: true } }),
+        tx.attribution.findMany({
+          where: { siren, apporteurId: { not: null }, statut: 'en_attente' },
+          select: { deposeeAt: true },
+        }),
+        tx.attribution.count({
+          where: {
+            siren,
+            apporteurId: { not: null },
+            demandeConfirmation: { etat: { in: [...CONFIRMATION_EN_COURS] } },
+          },
+        }),
+      ]);
+      return {
+        actes: [
+          ...verifications.map((v) => ({
+            at: v.verifieeAt,
+            exempte: VERIFICATION_EXEMPTEE.has(v.resultat),
+          })),
+          ...refuses.map((r) => ({ at: r.refuseAt, exempte: REFUS_EXEMPTE.has(r.motif) })),
+          ...enAttente.map((a) => ({ at: a.deposeeAt, exempte: false })),
+        ],
+        confirmationEnCours: confirmations > 0,
+      };
+    },
+  };
 }

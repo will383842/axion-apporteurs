@@ -2,13 +2,13 @@
 /**
  * SEC-51 (REQ-SEC-042) — la garde de la réserve en base RÉELLE, sous le rôle du serveur
  * (`partners_app`) : elle est rejugée DANS la transaction de l'action, sur des faits lus en base, et
- * un état illisible (une transaction avortée par la base) refuse sous le même code. Le port de ce
- * spec lit les vérifications d'apporteur ; les appelants de la garde lient le leur à leur propre
- * transaction (avis de la sécurité, point 2).
+ * un état illisible (une transaction avortée par la base) refuse sous le même code. Le port est celui
+ * de PRODUCTION (`portSousVerrou`) : une cause d'acte à la fois, le délai de confirmation, le verrou du
+ * SIREN partagé avec le dépôt (avis de la sécurité, point 2), et la ligne de journal du refus.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomInt, randomUUID } from 'node:crypto';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
 import {
   ROLE_D_EXECUTION,
@@ -16,8 +16,11 @@ import {
 } from '../../src/server/deploiement/role-d-execution';
 import {
   CODE_ENTREPRISE_RESERVEE,
+  EntrepriseReservee,
+  cleDuVerrouDuSiren,
   exigerHorsReserve,
-  type PortsDeLaGarde,
+  portSousVerrou,
+  type RefusDeReserve,
 } from '../../src/server/demarchage/garde-reserve';
 import { SEUILS } from '../../src/domain/seuils/ssot';
 import { MS_PAR_JOUR } from '../../src/domain/temps/calendrier-civil';
@@ -25,6 +28,7 @@ import { MS_PAR_JOUR } from '../../src/domain/temps/calendrier-civil';
 let base: Base;
 let app: PrismaClient;
 let apporteurId: string;
+let grilleId: string;
 
 const MAINTENANT = new Date('2026-10-03T12:00:00.000Z');
 const JOURS = SEUILS.RESERVE_APRES_ACTE_APPORTEUR_JOURS.valeur;
@@ -37,6 +41,17 @@ beforeAll(async () => {
   u.password = randomBytes(24).toString('hex');
   await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: u.toString() });
   app = new PrismaClient({ datasourceUrl: u.toString() });
+  grilleId = (
+    await base.prisma.grilleCommission.create({
+      data: {
+        version: 1,
+        hash: randomBytes(32).toString('hex'),
+        contenuJson: { essai: true },
+        publieeAt: MAINTENANT,
+        importeeAt: MAINTENANT,
+      },
+    })
+  ).id;
   apporteurId = (
     await base.prisma.apporteur.create({
       data: {
@@ -71,31 +86,104 @@ async function verifier(siren: string, joursAvant: number, resultat: 'libre' | '
   });
 }
 
-/** Le port lié à la transaction de l'appelant : les vérifications d'apporteur du SIREN. */
-function portDe(tx: Prisma.TransactionClient): PortsDeLaGarde {
-  return {
-    async lireLesFaits(siren) {
-      const lignes = await tx.$queryRaw<{ verifiee_at: Date; resultat: string }[]>`
-        SELECT verifiee_at, resultat::text AS resultat FROM verifications
-        WHERE siren = ${siren} AND apporteur_id IS NOT NULL`;
-      return {
-        actes: lignes.map((l) => ({ at: l.verifiee_at, exempte: l.resultat !== 'libre' })),
-        confirmationEnCours: false,
-      };
+/** Un dépôt refusé de l'apporteur, `joursAvant` jours avant MAINTENANT. */
+async function refuser(siren: string, joursAvant: number, motif: 'insincerite' | 'file_complete') {
+  await base.prisma.depotRefuse.create({
+    data: {
+      apporteurId,
+      siren,
+      motif,
+      canal: 'espace',
+      refuseAt: new Date(MAINTENANT.getTime() - joursAvant * MS_PAR_JOUR),
     },
-  };
+  });
 }
 
-const demarcher = (siren: string) =>
+/** Une attribution de l'apporteur sur un SIREN, dans l'état voulu ; rend son identifiant. */
+async function attribuer(siren: string, statut: 'en_attente' | 'provisoire'): Promise<string> {
+  return (
+    await base.prisma.attribution.create({
+      data: {
+        apporteurId,
+        statut,
+        rangAttente: statut === 'en_attente' ? 1 : null,
+        siren,
+        canal: 'espace',
+        grilleCommissionId: grilleId,
+        dateContact: new Date('2026-10-01'),
+        verificationPrioritaire: false,
+        entrepriseAVerifier: false,
+        lienInteretDeclare: false,
+      },
+    })
+  ).id;
+}
+
+const demarcher = (siren: string, journaliser?: (l: RefusDeReserve) => void) =>
   app.$transaction((tx) =>
-    exigerHorsReserve(portDe(tx), { siren, nature: 'demarchage' }, MAINTENANT)
+    exigerHorsReserve(
+      portSousVerrou(tx, journaliser),
+      { siren, action: 'tache:contacts_purger', nature: 'demarchage' },
+      MAINTENANT
+    )
   );
 
-describe('REQ-SEC-042 — la garde jugée en base réelle', () => {
-  it('REQ-SEC-042 : TÉMOIN — une entreprise vérifiée par un apporteur hier : refus NOMMÉ, dans la transaction', async () => {
+const refusDe = async (siren: string): Promise<{ code: string; message: string }> => {
+  try {
+    await demarcher(siren);
+  } catch (e) {
+    const { code, message } = e as { code: string; message: string };
+    return { code, message };
+  }
+  throw new Error('aucun refus');
+};
+
+describe('REQ-SEC-042 — la garde jugée en base réelle, une cause à la fois', () => {
+  it('REQ-SEC-042 : TÉMOIN — une vérification d’apporteur de moins de la réserve : refus NOMMÉ, dans la transaction', async () => {
     const siren = unSiren();
     await verifier(siren, 1, 'libre');
     await expect(demarcher(siren)).rejects.toMatchObject({ code: CODE_ENTREPRISE_RESERVEE });
+  });
+
+  it('REQ-SEC-042 : TÉMOIN — un dépôt refusé, puis un dépôt en attente : refus NOMMÉ ; refusé pour une entreprise occupée : l’acte est exempté', async () => {
+    const refuse = unSiren();
+    await refuser(refuse, 1, 'insincerite');
+    await expect(demarcher(refuse)).rejects.toMatchObject({ code: CODE_ENTREPRISE_RESERVEE });
+    const attente = unSiren();
+    await attribuer(attente, 'en_attente');
+    await expect(demarcher(attente)).rejects.toMatchObject({ code: CODE_ENTREPRISE_RESERVEE });
+    const occupee = unSiren();
+    await refuser(occupee, 1, 'file_complete');
+    await expect(demarcher(occupee)).resolves.toBeUndefined();
+  });
+
+  it('REQ-SEC-042 : TÉMOIN — le délai de confirmation : refus tant que la demande est planifiée ou envoyée, puis l’action passe', async () => {
+    const siren = unSiren();
+    const attribution = await attribuer(siren, 'provisoire');
+    await base.prisma.demandeConfirmation.create({
+      data: { attributionId: attribution, etat: 'planifiee' },
+    });
+    await expect(demarcher(siren)).rejects.toMatchObject({ code: CODE_ENTREPRISE_RESERVEE });
+    await base.prisma.$executeRawUnsafe(
+      `UPDATE demandes_confirmation SET etat = 'repondue_oui', envoyee_at = now(), repondu_at = now()
+       WHERE attribution_id = $1::uuid`,
+      attribution
+    );
+    await expect(demarcher(siren)).resolves.toBeUndefined();
+  });
+
+  it('REQ-SEC-042 : TÉMOIN — le corps du refus est IDENTIQUE pour la réserve après acte et le délai de confirmation', async () => {
+    const parActe = unSiren();
+    await verifier(parActe, 1, 'libre');
+    const parConfirmation = unSiren();
+    const attribution = await attribuer(parConfirmation, 'provisoire');
+    await base.prisma.demandeConfirmation.create({
+      data: { attributionId: attribution, etat: 'planifiee' },
+    });
+    const a = await refusDe(parActe);
+    const c = await refusDe(parConfirmation);
+    expect(a).toEqual({ code: CODE_ENTREPRISE_RESERVEE, message: CODE_ENTREPRISE_RESERVEE });
+    expect(c).toEqual(a);
   });
 
   it('REQ-SEC-042 : TÉMOIN — la réserve échue : l’action passe ; un acte exempté (cliente) ne réserve rien', async () => {
@@ -112,9 +200,56 @@ describe('REQ-SEC-042 — la garde jugée en base réelle', () => {
     await verifier(siren, 1, 'libre');
     await expect(
       app.$transaction((tx) =>
-        exigerHorsReserve(portDe(tx), { siren, nature: 'verification' }, MAINTENANT)
+        exigerHorsReserve(
+          portSousVerrou(tx),
+          { siren, action: 'tache:contacts_purger', nature: 'verification' },
+          MAINTENANT
+        )
       )
     ).resolves.toBeUndefined();
+  });
+
+  it('REQ-SEC-042 : TÉMOIN — le refus s’écrit au journal sous le SIREN et l’action seuls', async () => {
+    const siren = unSiren();
+    await verifier(siren, 1, 'libre');
+    const lignes: RefusDeReserve[] = [];
+    await expect(demarcher(siren, (l) => void lignes.push(l))).rejects.toBeInstanceOf(
+      EntrepriseReservee
+    );
+    expect(lignes).toEqual([
+      {
+        signal: 'demarchage_refuse',
+        code: CODE_ENTREPRISE_RESERVEE,
+        siren,
+        action: 'tache:contacts_purger',
+      },
+    ]);
+  });
+
+  it('REQ-SEC-042 : TÉMOIN — le verrou du SIREN : une garde tenue attend le verrou du dépôt, puis voit l’acte qu’il a écrit', async () => {
+    const siren = unSiren();
+    let liberer!: () => void;
+    const tenu = new Promise<void>((r) => (liberer = r));
+    let verrouPris!: () => void;
+    const pris = new Promise<void>((r) => (verrouPris = r));
+    const depot = app.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${cleDuVerrouDuSiren(siren)}, 0))`;
+      verrouPris();
+      await tenu;
+      await tx.verification.create({
+        data: { apporteurId, siren, resultat: 'libre', verifieeAt: MAINTENANT },
+      });
+    });
+    await pris;
+    const garde = demarcher(siren);
+    const attendu = await Promise.race([
+      garde.then(() => 'termine'),
+      new Promise((r) => setTimeout(() => r('attend'), 1500)),
+    ]);
+    expect(attendu).toBe('attend');
+    liberer();
+    await depot;
+    await expect(garde).rejects.toMatchObject({ code: CODE_ENTREPRISE_RESERVEE });
   });
 
   it('REQ-SEC-042 : TÉMOIN — ÉCHEC FERMÉ : la base refuse une lecture (transaction avortée), le démarchage est refusé sous le même code', async () => {
@@ -122,7 +257,11 @@ describe('REQ-SEC-042 — la garde jugée en base réelle', () => {
     await expect(
       app.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT 1/0`.catch(() => undefined);
-        await exigerHorsReserve(portDe(tx), { siren, nature: 'demarchage' }, MAINTENANT);
+        await exigerHorsReserve(
+          portSousVerrou(tx),
+          { siren, action: 'tache:contacts_purger', nature: 'demarchage' },
+          MAINTENANT
+        );
       })
     ).rejects.toMatchObject({ code: CODE_ENTREPRISE_RESERVEE });
   });

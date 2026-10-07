@@ -19,7 +19,9 @@ import type { NomDeTache } from '../taches/registre';
 export const NATURES = ['demarchage', 'verification', 'sans_contact'] as const;
 export type NatureDeLAction = (typeof NATURES)[number];
 
-type CleClassee = DroitConsole | `tache:${NomDeTache}`;
+/** La clé d'une action de la liste fermée : un droit de la matrice ou une tâche du registre. */
+export type CleDeLAction = DroitConsole | `tache:${NomDeTache}`;
+type CleClassee = CleDeLAction;
 
 export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction>> = {
   'action:voir_iban_en_clair': 'sans_contact',
@@ -29,6 +31,10 @@ export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction
   'action:suspendre_apporteur': 'sans_contact',
   'action:resilier_apporteur': 'sans_contact',
   'action:exporter_das2': 'sans_contact',
+  // UX-P1-57 : la mise en demeure est un acte du contrat envers l'apporteur, pas une prise de contact
+  // commerciale d'une entreprise.
+  'ecran:mise_en_demeure': 'sans_contact',
+  'action:mettre_en_demeure': 'sans_contact',
   'action:rattacher_manuellement': 'sans_contact',
   'action:lire_justification_anomalie': 'sans_contact',
   'action:lire_journal_des_acces': 'sans_contact',

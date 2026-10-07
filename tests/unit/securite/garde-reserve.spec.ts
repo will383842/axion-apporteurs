@@ -5,12 +5,15 @@
  * cours), lus par un port ; ce spec juge la règle, l'échec fermé et le refus non révélateur.
  */
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
   CODE_ENTREPRISE_RESERVEE,
   EntrepriseReservee,
+  cleDuVerrouDuSiren,
   exigerHorsReserve,
   jugerLaReserve,
   type FaitsDeReserve,
+  type RefusDeReserve,
 } from '../../../src/server/demarchage/garde-reserve';
 import { REFUS_DE_LA_CONSOLE } from '../../../src/content/micro-copy/console/refus';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
@@ -19,6 +22,7 @@ import { MS_PAR_JOUR } from '../../../src/domain/temps/calendrier-civil';
 const MAINTENANT = new Date('2026-10-03T10:00:00.000Z');
 const JOURS = SEUILS.RESERVE_APRES_ACTE_APPORTEUR_JOURS.valeur;
 const avant = (ms: number) => new Date(MAINTENANT.getTime() - ms);
+const ACTION = 'tache:contacts_purger' as const;
 const LIBRE: FaitsDeReserve = { actes: [], confirmationEnCours: false };
 
 describe('REQ-SEC-042 — la réserve après un acte de l’apporteur', () => {
@@ -74,7 +78,7 @@ describe('REQ-SEC-042 — la garde à l’appel : échec fermé, refus non rév�
       try {
         await exigerHorsReserve(
           { lireLesFaits: async () => faits },
-          { siren: '123456789', nature: 'demarchage' },
+          { siren: '123456789', action: ACTION, nature: 'demarchage' },
           MAINTENANT
         );
       } catch (e) {
@@ -107,7 +111,7 @@ describe('REQ-SEC-042 — la garde à l’appel : échec fermé, refus non rév�
             throw new Error('base injoignable');
           },
         },
-        { siren: '123456789', nature: 'demarchage' },
+        { siren: '123456789', action: ACTION, nature: 'demarchage' },
         MAINTENANT
       )
     ).rejects.toMatchObject({ code: CODE_ENTREPRISE_RESERVEE });
@@ -122,10 +126,18 @@ describe('REQ-SEC-042 — la garde à l’appel : échec fermé, refus non rév�
       },
     };
     await expect(
-      exigerHorsReserve(ports, { siren: '123456789', nature: 'demarchage' }, MAINTENANT)
+      exigerHorsReserve(
+        ports,
+        { siren: '123456789', action: ACTION, nature: 'demarchage' },
+        MAINTENANT
+      )
     ).resolves.toBeUndefined();
     await expect(
-      exigerHorsReserve(ports, { siren: '123456789', nature: 'verification' }, MAINTENANT)
+      exigerHorsReserve(
+        ports,
+        { siren: '123456789', action: ACTION, nature: 'verification' },
+        MAINTENANT
+      )
     ).resolves.toBeUndefined();
     expect(lu).toBe(1);
   });
@@ -134,5 +146,77 @@ describe('REQ-SEC-042 — la garde à l’appel : échec fermé, refus non rév�
     expect(REFUS_DE_LA_CONSOLE[CODE_ENTREPRISE_RESERVEE]).toBe(
       'Entreprise indisponible pour une prise de contact commerciale'
     );
+  });
+});
+
+describe('REQ-SEC-042 — le refus est journalisé sous les identifiants seuls', () => {
+  const reservee: FaitsDeReserve = { actes: [], confirmationEnCours: true };
+
+  it('REQ-SEC-042 : TÉMOIN — un refus écrit UNE ligne : le SIREN et l’action, ni la cause, ni l’apporteur, ni la date', async () => {
+    const lignes: RefusDeReserve[] = [];
+    const ports = {
+      lireLesFaits: async () => reservee,
+      journaliser: (l: RefusDeReserve) => void lignes.push(l),
+    };
+    await expect(
+      exigerHorsReserve(
+        ports,
+        { siren: '123456789', action: ACTION, nature: 'demarchage' },
+        MAINTENANT
+      )
+    ).rejects.toBeInstanceOf(EntrepriseReservee);
+    expect(lignes).toEqual([
+      {
+        signal: 'demarchage_refuse',
+        code: CODE_ENTREPRISE_RESERVEE,
+        siren: '123456789',
+        action: ACTION,
+      },
+    ]);
+    expect(Object.keys(lignes[0]!).sort()).toEqual(['action', 'code', 'signal', 'siren']);
+  });
+
+  it('REQ-SEC-042 : TÉMOIN — l’échec fermé est journalisé sous la même ligne, et un passage n’écrit rien', async () => {
+    const lignes: RefusDeReserve[] = [];
+    const journaliser = (l: RefusDeReserve) => void lignes.push(l);
+    await expect(
+      exigerHorsReserve(
+        {
+          lireLesFaits: async () => {
+            throw new Error('base injoignable');
+          },
+          journaliser,
+        },
+        { siren: '123456789', action: ACTION, nature: 'demarchage' },
+        MAINTENANT
+      )
+    ).rejects.toMatchObject({ code: CODE_ENTREPRISE_RESERVEE });
+    await exigerHorsReserve(
+      { lireLesFaits: async () => LIBRE, journaliser },
+      { siren: '123456789', action: ACTION, nature: 'demarchage' },
+      MAINTENANT
+    );
+    expect(lignes.map((l) => l.code)).toEqual([CODE_ENTREPRISE_RESERVEE]);
+  });
+
+  it('REQ-SEC-042 : un journal qui échoue ne change pas le verdict : le refus reste le même', async () => {
+    await expect(
+      exigerHorsReserve(
+        {
+          lireLesFaits: async () => reservee,
+          journaliser: async () => {
+            throw new Error('journal injoignable');
+          },
+        },
+        { siren: '123456789', action: ACTION, nature: 'demarchage' },
+        MAINTENANT
+      )
+    ).rejects.toMatchObject({ code: CODE_ENTREPRISE_RESERVEE });
+  });
+
+  it('REQ-SEC-042 : TÉMOIN — le verrou du SIREN de la garde est celui que le dépôt prend : une seule clé, deux sources', () => {
+    const depot = readFileSync('src/server/depot/deposer.ts', 'utf8');
+    expect(depot).toContain('verrou-du-depot.siren.${siren}');
+    expect(cleDuVerrouDuSiren('123456789')).toBe('verrou-du-depot.siren.123456789');
   });
 });
