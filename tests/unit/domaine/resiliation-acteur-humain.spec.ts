@@ -456,6 +456,8 @@ describe('REQ-SEC-032 — le niveau « lecture » d’un résilié', () => {
       'notifications',
       'documents',
       'mon-contrat',
+      // UX-P1-51 (sécurité, #775, 6032748282) : relire sa contestation, en lecture, sans aucune action.
+      'contestations',
     ]);
   });
 
