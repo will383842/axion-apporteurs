@@ -102,6 +102,11 @@ export function calculerCommission(e: EntreeCalcul): VerdictCommission {
  * jamais à la signature, jamais à la facture. AUCUNE part n'est due au titre d'un paiement partiel :
  * le prorata est retiré. La date est celle du crédit effectif des fonds qui SOLDE la commande.
  *
+ * LES AVOIRS SONT DATÉS (A15, #815 ; juriste, #815 6041629550) : le fait générateur est un ÉTAT, jugé
+ * à chaque date sur les avoirs ÉMIS à cette date, sans lecture rétroactive. La date d'acquisition est
+ * le premier jour, crédits et avoirs confondus, où le cumul encaissé atteint le prix moins les avoirs
+ * connus ce jour-là ; un crédit et un avoir du même jour se comptent ensemble.
+ *
  * TOUT EN ENTIERS : le cumul et le prix se comparent en `BigInt`, exactement ; un centime manquant
  * ne rend rien acquis. Un encaissement NUL n'ajoute rien ; un montant négatif ou non entier, un avoir
  * négatif ou un prix net nul ou négatif LÈVENT, nommés : une donnée fausse n'a pas de valeur par défaut.
@@ -120,6 +125,12 @@ export type EncaissementRecu = {
   readonly creditLe: DateCivile;
 };
 
+/** Un avoir émis sur la facture de la commande, et son jour d'émission. */
+export type AvoirEmis = {
+  readonly montantCents: number;
+  readonly le: DateCivile;
+};
+
 export type Acquisition =
   { readonly acquise: false } | { readonly acquise: true; readonly le: DateCivile };
 
@@ -127,32 +138,44 @@ const entierPositifOuNul = (v: number) => Number.isSafeInteger(v) && v >= 0;
 const ordreDuJour = (d: DateCivile) => d.annee * 10_000 + d.mois * 100 + d.jour;
 
 export function acquisitionAuPaiementIntegral(
-  commande: { readonly prixFactureCents: number; readonly avoirsCents: readonly number[] },
+  commande: { readonly prixFactureCents: number; readonly avoirs: readonly AvoirEmis[] },
   encaissements: readonly EncaissementRecu[]
 ): Acquisition {
   if (!entierPositifOuNul(commande.prixFactureCents)) {
     throw new RangeError('acquisition : le prix facturé doit être un entier de centimes ≥ 0');
   }
-  let net = BigInt(commande.prixFactureCents);
-  commande.avoirsCents.forEach((a, i) => {
-    if (!entierPositifOuNul(a)) {
+  let totalAvoirs = 0n;
+  commande.avoirs.forEach((a, i) => {
+    if (!entierPositifOuNul(a.montantCents)) {
       throw new RangeError(`acquisition : l'avoir ${i} doit être un entier de centimes ≥ 0`);
     }
-    net -= BigInt(a);
+    totalAvoirs += BigInt(a.montantCents);
   });
-  if (net <= 0n) throw new RangeError('acquisition : le prix net des avoirs doit être > 0');
+  if (BigInt(commande.prixFactureCents) - totalAvoirs <= 0n) {
+    throw new RangeError('acquisition : le prix net des avoirs doit être > 0');
+  }
   encaissements.forEach((e, i) => {
     if (!entierPositifOuNul(e.montantCents)) {
       throw new RangeError(`acquisition : l'encaissement ${i} doit être un entier de centimes ≥ 0`);
     }
   });
-  const parDate = [...encaissements].sort(
-    (a, b) => ordreDuJour(a.creditLe) - ordreDuJour(b.creditLe)
-  );
+  // Les jours où l'état change, dans l'ordre : chaque jour, ses crédits ET ses avoirs, ensemble.
+  const jours = new Map<number, { le: DateCivile; credits: bigint; avoirs: bigint }>();
+  const jour = (le: DateCivile) => {
+    const k = ordreDuJour(le);
+    const j = jours.get(k) ?? { le, credits: 0n, avoirs: 0n };
+    jours.set(k, j);
+    return j;
+  };
+  for (const e of encaissements) jour(e.creditLe).credits += BigInt(e.montantCents);
+  for (const a of commande.avoirs) jour(a.le).avoirs += BigInt(a.montantCents);
   let cumul = 0n;
-  for (const e of parDate) {
-    cumul += BigInt(e.montantCents);
-    if (cumul >= net) return { acquise: true, le: e.creditLe };
+  let net = BigInt(commande.prixFactureCents);
+  for (const k of [...jours.keys()].sort((a, b) => a - b)) {
+    const j = jours.get(k)!;
+    cumul += j.credits;
+    net -= j.avoirs;
+    if (cumul >= net) return { acquise: true, le: j.le };
   }
   return { acquise: false };
 }

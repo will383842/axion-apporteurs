@@ -10,23 +10,26 @@
  *   1. TOUT OU RIEN : le résultat n'est jamais un montant ni une part ;
  *   2. acquise SI ET SEULEMENT SI le cumul des encaissements atteint le prix NET des avoirs, au
  *      centime près : jamais avant le solde ;
- *   3. acquise au jour du crédit qui SOLDE, les crédits pris dans l'ordre de leur date ;
+ *   3. acquise au PREMIER JOUR, crédits et avoirs confondus, où le cumul encaissé atteint le prix moins
+ *      les avoirs ÉMIS ce jour-là (avoirs DATÉS : A15, #815 ; juriste, #815 6041629550) ;
  *   4. MONOTONE : un encaissement de plus ne retire jamais l'acquisition ;
  *   5. l'ordre de réception ne change rien.
  *
- * TÉMOIN À DEUX FACES : une implémentation qui acquiert à 99 %, puis une qui ignore les avoirs, font
+ * TÉMOIN À DEUX FACES : une implémentation qui acquiert à 99 %, une qui ignore les avoirs, et une qui
+ * lit les avoirs SANS LEUR DATE (rétroactivement, le défaut trouvé par A15), font
  * rougir le juge, qui NOMME l'invariant rompu ; l'implémentation du dépôt passe sur les MÊMES tirages.
  */
 import { describe, expect, it } from 'vitest';
 import {
   acquisitionAuPaiementIntegral,
   type Acquisition,
+  type AvoirEmis,
   type EncaissementRecu,
 } from '../../../src/domain/commission/calcul';
 
 type Scenario = {
   prixFactureCents: number;
-  avoirsCents: number[];
+  avoirs: AvoirEmis[];
   encaissements: EncaissementRecu[];
 };
 type Implementation = (s: Scenario) => Acquisition;
@@ -51,8 +54,11 @@ const unJour = () => ({ annee: 2027, mois: 1 + entier(12), jour: 1 + entier(28) 
 function scenarios(n: number): Scenario[] {
   return Array.from({ length: n }, () => {
     const prixFactureCents = 1 + entier(5_000_000);
-    const avoirsCents = Array.from({ length: entier(3) }, () => entier(prixFactureCents / 4));
-    const net = prixFactureCents - avoirsCents.reduce((a, b) => a + b, 0);
+    const avoirs = Array.from({ length: entier(3) }, () => ({
+      montantCents: entier(prixFactureCents / 4),
+      le: unJour(),
+    }));
+    const net = prixFactureCents - sommeAvoirs(avoirs);
     // Un tiers solde exactement, un tiers reste en deçà (un centime au moins), un tiers dépasse.
     const cible = [net, Math.max(0, net - 1 - entier(net)), net + entier(net)][entier(3)]!;
     const nb = 1 + entier(4);
@@ -66,7 +72,7 @@ function scenarios(n: number): Scenario[] {
     montants.push(reste);
     return {
       prixFactureCents,
-      avoirsCents,
+      avoirs,
       encaissements: montants.map((montantCents) => ({
         montantCents,
         payeur: PAYEURS[entier(3)]!,
@@ -77,26 +83,38 @@ function scenarios(n: number): Scenario[] {
 }
 
 const ordre = (d: EncaissementRecu['creditLe']) => d.annee * 10_000 + d.mois * 100 + d.jour;
+function sommeAvoirs(avoirs: readonly AvoirEmis[]): number {
+  return avoirs.reduce((a, b) => a + b.montantCents, 0);
+}
 
 /** Le juge : les invariants, nommés. Il ne lit QUE le résultat de l'implémentation. */
 function violations(impl: Implementation, s: Scenario): string[] {
   const v: string[] = [];
   const res = impl(s);
-  const net = BigInt(s.prixFactureCents) - s.avoirsCents.reduce((a, b) => a + BigInt(b), 0n);
+  const net =
+    BigInt(s.prixFactureCents) - s.avoirs.reduce((a, b) => a + BigInt(b.montantCents), 0n);
   const total = s.encaissements.reduce((a, e) => a + BigInt(e.montantCents), 0n);
   if (Object.keys(res).some((k) => k !== 'acquise' && k !== 'le')) v.push('tout_ou_rien');
   if (res.acquise !== total >= net) v.push('si_et_seulement_si_solde');
   if (res.acquise) {
-    // Le premier jour, dans l'ordre des dates, où le cumul atteint le prix net.
-    let cumul = 0n;
-    let attendu: number | null = null;
-    for (const e of [...s.encaissements].sort((a, b) => ordre(a.creditLe) - ordre(b.creditLe))) {
-      cumul += BigInt(e.montantCents);
-      if (cumul >= net) {
-        attendu = ordre(e.creditLe);
-        break;
-      }
-    }
+    // Le premier jour, crédits et avoirs confondus, où le cumul atteint le prix moins les avoirs
+    // émis à cette date : l'état est jugé à la FIN de chaque jour où il change.
+    const jours = [
+      ...new Set([
+        ...s.encaissements.map((e) => ordre(e.creditLe)),
+        ...s.avoirs.map((a) => ordre(a.le)),
+      ]),
+    ].sort((a, b) => a - b);
+    const attendu =
+      jours.find((j) => {
+        const cumul = s.encaissements
+          .filter((e) => ordre(e.creditLe) <= j)
+          .reduce((a, e) => a + BigInt(e.montantCents), 0n);
+        const avoirs = s.avoirs
+          .filter((a) => ordre(a.le) <= j)
+          .reduce((a, b) => a + BigInt(b.montantCents), 0n);
+        return cumul >= BigInt(s.prixFactureCents) - avoirs;
+      }) ?? null;
     if (ordre(res.le) !== attendu) v.push('au_jour_du_solde');
     // Monotone : un encaissement de plus, à n'importe quelle date, ne retire jamais l'acquisition.
     const plus = impl({
@@ -115,13 +133,13 @@ function violations(impl: Implementation, s: Scenario): string[] {
 
 const depot: Implementation = (s) =>
   acquisitionAuPaiementIntegral(
-    { prixFactureCents: s.prixFactureCents, avoirsCents: s.avoirsCents },
+    { prixFactureCents: s.prixFactureCents, avoirs: s.avoirs },
     s.encaissements
   );
 
 /** Faute 1 : acquise dès 99 % du prix net. */
 const a99pourcent: Implementation = (s) => {
-  const net = s.prixFactureCents - s.avoirsCents.reduce((a, b) => a + b, 0);
+  const net = s.prixFactureCents - sommeAvoirs(s.avoirs);
   const total = s.encaissements.reduce((a, e) => a + e.montantCents, 0);
   return total >= 0.99 * net && total < net
     ? { acquise: true, le: s.encaissements[0]!.creditLe }
@@ -129,7 +147,11 @@ const a99pourcent: Implementation = (s) => {
 };
 
 /** Faute 2 : le solde jugé sur le prix FACTURÉ, avoirs ignorés. */
-const sansAvoirs: Implementation = (s) => depot({ ...s, avoirsCents: [] });
+const sansAvoirs: Implementation = (s) => depot({ ...s, avoirs: [] });
+
+/** Faute 3 (A15, #815) : les avoirs lus SANS leur date, comme s'ils précédaient tout crédit. */
+const avoirsNonDates: Implementation = (s) =>
+  depot({ ...s, avoirs: s.avoirs.map((a) => ({ ...a, le: { annee: 2000, mois: 1, jour: 1 } })) });
 
 const TIRAGES = scenarios(500);
 const MARS = { annee: 2027, mois: 3, jour: 5 };
@@ -146,7 +168,7 @@ describe('REQ-ARG-004, REQ-DM-017 — l’acquisition au paiement intégral, inv
   it('REQ-ARG-004 — TÉMOIN : une acquisition à 99 % est prise, invariant nommé', () => {
     const s: Scenario = {
       prixFactureCents: PRIX,
-      avoirsCents: [],
+      avoirs: [],
       encaissements: [{ montantCents: PRIX - PRIX / 200, payeur: 'client', creditLe: MARS }],
     };
     expect(violations(a99pourcent, s)).toContain('si_et_seulement_si_solde');
@@ -156,17 +178,34 @@ describe('REQ-ARG-004, REQ-DM-017 — l’acquisition au paiement intégral, inv
   it('REQ-ARG-004 — TÉMOIN : un solde jugé sans les avoirs est pris, invariant nommé', () => {
     const s: Scenario = {
       prixFactureCents: PRIX,
-      avoirsCents: [AVOIR],
+      avoirs: [{ montantCents: AVOIR, le: MARS }],
       encaissements: [{ montantCents: PRIX - AVOIR, payeur: 'opco', creditLe: MARS }],
     };
     expect(violations(sansAvoirs, s)).toContain('si_et_seulement_si_solde');
     expect(violations(depot, s)).toEqual([]);
   });
 
+  it('REQ-ARG-004 — TÉMOIN : des avoirs lus sans leur date sont pris (A15, S10), invariant nommé', () => {
+    // Prix ; 90 % crédités le 1er février ; l'avoir des 10 % restants, le 20 : soldée le 20, jamais le 1er.
+    const s: Scenario = {
+      prixFactureCents: PRIX,
+      avoirs: [{ montantCents: PRIX / 10, le: { annee: 2027, mois: 2, jour: 20 } }],
+      encaissements: [
+        {
+          montantCents: PRIX - PRIX / 10,
+          payeur: 'client',
+          creditLe: { annee: 2027, mois: 2, jour: 1 },
+        },
+      ],
+    };
+    expect(violations(avoirsNonDates, s)).toContain('au_jour_du_solde');
+    expect(violations(depot, s)).toEqual([]);
+  });
+
   it('REQ-DM-017 : les tirages couvrent les trois cas : soldé exactement, en deçà, au-delà', () => {
     const cas = new Set(
       TIRAGES.map((s) => {
-        const net = s.prixFactureCents - s.avoirsCents.reduce((a, b) => a + b, 0);
+        const net = s.prixFactureCents - sommeAvoirs(s.avoirs);
         const total = s.encaissements.reduce((a, e) => a + e.montantCents, 0);
         return total === net ? 'exact' : total < net ? 'en_deca' : 'au_dela';
       })
@@ -178,15 +217,15 @@ describe('REQ-ARG-004, REQ-DM-017 — l’acquisition au paiement intégral, inv
 describe('REQ-DM-017 — une donnée fausse n’a pas de valeur par défaut', () => {
   it('REQ-DM-017 : TÉMOIN — un prix facturé négatif ou non entier lève, nommé', () => {
     for (const prixFactureCents of [-1, 10.5, Number.NaN]) {
-      expect(() =>
-        acquisitionAuPaiementIntegral({ prixFactureCents, avoirsCents: [] }, [])
-      ).toThrow(/prix facturé/);
+      expect(() => acquisitionAuPaiementIntegral({ prixFactureCents, avoirs: [] }, [])).toThrow(
+        /prix facturé/
+      );
     }
   });
 
   it('REQ-DM-017 : un encaissement NUL n’acquiert rien et ne lève pas', () => {
     expect(
-      acquisitionAuPaiementIntegral({ prixFactureCents: 100, avoirsCents: [] }, [
+      acquisitionAuPaiementIntegral({ prixFactureCents: 100, avoirs: [] }, [
         { montantCents: 0, payeur: 'client', creditLe: MARS },
       ])
     ).toEqual({ acquise: false });
