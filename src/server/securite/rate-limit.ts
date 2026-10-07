@@ -37,7 +37,15 @@ import { MS_PAR_JOUR, MS_PAR_MINUTE } from '../../domain/temps/calendrier-civil'
 // ── Le vocabulaire fermé ────────────────────────────────────────────────────────────────────────
 
 /** Les cinq familles de REQ-SEC-016. Un sixième préfixe passe par l'exigence, pas par ce fichier. */
-export const PREFIXES_DE_FAMILLE = ['magic:', 'depot:', 'verif:', 'webhook:', 'auth:'] as const;
+export const PREFIXES_DE_FAMILLE = [
+  'magic:',
+  'depot:',
+  'verif:',
+  'webhook:',
+  'auth:',
+  // UX-P1-62 (REQ-SEC-016 amendée, arbitrage de la coordination) : l'écrit de l'apporteur.
+  'ecrit:',
+] as const;
 export type PrefixeDeFamille = (typeof PREFIXES_DE_FAMILLE)[number];
 
 /** Les deux conduites possibles quand le cache ne répond pas. Il n'y en a pas de troisième. */
@@ -270,6 +278,26 @@ export const COMPTEURS = {
     ancre: 'verif:ip-jour',
     verifieLe: '2026-10-07',
   },
+  // UX-P1-62 (REQ-SEC-016, condition a de la sécurité) : l'envoi d'un écrit, par session et par
+  // apporteur. Limites et fenêtres HORS DÉPÔT, lues dans `PARTNERS_ECRIT_PLAFONDS` ; `refuser` sur panne.
+  'ecrit:session': {
+    prefixe: 'ecrit:',
+    limite: LIMITE_HORS_DEPOT,
+    fenetreSecondes: LIMITE_HORS_DEPOT,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-016',
+    ancre: 'ecrit:session',
+    verifieLe: '2026-10-08',
+  },
+  'ecrit:apporteur': {
+    prefixe: 'ecrit:',
+    limite: LIMITE_HORS_DEPOT,
+    fenetreSecondes: LIMITE_HORS_DEPOT,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-016',
+    ancre: 'ecrit:apporteur',
+    verifieLe: '2026-10-08',
+  },
 } as const satisfies Readonly<Record<`${PrefixeDeFamille}${string}`, DeclarationDeCompteur>>;
 
 /** Une faute de frappe dans le nom d'un compteur ne compile pas. */
@@ -368,7 +396,87 @@ export function lirePlafondsHorsDepot(texte: string | undefined): LectureDesPlaf
   return { ok: true, plafonds: p };
 }
 
-/** La limite et la fenêtre d'un compteur hors dépôt, lues dans le secret ; `null` : non configuré. */
+// ── Le second secret : les plafonds de l'écrit (UX-P1-62) ───────────────────────────────────────
+
+/** Le SECRET qui porte les plafonds de l'écrit ; son nom seul est au dépôt. */
+export const VARIABLE_DES_PLAFONDS_DE_L_ECRIT = 'PARTNERS_ECRIT_PLAFONDS' as const;
+
+/** Les quatre clés, FERMÉES : deux limites, deux fenêtres en minutes. */
+export const CLES_DES_PLAFONDS_DE_L_ECRIT = [
+  'session',
+  'apporteur',
+  'fenetre_session_minutes',
+  'fenetre_apporteur_minutes',
+] as const;
+export type CleDePlafondDeLEcrit = (typeof CLES_DES_PLAFONDS_DE_L_ECRIT)[number];
+
+const BORNES_DE_L_ECRIT: Readonly<Record<CleDePlafondDeLEcrit, readonly [number, number]>> = {
+  session: [1, 99_999],
+  apporteur: [1, 99_999],
+  fenetre_session_minutes: [1, MINUTES_PAR_SEMAINE],
+  fenetre_apporteur_minutes: [1, MINUTES_PAR_SEMAINE],
+};
+
+/** Quelle clé porte la limite, et laquelle la fenêtre, de chaque compteur de l'écrit. */
+export const PLAFONDS_DE_L_ECRIT_EN_CONFIGURATION = {
+  'ecrit:session': { limite: 'session', fenetreMinutes: 'fenetre_session_minutes' },
+  'ecrit:apporteur': { limite: 'apporteur', fenetreMinutes: 'fenetre_apporteur_minutes' },
+} as const satisfies Readonly<
+  Partial<
+    Record<NomDeCompteur, { limite: CleDePlafondDeLEcrit; fenetreMinutes: CleDePlafondDeLEcrit }>
+  >
+>;
+
+/**
+ * La correspondance FERMÉE compteur → secret (condition de la sécurité) : les trois `verif:` ne lisent
+ * que le secret de la vérification, les deux `ecrit:` que celui de l'écrit. La garde la confronte.
+ */
+export const SECRET_DU_COMPTEUR = {
+  'verif:identite-jour': VARIABLE_DES_PLAFONDS,
+  'verif:identite-court': VARIABLE_DES_PLAFONDS,
+  'verif:ip-jour': VARIABLE_DES_PLAFONDS,
+  'ecrit:session': VARIABLE_DES_PLAFONDS_DE_L_ECRIT,
+  'ecrit:apporteur': VARIABLE_DES_PLAFONDS_DE_L_ECRIT,
+} as const satisfies Readonly<Partial<Record<NomDeCompteur, string>>>;
+
+export type LectureDesPlafondsDeLEcrit =
+  | { readonly ok: true; readonly plafonds: Readonly<Record<CleDePlafondDeLEcrit, number>> }
+  | {
+      readonly ok: false;
+      readonly cle: CleDePlafondDeLEcrit | '(forme)';
+      readonly motif: MotifDePlafondsRefuses;
+    };
+
+/**
+ * Le SEUL lecteur du secret de l'écrit, en ÉCHEC FERMÉ, sur les règles de celui de la vérification :
+ * clés fermées, chacune une fois, bornées, et COHÉRENTES — la limite par session au plus égale à celle
+ * par apporteur. Le refus ne recopie JAMAIS une valeur reçue.
+ */
+export function lirePlafondsDeLEcrit(texte: string | undefined): LectureDesPlafondsDeLEcrit {
+  if (texte === undefined || texte === '') return { ok: false, cle: '(forme)', motif: 'absent' };
+  const lues = new Map<CleDePlafondDeLEcrit, number>();
+  for (const paire of texte.split(';')) {
+    const m = FORME_D_UNE_PAIRE.exec(paire);
+    if (m === null) return { ok: false, cle: '(forme)', motif: 'forme' };
+    const cle = m[1] as CleDePlafondDeLEcrit;
+    if (!(CLES_DES_PLAFONDS_DE_L_ECRIT as readonly string[]).includes(cle)) {
+      return { ok: false, cle: '(forme)', motif: 'inconnue' };
+    }
+    if (lues.has(cle)) return { ok: false, cle, motif: 'en_double' };
+    lues.set(cle, Number(m[2]));
+  }
+  for (const cle of CLES_DES_PLAFONDS_DE_L_ECRIT) {
+    const v = lues.get(cle);
+    if (v === undefined) return { ok: false, cle, motif: 'absente' };
+    const [min, max] = BORNES_DE_L_ECRIT[cle];
+    if (v < min || v > max) return { ok: false, cle, motif: 'hors_bornes' };
+  }
+  const p = Object.fromEntries(lues) as Record<CleDePlafondDeLEcrit, number>;
+  if (p.session > p.apporteur) return { ok: false, cle: 'session', motif: 'incoherente' };
+  return { ok: true, plafonds: p };
+}
+
+/** La limite et la fenêtre d'un compteur hors dépôt, lues dans SON secret ; `null` : non configuré. */
 function plafondsDuCompteur(
   nom: NomDeCompteur
 ): { limite: number; fenetreSecondes: number } | null {
@@ -377,12 +485,36 @@ function plafondsDuCompteur(
       Partial<Record<string, { limite: CleDePlafond; fenetreMinutes: CleDePlafond }>>
     >
   )[nom];
-  if (cles === undefined) return null;
+  if (cles === undefined) return plafondsDeLEcrit(nom);
   const lecture = lirePlafondsHorsDepot(process.env[VARIABLE_DES_PLAFONDS]);
   if (!lecture.ok) {
     // Le refus se DIT : la clé et le motif fermé, jamais la valeur, jamais le secret.
     process.stderr.write(
       `${JSON.stringify({ signal: 'plafonds_verification_refuses', cle: lecture.cle, motif: lecture.motif })}\n`
+    );
+    return null;
+  }
+  return {
+    limite: lecture.plafonds[cles.limite],
+    fenetreSecondes: lecture.plafonds[cles.fenetreMinutes] * SECONDES_PAR_MINUTE,
+  };
+}
+
+/** La limite et la fenêtre d'un compteur de l'écrit, lues dans le secret de l'écrit SEUL. */
+function plafondsDeLEcrit(nom: NomDeCompteur): { limite: number; fenetreSecondes: number } | null {
+  const cles = (
+    PLAFONDS_DE_L_ECRIT_EN_CONFIGURATION as Readonly<
+      Partial<
+        Record<string, { limite: CleDePlafondDeLEcrit; fenetreMinutes: CleDePlafondDeLEcrit }>
+      >
+    >
+  )[nom];
+  if (cles === undefined) return null;
+  const lecture = lirePlafondsDeLEcrit(process.env[VARIABLE_DES_PLAFONDS_DE_L_ECRIT]);
+  if (!lecture.ok) {
+    // Le refus se DIT : la clé et le motif fermé, jamais la valeur, jamais le secret.
+    process.stderr.write(
+      `${JSON.stringify({ signal: 'plafonds_ecrit_refuses', cle: lecture.cle, motif: lecture.motif })}\n`
     );
     return null;
   }
