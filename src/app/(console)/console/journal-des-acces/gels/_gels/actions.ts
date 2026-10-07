@@ -25,7 +25,7 @@ import {
   poserUnGel,
   type PorteeDuGel,
 } from '../../../../../../server/console/gels-journal-acces';
-import { lireLaSaisieDuGel } from './saisie';
+import { lireLaSaisieDuGel, lireLeGelALever } from './saisie';
 
 const ECRAN = '/console/journal-des-acces/gels';
 
@@ -84,8 +84,8 @@ export async function leverLeGel(formData: FormData): Promise<void> {
   const acteur = acteurOuRedirection(
     await requireRole('action:lever_gel_journal_acces', jeton, portsDeRoleConsole(d))
   );
-  const gelId = formData.get('gelId');
-  if (typeof gelId !== 'string' || gelId === '') redirect(`${ECRAN}?refus=saisie`);
+  const gelId = lireLeGelALever(formData);
+  if (gelId === null) redirect(`${ECRAN}?refus=saisie`);
   await geste(() =>
     leverUnGel(
       d.prisma,

@@ -283,9 +283,8 @@ describe('REQ-SEC-023 — (4) la saisie de la pose, fermée avant tout travail',
       PORTEES_GEL_JOURNAL: ['utilisateur', 'cible', 'temoin_portee'],
     }));
     try {
-      const { lireLaSaisieDuGel: lire } = await import(
-        '../../../src/app/(console)/console/journal-des-acces/gels/_gels/saisie'
-      );
+      const { lireLaSaisieDuGel: lire } =
+        await import('../../../src/app/(console)/console/journal-des-acces/gels/_gels/saisie');
       expect(lire(formulaire({ motif: 'temoin_motif' }))?.motif).toBe('temoin_motif');
       expect(lire(formulaire({ portee: 'temoin_portee' }))?.portee).toBe('temoin_portee');
       expect(lire(formulaire({ motif: 'autre' }))).toBeNull();
