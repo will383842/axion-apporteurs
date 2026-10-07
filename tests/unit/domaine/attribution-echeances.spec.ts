@@ -98,7 +98,7 @@ describe('REQ-DM-006 — l’expiration au terme de la fenêtre (art. 3.4 al. 1)
 
 describe('REQ-DM-004 — le délai de redéclaration du rang 1 (art. 3.5)', () => {
   it('REQ-DM-004 : TÉMOIN — au terme du délai posé, `file_expiree` ; avant, rien ; sans délai posé, rien avant douze mois', () => {
-    const a = e({ statut: 'en_attente', fenetreRedeclarationFinAt: T });
+    const a = e({ statut: 'en_attente', deposeeAt: T - 20 * JOUR, fenetreRedeclarationFinAt: T });
     expect(transitionEchue(a, T - MINUTE)).toBeNull();
     expect(transitionEchue(a, T)).toBe('file_expiree');
     // Sans délai posé, rien avant l'extinction de l'attente (douze mois de l'enregistrement).
