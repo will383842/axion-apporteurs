@@ -673,7 +673,7 @@ export function cloturerDansLaPr(options: {
       },
     ]);
   }
-  const depot = depotDeLaTache(t) ?? DEPOT_LOCAL;
+  const depot = depotDeLaTache({ repo: t.repo ?? DEPOT_LOCAL }) ?? DEPOT_LOCAL;
   const refus: RefusDeCloture[] = [];
   if ((t.repo ?? DEPOT_LOCAL) !== DEPOT_LOCAL) {
     refus.push({
