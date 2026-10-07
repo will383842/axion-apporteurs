@@ -20,6 +20,7 @@ import {
   CLES_DES_PLAFONDS,
   COMPTEURS,
   MOTIFS_DE_PLAFONDS_REFUSES,
+  SECRET_DU_COMPTEUR,
   VARIABLE_DES_PLAFONDS,
   limiter,
   lirePlafondsHorsDepot,
@@ -133,7 +134,13 @@ describe('REQ-SEC-021 — la garde : la troisième voie, fermée', () => {
       Object.entries(r.voies)
         .filter(([, v]) => v === 'configuration')
         .map(([n]) => n)
-    ).toEqual(['verif:identite-jour', 'verif:identite-court', 'verif:ip-jour']);
+    ).toEqual([
+      'verif:identite-jour',
+      'verif:identite-court',
+      'verif:ip-jour',
+      'ecrit:session',
+      'ecrit:apporteur',
+    ]);
   });
 
   it('REQ-SEC-021 : TÉMOIN À DEUX FACES — `surPanne: laisser-passer` sur un compteur de la configuration rougit ; `refuser` reste vert', async () => {
@@ -173,7 +180,24 @@ describe('REQ-SEC-021 — la garde : la troisième voie, fermée', () => {
   it('REQ-SEC-021 : TÉMOIN — un secret qui n’est pas déclaré dans `src/lib/env.ts` rougit', async () => {
     expect(NOMS_DES_SECRETS_CONDITIONNELS).toContain(VARIABLE_DES_PLAFONDS);
     const r = await analyser({ ...universDuDepot(), secretsConditionnels: [] });
-    expect(r.fautes.filter((f) => f.famille === 'configuration_mal_declaree')).toHaveLength(3);
+    expect(r.fautes.filter((f) => f.famille === 'configuration_mal_declaree')).toHaveLength(5);
+  });
+
+  it('REQ-SEC-021 : TÉMOIN — la correspondance compteur → secret est FERMÉE : un compteur qui lit le secret de l’autre famille rougit', async () => {
+    const base = universDuDepot();
+    const croise = await analyser({
+      ...base,
+      secretDuCompteur: {
+        ...SECRET_DU_COMPTEUR,
+        'verif:ip-jour': 'PARTNERS_ECRIT_PLAFONDS',
+        'ecrit:session': 'PARTNERS_VERIFICATION_PLAFONDS',
+      },
+    });
+    const fautes = croise.fautes.filter((f) => f.famille === 'configuration_mal_declaree');
+    expect(fautes.map((f) => f.message.match(/`(verif|ecrit):[a-z-]+`/)?.[0]).sort()).toEqual([
+      '`ecrit:session`',
+      '`verif:ip-jour`',
+    ]);
   });
 });
 

@@ -249,7 +249,14 @@ function substituer(texte: string, avant: string, apres: string): string {
 describe('REQ-SEC-016 — le registre des compteurs', () => {
   it('REQ-SEC-016 — chaque compteur vit sous l’un des cinq préfixes et déclare sa conduite sur panne', () => {
     expect(NOMS.length).toBeGreaterThan(0);
-    expect([...PREFIXES_DE_FAMILLE]).toEqual(['magic:', 'depot:', 'verif:', 'webhook:', 'auth:']);
+    expect([...PREFIXES_DE_FAMILLE]).toEqual([
+      'magic:',
+      'depot:',
+      'verif:',
+      'webhook:',
+      'auth:',
+      'ecrit:',
+    ]);
     for (const nom of NOMS) {
       const d = COMPTEURS[nom];
       expect(nom.startsWith(d.prefixe), nom).toBe(true);
@@ -341,6 +348,11 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
     const constates: string[] = [];
     // SEC-72 : les compteurs hors dépôt lisent leurs plafonds dans le secret — ici FACTICES.
     vi.stubEnv(VARIABLE_DES_PLAFONDS, PLAFONDS_FACTICES);
+    // UX-P1-62 : les compteurs de l'écrit lisent LEUR secret — ici FACTICE aussi.
+    vi.stubEnv(
+      'PARTNERS_ECRIT_PLAFONDS',
+      'session=2;apporteur=5;fenetre_session_minutes=10;fenetre_apporteur_minutes=600'
+    );
     for (const nom of NOMS) {
       const v = await limiter(nom, SUJET, 0, cache.magasin, signaler);
       const d = COMPTEURS[nom];
