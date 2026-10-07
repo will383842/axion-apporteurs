@@ -26,6 +26,12 @@ type Tx = Prisma.TransactionClient;
 type Confirmer = typeof confirmerUneAttribution;
 
 /**
+ * Les candidates lues par un passage : une lecture BORNÉE ; le passage suivant lit les suivantes, puisque
+ * chaque confirmation sort sa ligne du filtre (une constante du module, comme le lot de DM-70).
+ */
+export const CONFIRMATIONS_PAR_PASSAGE = 500;
+
+/**
  * La présélection : une attribution déposée depuis moins de `CONFIRMATION_TACITE_JOURS` jours n'a pas
  * pu échoir. Un jour de marge couvre le changement d'heure ; la règle juge chaque ligne au vrai.
  */
@@ -65,7 +71,7 @@ export async function confirmerTacitementLesEchues(
   prisma: PrismaClient,
   maintenant: Date,
   p: { confirmer?: Confirmer } = {}
-): Promise<{ confirmees: number }> {
+): Promise<{ confirmees: number; echecs: number }> {
   const confirmer = p.confirmer ?? confirmerUneAttribution;
   const candidates = await prisma.attribution.findMany({
     where: {
@@ -76,25 +82,32 @@ export async function confirmerTacitementLesEchues(
     },
     select: { id: true },
     orderBy: [{ deposeeAt: 'asc' }, { id: 'asc' }],
+    take: CONFIRMATIONS_PAR_PASSAGE,
   });
   let confirmees = 0;
+  let echecs = 0;
   for (const { id } of candidates) {
-    const fait = await prisma.$transaction(async (tx) => {
-      const l = await relireSousLeVerrou(tx, id);
-      if (l === null || l.statut !== 'provisoire') return false;
-      if (!confirmationTaciteDue(l.faits, maintenant.getTime())) return false;
-      await confirmer(tx, {
-        attributionId: id,
-        transition: 'confirmee_tacitement',
-        acteur: { par: 'systeme' },
-        maintenant,
-        // L'existence d'une commande valable rattachée est portée par DM-15, pas encore livrée : une
-        // attribution ne peut pas en porter avant elle (même convention que la qualification).
-        commandeValableRattachee: false,
-      });
-      return true;
-    });
-    if (fait) confirmees += 1;
+    // Un échec est COMPTÉ et n'arrête jamais les suivantes : une confirmation due et manquée serait un
+    // droit de l'apporteur manqué (même règle que la levée de plein droit, sécurité, #794 6039195762).
+    const fait = await prisma
+      .$transaction(async (tx) => {
+        const l = await relireSousLeVerrou(tx, id);
+        if (l === null || l.statut !== 'provisoire') return false;
+        if (!confirmationTaciteDue(l.faits, maintenant.getTime())) return false;
+        await confirmer(tx, {
+          attributionId: id,
+          transition: 'confirmee_tacitement',
+          acteur: { par: 'systeme' },
+          maintenant,
+          // L'existence d'une commande valable rattachée est portée par DM-15, pas encore livrée : une
+          // attribution ne peut pas en porter avant elle (même convention que la qualification).
+          commandeValableRattachee: false,
+        });
+        return true;
+      })
+      .catch(() => null);
+    if (fait === null) echecs += 1;
+    else if (fait) confirmees += 1;
   }
-  return { confirmees };
+  return { confirmees, echecs };
 }

@@ -30,6 +30,9 @@ import { expirerLaDemandeDe } from '../confirmation/demandes';
 
 type Tx = Prisma.TransactionClient;
 
+/** Les candidates lues par un passage : une lecture BORNÉE, comme le lot de DM-70. */
+export const ECHEANCES_PAR_PASSAGE = 500;
+
 /** Les jours d'une année civile au plus court : la présélection de l'extinction à douze mois. */
 const JOURS_D_UNE_ANNEE_AU_PLUS_COURT = 365;
 
@@ -89,7 +92,7 @@ export async function appliquerLesEcheances(
     transitionner?: typeof transitionnerUneAttribution;
     expirerLaDemande?: typeof expirerLaDemandeDe;
   } = {}
-): Promise<{ appliquees: number }> {
+): Promise<{ appliquees: number; echecs: number }> {
   const transitionner = p.transitionner ?? transitionnerUneAttribution;
   const expirerLaDemande = p.expirerLaDemande ?? expirerLaDemandeDe;
   const candidates = await prisma.attribution.findMany({
@@ -117,22 +120,28 @@ export async function appliquerLesEcheances(
     },
     select: { id: true },
     orderBy: [{ deposeeAt: 'asc' }, { id: 'asc' }],
+    take: ECHEANCES_PAR_PASSAGE,
   });
   let appliquees = 0;
+  let echecs = 0;
   for (const { id } of candidates) {
-    const fait = await prisma.$transaction(async (tx) => {
-      const transition = await rejugerSousLeVerrou(tx, id, maintenant);
-      if (transition === null) return false;
-      await transitionner(tx, {
-        attributionId: id,
-        transition,
-        acteur: { par: 'systeme' },
-        maintenant,
-      });
-      if (transition === 'fin_sans_adresse_valide') await expirerLaDemande(tx, id, maintenant);
-      return true;
-    });
-    if (fait) appliquees += 1;
+    // Un échec est COMPTÉ et n'arrête jamais les suivantes (même règle que la levée de plein droit).
+    const fait = await prisma
+      .$transaction(async (tx) => {
+        const transition = await rejugerSousLeVerrou(tx, id, maintenant);
+        if (transition === null) return false;
+        await transitionner(tx, {
+          attributionId: id,
+          transition,
+          acteur: { par: 'systeme' },
+          maintenant,
+        });
+        if (transition === 'fin_sans_adresse_valide') await expirerLaDemande(tx, id, maintenant);
+        return true;
+      })
+      .catch(() => null);
+    if (fait === null) echecs += 1;
+    else if (fait) appliquees += 1;
   }
-  return { appliquees };
+  return { appliquees, echecs };
 }

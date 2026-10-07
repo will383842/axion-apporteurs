@@ -13,7 +13,10 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import type { PrismaClient } from '@prisma/client';
-import { confirmerTacitementLesEchues } from '../../../src/server/jobs/confirmation-tacite';
+import {
+  CONFIRMATIONS_PAR_PASSAGE,
+  confirmerTacitementLesEchues,
+} from '../../../src/server/jobs/confirmation-tacite';
 import { ajouterJoursCivilsParis } from '../../../src/domain/temps/sla';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
 
@@ -78,7 +81,7 @@ describe('REQ-DM-006 — le passage de la confirmation tacite', () => {
     const c = unClient([ligne()]);
     expect(
       await confirmerTacitementLesEchues(c.prisma, ECHEANCE, { confirmer: c.confirmer })
-    ).toEqual({ confirmees: 1 });
+    ).toEqual({ confirmees: 1, echecs: 0 });
     expect(c.confirmer).toHaveBeenCalledTimes(1);
     expect(c.confirmer.mock.calls[0]![1]).toEqual({
       attributionId: 'a-1',
@@ -95,7 +98,7 @@ describe('REQ-DM-006 — le passage de la confirmation tacite', () => {
     const r = await confirmerTacitementLesEchues(c.prisma, new Date(ECHEANCE.getTime() - MINUTE), {
       confirmer: c.confirmer,
     });
-    expect(r).toEqual({ confirmees: 0 });
+    expect(r).toEqual({ confirmees: 0, echecs: 0 });
     expect(c.confirmer).not.toHaveBeenCalled();
   });
 
@@ -126,7 +129,7 @@ describe('REQ-DM-006 — le passage de la confirmation tacite', () => {
       'a-2': ligne({ id: 'a-2', etat: 'rebond' }),
     });
     const r = await confirmerTacitementLesEchues(c.prisma, ECHEANCE, { confirmer: c.confirmer });
-    expect(r).toEqual({ confirmees: 1 });
+    expect(r).toEqual({ confirmees: 1, echecs: 0 });
     expect(c.confirmer.mock.calls.map((x) => x[1].attributionId)).toEqual(['a-3']);
   });
 
@@ -155,9 +158,30 @@ describe('REQ-DM-006 — le passage de la confirmation tacite', () => {
       await confirmerTacitementLesEchues(c.prisma, new Date(tard.getTime() - MINUTE), {
         confirmer: c.confirmer,
       })
-    ).toEqual({ confirmees: 0 });
+    ).toEqual({ confirmees: 0, echecs: 0 });
     expect(await confirmerTacitementLesEchues(c.prisma, tard, { confirmer: c.confirmer })).toEqual({
       confirmees: 1,
+      echecs: 0,
     });
+  });
+});
+
+describe('REQ-DM-006 — une confirmation tacite n’en bloque jamais une autre', () => {
+  it('REQ-DM-006 : TÉMOIN — un échec sur la première ligne est COMPTÉ, et la seconde est quand même confirmée', async () => {
+    const c = unClient([ligne({ id: 'a-1' }), ligne({ id: 'a-2' })]);
+    c.confirmer.mockRejectedValueOnce(new Error('transition_refusee'));
+    expect(
+      await confirmerTacitementLesEchues(c.prisma, ECHEANCE, { confirmer: c.confirmer })
+    ).toEqual({
+      confirmees: 1,
+      echecs: 1,
+    });
+    expect(c.confirmer.mock.calls.map((x) => x[1].attributionId)).toEqual(['a-1', 'a-2']);
+  });
+
+  it('REQ-DM-006 : la lecture des candidates est BORNÉE', async () => {
+    const c = unClient([]);
+    await confirmerTacitementLesEchues(c.prisma, ECHEANCE, { confirmer: c.confirmer });
+    expect((c.findMany.mock.calls[0]![0] as { take: number }).take).toBe(CONFIRMATIONS_PAR_PASSAGE);
   });
 });

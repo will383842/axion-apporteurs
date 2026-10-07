@@ -15,7 +15,10 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import type { PrismaClient } from '@prisma/client';
-import { appliquerLesEcheances } from '../../../src/server/jobs/attribution-echeances';
+import {
+  ECHEANCES_PAR_PASSAGE,
+  appliquerLesEcheances,
+} from '../../../src/server/jobs/attribution-echeances';
 import { ajouterJoursCivilsParis } from '../../../src/domain/temps/sla';
 import { SEUILS } from '../../../src/domain/seuils/ssot';
 
@@ -91,7 +94,10 @@ const options = (c: ReturnType<typeof unClient>) => ({
 describe('REQ-DM-006 — le passage des échéances', () => {
   it('REQ-DM-006 : TÉMOIN — fin faute d’adresse valide : la transition par le système, puis la demande expirée, dans la MÊME transaction', async () => {
     const c = unClient([ligne()]);
-    expect(await appliquerLesEcheances(c.prisma, FIN_45, options(c))).toEqual({ appliquees: 1 });
+    expect(await appliquerLesEcheances(c.prisma, FIN_45, options(c))).toEqual({
+      appliquees: 1,
+      echecs: 0,
+    });
     expect(c.appels).toEqual([
       'transaction',
       'verrou:a-1',
@@ -112,7 +118,10 @@ describe('REQ-DM-006 — le passage des échéances', () => {
       'a-1': ligne({ id: 'a-1', etat: 'envoyee' }),
       'a-2': ligne({ id: 'a-2', statut: 'active' }),
     });
-    expect(await appliquerLesEcheances(c.prisma, FIN_45, options(c))).toEqual({ appliquees: 1 });
+    expect(await appliquerLesEcheances(c.prisma, FIN_45, options(c))).toEqual({
+      appliquees: 1,
+      echecs: 0,
+    });
     expect(c.transitionner.mock.calls.map((x) => x[1].attributionId)).toEqual(['a-3']);
   });
 
@@ -143,7 +152,10 @@ describe('REQ-DM-006 — le passage des échéances', () => {
       ligne({ id: 'p', statut: 'active', etat: 'envoyee', peremption_at: DEPOT }),
       ligne({ id: 'x', statut: 'signee', etat: 'envoyee', fenetre_fin_at: DEPOT }),
     ]);
-    expect(await appliquerLesEcheances(c.prisma, FIN_45, options(c))).toEqual({ appliquees: 0 });
+    expect(await appliquerLesEcheances(c.prisma, FIN_45, options(c))).toEqual({
+      appliquees: 0,
+      echecs: 0,
+    });
     expect(c.transitionner).not.toHaveBeenCalled();
   });
 
@@ -159,5 +171,23 @@ describe('REQ-DM-006 — le passage des échéances', () => {
       apporteurId: { not: null },
       demandeConfirmation: { is: { etat: 'rebond' } },
     });
+  });
+});
+
+describe('REQ-DM-006 — une échéance n’en bloque jamais une autre', () => {
+  it('REQ-DM-006 : TÉMOIN — un échec sur la première ligne est COMPTÉ, et la seconde est quand même appliquée', async () => {
+    const c = unClient([ligne({ id: 'a-1' }), ligne({ id: 'a-2' })]);
+    c.transitionner.mockRejectedValueOnce(new Error('transition_refusee'));
+    expect(await appliquerLesEcheances(c.prisma, FIN_45, options(c))).toEqual({
+      appliquees: 1,
+      echecs: 1,
+    });
+    expect(c.transitionner.mock.calls.map((x) => x[1].attributionId)).toEqual(['a-1', 'a-2']);
+  });
+
+  it('REQ-DM-006 : la lecture des candidates est BORNÉE', async () => {
+    const c = unClient([]);
+    await appliquerLesEcheances(c.prisma, FIN_45, options(c));
+    expect((c.findMany.mock.calls[0]![0] as { take: number }).take).toBe(ECHEANCES_PAR_PASSAGE);
   });
 });
