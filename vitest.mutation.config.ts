@@ -89,6 +89,9 @@ const ECARTES = [
   // dans le bac, ce texte porte l'instrumentation de Stryker (vu rougir au run initial de la PR 667).
   // Joué par pnpm test, sur le vrai texte.
   'TÉMOIN STATIQUE — aucun code de la console ne pose valide_at à une création',
+  // UX-P1-57 : ce témoin LIT le texte de src/server/console/mise-en-demeure/actions.ts, que Stryker
+  // instrumente dans le bac. Joué par pnpm test, sur le vrai texte.
+  'TÉMOIN statique — l.action ne lit ni le nombre ni l.historique des mises en demeure',
 ];
 
 export default defineConfig({
@@ -125,6 +128,10 @@ export default defineConfig({
       'tests/integration/reconciliation-sommes.spec.ts',
       // UX-P1-16 : le témoin de la navigation de la console, en processus (aucun dépôt git ni sous-processus).
       'tests/unit/console/navigation-par-role.spec.ts',
+      // UX-P1-57 : les témoins de l'action de mise en demeure (droit, step-up, refus, idempotence), en
+      // processus sur des doubles — sans eux, les 94 mutants de `mise-en-demeure/actions.ts` sortaient
+      // « sans couverture » (porte A de la PR 748 : 30,99 %).
+      'tests/unit/console/mise-en-demeure.spec.ts',
     ],
     exclude: [
       ...(base.test?.exclude ?? []),

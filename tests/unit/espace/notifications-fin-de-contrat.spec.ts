@@ -141,9 +141,10 @@ async function miseEnDemeure(faits: string, apporteurId = MOI) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('REQ-UX-016 — l’espace rend mise_en_demeure et resiliation (UX-P1-59)', () => {
-  it('REQ-UX-016 : les clés rendues sont EXACTEMENT premier_rang_libere, mise_en_demeure et resiliation', () => {
+  // UX-P1-58 : `decision_attribution` y entre, rendue par son propre lecteur.
+  it('REQ-UX-016 : les clés rendues sont EXACTEMENT premier_rang_libere, mise_en_demeure, resiliation et decision_attribution', () => {
     expect([...CLES_RENDUES_DANS_L_ESPACE].sort()).toEqual(
-      ['mise_en_demeure', 'premier_rang_libere', 'resiliation'].sort()
+      ['decision_attribution', 'mise_en_demeure', 'premier_rang_libere', 'resiliation'].sort()
     );
   });
 
