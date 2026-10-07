@@ -25371,6 +25371,8 @@
         "tests/unit/domaine/journal-charges.spec.ts",
         "tests/unit/domaine/resiliation-acteur-humain.spec.ts",
         "tests/unit/securite/matrice-des-roles.spec.ts",
+        "src/server/taches/purger-textes-des-decisions.ts",
+        "tests/unit/integration/purge-decisions-de-contrat.spec.ts",
         "docs/GLOSSAIRE.md"
       ],
       "schema": true,
