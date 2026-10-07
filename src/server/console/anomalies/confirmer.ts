@@ -98,11 +98,6 @@ export async function confirmerUneAnomalie(
     if (a.type !== 'sincerite') throw new ErreurConfirmationAnomalie('type_non_traite');
     if (a.statut !== 'ouverte') throw new ErreurConfirmationAnomalie('deja_traitee');
 
-    const { justificationChiffre } = colonnesPii(
-      { modele: MODELE_DE_LA_JUSTIFICATION, id: d.anomalieId },
-      { justification: faits },
-      cles
-    );
     // UNE écriture : la garde de la table exige la clôture entière, ensemble.
     await tx.anomalie.update({
       where: { id: d.anomalieId },
@@ -110,8 +105,13 @@ export async function confirmerUneAnomalie(
         statut: 'confirmee',
         traiteAt: d.maintenant,
         traiteParId: d.acteur.id,
-        // Une colonne Bytes : le bloc chiffré, tel quel, en Buffer.
-        justificationChiffre: Buffer.from(justificationChiffre!),
+        // Le bloc chiffré, étalé tel que la primitive le rend (securite:schema-pii) ; l'identifiant
+        // qu'elle porte aussi est celui de la ligne, déjà désignée par `where`.
+        ...(colonnesPii(
+          { modele: MODELE_DE_LA_JUSTIFICATION, id: d.anomalieId },
+          { justification: faits },
+          cles
+        ) as unknown as Prisma.AnomalieUncheckedUpdateInput),
       },
     });
     await ajouterEvenement(tx, {
@@ -127,7 +127,7 @@ export async function confirmerUneAnomalie(
 // ── la lecture de l'écran ────────────────────────────────────────────────────────────────────────
 
 /** La liste est BORNÉE : les plus anciennes d'abord, jamais tout le stock d'un coup. */
-export const ANOMALIES_OUVERTES_MAX = 100;
+export const LIGNES_DE_LA_LISTE_MAX = 100;
 
 /** Une anomalie telle que l'écran la montre : ni score, ni rang, ni seuil, ni faits. */
 export type AnomalieALaConsole = {
@@ -157,7 +157,7 @@ export async function lireLesAnomaliesOuvertes(
   const lignes = await prisma.anomalie.findMany({
     where: { type: 'sincerite', statut: 'ouverte' },
     orderBy: [{ ouverteAt: 'asc' }, { id: 'asc' }],
-    take: ANOMALIES_OUVERTES_MAX,
+    take: LIGNES_DE_LA_LISTE_MAX,
     select: {
       id: true,
       ouverteAt: true,

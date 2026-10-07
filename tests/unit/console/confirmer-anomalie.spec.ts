@@ -290,7 +290,10 @@ describe('REQ-DM-033 — la confirmation : une transaction, la clôture chiffré
       data: Record<string, unknown>;
     };
     expect(maj.where).toEqual({ id: ANOMALIE });
+    // La primitive rend aussi l'identifiant : c'est celui de la ligne, jamais un autre.
+    expect(maj.data['id']).toBe(ANOMALIE);
     expect(Object.keys(maj.data).sort()).toEqual([
+      'id',
       'justificationChiffre',
       'statut',
       'traiteAt',
