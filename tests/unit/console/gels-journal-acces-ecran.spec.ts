@@ -14,7 +14,7 @@
  *   (3) REQ-UX-047 — chaque refus du module a sa phrase, et celui où personne d'autre ne peut lever
  *       le dit : « aucun autre administrateur ». Aucun texte en dur dans le composant.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -36,7 +36,10 @@ import {
   type GelAffiche,
 } from '../../../src/app/(console)/console/journal-des-acces/gels/_gels/ecran';
 import { ROUTES_LIVREES_DE_LA_CONSOLE } from '../../../src/server/console/navigation';
-import { lireLaSaisieDuGel } from '../../../src/app/(console)/console/journal-des-acces/gels/_gels/saisie';
+import {
+  lireLaSaisieDuGel,
+  lireLeGelALever,
+} from '../../../src/app/(console)/console/journal-des-acces/gels/_gels/saisie';
 
 const DEPUIS = new Date('2026-01-01T00:00:00.000Z');
 const POSE = new Date('2028-05-01T09:00:00.000Z');
@@ -209,6 +212,11 @@ describe('REQ-UX-047 — (3) les refus, les états et la source unique des texte
   it('REQ-UX-047 — l’état vide dit le geste suivant, et reste muet sur la pose sans le droit', () => {
     expect(rendu({ gels: [] })).toContain(T.vide.titre);
     expect(rendu({ gels: [] })).toContain(T.vide.phrase);
+    const sansDroit = rendu({ gels: [], droits: { poser: false, lever: false } });
+    expect(sansDroit).toContain(T.vide.titre);
+    expect(sansDroit).not.toContain(T.poser.titre);
+    expect(sansDroit).not.toContain(T.poser.envoyer);
+    expect(sansDroit).not.toContain('<form');
   });
 
   it('REQ-UX-047 — aucun texte en dur dans le composant : tout vient de la micro-copie', () => {
@@ -263,6 +271,42 @@ describe('REQ-SEC-023 — (4) la saisie de la pose, fermée avant tout travail',
       { jusquA: 'demain' },
     ] as Record<string, string>[])
       expect(lireLaSaisieDuGel(formulaire(faute)), JSON.stringify(faute)).toBeNull();
+  });
+
+  it('REQ-SEC-023 — TÉMOIN (RM-01) : motifs et portées viennent de leur source unique, jamais d’une copie', async () => {
+    // Une valeur ajoutée à la source (`charges.ts`, confrontée au schéma par la garde des
+    // énumérations) doit être lue par la saisie : une copie locale la refuserait en silence.
+    vi.resetModules();
+    vi.doMock('../../../src/domain/evenement/charges', async (origine) => ({
+      ...(await origine<Record<string, unknown>>()),
+      MOTIFS_GEL_JOURNAL: ['incident', 'litige', 'temoin_motif'],
+      PORTEES_GEL_JOURNAL: ['utilisateur', 'cible', 'temoin_portee'],
+    }));
+    try {
+      const { lireLaSaisieDuGel: lire } = await import(
+        '../../../src/app/(console)/console/journal-des-acces/gels/_gels/saisie'
+      );
+      expect(lire(formulaire({ motif: 'temoin_motif' }))?.motif).toBe('temoin_motif');
+      expect(lire(formulaire({ portee: 'temoin_portee' }))?.portee).toBe('temoin_portee');
+      expect(lire(formulaire({ motif: 'autre' }))).toBeNull();
+    } finally {
+      vi.doUnmock('../../../src/domain/evenement/charges');
+      vi.resetModules();
+    }
+  });
+
+  it('REQ-SEC-023 — TÉMOINS : l’identifiant du gel à lever est un UUID, sinon la saisie est refusée', () => {
+    const avec = (gelId: string) => {
+      const f = new FormData();
+      f.set('gelId', gelId);
+      return f;
+    };
+    expect(lireLeGelALever(avec('0190F0F0-0000-7000-8000-00000000000E'))).toBe(
+      '0190f0f0-0000-7000-8000-00000000000e'
+    );
+    for (const faute of ['', '42', 'x'.repeat(36), "0190f0f0-0000-7000-8000-00000000000e' OR 1"])
+      expect(lireLeGelALever(avec(faute)), faute).toBeNull();
+    expect(lireLeGelALever(new FormData())).toBeNull();
   });
 });
 
