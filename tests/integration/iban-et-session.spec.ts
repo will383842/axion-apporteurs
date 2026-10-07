@@ -48,6 +48,7 @@ beforeAll(async () => {
   await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: u.toString() });
   app = new PrismaClient({ datasourceUrl: u.toString() });
   app2 = new PrismaClient({ datasourceUrl: u.toString() });
+  await deuxAdministrateursDuRib(base.prisma);
 }, 180_000);
 
 afterAll(async () => {
@@ -74,6 +75,50 @@ const CLES = clesPii({
 const t0 = Date.now();
 const MINUTE = 60 * 1000;
 const hex = (octets: number) => randomBytes(octets).toString('hex');
+
+/**
+ * Un RIB VALIDE, tel que la base l'exige depuis la migration 004750 : il naît SANS regard, dans un
+ * statut qui n'est pas `a_verifier` (il occupe donc le même index partiel qu'une pièce courante,
+ * comme avant), puis un administrateur le vérifie et un AUTRE le confirme ; la confirmation le passe à
+ * `valide`, dans la même écriture.
+ */
+/** Un client qui exécute du SQL paramétré : le propriétaire, `partners_app` ou une transaction. */
+type ClientSql = { $executeRawUnsafe(sql: string, ...valeurs: unknown[]): Promise<number> };
+const VERIFICATEUR_DU_RIB = randomUUID();
+const CONFIRMATEUR_DU_RIB = randomUUID();
+
+/** Les deux administrateurs actifs et validés des regards, sous le propriétaire. */
+async function deuxAdministrateursDuRib(proprietaire: ClientSql) {
+  for (const [id, par] of [
+    [VERIFICATEUR_DU_RIB, null],
+    [CONFIRMATEUR_DU_RIB, VERIFICATEUR_DU_RIB],
+  ] as const) {
+    await proprietaire.$executeRawUnsafe(
+      `INSERT INTO utilisateurs_console (id, role, email_chiffre, email_hash, cree_at, valide_at, valide_par_id)
+       VALUES ($1::uuid, 'admin'::console_role, $2, $3, clock_timestamp(), clock_timestamp(), $4::uuid)`,
+      id,
+      randomBytes(40),
+      randomBytes(32).toString('hex'),
+      par
+    );
+  }
+}
+
+/** Les deux regards d'un RIB inséré sans eux : vérifié, puis confirmé et passé à `valide`. */
+async function confirmerLeRib(client: ClientSql, id: string) {
+  await client.$executeRawUnsafe(
+    `UPDATE pieces_kyc SET rib_verifie_par_id = $1::uuid, rib_verifie_at = clock_timestamp()
+     WHERE id = $2::uuid`,
+    VERIFICATEUR_DU_RIB,
+    id
+  );
+  await client.$executeRawUnsafe(
+    `UPDATE pieces_kyc SET rib_confirme_par_id = $1::uuid, rib_confirme_at = clock_timestamp(),
+       statut = 'valide' WHERE id = $2::uuid`,
+    CONFIRMATEUR_DU_RIB,
+    id
+  );
+}
 
 function ports(maintenant: Date): PortsDeSession {
   return {
@@ -158,16 +203,19 @@ async function piece(p: {
   statut: string;
 }): Promise<void> {
   const rib = p.type === 'rib';
+  const ribValide = rib && p.statut === 'valide';
+  const id = randomUUID();
   await app.$executeRawUnsafe(
     `INSERT INTO pieces_kyc (id, apporteur_id, type, statut, iban_chiffre, iban_hash)
      VALUES ($1::uuid, $2::uuid, $3::type_piece_kyc, $4::statut_piece_kyc, $5, $6)`,
-    randomUUID(),
+    id,
     p.apporteur,
     p.type,
-    p.statut,
+    ribValide ? 'refusee' : p.statut,
     rib ? randomBytes(40) : null,
     rib ? hex(32) : null
   );
+  if (ribValide) await confirmerLeRib(app, id);
 }
 
 describe('REQ-SEC-003 — SEC-45 : un nouveau RIB révoque les sessions, le premier non', () => {
@@ -257,15 +305,19 @@ describe('REQ-SEC-003 — SEC-45 : un nouveau RIB révoque les sessions, le prem
     const a = await apporteur();
     /** Une insertion de RIB par SQL brut, dans la transaction donnée. */
     const rib = (tx: Pick<PrismaClient, '$executeRawUnsafe'>, statut: string) =>
-      tx.$executeRawUnsafe(
-        `INSERT INTO pieces_kyc (id, apporteur_id, type, statut, iban_chiffre, iban_hash)
-         VALUES ($1::uuid, $2::uuid, 'rib', $3::statut_piece_kyc, $4, $5)`,
-        randomUUID(),
-        a,
-        statut,
-        randomBytes(40),
-        hex(32)
-      );
+      (async () => {
+        const id = randomUUID();
+        await tx.$executeRawUnsafe(
+          `INSERT INTO pieces_kyc (id, apporteur_id, type, statut, iban_chiffre, iban_hash)
+           VALUES ($1::uuid, $2::uuid, 'rib', $3::statut_piece_kyc, $4, $5)`,
+          id,
+          a,
+          statut === 'valide' ? 'refusee' : statut,
+          randomBytes(40),
+          hex(32)
+        );
+        if (statut === 'valide') await confirmerLeRib(tx, id);
+      })();
     let insere!: () => void;
     const premiereInseree = new Promise<void>((r) => (insere = r));
     let relacher!: () => void;
@@ -299,15 +351,19 @@ describe('REQ-SEC-003 — SEC-45 : un nouveau RIB révoque les sessions, le prem
   it('REQ-SEC-003 : TÉMOIN — SANS DEADLOCK : les deux transactions tiennent d’abord FOR KEY SHARE sur l’apporteur (comme la clé étrangère), puis insèrent ; aucune erreur, et la version vaut 1', async () => {
     const a = await apporteur();
     const rib = (tx: Pick<PrismaClient, '$executeRawUnsafe'>, statut: string) =>
-      tx.$executeRawUnsafe(
-        `INSERT INTO pieces_kyc (id, apporteur_id, type, statut, iban_chiffre, iban_hash)
-         VALUES ($1::uuid, $2::uuid, 'rib', $3::statut_piece_kyc, $4, $5)`,
-        randomUUID(),
-        a,
-        statut,
-        randomBytes(40),
-        hex(32)
-      );
+      (async () => {
+        const id = randomUUID();
+        await tx.$executeRawUnsafe(
+          `INSERT INTO pieces_kyc (id, apporteur_id, type, statut, iban_chiffre, iban_hash)
+           VALUES ($1::uuid, $2::uuid, 'rib', $3::statut_piece_kyc, $4, $5)`,
+          id,
+          a,
+          statut === 'valide' ? 'refusee' : statut,
+          randomBytes(40),
+          hex(32)
+        );
+        if (statut === 'valide') await confirmerLeRib(tx, id);
+      })();
     const partager = (tx: Pick<PrismaClient, '$executeRawUnsafe'>) =>
       tx.$executeRawUnsafe(`SELECT 1 FROM apporteurs WHERE id = $1::uuid FOR KEY SHARE`, a);
     const signal = () => {

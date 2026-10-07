@@ -1,4 +1,4 @@
--- CPL-T24 — préfixe RE-RÉSERVÉ 20261003004600 par A02 (#563, 5986766662), qui remplace 20261003003900.
+-- CPL-T24 — préfixe RE-RÉSERVÉ 20261003004750 par A02 (#563, 5987457586), qui remplace 20261003004600.
 -- Corps recopié de la forme d'A02 (rattrapage 105) ; la fonction et le déclencheur sont ceux de son
 -- COMPLÉMENT (rattrapage 106), qui remplacent ceux de la forme.
 -- CPL-T24 (REQ-UX-027, REQ-DM-027) : le RIB à quatre yeux. Additive.

@@ -36,6 +36,7 @@ let adminId: string;
 
 beforeAll(async () => {
   base = await demarrerBase();
+  await deuxAdministrateursDuRib(base.prisma);
   const [u] = await base.prisma.$queryRawUnsafe<{ id: string }[]>(
     `INSERT INTO utilisateurs_console (id, role, email_chiffre, email_hash, cree_at)
      VALUES ($1::uuid, 'admin'::console_role, '\\x01'::bytea, $2, $3) RETURNING id`,
@@ -93,6 +94,49 @@ async function apporteur(i: Identite = {}): Promise<{ id: string; code: string }
   return { id: a.id, code: c };
 }
 
+/**
+ * Un RIB VALIDE, tel que la base l'exige depuis la migration 004750 : il naît SANS regard, dans un
+ * statut qui n'est pas `a_verifier` (il occupe donc le même index partiel qu'une pièce courante,
+ * comme avant), puis un administrateur le vérifie et un AUTRE le confirme ; la confirmation le passe à
+ * `valide`, dans la même écriture.
+ */
+/** Un client qui exécute du SQL paramétré : le propriétaire, `partners_app` ou une transaction. */
+type ClientSql = { $executeRawUnsafe(sql: string, ...valeurs: unknown[]): Promise<number> };
+const VERIFICATEUR_DU_RIB = randomUUID();
+const CONFIRMATEUR_DU_RIB = randomUUID();
+
+/** Les deux administrateurs actifs et validés des regards, sous le propriétaire. */
+async function deuxAdministrateursDuRib(proprietaire: ClientSql) {
+  for (const [id, par] of [
+    [VERIFICATEUR_DU_RIB, null],
+    [CONFIRMATEUR_DU_RIB, VERIFICATEUR_DU_RIB],
+  ] as const) {
+    await proprietaire.$executeRawUnsafe(
+      `INSERT INTO utilisateurs_console (id, role, email_chiffre, email_hash, cree_at, valide_at, valide_par_id)
+       VALUES ($1::uuid, 'admin'::console_role, $2, $3, clock_timestamp(), clock_timestamp(), $4::uuid)`,
+      id,
+      randomBytes(40),
+      randomBytes(32).toString('hex'),
+      par
+    );
+  }
+}
+
+/** Les deux regards d'un RIB inséré sans eux : vérifié, puis confirmé et passé à `valide`. */
+async function confirmerLeRib(client: ClientSql, id: string) {
+  await client.$executeRawUnsafe(
+    `UPDATE pieces_kyc SET rib_verifie_par_id = $1::uuid, rib_verifie_at = clock_timestamp()
+     WHERE id = $2::uuid`,
+    VERIFICATEUR_DU_RIB,
+    id
+  );
+  await client.$executeRawUnsafe(
+    `UPDATE pieces_kyc SET rib_confirme_par_id = $1::uuid, rib_confirme_at = clock_timestamp(),
+       statut = 'valide' WHERE id = $2::uuid`,
+    CONFIRMATEUR_DU_RIB,
+    id
+  );
+}
 /** Une pièce RIB, par SQL brut : le bloc et l'empreinte vont ensemble. Rend son id. */
 async function rib(apporteurId: string, ibanHash: string, remplaceeAt: Date | null = null) {
   const id = randomUUID();
@@ -101,11 +145,12 @@ async function rib(apporteurId: string, ibanHash: string, remplaceeAt: Date | nu
      VALUES ($1::uuid, $2::uuid, 'rib', $3::statut_piece_kyc, $4, $5, $6)`,
     id,
     apporteurId,
-    remplaceeAt === null ? 'a_verifier' : 'valide',
+    remplaceeAt === null ? 'a_verifier' : 'refusee',
     remplaceeAt,
     randomBytes(40),
     ibanHash
   );
+  if (remplaceeAt !== null) await confirmerLeRib(base.prisma, id);
   return id;
 }
 

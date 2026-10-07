@@ -49,6 +49,50 @@ const QUALIFIEUR: ActeurDuDossier = { id: randomUUID(), role: 'qualifieur' };
 const ADMIN: ActeurDuDossier = { id: randomUUID(), role: 'admin' };
 const LECTEUR: ActeurDuDossier = { id: randomUUID(), role: 'lecteur' };
 
+/**
+ * Un RIB VALIDE, tel que la base l'exige depuis la migration 004750 : il naît SANS regard, dans un
+ * statut qui n'est pas `a_verifier` (il occupe donc le même index partiel qu'une pièce courante,
+ * comme avant), puis un administrateur le vérifie et un AUTRE le confirme ; la confirmation le passe à
+ * `valide`, dans la même écriture.
+ */
+/** Un client qui exécute du SQL paramétré : le propriétaire, `partners_app` ou une transaction. */
+type ClientSql = { $executeRawUnsafe(sql: string, ...valeurs: unknown[]): Promise<number> };
+const VERIFICATEUR_DU_RIB = randomUUID();
+const CONFIRMATEUR_DU_RIB = randomUUID();
+
+/** Les deux administrateurs actifs et validés des regards, sous le propriétaire. */
+async function deuxAdministrateursDuRib(proprietaire: ClientSql) {
+  for (const [id, par] of [
+    [VERIFICATEUR_DU_RIB, null],
+    [CONFIRMATEUR_DU_RIB, VERIFICATEUR_DU_RIB],
+  ] as const) {
+    await proprietaire.$executeRawUnsafe(
+      `INSERT INTO utilisateurs_console (id, role, email_chiffre, email_hash, cree_at, valide_at, valide_par_id)
+       VALUES ($1::uuid, 'admin'::console_role, $2, $3, clock_timestamp(), clock_timestamp(), $4::uuid)`,
+      id,
+      randomBytes(40),
+      randomBytes(32).toString('hex'),
+      par
+    );
+  }
+}
+
+/** Les deux regards d'un RIB inséré sans eux : vérifié, puis confirmé et passé à `valide`. */
+async function confirmerLeRib(client: ClientSql, id: string) {
+  await client.$executeRawUnsafe(
+    `UPDATE pieces_kyc SET rib_verifie_par_id = $1::uuid, rib_verifie_at = clock_timestamp()
+     WHERE id = $2::uuid`,
+    VERIFICATEUR_DU_RIB,
+    id
+  );
+  await client.$executeRawUnsafe(
+    `UPDATE pieces_kyc SET rib_confirme_par_id = $1::uuid, rib_confirme_at = clock_timestamp(),
+       statut = 'valide' WHERE id = $2::uuid`,
+    CONFIRMATEUR_DU_RIB,
+    id
+  );
+}
+
 beforeAll(async () => {
   base = await demarrerBase();
   const u = new URL(base.url);
@@ -56,6 +100,7 @@ beforeAll(async () => {
   u.password = randomBytes(24).toString('hex');
   await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: u.toString() });
   app = new PrismaClient({ datasourceUrl: u.toString() });
+  await deuxAdministrateursDuRib(base.prisma);
 }, 180_000);
 
 afterAll(async () => {
@@ -97,7 +142,11 @@ async function unePiece(
   expireAt: Date | null = type === 'rc_pro' || type === 'vigilance' ? DANS_UN_AN : null
 ): Promise<string> {
   const id = randomUUID();
-  await base.prisma.pieceKyc.create({ data: { id, apporteurId, type, statut, expireAt } });
+  const ribValide = type === 'rib' && statut === 'valide';
+  await base.prisma.pieceKyc.create({
+    data: { id, apporteurId, type, statut: ribValide ? 'refusee' : statut, expireAt },
+  });
+  if (ribValide) await confirmerLeRib(base.prisma, id);
   return id;
 }
 
