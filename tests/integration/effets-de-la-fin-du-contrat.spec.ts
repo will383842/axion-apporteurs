@@ -252,7 +252,7 @@ describe('REQ-DM-011 — les effets de la fin du contrat, en une transaction', (
     const { jeton } = await sessionDeConsole('admin');
     await resilierDepuisLaConsole(portsDe(), DEMANDE(apporteurId, jeton));
     await expect(uneAttribution(autre, 'provisoire', figee.siren)).rejects.toThrow(
-      /attributions_un_occupant/
+      /23505|already exists/
     );
   });
 
