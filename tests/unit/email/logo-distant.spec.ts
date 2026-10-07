@@ -1,4 +1,4 @@
-// @req REQ-UX-047
+// @req REQ-UX-063
 /**
  * UX-P1-64 — le LOGO DISTANT des courriels, admis aux six conditions de la coordination (#319
  * 6041013643, sur l'avis de la sécurité et de la juriste 6040944172). Chaque condition a son témoin :
@@ -43,8 +43,8 @@ const courriel = (
 const images = (html: string) => [...html.matchAll(/<img\b[^>]*\bsrc="([^"]*)"/g)].map((m) => m[1]);
 const liens = (html: string) => [...html.matchAll(/\bhref="([^"]*)"/g)].map((m) => m[1]!);
 
-describe('REQ-UX-047 — le logo distant des courriels, sans suivi', () => {
-  it('REQ-UX-047 : TÉMOIN — condition 1 : l’URL du logo est statique, en https, sans paramètre ni fragment', () => {
+describe('REQ-UX-063 — le logo distant des courriels, sans suivi', () => {
+  it('REQ-UX-063 : TÉMOIN — condition 1 : l’URL du logo est statique, en https, sans paramètre ni fragment', () => {
     const u = new URL(LOGO_DES_COURRIELS);
     expect(u.protocol).toBe('https:');
     expect(u.search).toBe('');
@@ -52,7 +52,7 @@ describe('REQ-UX-047 — le logo distant des courriels, sans suivi', () => {
     expect(LOGO_DES_COURRIELS).toBe('https://axion-ia.com/email/axion-ia-logo-pill.png');
   });
 
-  it('REQ-UX-047 : TÉMOIN — conditions 2 et 3 : une seule image par courriel, la MÊME pour toutes les familles et tous les destinataires', () => {
+  it('REQ-UX-063 : TÉMOIN — conditions 2 et 3 : une seule image par courriel, la MÊME pour toutes les familles et tous les destinataires', () => {
     for (const famille of FAMILLES_DE_COURRIEL) {
       for (const n of [1, 2]) {
         expect(images(habillerLeCourriel(courriel(famille, n)).html), `${famille} ${n}`).toEqual([
@@ -62,7 +62,7 @@ describe('REQ-UX-047 — le logo distant des courriels, sans suivi', () => {
     }
   });
 
-  it('REQ-UX-047 : TÉMOIN — condition 3 : aucun lien ne porte de paramètre de suivi, ni ne redirige', () => {
+  it('REQ-UX-063 : TÉMOIN — condition 3 : aucun lien ne porte de paramètre de suivi, ni ne redirige', () => {
     for (const famille of FAMILLES_DE_COURRIEL) {
       for (const href of liens(habillerLeCourriel(courriel(famille, 1)).html)) {
         expect(href, `${famille} ${href}`).not.toMatch(/utm_|[?&](ref|track|click|redirect)=/i);
@@ -71,19 +71,19 @@ describe('REQ-UX-047 — le logo distant des courriels, sans suivi', () => {
     }
   });
 
-  it('REQ-UX-047 : TÉMOIN — condition 4 : rien dans l’image ne la relie au destinataire', () => {
+  it('REQ-UX-063 : TÉMOIN — condition 4 : rien dans l’image ne la relie au destinataire', () => {
     const html = habillerLeCourriel(courriel('C', 7)).html;
     const balise = /<img\b[^>]*>/.exec(html)![0];
     expect(balise).not.toContain('destinataire-7');
     expect(balise).not.toMatch(/data-|id=/);
   });
 
-  it('REQ-UX-047 : TÉMOIN statique — le châssis n’écrit ni paramètre de suivi, ni réseau social, ni pixel', () => {
+  it('REQ-UX-063 : TÉMOIN statique — le châssis n’écrit ni paramètre de suivi, ni réseau social, ni pixel', () => {
     const source = readFileSync('src/server/email/chassis.ts', 'utf8');
     expect(source).not.toMatch(/utm_|linkedin\.com|facebook\.com|width="1"|height="1"/i);
   });
 
-  it('REQ-UX-047 : TÉMOIN — condition 6 : chaque envoi éteint le suivi d’ouverture et de clic du fournisseur', async () => {
+  it('REQ-UX-063 : TÉMOIN — condition 6 : chaque envoi éteint le suivi d’ouverture et de clic du fournisseur', async () => {
     const corps: Record<string, unknown>[] = [];
     const relais = relaisZeptomail({
       url: 'https://api.zeptomail.eu/v1.1/email',

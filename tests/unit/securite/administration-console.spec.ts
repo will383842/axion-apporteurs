@@ -503,7 +503,7 @@ describe('REQ-SEC-023 — les courriels et leurs dates, à l’heure de Paris', 
       inviteeAt: INVITATION,
     });
     const echeance = new Date(INVITATION.getTime() + DUREES_AUTH.invitationConsoleMs.valeur);
-    expect(c).toEqual({
+    expect(c).toMatchObject({
       a: 'x@exemple.test',
       sujet: C.invitation.sujet,
       corps: C.invitation.corps({
@@ -514,6 +514,9 @@ describe('REQ-SEC-023 — les courriels et leurs dates, à l’heure de Paris', 
       }),
       gabarit: 'invitation_console',
     });
+    // UX-P1-64 (REQ-UX-063) : le même courriel, habillé du châssis commun, famille A.
+    expect(Object.keys(c).sort()).toEqual(['a', 'corps', 'gabarit', 'html', 'sujet']);
+    expect(c.html).toContain('data-famille="A"');
     // L'information individuelle préalable (art. L.1222-4) : la phrase de la juriste, mot pour mot.
     expect(c.corps).toContain(
       'La façon dont Axion-IA traite vos données de connexion, dont le journal de vos accès, est décrite dans https://p.exemple.test/console/vos-donnees.'

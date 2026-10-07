@@ -18,6 +18,7 @@ import { DUREES_AUTH } from '../../auth/durees';
 import { identiteDeLUtilisateurConsole } from '../../auth/lien-magique-depot';
 import type { ClesPii } from '../../securite/pii';
 import { dateEtHeureCompletesDeParis } from './dates';
+import { habillerLeCourriel } from '../../email/chassis';
 
 const C = UTILISATEURS_CONSOLE.courriels;
 
@@ -25,7 +26,23 @@ export interface CourrielDeLAdministration {
   readonly a: string;
   readonly sujet: string;
   readonly corps: string;
+  /** UX-P1-64 : le même courriel, habillé du châssis commun (famille A, sécurité du compte). */
+  readonly html: string;
   readonly gabarit: 'invitation_console' | 'admin_cree' | 'admin_reactive';
+}
+
+/**
+ * UX-P1-64 (REQ-UX-063) — le courriel de l'administration habillé du châssis commun, famille A : un
+ * message de sécurité du compte, sans soupape ni signature. Ses adresses restent dans le texte, comme
+ * les écrit la juriste ; aucun bouton n'est ajouté.
+ */
+function habille(sujet: string, corps: string): string {
+  return habillerLeCourriel({
+    famille: 'A',
+    preEnTete: corps.split('\n')[0] ?? sujet,
+    titre: sujet,
+    paragraphes: corps.split(/\n{2,}/),
+  }).html;
 }
 
 /** JUR-T62 : la route publique de la page « Vos données dans la console » (`docs/CONSOLE-ROUTES.md`). */
@@ -52,16 +69,18 @@ export function courrielDInvitation(d: {
     );
   }
   const echeance = new Date(d.inviteeAt.getTime() + DUREES_AUTH.invitationConsoleMs.valeur);
+  const corps = C.invitation.corps({
+    libelleRole: d.role,
+    adresseConnexion: d.adresseConnexion,
+    dateExpiration: dateEtHeureCompletesDeParis(echeance),
+    // JUR-T62 : la page publique « Vos données dans la console », sur la même origine que la connexion.
+    adressePolitique: new URL(ROUTE_VOS_DONNEES_CONSOLE, d.adresseConnexion).toString(),
+  });
   return {
     a: d.a,
     sujet: C.invitation.sujet,
-    corps: C.invitation.corps({
-      libelleRole: d.role,
-      adresseConnexion: d.adresseConnexion,
-      dateExpiration: dateEtHeureCompletesDeParis(echeance),
-      // JUR-T62 : la page publique « Vos données dans la console », sur la même origine que la connexion.
-      adressePolitique: new URL(ROUTE_VOS_DONNEES_CONSOLE, d.adresseConnexion).toString(),
-    }),
+    corps,
+    html: habille(C.invitation.sujet, corps),
     gabarit: 'invitation_console',
   };
 }
@@ -107,7 +126,15 @@ export async function courrielsDeCreationDAdministrateur(
     const adresse = clairs(x, d.cles).adresse;
     return adresse === null
       ? []
-      : [{ a: adresse, sujet: C.adminCree.sujet, corps, gabarit: 'admin_cree' as const }];
+      : [
+          {
+            a: adresse,
+            sujet: C.adminCree.sujet,
+            corps,
+            html: habille(C.adminCree.sujet, corps),
+            gabarit: 'admin_cree' as const,
+          },
+        ];
   });
 }
 
@@ -139,6 +166,14 @@ export async function courrielsDeReactivationDAdministrateur(
     const adresse = clairs(x, d.cles).adresse;
     return adresse === null
       ? []
-      : [{ a: adresse, sujet: C.adminReactive.sujet, corps, gabarit: 'admin_reactive' as const }];
+      : [
+          {
+            a: adresse,
+            sujet: C.adminReactive.sujet,
+            corps,
+            html: habille(C.adminReactive.sujet, corps),
+            gabarit: 'admin_reactive' as const,
+          },
+        ];
   });
 }
