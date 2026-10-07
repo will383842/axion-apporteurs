@@ -7,7 +7,7 @@
  * EN PROCESSUS : le geste sur un faux client (droit relu, anomalie verrouillée, clôture chiffrée en une
  * écriture, événement sans identité ni faits, transition de l'attribution seulement si son état
  * l'admet) ; l'action avec des doubles de Next et du juge des rôles ; l'écran rendu en HTML statique.
- * Aucun gel n'est posé : l'effet relève de SEC-15.
+ * Aucun gel n'est posé : l'effet relève du gel pour fraude, ailleurs.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createElement } from 'react';
@@ -24,7 +24,7 @@ const h = vi.hoisted(() => {
     Redirection,
     D: {
       prisma: { factice: true },
-      env: { NODE_ENV: 'test' } as Record<string, string>,
+      env: ((): Record<string, string> => ({ NODE_ENV: 'test' }))(),
       horloge: { maintenant: () => 1_803_031_200_000 },
     },
     jeton: { valeur: 'JETON' as string | undefined },
