@@ -424,6 +424,26 @@ que `gov:pr` applique :
   `main` sans conflit garde aussi l'empreinte : le diff se mesure depuis la base de fusion. La prose de cette
   entrée n'est plus relue après l'accord ; les gardes du journal la jugent à chaque tête.
 
+**La relecture proportionnée au risque (décision de Williams du 2026-10-05, #319, 5988252245, point 2, amendée
+le 2026-10-07, #319, 6032068586).** `risqueDeLaPr` et `lentillesExigees` (`scripts/lot/revues.ts`) l'appliquent :
+
+- **Toutes les lentilles** restent exigées pour l'argent, la sécurité, les données personnelles et le schéma ;
+  l'avis d'A02 reste exigé dès que `prisma/` est touché (label `schema`).
+- **Deux lentilles, l'exactitude et la sécurité, avec le veto de la sécurité,** pour tout écran de l'espace ou de
+  la console qui affiche ou modifie des données d'un apporteur ou de la console.
+- **Une seule lentille, l'exactitude,** pour ce qui n'affiche aucune donnée : une PR des zones `espace` ou
+  `console`, sans tâche `sensible`, dont TOUS les fichiers sont sous `docs/` (les maquettes) ou sous
+  `src/content/micro-copy/` (`RACINES_SANS_DONNEES`). C'est le critère mécanique ; une page statique hors de ces
+  racines reste à deux lentilles. `docs/maquettes/VALIDATION.md` reste à deux lentilles.
+- **La juriste** n'intervient que si un texte engage la Société.
+- Aucune garde « mobile first » n'est affaiblie : ses fichiers ne sont jamais à une lentille.
+
+**Le gel de la phase 1 (décision de Williams du 2026-10-05, #319, 5988252245, point 1 ; tri validé le
+2026-10-07, #319, 6032205185).** Toute tâche neuve née d'une relecture part « après la mise en service »
+(phase 2), sauf si elle touche l'argent, la sécurité ou une obligation légale : son `sensible`, ou sa zone
+juridique ou sécurité, le dit. `config/gel-phase-1.json` porte la liste des tâches de phase 1 au jour du gel ;
+`gov:tasks` refuse une tâche de phase 1 qui n'y figure pas et ne remplit pas la condition (`gel_phase_1`).
+
 ## 7. Fichiers réservés et label exigé (gate de REQ-GOV-010)
 
 Une PR qui modifie un chemin réservé **sans porter le label du poste** rougit (`gov:pr`, famille
@@ -478,10 +498,13 @@ doit passer devant un relecteur comme une décision, pas comme une ligne de conf
 
 **Ce qu'une PR d'auteur peut écrire dans `docs/tasks.json` (GOV-145, décision de Will du 2026-10-04).** Une PR
 dont la tâche n'est pas de la zone `gouvernance` peut AJOUTER aux `paths` d'une de SES tâches le chemin d'un
-fichier qu'elle touche — par `hors-depot/ajouter-path.mjs`, sous le label `role:gardien-spec` — et rien d'autre :
-ni un autre champ, ni la tâche d'une autre PR, ni un chemin retiré, ni une tâche versée ou supprimée. La lentille
-`exactitude` juge cet ajout dans la même relecture que le code. `gov:pr` refuse tout le reste
-(famille `registre_reecrit_par_une_pr_d_auteur`) ; le reste passe toujours par un rattrapage (GOV-012).
+fichier qu'elle touche — par `hors-depot/ajouter-path.mjs` — et rien d'autre : ni un autre champ, ni la tâche
+d'une autre PR, ni un chemin retiré, ni une tâche versée ou supprimée. La lentille `exactitude` juge cet ajout
+dans la même relecture que le code. `gov:pr` refuse tout le reste (famille
+`registre_reecrit_par_une_pr_d_auteur`) ; le reste passe toujours par un rattrapage (GOV-012).
+**Il n'y a plus de rattrapage de chemins** (décision de Williams du 2026-10-05, #319, 5988252245, point 3) :
+quand c'est sa SEULE écriture du registre, la PR d'auteur n'a pas besoin du label `role:gardien-spec` pour
+`docs/tasks.json` (`cheminsDAuteurSeuls`). Le registre est remis en ordre après coup, par lot.
 
 Deux chemins de plus, qui ne viennent pas de `docs/CONVENTIONS.md` §8 mais des fiches — leur source est dite
 dans la dernière colonne, et c'est à ce titre qu'ils entrent ici (RM-01) :
