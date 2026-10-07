@@ -13,8 +13,10 @@ import { join } from 'node:path';
 import type { PrismaClient } from '@prisma/client';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 import { clesPii } from '../../../src/server/securite/pii';
+import { MATRICE_DES_ROLES } from '../../../src/server/roles/matrice';
 import {
   ErreurSuspension,
+  GELS_ECHUS_PAR_PASSAGE,
   leverLesSuspensionsEchues,
   leverUneSuspension,
   poserUneSuspension,
@@ -42,12 +44,27 @@ function unDouble(o: {
   anomalie?: { statut: string; apporteurId: string | null; type?: string } | null;
   ecrites?: number;
   echues?: { id: string; depotsGelesDepuis: Date }[];
+  /** L'utilisateur de la console relu dans la transaction ; par défaut, un admin validé. */
+  utilisateur?: { role: string; desactiveAt: Date | null; valideAt: Date | null } | null;
+  /** Les lignes rendues sous verrou, dans l'ordre des appels (une levée concurrente). */
+  lignes?: Ligne[];
 }) {
   const appels: { quoi: string; args: unknown }[] = [];
+  const lecturesDeLActeur: unknown[] = [];
   const tx = {
-    $queryRaw: vi.fn(async () =>
-      o.ligne === null ? [] : [o.ligne ?? { statut: 'signe', etat_gel: 'libre' }]
-    ),
+    $queryRaw: vi.fn(async () => {
+      const suivante = o.lignes?.shift();
+      if (suivante !== undefined) return [suivante];
+      return o.ligne === null ? [] : [o.ligne ?? { statut: 'signe', etat_gel: 'libre' }];
+    }),
+    utilisateurConsole: {
+      findUnique: vi.fn(async (args: unknown) => {
+        lecturesDeLActeur.push(args);
+        return o.utilisateur === undefined
+          ? { role: 'admin', desactiveAt: null, valideAt: new Date('2026-09-01T00:00:00Z') }
+          : o.utilisateur;
+      }),
+    },
     anomalie: {
       findUnique: vi.fn(async (args: unknown) => {
         appels.push({ quoi: 'anomalie', args });
@@ -91,7 +108,7 @@ function unDouble(o: {
     ...tx,
     $transaction: vi.fn(async (f: (t: unknown) => Promise<unknown>) => f(tx)),
   } as unknown as PrismaClient;
-  return { tx: tx as never, prisma, appels, faits, ecrireUnFait };
+  return { tx: tx as never, prisma, appels, faits, ecrireUnFait, lecturesDeLActeur };
 }
 
 const motif = async (p: Promise<unknown>): Promise<string> => {
@@ -104,7 +121,8 @@ const motif = async (p: Promise<unknown>): Promise<string> => {
   return 'aucun refus';
 };
 
-const ADMIN_ROLE = { id: ADMIN, role: 'admin' } as const;
+/** L'administrateur, par son seul identifiant : son rôle est relu en base par le module. */
+const ADMIN_ROLE = { id: ADMIN } as const;
 const DEMENTI = {
   motif: 'gele_non_confirmation',
   indicationRecueAt: MAINTENANT.getTime() - 3_600_000,
@@ -214,15 +232,15 @@ describe('REQ-SEC-018 — la pose : un rôle habilité, une écriture, deux fait
     }
   });
 
-  it('REQ-SEC-018 : TÉMOIN — un autre rôle que admin est refusé, sans rien lire ni écrire', async () => {
+  it('REQ-SEC-018 : TÉMOIN — un autre rôle que admin, RELU en base, est refusé, sans rien lire ni écrire', async () => {
     for (const role of ['qualifieur', 'comptable', 'lecteur', 'inconnu']) {
-      const d = unDouble({});
+      const d = unDouble({ utilisateur: { role, desactiveAt: null, valideAt: null } });
       expect(
         await motif(
           poserUneSuspension(d.tx, {
             apporteurId: APPORTEUR,
             faits: DEMENTI,
-            acteur: { id: ADMIN, role },
+            acteur: { id: ADMIN },
             maintenant: MAINTENANT,
             faitsTexte: FAITS,
             cleIdempotence: CLE,
@@ -427,12 +445,19 @@ describe('REQ-SEC-019 — la levée, par un rôle ou de plein droit', () => {
   });
 
   it('REQ-SEC-019 : la levée par un rôle exige l’admin ; un apporteur non suspendu ne se lève pas', async () => {
-    const d = unDouble({ ligne: GELE });
+    const d = unDouble({
+      ligne: GELE,
+      utilisateur: {
+        role: 'qualifieur',
+        desactiveAt: null,
+        valideAt: new Date('2026-09-01T00:00:00Z'),
+      },
+    });
     expect(
       await motif(
         leverUneSuspension(d.tx, {
           apporteurId: APPORTEUR,
-          par: { role: { id: ADMIN, role: 'qualifieur' } },
+          par: { role: { id: ADMIN } },
           maintenant: MAINTENANT,
           ecrireUnFait: d.ecrireUnFait,
         })
@@ -459,11 +484,12 @@ describe('REQ-SEC-019 — la levée, par un rôle ou de plein droit', () => {
     const d = unDouble({ ligne: GELE, echues: [echu, pasEncore] });
     expect(
       await leverLesSuspensionsEchues(d.prisma, MAINTENANT, { ecrireUnFait: d.ecrireUnFait })
-    ).toEqual({ levees: 1 });
+    ).toEqual({ levees: 1, echecs: 0 });
     expect(d.appels.find((a) => a.quoi === 'lire_echues')!.args).toEqual({
       where: { etatGel: { not: 'libre' }, depotsGelesDepuis: { lte: MAINTENANT } },
       select: { id: true, depotsGelesDepuis: true },
-      orderBy: { depotsGelesDepuis: 'asc' },
+      orderBy: [{ depotsGelesDepuis: 'asc' }, { id: 'asc' }],
+      take: GELS_ECHUS_PAR_PASSAGE,
     });
     expect(d.appels.filter((a) => a.quoi === 'ecrire')).toHaveLength(1);
   });
@@ -487,5 +513,124 @@ describe('REQ-SEC-018 — la suspension ne touche JAMAIS une attribution (jurist
   it('REQ-SEC-018 : TÉMOIN — une suspension qui annulerait l’attribution rougit', () => {
     const glisse = `${SOURCE}\nawait transitionnerUneAttribution(tx, { transition: 'anomalie_confirmee' });\n`;
     expect(sansCommentaires(glisse)).toMatch(TOUCHE_UNE_ATTRIBUTION);
+  });
+});
+
+describe('REQ-SEC-018 — le droit RELU en base, dans la transaction (sécurité, #794 6039195762, condition 1)', () => {
+  const T = new Date('2026-09-01T00:00:00Z');
+  const CAS: [string, { role: string; desactiveAt: Date | null; valideAt: Date | null } | null][] =
+    [
+      ['inconnu', null],
+      ['désactivé', { role: 'admin', desactiveAt: T, valideAt: T }],
+      ['rôle retiré', { role: 'qualifieur', desactiveAt: null, valideAt: T }],
+      ['administrateur non validé', { role: 'admin', desactiveAt: null, valideAt: null }],
+    ];
+
+  it.each(CAS)(
+    'REQ-SEC-018 : TÉMOIN — la pose par un compte %s est refusée, sans rien écrire',
+    async (_cas, utilisateur) => {
+      const d = unDouble({ utilisateur });
+      expect(
+        await motif(
+          poserUneSuspension(d.tx, {
+            apporteurId: APPORTEUR,
+            faits: DEMENTI,
+            acteur: { id: ADMIN },
+            maintenant: MAINTENANT,
+            faitsTexte: FAITS,
+            cleIdempotence: CLE,
+            cles: CLES,
+            ecrireUnFait: d.ecrireUnFait,
+          })
+        )
+      ).toBe('droit_absent');
+      expect(d.appels).toEqual([]);
+      expect(d.faits).toEqual([]);
+    }
+  );
+
+  it.each(CAS)(
+    'REQ-SEC-019 : TÉMOIN — la levée par un compte %s est refusée, sans rien écrire',
+    async (_cas, utilisateur) => {
+      const d = unDouble({
+        utilisateur,
+        ligne: { statut: 'suspendu', etat_gel: 'gele_non_confirmation' },
+      });
+      expect(
+        await motif(
+          leverUneSuspension(d.tx, {
+            apporteurId: APPORTEUR,
+            par: { role: { id: ADMIN } },
+            maintenant: MAINTENANT,
+            ecrireUnFait: d.ecrireUnFait,
+          })
+        )
+      ).toBe('droit_absent');
+      expect(d.appels).toEqual([]);
+      expect(d.faits).toEqual([]);
+    }
+  );
+
+  it('REQ-SEC-018 : l’acteur est lu PAR SON IDENTIFIANT, dans la transaction : son rôle, sa désactivation, sa validation', async () => {
+    const d = unDouble({});
+    await poserUneSuspension(d.tx, {
+      apporteurId: APPORTEUR,
+      faits: DEMENTI,
+      acteur: { id: ADMIN },
+      maintenant: MAINTENANT,
+      faitsTexte: FAITS,
+      cleIdempotence: CLE,
+      cles: CLES,
+      ecrireUnFait: d.ecrireUnFait,
+    });
+    expect(d.lecturesDeLActeur).toEqual([
+      { where: { id: ADMIN }, select: { role: true, desactiveAt: true, valideAt: true } },
+    ]);
+  });
+});
+
+describe('REQ-SEC-018 — la pose exige le step-up (sécurité, condition 2)', () => {
+  it('REQ-SEC-018 : TÉMOIN — action:suspendre_apporteur est sous step-up, au rang de la mise en demeure', () => {
+    expect(MATRICE_DES_ROLES['action:suspendre_apporteur']).toEqual({
+      roles: ['admin'],
+      stepUp: true,
+    });
+    expect(MATRICE_DES_ROLES['action:mettre_en_demeure'].stepUp).toBe(true);
+  });
+});
+
+describe('REQ-SEC-019 — une levée de plein droit n’en bloque jamais une autre (sécurité, condition 3)', () => {
+  const POSE = new Date('2026-09-01T07:30:00.000Z');
+  const ECHU = new Date('2026-10-01T07:30:00.000Z');
+
+  it('REQ-SEC-019 : TÉMOIN — deux gels échus, le premier levé entre-temps : le second est QUAND MÊME levé, l’échec est compté', async () => {
+    const d = unDouble({
+      echues: [
+        { id: 'apporteur-a', depotsGelesDepuis: POSE },
+        { id: 'apporteur-b', depotsGelesDepuis: POSE },
+      ],
+      lignes: [
+        { statut: 'signe', etat_gel: 'libre' },
+        { statut: 'suspendu', etat_gel: 'gele_non_confirmation' },
+      ],
+    });
+    expect(
+      await leverLesSuspensionsEchues(d.prisma, ECHU, { ecrireUnFait: d.ecrireUnFait })
+    ).toEqual({
+      levees: 1,
+      echecs: 1,
+    });
+    expect(d.appels.filter((a) => a.quoi === 'ecrire')).toHaveLength(1);
+  });
+
+  it('REQ-SEC-019 : la lecture des gels échus est BORNÉE, dans l’ordre de leur pose', async () => {
+    const d = unDouble({});
+    await leverLesSuspensionsEchues(d.prisma, ECHU);
+    const lu = d.appels.find((a) => a.quoi === 'lire_echues')!.args as {
+      take: number;
+      orderBy: unknown;
+    };
+    expect(lu.take).toBe(GELS_ECHUS_PAR_PASSAGE);
+    expect(lu.orderBy).toEqual([{ depotsGelesDepuis: 'asc' }, { id: 'asc' }]);
   });
 });

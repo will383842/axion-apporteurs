@@ -47,7 +47,11 @@ type Tx = Prisma.TransactionClient;
 type EcrireUnEvenement = (tx: Tx, e: Parameters<typeof ajouterEvenement>[1]) => Promise<unknown>;
 
 /** Une personne de la console qui agit, et son rôle. */
-export type ActeurDeLaConsole = { readonly id: string; readonly role: string };
+/**
+ * L'acteur de la console, par son SEUL identifiant : son rôle, sa désactivation et sa validation sont
+ * RELUS en base dans la transaction du geste, jamais pris de l'appelant (sécurité, #794 6039195762).
+ */
+export type ActeurDeLaConsole = { readonly id: string };
 
 export type MotifDeSuspensionRefusee =
   | 'droit_absent'
@@ -70,8 +74,22 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const POSER = 'action:suspendre_apporteur';
 const LEVER = 'action:lever_gel';
 
-function exigerLeDroit(droit: string, acteur: ActeurDeLaConsole): void {
-  if (!roleAutorise(droit, acteur.role as Parameters<typeof roleAutorise>[1])) {
+/**
+ * Le droit RELU dans la transaction, au point d'entrée UNIQUE du gel : un compte inconnu, désactivé,
+ * au rôle retiré, ou un administrateur NON VALIDÉ est refusé avant toute lecture et toute écriture,
+ * comme pour la mise en demeure et la résiliation.
+ */
+async function exigerLeDroit(tx: Tx, droit: string, acteur: ActeurDeLaConsole): Promise<void> {
+  const lu = await tx.utilisateurConsole.findUnique({
+    where: { id: acteur.id },
+    select: { role: true, desactiveAt: true, valideAt: true },
+  });
+  if (
+    lu === null ||
+    lu.desactiveAt !== null ||
+    !roleAutorise(droit, lu.role) ||
+    (lu.role === 'admin' && lu.valideAt === null)
+  ) {
     throw new ErreurSuspension('droit_absent');
   }
 }
@@ -114,7 +132,7 @@ export async function poserUneSuspension(
     ecrireUnFait?: EcrireUnEvenement;
   }
 ): Promise<void> {
-  exigerLeDroit(POSER, d.acteur);
+  await exigerLeDroit(tx, POSER, d.acteur);
   if (!UUID.test(d.cleIdempotence)) throw new ErreurSuspension('cle_idempotence_invalide');
   // Les faits passent le JUGE UNIQUE des faits saisis (DM-55), comme ceux d'une mise en demeure.
   const verdict = jugerLesFaitsSaisis(d.faitsTexte);
@@ -223,7 +241,7 @@ export async function leverUneSuspension(
     ecrireUnFait?: EcrireUnEvenement;
   }
 ): Promise<void> {
-  if (d.par !== 'plein_droit') exigerLeDroit(LEVER, d.par.role);
+  if (d.par !== 'plein_droit') await exigerLeDroit(tx, LEVER, d.par.role);
   const ecrire = d.ecrireUnFait ?? ajouterEvenement;
   const { statut, etatGel } = await etatVerrouille(tx, d.apporteurId);
   juger(() => jugerLaLevee({ statut, etatGel }));
@@ -270,32 +288,47 @@ export async function leverUneSuspension(
 }
 
 /**
+ * Les gels échus lus par un passage : une lecture BORNÉE (sécurité, note) ; un passage suivant lit les
+ * suivants, puisque chaque levée sort sa ligne du filtre.
+ */
+export const GELS_ECHUS_PAR_PASSAGE = 200;
+
+/**
  * Le passage planifié : lève de plein droit chaque gel dont l'échéance est atteinte (quinze jours
- * civils de Paris après la pose, `echeanceDeLevee`), chacun dans SA transaction.
+ * civils de Paris après la pose, `echeanceDeLevee`), chacun dans SA transaction. Une levée qui
+ * échoue (un gel levé entre la lecture et la transaction, par exemple) est COMPTÉE et n'arrête jamais
+ * les suivantes : un gel échu laissé posé serait un droit de l'apporteur manqué (sécurité, condition 3).
  */
 export async function leverLesSuspensionsEchues(
   prisma: PrismaClient,
   maintenant: Date,
   p: { ecrireUnFait?: EcrireUnEvenement } = {}
-): Promise<{ levees: number }> {
+): Promise<{ levees: number; echecs: number }> {
   const poses = await prisma.apporteur.findMany({
     where: { etatGel: { not: 'libre' }, depotsGelesDepuis: { lte: maintenant } },
     select: { id: true, depotsGelesDepuis: true },
-    orderBy: { depotsGelesDepuis: 'asc' },
+    orderBy: [{ depotsGelesDepuis: 'asc' }, { id: 'asc' }],
+    take: GELS_ECHUS_PAR_PASSAGE,
   });
   let levees = 0;
+  let echecs = 0;
   for (const g of poses) {
     if (g.depotsGelesDepuis === null) continue;
     if (!leveeDePleinDroitDue(g.depotsGelesDepuis.getTime(), maintenant.getTime())) continue;
-    await prisma.$transaction((tx) =>
-      leverUneSuspension(tx, {
-        apporteurId: g.id,
-        par: 'plein_droit',
-        maintenant,
-        ...(p.ecrireUnFait === undefined ? {} : { ecrireUnFait: p.ecrireUnFait }),
-      })
-    );
-    levees += 1;
+    try {
+      await prisma.$transaction((tx) =>
+        leverUneSuspension(tx, {
+          apporteurId: g.id,
+          par: 'plein_droit',
+          maintenant,
+          ...(p.ecrireUnFait === undefined ? {} : { ecrireUnFait: p.ecrireUnFait }),
+        })
+      );
+      levees += 1;
+    } catch {
+      // Compté, rien d'autre : ni l'apporteur ni le motif ne sortent du passage.
+      echecs += 1;
+    }
   }
-  return { levees };
+  return { levees, echecs };
 }

@@ -5528,7 +5528,8 @@
         "tests/unit/securite/journal-fin-de-suspension.spec.ts",
         "tests/unit/securite/suspension.spec.ts",
         "src/server/taches/purger-textes-des-decisions.ts",
-        "tests/unit/integration/purge-decisions-de-contrat.spec.ts"
+        "tests/unit/integration/purge-decisions-de-contrat.spec.ts",
+        "src/server/roles/matrice.ts"
       ],
       "schema": true,
       "sensible": [

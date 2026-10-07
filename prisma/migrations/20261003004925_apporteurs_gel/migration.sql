@@ -131,3 +131,19 @@ END;
 $$;
 CREATE TRIGGER apporteurs_gel_garde BEFORE UPDATE OF "etat_gel", "depots_geles_depuis", "gel_anomalie_id", "gel_pose_par_id", "gel_decision_contrat_id" ON "apporteurs"
   FOR EACH ROW EXECUTE FUNCTION apporteurs_gel_garde();
+
+-- La NAISSANCE (A02, #794, note de pré-relecture) : la garde du gel ne voit que l'UPDATE. Un apporteur
+-- naît LIBRE ; une ligne insérée directement dans un état de gel (posé, levé ou échu) est refusée. Les
+-- CHECK tiennent déjà une ligne libre sans date, sans auteur ni décision.
+-- Retour arrière (commentaire) : DROP TRIGGER apporteurs_gel_naissance ON apporteurs ;
+-- DROP FUNCTION apporteurs_gel_naissance().
+CREATE FUNCTION apporteurs_gel_naissance() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW."etat_gel" <> 'libre' THEN
+    RAISE EXCEPTION 'apporteurs_gel_naissance : un apporteur naît libre ; le gel se pose, il ne s''insère pas';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER apporteurs_gel_naissance BEFORE INSERT ON "apporteurs"
+  FOR EACH ROW EXECUTE FUNCTION apporteurs_gel_naissance();

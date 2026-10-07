@@ -48,9 +48,10 @@ beforeAll(async () => {
   u.password = randomBytes(24).toString('hex');
   await provisionnerRoleDExecution({ urlMigration: base.url, urlExecution: u.toString() });
   app = new PrismaClient({ datasourceUrl: u.toString() });
+  // Un administrateur VALIDÉ : le droit de la suspension est relu en base (sécurité, #794 6039195762).
   const [admin] = await base.prisma.$queryRawUnsafe<{ id: string }[]>(
-    `INSERT INTO utilisateurs_console (id, role, email_chiffre, email_hash, cree_at)
-     VALUES ($1::uuid, 'admin'::console_role, '\\x01'::bytea, $2, $3) RETURNING id`,
+    `INSERT INTO utilisateurs_console (id, role, email_chiffre, email_hash, cree_at, valide_at)
+     VALUES ($1::uuid, 'admin'::console_role, '\\x01'::bytea, $2, $3, $3) RETURNING id`,
     randomUUID(),
     hex(32),
     MAINTENANT
@@ -204,6 +205,21 @@ describe('REQ-SEC-018 — apporteurs : les CHECK du gel (A02, 6035951154)', () =
 });
 
 describe('REQ-SEC-018 — apporteurs : la garde dédiée du gel (A02, 6035951154, 6036131730)', () => {
+  it('REQ-SEC-018 : TÉMOIN — un apporteur naît LIBRE : une ligne insérée gelée (posée ou échue) est refusée (A02, note de pré-relecture)', async () => {
+    for (const depotsGelesDepuis of [MAINTENANT, new Date('2026-01-01T00:00:00.000Z')]) {
+      expect(
+        await refus(
+          unApporteur(app, {
+            statut: 'suspendu',
+            etatGel: 'gele_non_confirmation',
+            depotsGelesDepuis,
+            gelPoseParId: adminId,
+          })
+        )
+      ).toContain('apporteurs_gel_naissance');
+    }
+  });
+
   it('REQ-SEC-018 : TÉMOIN — la pose puis la levée passent ; la levée remet tout à NULL', async () => {
     const { a } = await unGele();
     await app.$executeRawUnsafe(
@@ -314,7 +330,7 @@ describe('REQ-SEC-019 — la pose et la levée par le code serveur, en base rée
       poserUneSuspension(tx, {
         apporteurId: a,
         faits: { motif: 'gele_non_confirmation', indicationRecueAt: MAINTENANT.getTime() - 60_000 },
-        acteur: { id: adminId, role: 'admin' },
+        acteur: { id: adminId },
         maintenant: MAINTENANT,
         faitsTexte: "L'entreprise déclarée a indiqué n'avoir eu aucun échange avec vous.",
         cleIdempotence: cle,
@@ -350,7 +366,7 @@ describe('REQ-SEC-019 — la pose et la levée par le code serveur, en base rée
     await app.$transaction((tx) =>
       leverUneSuspension(tx, {
         apporteurId: a,
-        par: { role: { id: adminId, role: 'admin' } },
+        par: { role: { id: adminId } },
         maintenant: new Date('2026-10-08T07:30:00.000Z'),
       })
     );
