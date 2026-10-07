@@ -80,6 +80,10 @@ export const EVENEMENTS_ATTRIBUTION = [
   // SEC-19 (REQ-DM-011, art. 12) : la résiliation du contrat de l'apporteur porteur, dans sa
   // transaction. Une transition, pas un état : ses arrivées sont `annulee` et `expiree`.
   'fin_de_contrat',
+  // DM-71 (art. 3.3 du v2) : après la confirmation, seul un geste HUMAIN annule, pour erreur
+  // d'identification de l'entreprise ou pour fraude de l'apporteur (forme d'A02, #806 6039768837).
+  'annulee_erreur_identification',
+  'fraude_etablie',
 ] as const;
 export type TransitionAttribution = (typeof EVENEMENTS_ATTRIBUTION)[number];
 
@@ -97,7 +101,9 @@ const SUITES_SANS_PERTE = {
   expiree: 'expiree',
   anomalie_confirmee: 'invalidee',
   fin_de_contrat: 'expiree',
-  anteriorite_etablie: 'annulee',
+  // DM-71 : l'antériorité n'annule plus après la confirmation ; seules les deux exceptions humaines.
+  annulee_erreur_identification: 'annulee',
+  fraude_etablie: 'annulee',
 } as const;
 
 /** La matrice : pour chaque état, les seules transitions acceptées et leur état d'arrivée. */
@@ -133,7 +139,8 @@ export const TRANSITIONS_ATTRIBUTION: {
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
     fin_de_contrat: 'expiree',
-    anteriorite_etablie: 'annulee',
+    annulee_erreur_identification: 'annulee',
+    fraude_etablie: 'annulee',
   },
   signee: {
     paiement_recu: 'convertie',
@@ -141,16 +148,58 @@ export const TRANSITIONS_ATTRIBUTION: {
     figee: 'figee_resiliation',
     commande_caduque: 'active',
     commande_caduque_hors_fenetre: 'expiree',
-    anteriorite_etablie: 'annulee',
+    annulee_erreur_identification: 'annulee',
+    fraude_etablie: 'annulee',
   },
-  convertie: { expiree: 'expiree', figee: 'figee_resiliation', anteriorite_etablie: 'annulee' },
-  figee_resiliation: { expiree: 'expiree', anteriorite_etablie: 'annulee' },
+  convertie: {
+    expiree: 'expiree',
+    figee: 'figee_resiliation',
+    annulee_erreur_identification: 'annulee',
+    fraude_etablie: 'annulee',
+  },
+  figee_resiliation: {
+    expiree: 'expiree',
+    annulee_erreur_identification: 'annulee',
+    fraude_etablie: 'annulee',
+  },
   invalidee: {},
   perdue: {},
   perimee: {},
   expiree: {},
   annulee: {},
 };
+
+/**
+ * DM-71 (art. 3.3 du v2) : les états CONFIRMÉS. Depuis eux, l'antériorité n'annule plus ; seules les
+ * deux exceptions humaines le font. La base tient la même règle par `confirmee_at`
+ * (garde `attributions_annulation_apres_confirmation`).
+ */
+export const ETATS_CONFIRMES = [
+  'active',
+  'rdv_pris',
+  'proposition',
+  'signee',
+  'convertie',
+  'figee_resiliation',
+] as const satisfies readonly EtatAttribution[];
+
+/**
+ * DM-71 : la liste FERMÉE des exceptions d'annulation, celle de l'enum `exception_annulation` en base.
+ * `retablissement_apporteur` est posée au rétablissement d'un apporteur (UX-P1-61), par sa propre
+ * transition.
+ */
+export const EXCEPTIONS_ANNULATION = [
+  'erreur_identification',
+  'fraude',
+  'retablissement_apporteur',
+] as const;
+export type ExceptionAnnulation = (typeof EXCEPTIONS_ANNULATION)[number];
+
+/** L'exception que porte chaque transition humaine de l'art. 3.3, dans la charge et en base. */
+export const EXCEPTION_DE_LA_TRANSITION = {
+  annulee_erreur_identification: 'erreur_identification',
+  fraude_etablie: 'fraude',
+} as const satisfies Partial<Record<TransitionAttribution, ExceptionAnnulation>>;
 
 /** Le type de porteur, DÉRIVÉ de la population de l'attribution (W19 (1)). */
 export type TypePorteur = 'apporteur' | 'conseiller';
@@ -170,6 +219,9 @@ export const REFUSEES_AU_CONSEILLER = [
   'figee',
   // SEC-19 : la résiliation est celle d'un contrat d'apporteur ; un conseiller n'en a pas.
   'fin_de_contrat',
+  // DM-71 : les deux exceptions de l'art. 3.3 visent l'attribution d'un APPORTEUR.
+  'annulee_erreur_identification',
+  'fraude_etablie',
 ] as const satisfies readonly TransitionAttribution[];
 
 /** La prise en charge est la naissance du conseiller, et de lui seul. */

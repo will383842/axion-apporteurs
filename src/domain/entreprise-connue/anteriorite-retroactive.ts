@@ -12,7 +12,6 @@
  * RÈGLE IMPÉRATIVE : un fait daté au dépôt ou après n'annule JAMAIS — une facture, une émission, une
  * signature postérieures sont ignorées. La liste de la Société n'est pas un de ces critères.
  */
-import { occupe } from '../attribution/etats';
 import {
   CRITERES_D_ANTERIORITE,
   type CritereDAnteriorite,
@@ -56,12 +55,15 @@ export function critereAuDepot(
     : 'devis';
 }
 
-/** Le critère qui annule cette attribution, ou `null` : seule une attribution qui OCCUPE s'annule. */
+/** Le critère qui annule cette attribution, ou `null` : seule une attribution NON CONFIRMÉE s'annule (DM-71). */
 export function doitEtreAnnulee(
   attribution: { statut: string; deposeeAt: Date },
   faits: FaitsDatesDeLEntreprise
 ): CritereDAnteriorite | null {
-  return occupe(attribution.statut) ? critereAuDepot(faits, attribution.deposeeAt) : null;
+  // DM-71 (art. 3.3 du v2) : seule une attribution NON CONFIRMÉE s'annule pour antériorité.
+  return attribution.statut === 'provisoire'
+    ? critereAuDepot(faits, attribution.deposeeAt)
+    : null;
 }
 
 /** Où l'annulation est dite : l'apporteur dans son espace ; un conseiller, en console seulement (W19). */

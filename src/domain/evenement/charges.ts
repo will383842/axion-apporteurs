@@ -33,6 +33,8 @@ import {
   ETATS_ATTRIBUTION,
   MOTIFS_ANNULATION_CONSOLE,
   MOTIFS_LISTE_NOIRE,
+  EXCEPTIONS_ANNULATION,
+  EXCEPTION_DE_LA_TRANSITION,
   EVENEMENTS_ATTRIBUTION,
   NAISSANCES_ATTRIBUTION,
 } from '../attribution/machine';
@@ -207,9 +209,15 @@ export const CHARGES_PAR_TYPE = {
       motifAnnulation: z.enum(MOTIFS_ANNULATION_CONSOLE).optional(),
       /** DM-55 : la catégorie de l'article 3.3 bis, exigée avec ce motif et lui seul. */
       categorieRelation: z.enum(MOTIFS_LISTE_NOIRE).optional(),
+      /**
+       * DM-71 (art. 3.3 du v2) : l'exception d'une annulation après la confirmation, exigée pour les
+       * deux transitions humaines et elles seules, avec LEUR valeur. Ni texte ni anomalie (DM-12, (d)).
+       */
+      exception: z.enum(EXCEPTIONS_ANNULATION).optional(),
     })
     .strict()
-    .superRefine(({ de, transition, critere, fait, motifAnnulation, categorieRelation }, ctx) => {
+    .superRefine(
+      ({ de, transition, critere, fait, motifAnnulation, categorieRelation, exception }, ctx) => {
       if ((de === null) !== NAISSANCES.includes(transition)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -227,6 +235,16 @@ export const CHARGES_PAR_TYPE = {
       // Le fait fondateur accompagne le critère, et sa nature est celle que le critère nomme.
       const natureAttendue =
         critere === undefined ? undefined : critere === 'cliente' ? 'facture' : 'devis';
+      const exceptionAttendue = (
+        EXCEPTION_DE_LA_TRANSITION as Partial<Record<string, string>>
+      )[transition];
+      if (exception !== exceptionAttendue) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['exception'],
+          message: 'exception_incoherente',
+        });
+      }
       if ((transition === 'annulee_par_la_console') !== (motifAnnulation !== undefined)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
