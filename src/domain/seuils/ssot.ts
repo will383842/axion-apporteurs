@@ -83,18 +83,9 @@ export const SEUILS = {
     renvois: [],
     verifieLe: '2026-10-01',
   },
-  // JUR-T40 — la fin d'une demande vérifiée sans prise de contact concluante (HYP-W20-LIBERATION,
-  // tranchée par Williams le 2026-09-29) et la carence avant une nouvelle déclaration
-  // (HYP-W20-CARENCE-REDEPOT, arbitrage de -d7 sur délégation, même jour). L'art. 3.2 en est la
-  // source, et il les écrit par variables.
-  LIBERATION_SIGNALEE_INJOIGNABLE_MAX: {
-    valeur: 3,
-    unite: 'tentatives',
-    source:
-      "HYP-W20-LIBERATION — RÈGLE ABSENTE du contrat depuis JUR-T66 (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi (décision du 2026-10-07, #474, 6032680253), art. 3.2) : à retirer du code avec l'alignement de la confirmation",
-    renvois: [],
-    verifieLe: '2026-10-01',
-  },
+  // JUR-T66 — la fin de l'attribution faute d'adresse valide et la carence unique qui la suit (art. 3.2
+  // du contrat v2, qui fait foi). La libération après N tentatives et la carence graduée de JUR-T40
+  // sont retirées : le contrat ne les connaît plus.
   LIBERATION_SIGNALEE_JOURS: {
     valeur: 45,
     unite: 'jours',
@@ -129,14 +120,6 @@ export const SEUILS = {
       'deux protections pour l’apporteur ») et réponse « A. » au point 6, réserve de 30 jours gardée',
     renvois: art('3.5'),
     verifieLe: '2026-10-03',
-  },
-  CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS: {
-    valeur: 90,
-    unite: 'jours',
-    source:
-      "HYP-W20-CARENCE-REDEPOT — RÈGLE ABSENTE du contrat depuis JUR-T66 (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi (décision du 2026-10-07, #474, 6032680253), art. 3.2) : à retirer du code avec l'alignement de la confirmation",
-    renvois: [],
-    verifieLe: '2026-10-01',
   },
   ANTERIORITE_CLIENT_MOIS: {
     valeur: 24,
