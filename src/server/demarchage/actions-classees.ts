@@ -86,6 +86,9 @@ export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction
   'tache:traces_liste_noire_purger': 'sans_contact',
   // SEC-14 : l'ouverture d'un signalement de sincérité est un passage interne, qui ne contacte aucune entreprise.
   'tache:sincerite_ouvrir': 'sans_contact',
+  // SEC-15 (confirmé par la sécurité) : la levée de plein droit d'une suspension échue est un passage
+  // interne ; aucune entreprise n'est contactée.
+  'tache:suspensions_lever': 'sans_contact',
 };
 
 /** Les actions et tâches qui doivent appeler la garde de la réserve. */

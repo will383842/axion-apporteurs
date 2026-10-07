@@ -5596,7 +5596,8 @@
         "tests/integration/concurrence.spec.ts",
         "tests/integration/jeton-depot.spec.ts",
         "tests/integration/sessions-revocables.spec.ts",
-        "tests/integration/code-de-parrainage.spec.ts"
+        "tests/integration/code-de-parrainage.spec.ts",
+        "src/server/demarchage/actions-classees.ts"
       ],
       "schema": true,
       "sensible": [
