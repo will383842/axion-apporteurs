@@ -293,13 +293,13 @@ describe('REQ-JUR-069 — le renouvellement : le lien, puis l’avis, et jamais 
       expect(apres.corps).toBe(CORPS_DU_RENOUVELLEMENT[motif]);
       expect(
         apres.corps.endsWith(
-          'Les entreprises que vous avez déclarées et vos commissions ne sont pas affectées.'
+          'Les entreprises que vous avez déposées et vos commissions ne sont pas affectées.'
         )
       ).toBe(true);
       for (const statut of ['kyc_en_cours', 'pret_a_signer']) {
         const avant = avisDuRenouvellement(motif, statut);
         expect(avant.corps.endsWith("Votre dossier d'inscription n'est pas affecté.")).toBe(true);
-        expect(avant.corps).not.toContain('Les entreprises que vous avez déclarées');
+        expect(avant.corps).not.toContain('Les entreprises que vous avez déposées');
         expect(avant.corps.slice(0, 40)).toBe(apres.corps.slice(0, 40));
       }
     }

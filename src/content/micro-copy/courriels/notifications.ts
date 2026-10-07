@@ -121,9 +121,9 @@ export const TEXTES_DES_NOTIFICATIONS = {
  */
 export const CORPS_DU_RENOUVELLEMENT = {
   signalement_apporteur:
-    "À la suite de votre signalement, votre accès à l'espace en ligne a été révoqué. Un nouvel accès vous est adressé par courrier électronique. Les entreprises que vous avez déclarées et vos commissions ne sont pas affectées.",
+    "À la suite de votre signalement, votre accès à l'espace en ligne a été révoqué. Un nouvel accès vous est adressé par courrier électronique. Les entreprises que vous avez déposées et vos commissions ne sont pas affectées.",
   securite:
-    "Pour un motif de sécurité, Axion-IA a révoqué votre accès à l'espace en ligne. Un nouvel accès vous est adressé par courrier électronique. Les entreprises que vous avez déclarées et vos commissions ne sont pas affectées.",
+    "Pour un motif de sécurité, Axion-IA a révoqué votre accès à l'espace en ligne. Un nouvel accès vous est adressé par courrier électronique. Les entreprises que vous avez déposées et vos commissions ne sont pas affectées.",
 } as const;
 
 /**
@@ -132,7 +132,7 @@ export const CORPS_DU_RENOUVELLEMENT = {
  * d'inscription, MOT POUR MOT. L'objet et le reste des corps sont inchangés.
  */
 export const RENOUVELLEMENT_AVANT_SIGNATURE = {
-  remplacee: 'Les entreprises que vous avez déclarées et vos commissions ne sont pas affectées.',
+  remplacee: 'Les entreprises que vous avez déposées et vos commissions ne sont pas affectées.',
   par: "Votre dossier d'inscription n'est pas affecté.",
 } as const;
 

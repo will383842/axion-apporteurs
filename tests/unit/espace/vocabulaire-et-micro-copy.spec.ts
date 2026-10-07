@@ -925,9 +925,9 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › resiliation › appel : Voir mes commissions
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › acces_renouvele › titre : Votre accès à l'espace en ligne a été renouvelé
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › acces_renouvele › appel : Ouvrir mon espace
-      courriels/notifications.ts › CORPS_DU_RENOUVELLEMENT › signalement_apporteur : À la suite de votre signalement, votre accès à l'espace en ligne a été révoqué. Un nouvel accès vous est adressé par courrier électronique. Les entreprises que vous avez déclarées et vos commissions ne sont pas affectées.
-      courriels/notifications.ts › CORPS_DU_RENOUVELLEMENT › securite : Pour un motif de sécurité, Axion-IA a révoqué votre accès à l'espace en ligne. Un nouvel accès vous est adressé par courrier électronique. Les entreprises que vous avez déclarées et vos commissions ne sont pas affectées.
-      courriels/notifications.ts › RENOUVELLEMENT_AVANT_SIGNATURE › remplacee : Les entreprises que vous avez déclarées et vos commissions ne sont pas affectées.
+      courriels/notifications.ts › CORPS_DU_RENOUVELLEMENT › signalement_apporteur : À la suite de votre signalement, votre accès à l'espace en ligne a été révoqué. Un nouvel accès vous est adressé par courrier électronique. Les entreprises que vous avez déposées et vos commissions ne sont pas affectées.
+      courriels/notifications.ts › CORPS_DU_RENOUVELLEMENT › securite : Pour un motif de sécurité, Axion-IA a révoqué votre accès à l'espace en ligne. Un nouvel accès vous est adressé par courrier électronique. Les entreprises que vous avez déposées et vos commissions ne sont pas affectées.
+      courriels/notifications.ts › RENOUVELLEMENT_AVANT_SIGNATURE › remplacee : Les entreprises que vous avez déposées et vos commissions ne sont pas affectées.
       courriels/notifications.ts › RENOUVELLEMENT_AVANT_SIGNATURE › par : Votre dossier d'inscription n'est pas affecté.
       courriels/notifications.ts › CORPS_DE_LA_LIBERATION › demande_verifiee : Ce dépôt a pris fin sans confirmation de l'échange. Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}. Cette fin n'emporte aucune autre conséquence pour vous.
       courriels/notifications.ts › CORPS_DE_LA_LIBERATION › peremption_ou_fin_de_duree : Cette entreprise est de nouveau disponible, y compris pour un nouveau dépôt de votre part.
