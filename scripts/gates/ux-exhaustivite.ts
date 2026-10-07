@@ -207,6 +207,12 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   'espace/vocabulaire.ts › FORMULES › droitACommissionJusquau': ['dateFin'],
   'espace/vocabulaire.ts › FORMULES › courrierDeSuspension': ['dateCourrier'],
   'espace/vocabulaire.ts › FORMULES › limiteDeVerification': ['limiteParJour'],
+  // UX-P1-51 : SA contestation — la réception de SON écrit, la date de la réponse qui LUI est faite, et
+  // l'échéance de cette réponse, dérivée de la réception ; le délai vient de la SSOT (RM-10).
+  'espace/vocabulaire.ts › CONTESTATION › votreEcrit': ['date'],
+  'espace/vocabulaire.ts › CONTESTATION › reponse': ['date'],
+  'espace/vocabulaire.ts › CONTESTATION › contestationRecue': ['date'],
+  'espace/vocabulaire.ts › CONTESTATION › attente › phrase': ['delaiReponse', 'dateLimite'],
   // UX-P1-10 : les notifications de l'apporteur, clé par clé (textes d'A07). Chaque paramètre dit
   // SON entreprise, SON contact, et la décision, le motif ou la date qui le concernent ; jamais un
   // autre apporteur ni l'occupant d'une entreprise (art. 3.5).
