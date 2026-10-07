@@ -21,7 +21,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { EcranNotifications } from '../../../src/app/(espace)/notifications/ecran';
-import { routeOuverte, niveauDAcces } from '../../../src/domain/apporteur/acces-espace';
+import {
+  routeOuverte,
+  niveauDAcces,
+  type NiveauDAcces,
+} from '../../../src/domain/apporteur/acces-espace';
 import { FAITS_ANOMALIE_CARACTERES_MAX } from '../../../src/domain/seuils/ssot';
 import { MODELE_DECISION_DE_CONTRAT } from '../../../src/server/apporteur/resiliation';
 import { CHAMPS_PII, encryptPii, type ClesPii } from '../../../src/server/securite/pii';
@@ -256,7 +260,7 @@ describe('REQ-UX-047 — les faits à l’écran : même nettoyage, même borne,
   });
 });
 
-describe('REQ-UX-016 — la résiliation, vue par le résilié en lecture', () => {
+describe('REQ-UX-016 — la résiliation, rendue par le passage de l’espace (SEC-70 : le résilié ne l’y lit plus)', () => {
   const resiliation = async (
     resiliationMotif = 'ordinaire_apporteur',
     purge: { texte?: string } | null = null
@@ -315,7 +319,8 @@ describe('REQ-UX-016 — la résiliation, vue par le résilié en lecture', () =
     const [n] = await notificationsDeLEspace(c, MOI, { cles, lireUnFait });
     expect(n?.titre).toBe("Fin de votre contrat d'apporteur");
     expect(n?.corps).toContain('votre décision de résilier le contrat');
-    expect(n?.route).toBe('/mes-commissions');
+    // SEC-70 : l'appel de la résiliation ne mène à aucune route de l'espace (juriste, #824 6043086595).
+    expect(n?.route).toBeNull();
   });
 
   it('REQ-UX-016 : échec FERMÉ — sans lecteur de la charge, ou sur une autre charge, la résiliation n’apparaît pas', async () => {
@@ -375,8 +380,9 @@ describe('REQ-UX-016 — la résiliation, vue par le résilié en lecture', () =
     expect(np?.corps).toBe(ni?.corps);
   });
 
-  it('REQ-UX-016 : TÉMOIN — un résilié en `lecture` ouvre /notifications (SEGMENTS_LECTURE)', () => {
-    expect(niveauDAcces('resilie', true)).toBe('lecture');
-    expect(routeOuverte('lecture', 'notifications')).toBe(true);
+  it('REQ-UX-016 : TÉMOIN — SEC-70 : un résilié n’ouvre PLUS /notifications ; la résiliation lui parvient par courriel', () => {
+    const avecDroits = niveauDAcces as (statut: string, droitsEnCours?: boolean) => NiveauDAcces;
+    expect(avecDroits('resilie', true)).toBe('ferme');
+    expect(routeOuverte(avecDroits('resilie', true), 'notifications')).toBe(false);
   });
 });

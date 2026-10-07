@@ -29,6 +29,7 @@ import {
 import type { MotifResiliation } from '../../domain/apporteur/statut';
 import type { AccesApporteur } from '../acces/for-apporteur';
 import type { DemandeDEnvoi } from '../integrations/zeptomail/emetteur';
+import { adresseDeContact } from '../../config/entite';
 import {
   GABARITS,
   schemaGabarit,
@@ -237,15 +238,24 @@ export interface DemandeDeNotification {
 /**
  * La composition d'un courriel de notification, UNE fois pour tous ses émetteurs (`notifier()` et
  * le passage d'envoi de DM-55) : le titre en sujet ; le corps, puis l'appel à l'action suivi du lien
- * de sa route quand elle existe.
+ * de sa route quand elle existe. SEC-70 : un gabarit `lien: 'contact_entite'` mène au mailto: de
+ * l'adresse de contact de l'entité ; sans adresse renseignée, l'appel part SANS lien.
  */
 export function composerLeCourriel(
   cle: string,
   texte: TexteRendu,
-  urlDeLEspace: URL
+  urlDeLEspace: URL,
+  contact: string | null = adresseDeContact()
 ): { sujet: string; corps: string } {
-  const route = GABARITS[cleDeLaTable(cle)].route;
-  const lien = route === null ? null : new URL(route, urlDeLEspace).href;
+  const gabarit: LigneDeNotification = GABARITS[cleDeLaTable(cle)];
+  const lien =
+    gabarit.lien === 'contact_entite'
+      ? contact === null
+        ? null
+        : `mailto:${contact}`
+      : gabarit.route === null
+        ? null
+        : new URL(gabarit.route, urlDeLEspace).href;
   const corps = [texte.corps, lien === null ? texte.appel : `${texte.appel} : ${lien}`]
     .filter((x): x is string => x !== null)
     .join('\n\n');

@@ -78,11 +78,8 @@ export interface LigneDeSession {
   expireAt: Date;
   revoqueAt: Date | null;
   sessionVersion: number;
-  /**
-   * `droitsEnCours` (SEC-19, A02 #703) : au moins une attribution `figee_resiliation` non éteinte.
-   * Relu avec le statut à chaque requête ; absent, il vaut faux — défaut fermé.
-   */
-  apporteur: { statut: string; sessionVersion: number; droitsEnCours?: boolean } | null;
+  /** Le statut et la version, relus à chaque requête : un résilié est fermé (SEC-70). */
+  apporteur: { statut: string; sessionVersion: number } | null;
   lienMagique: { consommeAt: Date | null };
 }
 
@@ -119,7 +116,7 @@ export function jugerSession(
   if (ligne.revoqueAt !== null) return refus('revoquee');
   if (ligne.expireAt.getTime() <= maintenant.getTime()) return refus('expiree');
   if (ligne.sessionVersion !== ligne.apporteur.sessionVersion) return refus('version_perimee');
-  const niveau = niveauDAcces(ligne.apporteur.statut, ligne.apporteur.droitsEnCours === true);
+  const niveau = niveauDAcces(ligne.apporteur.statut);
   if (niveau === 'ferme') return refus('statut_ferme');
   return {
     ok: true,
@@ -323,8 +320,8 @@ export function revoquerPourMotifDeSecurite(
  */
 export function depotDeSessions(prisma: PrismaClient): DepotDeSessions {
   return {
-    async lire(tokenHash) {
-      const ligne = await prisma.sessionEspace.findUnique({
+    lire(tokenHash) {
+      return prisma.sessionEspace.findUnique({
         where: { tokenHash },
         select: {
           id: true,
@@ -333,24 +330,10 @@ export function depotDeSessions(prisma: PrismaClient): DepotDeSessions {
           expireAt: true,
           revoqueAt: true,
           sessionVersion: true,
-          apporteur: {
-            select: {
-              statut: true,
-              sessionVersion: true,
-              // SEC-19 : les droits en cours, relus à chaque requête avec le statut.
-              attributions: {
-                where: { statut: 'figee_resiliation' },
-                select: { id: true },
-                take: 1,
-              },
-            },
-          },
+          apporteur: { select: { statut: true, sessionVersion: true } },
           lienMagique: { select: { consommeAt: true } },
         },
       });
-      if (ligne?.apporteur == null) return ligne;
-      const { attributions, ...apporteur } = ligne.apporteur;
-      return { ...ligne, apporteur: { ...apporteur, droitsEnCours: attributions.length > 0 } };
     },
     async marquerVue(id, maintenant) {
       await prisma.sessionEspace.updateMany({ where: { id }, data: { derniereVueAt: maintenant } });
