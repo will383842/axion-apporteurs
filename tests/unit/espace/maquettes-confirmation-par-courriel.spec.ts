@@ -174,7 +174,6 @@ const ETATS_ATTENDUS: Record<string, string[]> = {
     'etat-annule',
     'etat-corriger',
     'etat-envoye',
-    'etat-signale',
     'etat-confirme',
     'etat-rebond',
     'etat-corriger-adresse',
@@ -182,8 +181,8 @@ const ETATS_ATTENDUS: Record<string, string[]> = {
   ],
   'confirmation-contact.html': [
     'etat-question',
-    'etat-non',
     'etat-merci',
+    'etat-merci-non',
     'etat-deja-repondu',
     'etat-lien-inconnu',
     'etat-chargement',
@@ -209,14 +208,16 @@ describe('REQ-UX-019 — les états des écrans W20, et les badges de REQ-UX-062
     for (const f of Object.keys(ETATS_ATTENDUS)) expect(etatsManquants(f, lire(f))).toEqual([]);
   });
 
-  it('REQ-UX-019 — la page du contact : de 320 à 414 px, deux thèmes, « Non » en second geste, aucun oracle', () => {
+  // Contrat v2 (#474, 6032680253 ; DM-72) : « Non » s'enregistre d'un seul geste, sans seconde question.
+  it('REQ-UX-019 — la page du contact : de 320 à 414 px, deux thèmes, « Non » d’un seul geste, aucun oracle', () => {
     const html = lire('confirmation-contact.html');
     expect(html).toMatch(/data-largeur="320"/);
     expect(html).toMatch(/data-largeur="414"/);
     expect(html).toMatch(/:root\[data-theme='sombre'\]/);
     expect(html).toMatch(/id="theme"/);
-    expect(texte(corpsDe(html, 'etat-non'))).toMatch(/Je confirme n’avoir eu aucun échange/);
-    expect(texte(corpsDe(html, 'etat-question'))).not.toMatch(/Je confirme/);
+    expect(corpsDe(html, 'etat-question')).toContain('href="#etat-merci-non"');
+    expect(html).not.toMatch(/id="etat-non"/);
+    expect(html).not.toMatch(/Je confirme n’avoir eu aucun échange/);
   });
 
   it('REQ-UX-019 — chaque badge de REQ-UX-062 est écrit, et la phrase d’aide est sous deux badges seulement', () => {
@@ -236,7 +237,7 @@ describe('REQ-UX-019 — les états des écrans W20, et les badges de REQ-UX-062
     const confirmation = corpsDe(html, 'etat-confirmation');
     const deTrop = html.replace(
       confirmation,
-      confirmation.replace(/(va appeler votre contact\s*<\/p>)/, `$1<p>${aide}</p>`)
+      confirmation.replace(/(Non confirmée par le contact\s*<\/p>)/, `$1<p>${aide}</p>`)
     );
     expect(fautesDesBadges(deTrop)).toContain(
       'phrase d’aide présente 3 fois, attendue sous deux badges'
@@ -244,9 +245,9 @@ describe('REQ-UX-019 — les états des écrans W20, et les badges de REQ-UX-062
     expect(
       etatsManquants(
         'confirmation-contact.html',
-        lire('confirmation-contact.html').replace('id="etat-non"', 'id="etat-x"')
+        lire('confirmation-contact.html').replace('id="etat-merci-non"', 'id="etat-x"')
       )
-    ).toEqual(['confirmation-contact.html#etat-non']);
+    ).toEqual(['confirmation-contact.html#etat-merci-non']);
   });
 });
 
