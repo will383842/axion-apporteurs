@@ -18,11 +18,15 @@
 import { spawnSync } from 'node:child_process';
 
 export const TENTATIVES = 3;
-export const DELAI_PAR_TENTATIVE_MS = 240_000;
+/**
+ * QA-T74 : 180 s par tentative (240 avant) — l attente du verrou et la tentative S ADDITIONNENT, et
+ * leur somme, pauses comprises, doit tenir sous les quinze minutes de l étape avec une marge.
+ */
+export const DELAI_PAR_TENTATIVE_MS = 180_000;
 /** QA-T74 : la pause APRÈS l'échec de la tentative i (i = 1, 2). */
-export const PAUSES_MS: readonly number[] = [45_000, 90_000];
+export const PAUSES_MS: readonly number[] = [30_000, 60_000];
 /** QA-T74 : l'attente bornée du verrou d'apt avant chaque tentative, et son pas d'interrogation. */
-export const ATTENTE_VERROU_MS = 120_000;
+export const ATTENTE_VERROU_MS = 75_000;
 export const PAS_VERROU_MS = 5_000;
 
 /** Une tentative : `true` si la commande est sortie en 0 dans le délai. */

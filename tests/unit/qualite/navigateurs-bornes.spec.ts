@@ -19,9 +19,9 @@ const suite = (...issues: boolean[]) => {
 };
 
 describe('REQ-QA-016 — les navigateurs installés en trois tentatives bornées (QA-T59)', () => {
-  it('REQ-QA-016 — les bornes : trois tentatives, quatre minutes chacune', () => {
+  it('REQ-QA-016 — les bornes : trois tentatives, trois minutes chacune (QA-T74 : 240 s avant)', () => {
     expect(TENTATIVES).toBe(3);
-    expect(DELAI_PAR_TENTATIVE_MS).toBe(240_000);
+    expect(DELAI_PAR_TENTATIVE_MS).toBe(180_000);
   });
 
   it('REQ-QA-016 — un succès à la deuxième tentative s’arrête là, en 0, chaque tentative sous le délai', () => {
@@ -53,13 +53,13 @@ describe('REQ-QA-016 — QA-T74 : le verrou d’apt du runner ne brûle plus les
     expect(verrous).toBe(3);
   });
 
-  it('REQ-QA-016 — le pire cas tient sous les quinze minutes de l’étape', () => {
-    // Un verrou tenu fait échouer vite la tentative qui suit son attente ; une tentative qui télécharge
-    // n'attend aucun verrou. Le pire cas est donc, par tentative, le plus long des deux.
+  it('REQ-QA-016 — le pire cas, attente du verrou ET tentative ADDITIONNÉES, tient sous les quinze minutes avec une marge', () => {
+    // L attente du verrou et la tentative s ADDITIONNENT (refus de l exactitude sur #842) : le verrou
+    // peut se libérer à la fin de son attente, puis la tentative télécharger jusqu à son délai.
     const pire =
-      TENTATIVES * Math.max(DELAI_PAR_TENTATIVE_MS, ATTENTE_VERROU_MS) +
+      TENTATIVES * (ATTENTE_VERROU_MS + DELAI_PAR_TENTATIVE_MS) +
       PAUSES_MS.reduce((a, b) => a + b, 0);
-    expect(pire).toBeLessThanOrEqual(15 * 60_000);
+    expect(pire).toBeLessThanOrEqual(15 * 60_000 - 30_000);
   });
 
   it('REQ-QA-016 — un verrou encore tenu ne saute pas la tentative : il est NOMMÉ, et l’échec reste fermé', () => {
