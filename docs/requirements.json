@@ -5511,6 +5511,20 @@
       ]
     },
     {
+      "id": "REQ-UX-063",
+      "domaine": "produit-ux",
+      "texte": "Tous les e-mails de Partners reprennent le gabarit commun d'axion-ia, sans second système visuel. Exigence de Williams (#786, commentaire 6039806330), MOT POUR MOT :\n**EXIGENCE DE WILLIAMS (07/10/2026) : e-mails d'Axion Partners = même gabarit que le site axion-ia.com.**\n\nTous les e-mails envoyés par Axion Partners (apporteurs, entreprises, console) doivent reprendre **le gabarit commun d'axion-ia**, pour que toute la plateforme soit harmonisée :\n- même châssis que `src/lib/email/templates/_layout.tsx` d'axion-ia : fond crème `#f6f1e8`, logo `https://axion-ia.com/email/axion-ia-logo-pill.png`, boutons terracotta `#c24a1b`, carte blanche arrondie, et même pied légal (AXION IA SAS, SIREN, TVA, NDA, contact) ;\n- charte TERRACOTTA, jamais le bleu du site, sauf pour les liens ;\n- vouvoiement, signature de Williams, et les mêmes familles d'e-mails (pied d'opposition pour la famille B) ;\n- pas de second système visuel. Si le gabarit doit évoluer, il évolue des deux côtés.\n\nÀ intégrer au registre des exigences (REQ) et aux revues UX/rédaction avant tout envoi réel.",
+      "source": "exigence de Williams du 2026-10-07 (#786, 6039806330, relayée par la session axion-ia-a1) ; versée au rattrapage 124",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 12,
+      "etape": 8,
+      "phase": 1,
+      "taches": [
+        "UX-P1-64"
+      ]
+    },
+    {
       "id": "REQ-DM-041",
       "domaine": "Annexe — passe de dédoublonnage (à appliquer par le Gardien du spec, GOV-001)",
       "texte": "Le payload d'un événement du journal est un schéma Zod **fermé** par type : identifiants, hashes, enums, montants, horodatages — **jamais** nom, e-mail, téléphone, IBAN, adresse ; gate `journal:sans-pii` ; après un effacement de tiers, `verifierChaine()` reste vrai. **Porteurs : `DM-01` et `DM-20`** — cette exigence fondait la gate `journal:sans-pii` (phase 0) sans qu'aucune tâche ne la cite : la gate existait sans porteur (corrigé le 2026-09-03).",
