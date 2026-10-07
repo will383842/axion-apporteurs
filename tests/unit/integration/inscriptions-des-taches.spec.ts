@@ -34,6 +34,7 @@ const m = vi.hoisted(() => ({
   purgerLeJournalDesAccesConsole: vi.fn(),
   purgerLesSessions: vi.fn(),
   effacerLesComptesDesactives: vi.fn(),
+  purgerLesTextesDesDecisions: vi.fn(),
   // DM-60 : l'anonymisation des traces de droits du contact.
   anonymiserLesTracesDesDroits: vi.fn(),
   anonymiserLesAnomalies: vi.fn(),
@@ -115,6 +116,10 @@ vi.mock('../../../src/server/taches/purger-sessions-espace', async (original) =>
 vi.mock('../../../src/server/taches/purger-utilisateurs-console', async (original) => ({
   ...(await original<object>()),
   effacerLesComptesDesactives: m.effacerLesComptesDesactives,
+}));
+vi.mock('../../../src/server/taches/purger-textes-des-decisions', async (original) => ({
+  ...(await original<object>()),
+  purgerLesTextesDesDecisions: m.purgerLesTextesDesDecisions,
 }));
 vi.mock('../../../src/server/taches/anonymiser-traces-droits-contact', () => ({
   anonymiserLesTracesDesDroits: m.anonymiserLesTracesDesDroits,
@@ -323,6 +328,7 @@ describe('REQ-QA-027 — les passages planifiés reçoivent le client et l’heu
     ['journal_acces_console_purger', 'purgerLeJournalDesAccesConsole'],
     ['sessions_purger', 'purgerLesSessions'],
     ['utilisateurs_console_effacer', 'effacerLesComptesDesactives'],
+    ['decisions_contrat_purger', 'purgerLesTextesDesDecisions'],
   ] as const;
 
   for (const [cle, purge] of PURGES) {

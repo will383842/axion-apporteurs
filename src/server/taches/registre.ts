@@ -81,6 +81,8 @@ export const TACHES = {
   contestations_purger: { req: 'REQ-DM-043' },
   /** DM-62 — la purge dédiée du démenti d'un contact, que la purge du contact excepte. */
   dementis_purger: { req: 'REQ-DM-043' },
+  /** DM-70 — la purge du texte d'une décision de contrat, cinq ans après son point de départ. */
+  decisions_contrat_purger: { req: 'REQ-JUR-029' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;

@@ -23325,7 +23325,19 @@
         "src/server/contestation/relire.ts",
         "src/content/micro-copy/espace/vocabulaire.ts",
         "tests/unit/securite/contestation-relecture.spec.ts",
-        "tests/integration/contestation-relecture.spec.ts"
+        "tests/integration/contestation-relecture.spec.ts",
+        "src/domain/apporteur/acces-espace.ts",
+        "docs/ESPACE-ROUTES.md",
+        "src/app/(espace)/contestations/[id]/layout.tsx",
+        "src/app/(espace)/contestations/[id]/loading.tsx",
+        "src/app/(espace)/contestations/[id]/error.tsx",
+        "src/app/(espace)/contestations/[id]/contestation.module.css",
+        "src/content/micro-copy/espace/etats-vides.ts",
+        "src/content/micro-copy/espace/issues-depot.ts",
+        "scripts/gates/ux-exhaustivite.ts",
+        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts",
+        "perf/budgets.json",
+        "tests/integration/idor.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -24665,7 +24677,12 @@
         "tests/integration/dossier-de-conformite.spec.ts",
         "tests/unit/securite/rib-quatre-yeux.spec.ts",
         "src/server/evenement/journal.ts",
-        "scripts/gates/schema-pii.ts"
+        "scripts/gates/schema-pii.ts",
+        "src/server/acces/for-apporteur.ts",
+        "tests/integration/iban-et-session.spec.ts",
+        "tests/integration/pieces-kyc.spec.ts",
+        "tests/integration/pieces-kyc-figees.spec.ts",
+        "tests/integration/anti-auto-parrainage.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -25437,7 +25454,9 @@
         "src/server/taches/registre.ts",
         "docs/rgpd/registre-article-30.md",
         "tests/integration/purge-decisions-de-contrat.spec.ts",
-        "tests/unit/integration/inscriptions-des-taches.spec.ts"
+        "tests/unit/integration/inscriptions-des-taches.spec.ts",
+        "src/server/taches/purger-textes-des-decisions.ts",
+        "tests/unit/integration/purge-decisions-de-contrat.spec.ts"
       ],
       "schema": false,
       "sensible": [],
