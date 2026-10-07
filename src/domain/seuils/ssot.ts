@@ -257,7 +257,7 @@ export const SEUILS = {
     unite: 'jours_ouvres',
     source:
       "contrat art. 5.3 (JUR-T66) : délai INDICATIF, ni échéance ni engagement (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi (décision du 2026-10-07, #474, 6032680253))",
-    renvois: art('5.3'),
+    renvois: art('5.3', '5.4'),
     verifieLe: LE,
   },
   VERSEMENT_PLAFOND_JOURS: {
@@ -265,7 +265,7 @@ export const SEUILS = {
     unite: 'jours',
     source:
       "contrat art. 5.3 (JUR-T66) : l'échéance de chaque autofacture est le trentième jour suivant son émission (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi (décision du 2026-10-07, #474, 6032680253)) — À RELIRE, non encore confronté : C. com. L.441-10, I",
-    renvois: art('5.3'),
+    renvois: art('5.3', '5.4'),
     verifieLe: LE,
   },
   FORCLUSION_CONTESTATION_MOIS: {
