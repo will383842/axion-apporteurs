@@ -39,6 +39,21 @@ import { VERIFICATION_INDISPONIBLE } from '../../../src/content/micro-copy/espac
 // (sous `.stryker-tmp/`) instrumente sa copie, et une lecture textuelle n'y trouverait plus l'appel.
 const RACINE = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
 
+/**
+ * L'univers du dépôt, ses textes relus à la RACINE : la liste des fichiers est celle de la garde,
+ * mais chaque texte vient du fichier d'origine, jamais de la copie instrumentée du bac de Stryker.
+ */
+function universDuDepotOrigine(): ReturnType<typeof universDuDepot> {
+  const u = universDuDepot();
+  return {
+    ...u,
+    fichiers: u.fichiers.map((x) => ({
+      ...x,
+      texte: readFileSync(`${RACINE}/${x.chemin}`, 'utf8'),
+    })),
+  };
+}
+
 const FACTICES =
   'identite_jour=7;identite_court=2;ip_jour=9;fenetre_jour_minutes=600;fenetre_court_minutes=5';
 const SUJET = sujetDepuisEmpreinte('a'.repeat(64));
@@ -132,7 +147,7 @@ describe('REQ-SEC-021 — le secret des plafonds : cinq clés fermées, bornées
 
 describe('REQ-SEC-021 — la garde : la troisième voie, fermée', () => {
   it('REQ-SEC-021 : le dépôt est vert, et ses trois compteurs `verif:` passent par la configuration privée', async () => {
-    const r = await analyser(universDuDepot());
+    const r = await analyser(universDuDepotOrigine());
     expect(r.fautes).toEqual([]);
     expect(
       Object.entries(r.voies)
@@ -142,7 +157,7 @@ describe('REQ-SEC-021 — la garde : la troisième voie, fermée', () => {
   });
 
   it('REQ-SEC-021 : TÉMOIN À DEUX FACES — `surPanne: laisser-passer` sur un compteur de la configuration rougit ; `refuser` reste vert', async () => {
-    const base = universDuDepot();
+    const base = universDuDepotOrigine();
     const ouvert = await analyser({
       ...base,
       registre: {
@@ -160,7 +175,7 @@ describe('REQ-SEC-021 — la garde : la troisième voie, fermée', () => {
   });
 
   it('REQ-SEC-021 : TÉMOIN — la sentinelle sur un autre compteur rougit `sentinelle_hors_liste`', async () => {
-    const base = universDuDepot();
+    const base = universDuDepotOrigine();
     const r = await analyser({
       ...base,
       registre: {
@@ -177,7 +192,7 @@ describe('REQ-SEC-021 — la garde : la troisième voie, fermée', () => {
 
   it('REQ-SEC-021 : TÉMOIN — un secret qui n’est pas déclaré dans `src/lib/env.ts` rougit', async () => {
     expect(NOMS_DES_SECRETS_CONDITIONNELS).toContain(VARIABLE_DES_PLAFONDS);
-    const r = await analyser({ ...universDuDepot(), secretsConditionnels: [] });
+    const r = await analyser({ ...universDuDepotOrigine(), secretsConditionnels: [] });
     expect(r.fautes.filter((f) => f.famille === 'configuration_mal_declaree')).toHaveLength(3);
   });
 });
