@@ -28,6 +28,7 @@ import { z } from 'zod';
 import { ALGORITHME } from './journal';
 import { EVENEMENTS_APPORTEUR, MOTIFS_RESILIATION, STATUTS_APPORTEUR } from '../apporteur/statut';
 import { ARTICLES_MISE_EN_DEMEURE } from '../apporteur/resiliation';
+import { ETATS_DE_GEL } from '../apporteur/suspension';
 import {
   CRITERES_D_ANTERIORITE,
   ETATS_ATTRIBUTION,
@@ -110,6 +111,7 @@ export type TypeEvenementJournal =
   | 'utilisateur_console_modifie'
   | 'journal_acces_gel_modifie'
   | 'apporteur_mis_en_demeure'
+  | 'apporteur_gel_modifie'
   | 'acces_coordonnees_reservee';
 
 /**
@@ -155,6 +157,30 @@ export const CHARGES_PAR_TYPE = {
           path: ['de'],
           message: 'naissance_incoherente',
         });
+      }
+    }),
+  /**
+   * SEC-15 (REQ-SEC-019) : la pose et la levée du gel des dépôts (forme d'A02, #794, 6035951154). Un
+   * côté vaut `libre`, jamais les deux ; un rôle est une personne de la console, et le plein droit, le
+   * système, pour la seule levée. AUCUN identifiant d'anomalie (DM-12, décision (d) de la juriste) : le
+   * lien d'un gel pour fraude vit dans `apporteurs.gel_anomalie_id`, jamais au journal.
+   */
+  apporteur_gel_modifie: z
+    .object({
+      de: z.enum(ETATS_DE_GEL),
+      vers: z.enum(ETATS_DE_GEL),
+      par: z.enum(['role', 'plein_droit']),
+      acteur: FORMES.acteur(),
+    })
+    .strict()
+    .superRefine(({ de, vers, par, acteur }, ctx) => {
+      const faute = (path: string, message: string) =>
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+      if ((de === 'libre') === (vers === 'libre')) faute('vers', 'pose_ou_levee_seulement');
+      if (par === 'role' && acteur.par !== 'utilisateur_console')
+        faute('acteur', 'role_sans_personne');
+      if (par === 'plein_droit' && (acteur.par !== 'systeme' || vers !== 'libre')) {
+        faute('par', 'plein_droit_pour_la_seule_levee');
       }
     }),
   /**

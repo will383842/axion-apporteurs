@@ -65,6 +65,11 @@ export type LigneDeNotification = {
   readonly route: string | null;
   /** Quand la route n'est pas encore déclarée : la tâche qui la posera. */
   readonly routeEnAttente: string | null;
+  /**
+   * SEC-70 : un appel qui ne mène PAS à l'espace. `contact_entite` : le mailto: de l'adresse de
+   * contact de l'entité, lue au registre ; sans elle, l'appel part seul.
+   */
+  readonly lien?: 'contact_entite';
 };
 
 const action = (cle: keyof typeof TEXTES_DES_NOTIFICATIONS) => [
@@ -354,8 +359,9 @@ export const GABARITS = {
     route: '/mes-entreprises',
     routeEnAttente: null,
   },
-  // SEC-19 : la fin du contrat, dans l'espace en lecture seule ; elle fait courir le préavis d'une
-  // résiliation par la Société (art. 11.1 et 20).
+  // SEC-19 : la fin du contrat ; elle fait courir le préavis d'une résiliation par la Société (art. 11.1
+  // et 20). SEC-70 (art. 12.3) : l'espace est fermé au résilié — l'appel ne mène à aucune route, mais à la
+  // demande écrite (juriste, #824 6043086595).
   resiliation: {
     destinataire: 'apporteur',
     req: 'REQ-DM-011',
@@ -367,8 +373,9 @@ export const GABARITS = {
     canaux: ['email', 'espace'],
     desactivable: false,
     actions: action('resiliation'),
-    route: '/mes-commissions',
+    route: null,
     routeEnAttente: null,
+    lien: 'contact_entite',
   },
 } as const satisfies Readonly<Record<string, LigneDeNotification>>;
 
@@ -468,7 +475,8 @@ export function fautesDeLaTable(
       f.push(`action_non_unique : ${cle} doit porter UN appel, celui de la micro-copie`);
     if (l.route !== null && !routes.includes(l.route))
       f.push(`route_non_declaree : ${cle} mène à ${l.route}, absente de ${sourceDesRoutes}`);
-    if (l.route === null && l.routeEnAttente === null)
+    // SEC-70 : un appel vers le contact de l'entité ne mène à aucune route de l'espace.
+    if (l.route === null && l.routeEnAttente === null && l.lien === undefined)
       f.push(`route_absente_sans_tache : ${cle} n'a ni route ni tâche qui la posera`);
   }
   return f;
