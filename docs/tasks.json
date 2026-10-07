@@ -23545,7 +23545,8 @@
         "tests/integration/migrations-additives.spec.ts",
         "scripts/lib/semis-porte-d.ts",
         "tests/unit/qualite/porte-d.spec.ts",
-        "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts"
+        "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts",
+        "src/domain/contrat/decisions.ts"
       ],
       "schema": true,
       "sensible": [
