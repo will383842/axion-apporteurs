@@ -21,9 +21,12 @@ import {
 } from '../../src/server/deploiement/role-d-execution';
 import {
   CibleInconnue,
+  CurseurDuJournalIllisible,
   LectureDuJournalRefusee,
   lireLeJournalDesAcces,
+  type TraceDAcces,
 } from '../../src/server/console/journal-des-acces';
+import { PARAMETRES } from '../../src/domain/seuils/ssot';
 import { ROLES_CONSOLE } from '../../src/server/roles/matrice';
 import {
   limiteDuJournalDesAcces,
@@ -175,19 +178,19 @@ describe('REQ-SEC-058 — la lecture du journal des accès est réservée à un 
       where: { id: enAttente },
       data: { valideAt: new Date('2026-01-02T00:00:00.000Z'), valideParId: validateur },
     });
-    await expect(lire()).resolves.toEqual([]);
+    await expect(lire()).resolves.toEqual({ traces: [], suivant: null });
     expect(await lignesDe(enAttente)).toHaveLength(1);
   });
 
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — le même appel, par l’admin actif, passe', async () => {
     const cible = await unUtilisateur('qualifieur');
     const admin = await unUtilisateur('admin');
-    const traces = await lireLeJournalDesAcces(
+    const page = await lireLeJournalDesAcces(
       app,
       { lecteurId: admin, utilisateurConsoleId: cible, adresse: ADRESSE },
       cles
     );
-    expect(traces).toEqual([]);
+    expect(page).toEqual({ traces: [], suivant: null });
   });
 });
 
@@ -215,7 +218,7 @@ describe('REQ-SEC-058 — la lecture du journal se journalise elle-même, par id
     const admin = await unUtilisateur('admin');
     const ancienne = await uneConnexion(cible, new Date('2026-03-01T08:00:00.000Z'));
     const recente = await uneConnexion(cible, new Date('2026-03-02T08:00:00.000Z'));
-    const traces = await lireLeJournalDesAcces(
+    const { traces } = await lireLeJournalDesAcces(
       app,
       { lecteurId: admin, utilisateurConsoleId: cible, adresse: ADRESSE },
       cles
@@ -228,7 +231,7 @@ describe('REQ-SEC-058 — la lecture du journal se journalise elle-même, par id
 
   it('REQ-SEC-058 : TÉMOIN — lire ses propres traces est journalisé, la cible étant le lecteur lui-même', async () => {
     const admin = await unUtilisateur('admin');
-    const traces = await lireLeJournalDesAcces(
+    const { traces } = await lireLeJournalDesAcces(
       app,
       { lecteurId: admin, utilisateurConsoleId: admin, adresse: null },
       cles
@@ -249,6 +252,75 @@ describe('REQ-SEC-058 — la lecture du journal se journalise elle-même, par id
       )
     ).rejects.toBeInstanceOf(CibleInconnue);
     expect(await lignesDe(admin)).toHaveLength(0);
+  });
+});
+
+describe('REQ-SEC-058 — la lecture est bornée et paginée par curseur, en base réelle (SEC-67)', () => {
+  it('REQ-SEC-058 : TÉMOIN — la traversée par curseur rend tout le journal de l’utilisateur lu, une fois, dans l’ordre de la base (survenu_at desc, id desc), malgré les égalités de date ; chaque page est bornée et tracée', async () => {
+    const borne = PARAMETRES.JOURNAL_DES_ACCES_PAGE_MAX.valeur;
+    const cible = await unUtilisateur('qualifieur');
+    const voisin = await unUtilisateur('comptable');
+    const admin = await unUtilisateur('admin');
+    const debut = new Date('2026-04-01T08:00:00.000Z').getTime();
+    for (let k = 0; k < borne * 2 + 3; k += 1) {
+      // Trois traces par milliseconde : seul `id` les départage.
+      const quand = new Date(debut + Math.floor(k / 3));
+      await uneConnexion(cible, quand);
+      await uneConnexion(voisin, quand);
+    }
+    const ordreDeLaBase = (
+      await base.prisma.$queryRawUnsafe<{ id: string }[]>(
+        `SELECT id::text AS id FROM journal_acces_console
+         WHERE utilisateur_console_id = $1::uuid ORDER BY survenu_at DESC, id DESC`,
+        cible
+      )
+    ).map((l) => l.id);
+    const vues: TraceDAcces[] = [];
+    let curseur: string | null = null;
+    let pages = 0;
+    do {
+      const page: Awaited<ReturnType<typeof lireLeJournalDesAcces>> = await lireLeJournalDesAcces(
+        app,
+        { lecteurId: admin, utilisateurConsoleId: cible, adresse: null, curseur },
+        cles
+      );
+      expect(page.traces.length).toBeLessThanOrEqual(borne);
+      vues.push(...page.traces);
+      curseur = page.suivant;
+      pages += 1;
+    } while (curseur !== null && pages < 10);
+    expect(pages).toBe(3);
+    expect(vues.map((t) => t.id)).toEqual(ordreDeLaBase);
+    expect(ordreDeLaBase).toHaveLength(borne * 2 + 3);
+    const lectures = await lignesDe(admin);
+    expect(lectures).toHaveLength(pages);
+    expect(lectures.every((l) => l.nature === 'lecture_journal_acces' && l.cibleId === cible)).toBe(
+      true
+    );
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — le curseur d’un autre utilisateur est refusé sans rien écrire ni rien lire', async () => {
+    const borne = PARAMETRES.JOURNAL_DES_ACCES_PAGE_MAX.valeur;
+    const cible = await unUtilisateur('lecteur');
+    const autre = await unUtilisateur('lecteur');
+    const admin = await unUtilisateur('admin');
+    for (let k = 0; k < borne + 1; k += 1)
+      await uneConnexion(autre, new Date(Date.UTC(2026, 4, 1, 8, 0, 0, k)));
+    const { suivant } = await lireLeJournalDesAcces(
+      app,
+      { lecteurId: admin, utilisateurConsoleId: autre, adresse: null },
+      cles
+    );
+    expect(suivant).not.toBeNull();
+    const avant = (await lignesDe(admin)).length;
+    await expect(
+      lireLeJournalDesAcces(
+        app,
+        { lecteurId: admin, utilisateurConsoleId: cible, adresse: null, curseur: suivant },
+        cles
+      )
+    ).rejects.toBeInstanceOf(CurseurDuJournalIllisible);
+    expect(await lignesDe(admin)).toHaveLength(avant);
   });
 });
 
