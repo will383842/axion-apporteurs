@@ -48,7 +48,7 @@ import { CHEMIN_CHARTE, cheminsSchema, touche } from '../lot/revues';
 
 const CHEMIN_TACHES = 'docs/tasks.json';
 const CHEMIN_SCHEMA = 'scripts/lot/tasks.schema.json';
-const CHEMIN_GEL = 'config/gel-phase-1.json';
+export const CHEMIN_GEL = 'config/gel-phase-1.json';
 const CHEMIN_DECISIONS = CHEMIN_REGISTRE;
 const CHEMIN_VUE_PAR_DEFAUT = 'docs/TASKS.md';
 

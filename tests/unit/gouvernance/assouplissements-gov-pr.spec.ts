@@ -404,7 +404,12 @@ describe('REQ-GOV-011 — GOV-145 : une lentille pour ce qui n’affiche aucune 
   it('REQ-GOV-011 — maquette, texte et micro-copy : UNE lentille possible', () => {
     expect(LECTEUR.fichierAUneLentille('docs/maquettes/contestation.html')).toBe(true);
     expect(LECTEUR.fichierAUneLentille('src/content/micro-copy/espace/contestation.ts')).toBe(true);
-    expect(LECTEUR.ZONES_A_UNE_LENTILLE).toEqual(expect.arrayContaining(['espace', 'console']));
+    expect([...LECTEUR.ZONES_A_UNE_LENTILLE]).toEqual([
+      'gouvernance',
+      'qualite',
+      'espace',
+      'console',
+    ]);
   });
 
   it('REQ-GOV-011 — un écran qui affiche ou modifie des données reste à DEUX lentilles', () => {
