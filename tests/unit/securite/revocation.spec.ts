@@ -649,18 +649,9 @@ describe('REQ-SEC-003 — l’adaptateur Prisma des sessions', () => {
             expireAt: true,
             revoqueAt: true,
             sessionVersion: true,
-            // SEC-19 : les droits en cours d'un résilié, relus avec le statut à chaque requête.
-            apporteur: {
-              select: {
-                statut: true,
-                sessionVersion: true,
-                attributions: {
-                  where: { statut: 'figee_resiliation' },
-                  select: { id: true },
-                  take: 1,
-                },
-              },
-            },
+            // SEC-70 : le statut et la version seuls ; aucun droit en cours n'est plus lu (un résilié
+            // est fermé, quels que soient ses droits).
+            apporteur: { select: { statut: true, sessionVersion: true } },
             lienMagique: { select: { consommeAt: true } },
           },
         },
