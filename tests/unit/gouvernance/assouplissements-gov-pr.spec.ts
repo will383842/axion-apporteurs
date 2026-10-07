@@ -289,3 +289,62 @@ describe('REQ-GOV-013 — GOV-145 (5) : la case « Relecteur ≠ auteur » compt
     expect(GARDE.casesVidesDeLaDod(autre, true)).toBe(1);
   });
 });
+
+// ── la fin des rattrapages de chemins (décision de Williams du 2026-10-05, #319, point 3) ──────────
+
+describe('REQ-GOV-010 — GOV-145 : sans rattrapage, une PR d’auteur qui n’ajoute que ses chemins se passe du label', () => {
+  const tache = (id: string, zone: string, paths: string[]): GARDE.Tache =>
+    GARDE.projeter([{ id, zone, sensible: [], schema: false, pr: null, paths, tests: null, statut: 'a_faire', acceptance: 'a' }])[0]!;
+  const depot = (taches: GARDE.Tache[]): GARDE.Depot => ({ gabarit: '', codeowners: '', charte: '', fiches: [], architecte: '', taches });
+  const pr = (fichiers: string[]): GARDE.Pr => ({ titre: 't', corps: '', labels: [], fichiers, revues: null, tachesBase: null });
+  const TETE = [tache('UX-P1-01', 'espace', ['src/app/x.tsx']), tache('GOV-012', 'gouvernance', ['docs/tasks.json'])];
+
+  it('REQ-GOV-010 — registre touché, tâche d’auteur, AUCUN écart : le label n’est plus exigé', () => {
+    expect(GARDE.cheminsDAuteurSeuls(depot(TETE), pr(['docs/tasks.json', 'src/app/x.tsx']), 'UX-P1-01', [])).toBe(true);
+  });
+
+  it('REQ-GOV-010 — un seul écart, une PR de gouvernance, un titre inconnu ou sans tâche : le label reste exigé', () => {
+    const f = ['docs/tasks.json'];
+    expect(GARDE.cheminsDAuteurSeuls(depot(TETE), pr(f), 'UX-P1-01', ['UX-P1-02 est réécrite'])).toBe(false);
+    expect(GARDE.cheminsDAuteurSeuls(depot(TETE), pr(f), 'GOV-012', [])).toBe(false);
+    expect(GARDE.cheminsDAuteurSeuls(depot(TETE), pr(f), 'UX-P1-99', [])).toBe(false);
+    expect(GARDE.cheminsDAuteurSeuls(depot(TETE), pr(f), null, [])).toBe(false);
+  });
+
+  it('REQ-GOV-010 — une PR qui ne touche pas le registre n’en tire aucune levée', () => {
+    expect(GARDE.cheminsDAuteurSeuls(depot(TETE), pr(['src/app/x.tsx']), 'UX-P1-01', [])).toBe(false);
+  });
+});
+
+// ── la relecture proportionnée (#319, 5988252245, point 2, amendée le 2026-10-07, 6032068586) ──────
+
+describe('REQ-GOV-011 — GOV-145 : une lentille pour ce qui n’affiche aucune donnée, deux pour un écran', () => {
+  it('REQ-GOV-011 — maquette, texte et micro-copy : UNE lentille possible', () => {
+    expect(LECTEUR.fichierAUneLentille('docs/maquettes/contestation.html')).toBe(true);
+    expect(LECTEUR.fichierAUneLentille('src/content/micro-copy/espace/contestation.ts')).toBe(true);
+    expect(LECTEUR.ZONES_A_UNE_LENTILLE).toEqual(expect.arrayContaining(['espace', 'console']));
+  });
+
+  it('REQ-GOV-011 — un écran qui affiche ou modifie des données reste à DEUX lentilles', () => {
+    for (const f of [
+      'src/app/(espace)/contestation/page.tsx',
+      'src/components/console/mise-en-demeure.tsx',
+      'src/app/(console)/console/apporteurs/[id]/actions.ts',
+      'src/server/console/navigation.ts',
+    ]) {
+      expect(LECTEUR.fichierAUneLentille(f), f).toBe(false);
+    }
+  });
+
+  it('REQ-GOV-011 — la fiche de validation de Williams et les gardes « mobile first » ne passent jamais à une lentille', () => {
+    for (const f of [
+      'docs/maquettes/VALIDATION.md',
+      'scripts/gates/ux-reflow.ts',
+      'tests/e2e/espace/mobile.spec.ts',
+      'tests/unit/qualite/budgets-mobiles.spec.ts',
+      'playwright.config.ts',
+    ]) {
+      expect(LECTEUR.fichierAUneLentille(f), f).toBe(false);
+    }
+  });
+});
