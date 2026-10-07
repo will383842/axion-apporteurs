@@ -53,6 +53,12 @@ export const TACHES = {
   appareils_purger: { req: 'REQ-SEC-003' },
   /** SEC-58 — la purge, à échéance, du journal des accès à la console. */
   journal_acces_console_purger: { req: 'REQ-SEC-023' },
+  /**
+   * SEC-59 — le résumé quotidien du journal des accès à la console, au journal chaîné : le nombre de
+   * lignes et deux empreintes par jour clos, puis la vérification des résumés
+   * (`src/server/taches/resumer-journal-acces-console.ts`).
+   */
+  journal_acces_console_resumer: { req: 'REQ-SEC-058' },
   /** SEC-65 — la suppression des sessions finies, six mois après leur fin. */
   sessions_purger: { req: 'REQ-SEC-003' },
   /** SEC-65 — l'effacement du nom et de l'adresse d'un accès désactivé de la console, cinq ans après. */

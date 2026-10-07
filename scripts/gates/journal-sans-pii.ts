@@ -15,8 +15,9 @@
  *   — une charge et chaque objet imbriqué `.strict()`, sans `catchall` (`charge_ouverte`) ;
  *   — chaque feuille dans la liste fermée des formes — identifiant `uuid`, empreinte sur
  *     `HASH_HEX_64` (CETTE constante, par identité), enum, `nativeEnum`, littéral de chaîne, entier
- *     sur un champ suffixé `Cents`, horodatage `datetime`, déballés d'`optional` / `nullable`
- *     (`feuille_hors_liste`) — `z.string()` nu compris : une chaîne libre peut porter un courriel ;
+ *     sur un champ suffixé `Cents`, horodatage `datetime`, compte borné (entier de 0 à `COMPTE_MAX`
+ *     sur un champ suffixé `Nombre`), jour en UTC sur `JOUR_UTC` (CETTE constante, par identité),
+ *     déballés d'`optional` / `nullable` (`feuille_hors_liste`) — `z.string()` nu compris : une chaîne libre peut porter un courriel ;
  *   — aucun champ dont un segment de nom est au lexique UNIQUE des champs de personne
  *     (`src/domain/donnees-personnelles/champs.ts`), sauf une EMPREINTE : dernier segment `hash` et
  *     forme empreinte (`ipHash`, `emailHash`) (`champ_nominatif`) ;
@@ -59,7 +60,13 @@
 import { readFileSync, existsSync } from 'node:fs';
 import ts from 'typescript';
 import { z } from 'zod';
-import { CHARGES_PAR_TYPE, FORMES, HASH_HEX_64 } from '../../src/domain/evenement/charges';
+import {
+  CHARGES_PAR_TYPE,
+  COMPTE_MAX,
+  FORMES,
+  HASH_HEX_64,
+  JOUR_UTC,
+} from '../../src/domain/evenement/charges';
 import { segmentsDuNom, segmentsPersonnels } from '../../src/domain/donnees-personnelles/champs';
 import { enumsDuSchema } from './schema-enums';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
@@ -406,7 +413,16 @@ function estUnRaffinement(schema: z.ZodTypeAny): schema is z.ZodEffects<z.ZodTyp
   return schema instanceof z.ZodEffects && schema._def.effect.type === 'refinement';
 }
 
-type Forme = 'identifiant' | 'empreinte' | 'enum' | 'montant' | 'horodatage' | 'objet' | null;
+type Forme =
+  | 'identifiant'
+  | 'empreinte'
+  | 'enum'
+  | 'montant'
+  | 'horodatage'
+  | 'compte'
+  | 'jourUtc'
+  | 'objet'
+  | null;
 
 /** La forme d'une feuille, ou `null` si elle est hors de la liste fermée. */
 function forme(schema: z.ZodTypeAny, cle: string): Forme {
@@ -424,11 +440,21 @@ function forme(schema: z.ZodTypeAny, cle: string): Forme {
     if (checks.some((c) => c.kind === 'uuid')) return 'identifiant';
     if (checks.some((c) => c.kind === 'regex' && c.regex === HASH_HEX_64)) return 'empreinte';
     if (checks.some((c) => c.kind === 'datetime')) return 'horodatage';
+    if (checks.some((c) => c.kind === 'regex' && c.regex === JOUR_UTC)) return 'jourUtc';
     return null;
   }
   if (schema instanceof z.ZodNumber) {
-    const entier = schema._def.checks.some((c) => c.kind === 'int');
-    return entier && cle.endsWith('Cents') ? 'montant' : null;
+    const checks = schema._def.checks;
+    const entier = checks.some((c) => c.kind === 'int');
+    if (entier && cle.endsWith('Cents')) return 'montant';
+    // SEC-59 : un compte est un entier BORNÉ des deux côtés — de 0 à COMPTE_MAX —, sur un champ …Nombre.
+    const bas = Math.max(
+      ...checks.flatMap((c) => (c.kind === 'min' ? [c.inclusive ? c.value : c.value + 1] : []))
+    );
+    const haut = Math.min(
+      ...checks.flatMap((c) => (c.kind === 'max' ? [c.inclusive ? c.value : c.value - 1] : []))
+    );
+    return entier && cle.endsWith('Nombre') && bas >= 0 && haut <= COMPTE_MAX ? 'compte' : null;
   }
   return null;
 }
@@ -494,7 +520,8 @@ export function controler(vue: Vue): { fautes: Faute[]; types: number; champs: n
           ou: ici,
           message:
             `${ici} — forme hors de la liste fermée (identifiant uuid, empreinte HASH_HEX_64, enum, ` +
-            'littéral de chaîne, entier sur un champ …Cents, horodatage datetime). Utilise FORMES.',
+            'littéral de chaîne, entier sur un champ …Cents, horodatage datetime, compte borné sur un champ ' +
+            '…Nombre, jour JOUR_UTC). Utilise FORMES.',
         });
       }
       const sous = objetSous(champ);
@@ -598,6 +625,13 @@ const TEMOINS: { famille: Famille; vue: () => Vue }[] = [
   { famille: 'champ_nominatif', vue: () => bac({ nomContact: z.enum(['a']) }) },
   { famille: 'feuille_hors_liste', vue: () => bac({ motif: z.string() }) },
   { famille: 'feuille_hors_liste', vue: () => bac({ montantHt: z.number().int() }) },
+  // SEC-59 : un compte sans borne, ou sans le suffixe Nombre, et un jour sur une autre expression.
+  { famille: 'feuille_hors_liste', vue: () => bac({ lignesNombre: z.number().int().min(0) }) },
+  { famille: 'feuille_hors_liste', vue: () => bac({ lignes: FORMES.compte() }) },
+  {
+    famille: 'feuille_hors_liste',
+    vue: () => bac({ jourUtc: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }),
+  },
   {
     famille: 'charge_ouverte',
     vue: () => ({
@@ -668,6 +702,8 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
         ipHash: FORMES.empreinte(),
         emailHash: FORMES.empreinte().nullable(),
         montantHtCents: FORMES.montantCents(),
+        lignesNombre: FORMES.compte(),
+        jourUtc: FORMES.jourUtc(),
         survenuAt: FORMES.horodatage().optional(),
         statut: z.enum(['a', 'b']),
         version: z.literal('v1'),

@@ -457,13 +457,17 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
     expect(
       refus('journal_acces_console_resume', { ...juste, acteur: { par: 'utilisateur_console' } })
     ).toEqual(['acteur:acteur_systeme_attendu']);
-    expect(refus('journal_acces_console_resume', { ...juste, acteur: CONSOLE })).toHaveLength(1);
+    expect(refus('journal_acces_console_resume', { ...juste, acteur: CONSOLE })).toEqual([
+      "acteur:Unrecognized key(s) in object: 'id'",
+      'acteur:acteur_systeme_attendu',
+    ]);
     // Une clé en trop (un identifiant d'employé, une cible), une clé en moins : refusées.
     expect(
       refus('journal_acces_console_resume', { ...juste, utilisateurConsoleId: ID })
     ).toHaveLength(1);
-    const { empreinteSurvivante: _s, ...sans } = juste;
-    expect(refus('journal_acces_console_resume', sans)).toHaveLength(1);
+    expect(
+      refus('journal_acces_console_resume', { ...juste, empreinteSurvivante: undefined })
+    ).toHaveLength(1);
     // La clé du jour est `jourUtc` : l'ancien nom `jour` est refusé.
     const { jourUtc, ...sansJour } = juste;
     expect(refus('journal_acces_console_resume', { ...sansJour, jour: jourUtc })).toHaveLength(2);

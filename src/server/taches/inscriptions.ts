@@ -76,6 +76,7 @@ import {
   purgerLesDementis,
 } from './purger-contestations-anomalies';
 import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
+import { passageDuResumeDuJournalDesAcces } from './resumer-journal-acces-console';
 import { purgerLesSessions } from './purger-sessions-espace';
 import { effacerLesComptesDesactives } from './purger-utilisateurs-console';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
@@ -271,6 +272,18 @@ export function inscriptions(
     // SEC-58 : le journal des accès à la console, purgé à son échéance (la purge vide les identifiants).
     journal_acces_console_purger: () =>
       purgerLeJournalDesAccesConsole(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-59 (REQ-SEC-058) : le résumé de chaque jour clos du journal des accès entre au journal
+    // chaîné, une fois par jour civil UTC (son battement le dit), puis les résumés sont vérifiés.
+    journal_acces_console_resumer: passageDuResumeDuJournalDesAcces(prisma, {
+      maintenant: () => new Date(horlogeSysteme.maintenant()),
+      dernierSucces: async () =>
+        (
+          await prisma.battement.findUnique({
+            where: { tache: 'journal_acces_console_resumer' },
+            select: { dernierSuccesAt: true },
+          })
+        )?.dernierSuccesAt ?? null,
+    }),
     // SEC-65 (REQ-SEC-003, REQ-JUR-068) : les sessions finies, six mois après leur fin ; le nom et
     // l'adresse d'un accès désactivé de la console, cinq ans après la désactivation.
     sessions_purger: () => purgerLesSessions(prisma, new Date(horlogeSysteme.maintenant())),

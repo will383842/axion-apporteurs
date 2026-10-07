@@ -14,6 +14,8 @@
  *   — enum / littéral   `z.enum`, `z.nativeEnum`, `z.literal` d'une chaîne
  *   — montant           `z.number().int()` sur un champ suffixé `Cents`       → `FORMES.montantCents()`
  *   — horodatage        `z.string().datetime()`                               → `FORMES.horodatage()`
+ *   — compte            `z.number().int().min(0).max(COMPTE_MAX)` sur un champ suffixé `Nombre` → `FORMES.compte()`
+ *   — jour en UTC       `z.string().regex(JOUR_UTC)` — CETTE constante (SEC-59)  → `FORMES.jourUtc()`
  *   — `optional` / `nullable` d'une forme admise ; objet imbriqué `.strict()`.
  * Tout le reste est refusé — `z.string()` nu compris : une chaîne libre peut porter un courriel.
  * C'est `scripts/gates/journal-sans-pii.ts` (`pnpm journal:sans-pii`) qui le vérifie, sur le schéma
@@ -56,12 +58,22 @@ export const TRANSITIONS_DU_JOURNAL_APPORTEUR = ['creer', ...EVENEMENTS_APPORTEU
 /** L'empreinte admise : SHA-256 en hexadécimal minuscule. La SEULE expression d'empreinte admise. */
 export const HASH_HEX_64 = /^[0-9a-f]{64}$/;
 
+/** SEC-59 : un jour civil en UTC, `AAAA-MM-JJ`, sans heure. La SEULE expression admise (le fuseau est dans le nom). */
+export const JOUR_UTC = /^\d{4}-\d{2}-\d{2}$/;
+
+/** SEC-59 : la borne haute d'un compte : un entier signé sur 32 bits. */
+export const COMPTE_MAX = 2147483647;
+
 /** Les constructeurs des formes admises — un raccourci, pas une obligation : la garde lit le schéma. */
 export const FORMES = {
   identifiant: () => z.string().uuid(),
   empreinte: () => z.string().regex(HASH_HEX_64),
   montantCents: () => z.number().int(),
   horodatage: () => z.string().datetime(),
+  /** SEC-59 : un nombre de lignes, de 0 à `COMPTE_MAX`, sur un champ suffixé `Nombre` (jamais une somme). */
+  compte: () => z.number().int().min(0).max(COMPTE_MAX),
+  /** SEC-59 : le jour civil en UTC des lignes résumées (`JOUR_UTC`). */
+  jourUtc: () => z.string().regex(JOUR_UTC),
   /**
    * HYP-A02-ACTEUR-JOURNAL — QUI a produit l'événement : OBLIGATOIRE dans la charge hachée de tout
    * type sauf la genèse, et sous CETTE forme seule. `id` est présent si et seulement si l'acteur
@@ -109,7 +121,8 @@ export type TypeEvenementJournal =
   | 'anomalie_gel_modifie'
   | 'utilisateur_console_modifie'
   | 'journal_acces_gel_modifie'
-  | 'apporteur_mis_en_demeure';
+  | 'apporteur_mis_en_demeure'
+  | 'journal_acces_console_resume';
 
 /**
  * SEC-61 : le gel du journal des accès à la console — ses gestes, ses motifs (les valeurs de
@@ -416,6 +429,24 @@ export const CHARGES_PAR_TYPE = {
       acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
         message: 'acteur_console_attendu',
       }),
+    })
+    .strict(),
+  /**
+   * SEC-59 (REQ-SEC-058, forme d'A02, rattrapage 104) : le résumé quotidien du journal des accès à la
+   * console. Aucun agrégat : un jour n'est l'état d'aucun. Le nombre de lignes du jour (`jourUtc`, en UTC)
+   * et DEUX empreintes de leur texte : la première sur les lignes complètes (vérifiable jusqu'à la
+   * purge), la seconde sur les seules colonnes qui survivent à la purge (vérifiable pour toujours).
+   * Aucun identifiant d'employé, aucune cible, aucune empreinte réseau.
+   */
+  journal_acces_console_resume: z
+    .object({
+      acteur: FORMES.acteurSansIdentite().refine((a) => a.par === 'systeme', {
+        message: 'acteur_systeme_attendu',
+      }),
+      jourUtc: FORMES.jourUtc(),
+      lignesNombre: FORMES.compte(),
+      empreinteComplete: FORMES.empreinte(),
+      empreinteSurvivante: FORMES.empreinte(),
     })
     .strict(),
 } satisfies Record<TypeEvenementJournal, z.ZodTypeAny>;

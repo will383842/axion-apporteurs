@@ -190,3 +190,19 @@ export async function lireLaChargeDUnFait(
   });
   return l === null ? null : { type: l.type, charge: l.charge };
 }
+
+/**
+ * SEC-59 — les charges des résumés quotidiens du journal des accès à la console, du plus ancien au plus
+ * récent. Une lecture seule, par l'écrivain unique du journal ; la tâche du résumé les confronte à la
+ * table, et refuse d'en écrire un second pour le même jour.
+ */
+export async function lireLesResumesDuJournalDesAcces(
+  client: PrismaClient | Prisma.TransactionClient
+): Promise<unknown[]> {
+  const lignes = await client.evenement.findMany({
+    where: { type: 'journal_acces_console_resume' },
+    orderBy: { id: 'asc' },
+    select: { charge: true },
+  });
+  return lignes.map((l) => l.charge);
+}
