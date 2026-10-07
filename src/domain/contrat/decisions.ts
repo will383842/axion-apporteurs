@@ -278,7 +278,11 @@ export const CONCORDANCES: readonly Concordance[] = [
     article: '3.2',
     alinea: null,
     registre: ["Provisoire jusqu'à confirmation par l'entreprise"],
-    gabarit: ["L'attribution est d'abord provisoire", "lorsque l'entreprise confirme"],
+    // JUR-T66 : la confirmation suit le contrat v2 d'axion-ia, qui fait foi (décision de Williams du 2026-10-07, #474, 6032680253).
+    gabarit: [
+      "L'attribution est d'abord provisoire",
+      "L'attribution devient définitive dès que l'entreprise répond à la Société",
+    ],
     absents: [],
   },
   {
@@ -360,12 +364,13 @@ export const CONCORDANCES: readonly Concordance[] = [
     gabarit: ['dont il a effectivement rencontré ou joint un représentant'],
     absents: [],
   },
+  // JUR-T66 : la personne opposée suit le régime du silence de l'entreprise, au contrat v2 (art. 3.2).
   {
     decision: 'HYP-W20-OPPOSITION',
     article: '3.2',
-    alinea: 3,
-    registre: ['ne se prononce pas » (art. 3.2 al. 3)'],
-    gabarit: ["ne se prononce pas sur l'existence de l'échange"],
+    alinea: null,
+    registre: ["régime du silence de l'entreprise (art. 3.2"],
+    gabarit: ["sont les seules conséquences attachées au silence de l'entreprise"],
     absents: [],
   },
   {
@@ -381,7 +386,8 @@ export const CONCORDANCES: readonly Concordance[] = [
     article: '3.4',
     alinea: 2,
     registre: ['« première prise de contact de la Société »'],
-    gabarit: ["première prise de contact de la Société avec l'entreprise déclarée"],
+    // JUR-T66 : le « premier échange » du contrat v2 d'axion-ia, qui fait foi (décision de Williams du 2026-10-07, #474, 6032680253).
+    gabarit: ["Le premier échange s'entend de la première réponse de l'entreprise à la Société"],
     absents: [],
   },
   {
@@ -392,15 +398,16 @@ export const CONCORDANCES: readonly Concordance[] = [
     gabarit: ['Deux déclarations au plus sont conservées en attente par entreprise'],
     absents: [],
   },
+  // JUR-T66 : la fin faute d'adresse valide du contrat v2 (art. 3.2) remplace la libération après N tentatives.
   {
     decision: 'HYP-W20-LIBERATION',
     article: '3.2',
     alinea: null,
-    registre: ["leur source est l'art. 3.2 amendé (JUR-T40)"],
+    registre: ["remplacée par le contrat v2 d'axion-ia"],
     gabarit: [
-      "l'attribution prend fin après {{LIBERATION_SIGNALEE_INJOIGNABLE_MAX}} tentatives de prise de contact restées sans réponse",
+      'valide dans un délai de {{LIBERATION_SIGNALEE_JOURS}} jours à compter de la déclaration',
     ],
-    absents: [],
+    absents: ['{{LIBERATION_SIGNALEE_INJOIGNABLE_MAX}}'],
   },
   {
     decision: 'HYP-W20-CARENCE-REDEPOT',
@@ -431,8 +438,10 @@ export const CONCORDANCES: readonly Concordance[] = [
     article: '12.2',
     alinea: null,
     registre: ['Aucune déchéance', 'sont payées au dernier relevé sans le seuil'],
+    // JUR-T66 : l'art. 12.2 du contrat v2 d'axion-ia, qui fait foi (décision de Williams du 2026-10-07, #474, 6032680253) ; plus de relevé ni de seuil.
     gabarit: [
-      'Les commissions déjà acquises sont payées au dernier relevé, sans application du seuil',
+      'Les commissions acquises à cette date et non encore facturées sont facturées et versées',
+      'sans montant minimum',
     ],
     absents: ['déchéance', 'déchu', 'dechue'],
   },
@@ -442,7 +451,8 @@ export const CONCORDANCES: readonly Concordance[] = [
     alinea: null,
     registre: ['suivent la règle ordinaire du contrat art. 12.3'],
     gabarit: [
-      "Les commandes signées avant la fin du contrat continuent d'ouvrir droit à commission",
+      // JUR-T66 : l'art. 12.3 du contrat v2 d'axion-ia, qui fait foi (décision de Williams du 2026-10-07, #474, 6032680253), qui y ajoute le préavis.
+      'Les commandes signées avant la fin du contrat, ou pendant le préavis, continuent',
     ],
     absents: [],
   },
@@ -451,7 +461,8 @@ export const CONCORDANCES: readonly Concordance[] = [
     article: '5.2',
     alinea: null,
     registre: ['mandat dans le contrat'],
-    gabarit: ["donne mandat à la Société d'établir en son nom et pour son compte les factures"],
+    // JUR-T66 : les autofactures du contrat v2 d'axion-ia, qui fait foi (décision de Williams du 2026-10-07, #474, 6032680253).
+    gabarit: ["donne mandat à la Société d'établir en son nom et pour son compte les autofactures"],
     absents: [],
   },
   {
@@ -512,13 +523,14 @@ export const CONCORDANCES: readonly Concordance[] = [
     gabarit: ["et sur l'accès de l'Apporteur à son espace"],
     absents: [],
   },
+  // JUR-T66 : l'accès prend fin à la fin du contrat, au contrat v2 (art. 12.3) ; le code suit SEC-70.
   {
     decision: 'HYP-SEC03-ACCES',
     article: '12.3',
     alinea: null,
-    registre: ['`resilie` : lecture seule'],
-    gabarit: ["L'Apporteur conserve l'accès en lecture à son espace"],
-    absents: [],
+    registre: ['`resilie` : fermé depuis la décision de Williams du 2026-10-07'],
+    gabarit: ["son accès à l'espace en ligne prend fin à la fin du contrat"],
+    absents: ["conserve l'accès en lecture"],
   },
   // ── W15 (2026-09-25) : l'art. 4.6 amendé (al. 6) et complété (al. 8, correction du rattachement)
   {

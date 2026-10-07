@@ -74,6 +74,7 @@ import {
   type ClesPii,
 } from '../securite/pii';
 import { CHARGES_PAR_TYPE } from '../../domain/evenement/charges';
+import { echeanceDeLevee } from '../../domain/apporteur/suspension';
 
 type Tx = Prisma.TransactionClient;
 
@@ -652,6 +653,16 @@ export async function resilierALaDateDEffetUnApporteur(
 // ── le rendu par le passage ──────────────────────────────────────────────────────────────────────
 
 /** Ce que le rendu lit d'une notification du contrat. */
+/**
+ * SEC-15 : la clé d'une notification du contrat, et le geste de la décision qu'elle cite. Écrite UNE
+ * fois (RM-01) : le courriel et l'écran la lisent ici.
+ */
+export const GESTE_DE_LA_CLE_DU_CONTRAT: Readonly<Record<string, string>> = {
+  mise_en_demeure: 'mise_en_demeure',
+  resiliation: 'resiliation',
+  suspension_declarations: 'suspension',
+};
+
 export type NotificationDuContrat = {
   cle: string;
   apporteurId: string;
@@ -693,13 +704,14 @@ export async function rendreUneDecisionDeContrat(
       dateEffet: true,
       evenementId: true,
       textePurgeAt: true,
+      creeAt: true,
     },
   });
   if (d === null || n.evenementId === null || d.evenementId.toString() !== n.evenementId) {
     return nonRendue('fait_introuvable');
   }
   if (d.apporteurId !== n.apporteurId) return nonRendue('apporteur_different');
-  if (d.geste !== n.cle) return nonRendue('charge_illisible');
+  if (d.geste !== GESTE_DE_LA_CLE_DU_CONTRAT[n.cle]) return nonRendue('charge_illisible');
   if (d.textePurgeAt !== null) return nonRendue('faits_non_conserves');
   let texte: string | undefined;
   if (d.texteChiffre !== null) {
@@ -717,6 +729,17 @@ export async function rendreUneDecisionDeContrat(
     texte = propre;
   }
   try {
+    // SEC-15 : la suspension, notifiée avec ses faits ; levée au plus tard quinze jours civils après.
+    if (d.geste === 'suspension') {
+      if (texte === undefined) return nonRendue('faits_non_conserves');
+      return s.composer(
+        n.cle,
+        rendreLaNotification(n.cle, {
+          faits: texte,
+          dateLevee: dateEnClair(new Date(echeanceDeLevee(d.creeAt.getTime()))),
+        })
+      );
+    }
     if (d.geste === 'mise_en_demeure') {
       if (texte === undefined || d.article === null) return nonRendue('faits_non_conserves');
       return s.composer(n.cle, rendreLaNotification(n.cle, { article: d.article, faits: texte }));
