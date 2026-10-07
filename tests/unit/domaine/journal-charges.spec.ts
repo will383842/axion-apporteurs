@@ -447,13 +447,21 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
     expect(refus('acces_coordonnees_reservee', { acteur: { par: 'systeme' } })).toEqual([
       'acteur:acteur_console_attendu',
     ]);
-    expect(
-      refus('acces_coordonnees_reservee', { acteur: { par: 'apporteur', id: ID } })
-    ).toEqual(['acteur:acteur_console_attendu']);
+    expect(refus('acces_coordonnees_reservee', { acteur: { par: 'apporteur', id: ID } })).toEqual([
+      'acteur:acteur_console_attendu',
+    ]);
     // L'acteur est obligatoire.
     expect(refus('acces_coordonnees_reservee', {})).toHaveLength(1);
     // La charge est FERMÉE : ni les coordonnées, ni le SIREN, ni l'apporteur, ni la cause ou la date de la réserve.
-    for (const intrus of ['nom', 'email', 'telephone', 'siren', 'apporteurId', 'cause', 'reserveJusqua']) {
+    for (const intrus of [
+      'nom',
+      'email',
+      'telephone',
+      'siren',
+      'apporteurId',
+      'cause',
+      'reserveJusqua',
+    ]) {
       expect(
         refus('acces_coordonnees_reservee', { acteur: CONSOLE, [intrus]: 'x' }),
         intrus
