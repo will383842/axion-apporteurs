@@ -25872,7 +25872,8 @@
         "scripts/lot/revues.ts",
         "tests/unit/gouvernance/assouplissements-gov-pr.spec.ts",
         "docs/CHARTE-AGENTS.md",
-        "docs/CONVENTIONS.md"
+        "docs/CONVENTIONS.md",
+        "tests/unit/gouvernance/une-lentille-pour-une-pr-sans-risque.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -25909,7 +25910,9 @@
         "scripts/gates/gov-tasks.ts",
         "config/gel-phase-1.json",
         "tests/unit/gouvernance/gel-de-la-phase-1.spec.ts",
-        "docs/CHARTE-AGENTS.md"
+        "docs/CHARTE-AGENTS.md",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts"
       ],
       "schema": false,
       "sensible": [],
