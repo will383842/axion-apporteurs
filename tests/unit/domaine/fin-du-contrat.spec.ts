@@ -55,7 +55,14 @@ describe('REQ-DM-011 — l’arrivée de chaque état à la fin du contrat', () 
     expect([...ETATS_A_TRAITER_A_LA_FIN_DU_CONTRAT].sort()).toStrictEqual(
       [...A_ANNULER, ...A_FAIRE_EXPIRER, ...A_FIGER].sort()
     );
-    for (const e of ['figee_resiliation', 'invalidee', 'perdue', 'perimee', 'expiree', 'annulee'] as const) {
+    for (const e of [
+      'figee_resiliation',
+      'invalidee',
+      'perdue',
+      'perimee',
+      'expiree',
+      'annulee',
+    ] as const) {
       expect(sortieDeFinDeContrat(e)).toBeNull();
       expect(etatApresFinDuContrat(e)).toBe(e);
     }
@@ -66,30 +73,71 @@ describe('REQ-DM-011 — le droit d’une commande à la fin du contrat (art. 12
   const EFFET = Date.parse('2026-10-07T08:00:00.000Z');
 
   it('REQ-DM-011 : TÉMOIN — une commande signée AVANT la date d’effet ouvre droit', () => {
-    expect(ouvreDroitALaCommission({ commandeSigneeAt: Date.parse('2026-10-06T21:59:59Z'), dateEffet: EFFET })).toBe(true);
-    expect(ouvreDroitALaCommission({ commandeSigneeAt: Date.parse('2026-01-02T10:00:00Z'), dateEffet: EFFET })).toBe(true);
+    expect(
+      ouvreDroitALaCommission({
+        commandeSigneeAt: Date.parse('2026-10-06T21:59:59Z'),
+        dateEffet: EFFET,
+      })
+    ).toBe(true);
+    expect(
+      ouvreDroitALaCommission({
+        commandeSigneeAt: Date.parse('2026-01-02T10:00:00Z'),
+        dateEffet: EFFET,
+      })
+    ).toBe(true);
   });
 
   it('REQ-DM-011 : TÉMOIN — une commande signée à la date d’effet ou APRÈS n’ouvre aucun droit', () => {
-    expect(ouvreDroitALaCommission({ commandeSigneeAt: Date.parse('2026-10-07T09:00:00Z'), dateEffet: EFFET })).toBe(false);
-    expect(ouvreDroitALaCommission({ commandeSigneeAt: Date.parse('2026-10-08T09:00:00Z'), dateEffet: EFFET })).toBe(false);
-    expect(ouvreDroitALaCommission({ commandeSigneeAt: Date.parse('2027-03-01T09:00:00Z'), dateEffet: EFFET })).toBe(false);
+    expect(
+      ouvreDroitALaCommission({
+        commandeSigneeAt: Date.parse('2026-10-07T09:00:00Z'),
+        dateEffet: EFFET,
+      })
+    ).toBe(false);
+    expect(
+      ouvreDroitALaCommission({
+        commandeSigneeAt: Date.parse('2026-10-08T09:00:00Z'),
+        dateEffet: EFFET,
+      })
+    ).toBe(false);
+    expect(
+      ouvreDroitALaCommission({
+        commandeSigneeAt: Date.parse('2027-03-01T09:00:00Z'),
+        dateEffet: EFFET,
+      })
+    ).toBe(false);
   });
 
   it('REQ-DM-011 : TÉMOIN — la borne est le jour civil de Paris, non le jour UTC', () => {
     // 2026-10-06 23:30 UTC est le 7 octobre à 01 h 30 à Paris : le jour d'effet, donc sans droit.
-    expect(ouvreDroitALaCommission({ commandeSigneeAt: Date.parse('2026-10-06T23:30:00Z'), dateEffet: EFFET })).toBe(false);
+    expect(
+      ouvreDroitALaCommission({
+        commandeSigneeAt: Date.parse('2026-10-06T23:30:00Z'),
+        dateEffet: EFFET,
+      })
+    ).toBe(false);
     // 2026-10-06 21:30 UTC est le 6 octobre à 23 h 30 à Paris : la veille, donc avec droit.
-    expect(ouvreDroitALaCommission({ commandeSigneeAt: Date.parse('2026-10-06T21:30:00Z'), dateEffet: EFFET })).toBe(true);
+    expect(
+      ouvreDroitALaCommission({
+        commandeSigneeAt: Date.parse('2026-10-06T21:30:00Z'),
+        dateEffet: EFFET,
+      })
+    ).toBe(true);
   });
 
   it('REQ-DM-011 : TÉMOIN — le droit ne lit AUCUNE fenêtre d’attribution ni date d’encaissement : sa signature ne les porte pas', () => {
     // Le droit se rattache à la commande : la fonction n'accepte que sa signature et la date d'effet.
     expect(ouvreDroitALaCommission.length).toBe(1);
-    const droit = ouvreDroitALaCommission({ commandeSigneeAt: Date.parse('2026-05-01T10:00:00Z'), dateEffet: EFFET });
+    const droit = ouvreDroitALaCommission({
+      commandeSigneeAt: Date.parse('2026-05-01T10:00:00Z'),
+      dateEffet: EFFET,
+    });
     expect(droit).toBe(true);
   });
 });
+
+/** Un double : le test ne fabrique que ce que le code lit. */
+const double = <T>(x: unknown): T => x as T;
 
 const portsDe = (role: 'admin' | 'comptable' | 'qualifieur' | 'lecteur' | null) => {
   const jetonValide = 'jeton-de-console';
@@ -125,7 +173,11 @@ const portsDe = (role: 'admin' | 'comptable' | 'qualifieur' | 'lecteur' | null) 
 
 describe('REQ-SEC-023 — le geste de résiliation en console est réservé à un rôle nommé', () => {
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — chaque rôle sauf admin est refusé, sans transaction ouverte ; admin passe, avec SON identifiant pour acteur', async () => {
-    const resilierUnApporteur = vi.fn(async () => ({ de: 'signe', vers: 'resilie', jetonsRevoques: 0 }));
+    const resilierUnApporteur = vi.fn(async (_tx: unknown, _demande: unknown) => ({
+      de: 'signe',
+      vers: 'resilie',
+      jetonsRevoques: 0,
+    }));
     vi.resetModules();
     vi.doMock('../../../src/server/apporteur/resiliation', () => ({ resilierUnApporteur }));
     const { resilierDepuisLaConsole } = await import('../../../src/server/apporteur/resilier');
@@ -138,7 +190,7 @@ describe('REQ-SEC-023 — le geste de résiliation en console est réservé à u
     for (const role of ['comptable', 'qualifieur', 'lecteur'] as const) {
       const { jeton, ports } = portsDe(role);
       const r = await resilierDepuisLaConsole(
-        { role: ports, prisma: { $transaction: transaction } as never, cles: {} as never },
+        { role: ports, prisma: double({ $transaction: transaction }), cles: double({}) },
         { ...demande, jeton }
       );
       expect(r).toStrictEqual({ ok: false, motif: 'role_refuse' });
@@ -146,7 +198,7 @@ describe('REQ-SEC-023 — le geste de résiliation en console est réservé à u
     const { jeton: sansJeton, ports: sansSession } = portsDe(null);
     expect(
       await resilierDepuisLaConsole(
-        { role: sansSession, prisma: { $transaction: transaction } as never, cles: {} as never },
+        { role: sansSession, prisma: double({ $transaction: transaction }), cles: double({}) },
         { ...demande, jeton: sansJeton }
       )
     ).toStrictEqual({ ok: false, motif: 'absente' });
@@ -155,9 +207,9 @@ describe('REQ-SEC-023 — le geste de résiliation en console est réservé à u
 
     const { jeton, ports } = portsDe('admin');
     const r = await resilierDepuisLaConsole(
-      { role: ports, prisma: { $transaction: transaction } as never, cles: {} as never },
+      { role: ports, prisma: double({ $transaction: transaction }), cles: double({}) },
       // Un acteur glissé dans la demande ne compte pas : l'acteur est celui de la session.
-      { ...demande, jeton, acteur: { par: 'utilisateur_console', id: 'pirate' } } as never
+      double({ ...demande, jeton, acteur: { par: 'utilisateur_console', id: 'pirate' } })
     );
     expect(r).toMatchObject({ ok: true, de: 'signe', vers: 'resilie' });
     expect(resilierUnApporteur).toHaveBeenCalledTimes(1);
