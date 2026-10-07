@@ -1,5 +1,6 @@
 // @req REQ-SEC-012
 // @req REQ-INT-014
+// @req REQ-INT-015
 // @req REQ-QA-030
 /**
  * `frontiere-axionia.spec.ts` — la frontière des API qu'axionia appelle, EN PROCESSUS.
@@ -536,7 +537,9 @@ describe('REQ-INT-014 — 6. le SIREN, puis la lecture au plancher', () => {
     ['une lettre au début', 'a12345678'],
     ['vide', ''],
   ])(
-    'SIREN %s : 400 sans corps, jamais lu, et le journal porte `siren: null`',
+    // REQ-INT-015 : axion-ia n'appelle l'API 1 qu'avec un SIREN normalisé à neuf chiffres ; Partners
+    // refuse tout autre forme, sans la lire.
+    'REQ-INT-015 : SIREN %s : 400 sans corps, jamais lu, et le journal porte `siren: null`',
     async (_q, brut) => {
       const m = monde();
       const r = await traiterAppel(
