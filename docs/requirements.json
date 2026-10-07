@@ -65,6 +65,7 @@
         "DM-08",
         "DM-13",
         "DM-55",
+        "DM-72",
         "JUR-T49"
       ]
     },
@@ -188,7 +189,8 @@
         "DM-18",
         "DM-63",
         "DM-64",
-        "SEC-19"
+        "SEC-19",
+        "SEC-70"
       ]
     },
     {
@@ -287,7 +289,8 @@
       "phase": 0,
       "taches": [
         "DM-04",
-        "DM-15"
+        "DM-15",
+        "T-ARG-044"
       ]
     },
     {
@@ -681,6 +684,7 @@
         "DM-13",
         "DM-24",
         "DM-41",
+        "DM-72",
         "JUR-T40"
       ]
     },
@@ -700,6 +704,7 @@
         "DM-53",
         "DM-62",
         "DM-69",
+        "DM-71",
         "UX-P1-51"
       ]
     },
@@ -753,6 +758,7 @@
         "SEC-55",
         "SEC-62",
         "SEC-65",
+        "SEC-71",
         "UX-P1-04"
       ]
     },
@@ -1210,6 +1216,7 @@
         "SEC-12",
         "SEC-19",
         "SEC-43",
+        "SEC-70",
         "T-ARG-038"
       ]
     },
@@ -1497,7 +1504,8 @@
       "taches": [
         "DM-04",
         "T-ARG-036",
-        "T-ARG-037"
+        "T-ARG-037",
+        "T-ARG-044"
       ]
     },
     {
@@ -1650,11 +1658,12 @@
       "remplaceePar": null,
       "module": 15,
       "etape": 12,
-      "phase": 2,
+      "phase": 1,
       "taches": [
         "T-ARG-015",
         "T-ARG-033",
-        "T-ARG-038"
+        "T-ARG-038",
+        "T-ARG-045"
       ]
     },
     {
@@ -1707,7 +1716,8 @@
         "JUR-T01c",
         "T-ARG-016",
         "T-ARG-038",
-        "T-ARG-039"
+        "T-ARG-039",
+        "T-ARG-045"
       ]
     },
     {
@@ -2551,7 +2561,8 @@
         "JUR-T31",
         "JUR-T40",
         "JUR-T46",
-        "JUR-T48"
+        "JUR-T48",
+        "JUR-T66"
       ]
     },
     {
@@ -2613,6 +2624,7 @@
       "phase": 0,
       "taches": [
         "DM-25",
+        "DM-71",
         "JUR-T01",
         "JUR-T01b",
         "T-ARG-033"
@@ -5350,6 +5362,7 @@
         "QA-T58",
         "SEC-29",
         "SEC-30",
+        "SEC-71",
         "T-ARG-035",
         "UX-P1-01",
         "UX-P1-02",
@@ -6488,6 +6501,20 @@
         "JUR-T63",
         "JUR-T65",
         "SEC-65"
+      ]
+    },
+    {
+      "id": "REQ-JUR-069",
+      "domaine": "juridique",
+      "texte": "La Société révoque l'accès d'un apporteur, sans délai, sur son signalement d'un usage qu'il n'a pas autorisé, et peut révoquer et renouveler un moyen d'accès pour un motif de sécurité, sans effet sur les attributions ni sur les commissions (contrat v2, art. 3.8).",
+      "source": "nouvelle (rattrapage 119, coordination) ; contrat v2, art. 3.8, cité par la juriste (#474, 6034003544)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 21,
+      "etape": 12,
+      "phase": 1,
+      "taches": [
+        "SEC-71"
       ]
     },
     {
