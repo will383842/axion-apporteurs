@@ -362,11 +362,13 @@ describe('REQ-QA-030 — le module rechargé : les listes dérivées du schéma,
       'TELEGRAM_CHAT_ID',
       // SEC-14 (REQ-SEC-017, REQ-GOV-031) : le réglage des signaux de sincérité, hors dépôt.
       'PARTNERS_SINCERITE_REGLAGE',
+      // SEC-72 (REQ-SEC-021) : les plafonds de la vérification, hors dépôt.
+      'PARTNERS_VERIFICATION_PLAFONDS',
     ]);
     // Douze secrets toujours exigés, lus au schéma : leurs noms ne sont pas retapés ici.
     expect(m.NOMS_DES_SECRETS).toHaveLength(12);
     expect(m.NOMS_DES_SECRETS).toContain(CLE_HEX);
-    expect(m.NOMS_DES_VARIABLES).toHaveLength(28);
+    expect(m.NOMS_DES_VARIABLES).toHaveLength(29);
     expect(m.NOMS_DES_VARIABLES).toEqual([
       ...m.NOMS_DES_SECRETS,
       ...m.NOMS_DES_SECRETS_CONDITIONNELS,

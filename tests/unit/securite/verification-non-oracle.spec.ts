@@ -14,7 +14,8 @@
  * Les limites ne sont pas chiffrées (décision de Williams attendue) : un compteur `verif:` ABSENT du
  * registre REFUSE la vérification — « aucun chiffre » ne devient jamais « pas de limite ».
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
   ETATS_VERIFICATION,
   etatDeVerification,
@@ -39,10 +40,7 @@ import {
   entrepriseParLeRegistre,
   etatDepuisLaFiche,
 } from '../../../src/server/verification/registre-public';
-import {
-  compterAvantLaDecision,
-  portsDeLaBase,
-} from '../../../src/server/verification/ports-prisma';
+import { compterAuRegistre, portsDeLaBase } from '../../../src/server/verification/ports-prisma';
 import { ETATS_OCCUPANTS } from '../../../src/domain/attribution/etats';
 import type { PrismaClient } from '@prisma/client';
 import type {
@@ -252,15 +250,21 @@ describe('REQ-SEC-021 — limitée par identité et par empreinte d’adresse, �
   });
 
   it('REQ-SEC-021 : TÉMOIN — un compteur qui refuse fait refuser : aucun fait lu, rien au journal', async () => {
+    // Le compteur de PRODUCTION, sans plafonds configurés : il refuse (SEC-72).
+    vi.stubEnv('PARTNERS_VERIFICATION_PLAFONDS', '');
     const p = ports(LIBRE);
-    p.p.compter = compterAvantLaDecision;
+    p.p.compter = compterAuRegistre;
     expect(await verifierUneEntreprise(p.p, DEMANDE)).toEqual({ ok: false, refus: 'limite' });
     expect(p.trace).toEqual([]);
     expect(p.journal).toEqual([]);
+    vi.unstubAllEnvs();
   });
 
-  it('REQ-SEC-021 : CLIQUET — aucun compteur de la famille n’est au registre ; le jour où l’un y entre, ce témoin rougit, et le port de production l’appelle par son nom littéral', () => {
-    expect(Object.keys(COMPTEURS).filter((n) => n.startsWith(FAMILLE))).toEqual([]);
+  it('REQ-SEC-021 : CLIQUET — les TROIS compteurs de la famille sont au registre (SEC-72), et le port de production les appelle par leurs noms littéraux', () => {
+    const noms = Object.keys(COMPTEURS).filter((n) => n.startsWith(FAMILLE));
+    expect(noms).toEqual(['verif:identite-jour', 'verif:identite-court', 'verif:ip-jour']);
+    const port = readFileSync('src/server/verification/ports-prisma.ts', 'utf8');
+    for (const n of noms) expect(port).toContain(`limiter('${n}', sujet, maintenant)`);
   });
 
   it.each(['identite', 'ip'])(
@@ -394,12 +398,24 @@ describe('REQ-JUR-011 — la fiche du registre public, lue en échec fermé', ()
   );
 });
 
-describe('REQ-SEC-021 — avant la décision de Williams, le compteur de production refuse', () => {
-  it('REQ-SEC-021 : TÉMOIN — aucun chiffre ne devient « pas de limite » : chaque compteur refuse', async () => {
-    for (const nom of SUJETS_COMPTES) {
-      expect(await compterAvantLaDecision(nom, DEMANDE.sujetIdentite)).toEqual({ autorise: false });
+describe('REQ-SEC-021 — sans plafonds lisibles, le compteur de production refuse (SEC-72)', () => {
+  it.each([
+    ['absents', ''],
+    ['illisibles', 'identite_jour=sept'],
+    [
+      'incohérents',
+      'identite_jour=2;identite_court=7;ip_jour=9;fenetre_jour_minutes=600;fenetre_court_minutes=5',
+    ],
+  ])(
+    'REQ-SEC-021 : TÉMOIN — plafonds %s : aucun chiffre ne devient « pas de limite », chaque compteur refuse',
+    async (_l, valeur) => {
+      vi.stubEnv('PARTNERS_VERIFICATION_PLAFONDS', valeur);
+      for (const nom of SUJETS_COMPTES) {
+        expect(await compterAuRegistre(nom, DEMANDE.sujetIdentite)).toEqual({ autorise: false });
+      }
+      vi.unstubAllEnvs();
     }
-  });
+  );
 });
 
 describe('REQ-UX-007 — les ports de la base, jugés en processus sur un faux client', () => {
