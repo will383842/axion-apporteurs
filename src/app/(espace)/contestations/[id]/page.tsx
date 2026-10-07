@@ -2,8 +2,9 @@
  * `/contestations/[id]` — « Ma contestation » (UX-P1-51, REQ-DM-043, REQ-UX-047).
  *
  * La garde de l'espace est le PREMIER acte : la session pour ce segment, puis l'acceptation de la
- * politique (SEC-53). Un résilié dont les droits courent y lit, en `lecture` (sécurité, #775,
- * 6032748282) ; aucune action n'est ouverte ici. L'apporteur est celui de la session, jamais une entrée
+ * politique (SEC-53). Le segment est PLEIN seulement (arbitrage de la coordination sur #775, contrat
+ * v2 art. 12.3) : un résilié reçoit la même page qu'une contestation inconnue. Aucune action ici.
+ * L'apporteur est celui de la session, jamais une entrée
  * de la requête : le lecteur unique le met dans son `where`. Un identifiant hors forme, une contestation
  * inconnue ou celle d'un autre apporteur rendent la MÊME page « indisponible ». La page n'écrit rien.
  */
@@ -17,7 +18,11 @@ import {
   pageEspace,
   type PortsDeSession,
 } from '../../../../server/auth/session';
-import { dateDeLaContestation, relireLaContestation } from '../../../../server/contestation/relire';
+import {
+  dateDeLaContestation,
+  refusRenduIndisponible,
+  relireLaContestation,
+} from '../../../../server/contestation/relire';
 import { clesPii } from '../../../../server/securite/pii';
 import {
   ROUTE_CONFIDENTIALITE,
@@ -56,8 +61,18 @@ function portsDeLaGarde(): PortsDeSession {
 export default async function PageContestation({ params }: { params: Promise<{ id: string }> }) {
   const jeton = (await cookies()).get(COOKIE_DE_SESSION.nom)?.value;
   const verdict = await pageEspace('contestations', jeton, portsDeLaGarde());
-  if (!verdict.ok) redirect(destinationDuRefus(verdict.motif));
   const { id } = await params;
+  if (!verdict.ok) {
+    if (refusRenduIndisponible(verdict.motif))
+      return (
+        <EcranContestation
+          contestationId={id}
+          c={{ etat: 'indisponible' }}
+          date={dateDeLaContestation}
+        />
+      );
+    redirect(destinationDuRefus(verdict.motif));
+  }
   const { prisma } = dependancesDuProcessus({ apres: after, env: process.env });
   const c = UUID.test(id)
     ? await relireLaContestation(

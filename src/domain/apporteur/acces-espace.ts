@@ -40,9 +40,6 @@ export const SEGMENTS_LECTURE = [
   'notifications',
   'documents',
   'mon-contrat',
-  // UX-P1-51 (sécurité, #775, 6032748282) : relire sa contestation et la réponse est de la LECTURE ;
-  // aucune action n'est ouverte (rien dans ACTIONS_PERMISES_EN_LECTURE). Ni limite ni ferme.
-  'contestations',
 ] as const;
 
 /** Ce que seule l'ouverture PLEINE atteint. */
@@ -60,7 +57,9 @@ export const SEGMENTS_PLEINS = [
   'activite',
   'ressources',
   'aide',
-  // UX-P1-51 : l'apporteur relit sa contestation et la réponse d'Axion-IA (REQ-DM-043).
+  // UX-P1-51 : l'apporteur relit sa contestation et la réponse d'Axion-IA (REQ-DM-043). En PLEIN
+  // seulement (arbitrage de la coordination sur #775 : le contrat v2 fait foi, art. 12.3, SEC-70) :
+  // un résilié n'y a pas accès.
   'contestations',
 ] as const;
 
