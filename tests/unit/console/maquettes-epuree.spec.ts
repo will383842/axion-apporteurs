@@ -99,22 +99,21 @@ describe('REQ-UX-048 — (3) une action dominante : l’écran de connexion', ()
 
 describe('REQ-UX-048 — (4) les treize validations de Williams', () => {
   // UX-P1-57 : une maquette neuve attend la validation de Williams ; sa ligne garde ses deux colonnes
-  // vides, jamais une date sans signature. Les treize validées le 2026-10-03 le restent.
+  // vides, jamais une date sans signature. Les treize validées le 2026-10-03 le restent ; la mise en
+  // demeure l'est le 2026-10-07 (#319, 6032238671).
   const validees = LIGNES.filter((l) => l.par !== '' || l.valideLe !== '');
   it('REQ-UX-048 — une maquette de la console en attente porte « Validé le » et « Par » vides, ensemble', () => {
     for (const l of LIGNES.filter((x) => !validees.includes(x)))
       expect([l.valideLe, l.par], l.fichier ?? '').toEqual(['', '']);
-    expect(validees).toHaveLength(13);
+    expect(validees).toHaveLength(14);
   });
 
-  it('REQ-UX-048 — chaque maquette de la console est validée par Will le 2026-10-03', () => {
+  it('REQ-UX-048 — chaque maquette de la console validée l’est par Will, aux séances du 2026-10-03 et du 2026-10-07', () => {
     for (const l of validees) {
-      expect([l.fichier, l.valideLe, l.par], l.fichier ?? '').toEqual([
-        l.fichier,
-        '2026-10-03',
-        'Will',
-      ]);
+      expect(l.par, l.fichier ?? '').toBe('Will');
+      expect(['2026-10-03', '2026-10-07'], l.fichier ?? '').toContain(l.valideLe);
     }
+    expect(validees.filter((l) => l.valideLe === '2026-10-03')).toHaveLength(13);
   });
 });
 
