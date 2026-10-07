@@ -459,6 +459,7 @@ model UtilisateurConsole {
   sessionsEspace          SessionEspace[]
   attributions            Attribution[]            @relation("AttributionsDuConseiller")
   suspensionsDePeremption Attribution[]            @relation("SuspensionsDePeremption")
+  annulationsApresConfirmation Attribution[]       @relation("AnnulationsApresConfirmation")
   verifications           Verification[]
   anomaliesTraitees       Anomalie[]
   rattachementsDecides    RattachementManuel[]
@@ -858,6 +859,15 @@ enum CategorieEntreprise {
 }
 
 /// Les sept motifs de refus d'un dépôt (REQ-SEC-022), exactement.
+/// DM-71 (art. 3.3 du v2) : l'exception d'une annulation après la confirmation (forme d'A02, #806).
+enum ExceptionAnnulation {
+  erreur_identification
+  fraude
+  retablissement_apporteur
+
+  @@map("exception_annulation")
+}
+
 enum MotifRefusDepot {
   anteriorite_client
   anteriorite_devis
@@ -967,6 +977,12 @@ model Attribution {
   peremptionSuspenduePar           UtilisateurConsole? @relation("SuspensionsDePeremption", fields: [peremptionSuspendueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   peremptionSuspendueJustification String?             @map("peremption_suspendue_justification") @db.Text
   fenetreRedeclarationFinAt        DateTime?           @map("fenetre_redeclaration_fin_at") @db.Timestamptz(3)
+  /// DM-71 (art. 3.3 du v2, migration 005020) : l'exception d'une annulation APRÈS la confirmation et
+  /// son auteur humain, posés ensemble avec l'arrivée en `annulee`, immuables ensuite (garde
+  /// `attributions_annulation_apres_confirmation`).
+  annulationException              ExceptionAnnulation? @map("annulation_exception")
+  annulationParId                  String?             @map("annulation_par_id") @db.Uuid
+  annulationPar                    UtilisateurConsole? @relation("AnnulationsApresConfirmation", fields: [annulationParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   purgeContactAt                   DateTime?           @map("purge_contact_at") @db.Timestamptz(3)
   contactPurgeAt                   DateTime?           @map("contact_purge_at") @db.Timestamptz(3)
   /// L'empreinte HMAC du jeton de la page des droits du contact, jamais le jeton (DM-59). Unique
