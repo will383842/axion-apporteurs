@@ -172,3 +172,11 @@ export function issueRendue(issue: IssueDepot): IssueRendue {
       : null,
   };
 }
+
+/**
+ * L'information de l'apporteur sur l'existence et le principe de la liste tenue par la Société
+ * (contrat v2, art. 3.3 bis (b), DM-65, REQ-DM-028). Texte de la juriste, mot pour mot ; l'aide du dépôt
+ * l'affichera.
+ */
+export const INFORMATION_LISTE_TENUE =
+  "Axion-IA tient une liste d'organismes avec lesquels elle est déjà en relation : administrations, financeurs publics ou paritaires, et organismes de formation. Une entreprise qui y figure ne peut pas être déposée, et le refus vous indique cette catégorie (contrat, article 3.3 bis).";

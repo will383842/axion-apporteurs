@@ -57,6 +57,8 @@ export const TACHES = {
   sessions_purger: { req: 'REQ-SEC-003' },
   /** SEC-65 — l'effacement du nom et de l'adresse d'un accès désactivé de la console, cinq ans après. */
   utilisateurs_console_effacer: { req: 'REQ-JUR-068' },
+  /** DM-65 — l'effacement, cinq ans après le retrait, de la trace de la liste tenue par la Société. */
+  traces_liste_noire_purger: { req: 'REQ-DM-028' },
   /**
    * INT-T08-P — la réconciliation quotidienne avec axion-ia : relecture de sa file depuis la plus
    * haute séquence reçue, rejeu des trous (`src/server/jobs/reconciliation.ts`).
@@ -67,6 +69,11 @@ export const TACHES = {
    * et de pièces RIB lues au journal (`src/server/taches/ouvrir-anomalies-auto-parrainage.ts`).
    */
   auto_parrainage_ouvrir: { req: 'REQ-SEC-031' },
+  /**
+   * SEC-14 — l'ouverture DIFFÉRÉE des anomalies de sincérité, jamais dans la transaction du dépôt
+   * (`ouvrirLesAnomaliesDeSincerite`, `src/server/anomalie/sincerite.ts`).
+   */
+  sincerite_ouvrir: { req: 'REQ-SEC-017' },
   /**
    * DM-62 — l'anonymisation des anomalies à leur échéance, et le NOMBRE des mesures ouvertes au-delà
    * de `MESURE_OUVERTE_ALERTE_JOURS` (`anonymiserLesAnomalies`).
