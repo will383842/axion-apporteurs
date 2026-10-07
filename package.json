@@ -100,6 +100,8 @@
     "jur:aucun-agregat-reseau:prove": "tsx scripts/gates/jur-aucun-agregat-reseau.ts --prove",
     "jur:date-contact-inerte": "tsx scripts/gates/jur-date-contact-inerte.ts",
     "jur:date-contact-inerte:prove": "tsx scripts/gates/jur-date-contact-inerte.ts --prove",
+    "jur:supports-de-presentation": "tsx scripts/gates/jur-supports-de-presentation.ts",
+    "jur:supports-de-presentation:prove": "tsx scripts/gates/jur-supports-de-presentation.ts --prove",
     "csp:inline": "tsx scripts/gates/csp-inline.ts",
     "csp:inline:prove": "tsx scripts/gates/csp-inline.ts --prove",
     "jur:aucune-progression": "tsx scripts/gates/jur-aucune-progression.ts",

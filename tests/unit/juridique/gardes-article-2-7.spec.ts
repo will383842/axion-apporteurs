@@ -1,4 +1,5 @@
 // @req REQ-JUR-040
+// @req REQ-JUR-041
 /**
  * JUR-T30 — les gardes de l'art. 2.7 du contrat : l'apporteur organise librement son activité, et le
  * produit ne reconstitue ni ne restitue son rythme. Ce fichier juge les gardes en processus, sur des
@@ -7,6 +8,10 @@
  * (b) `jur:date-contact-inerte` — `dateContact` est la seule donnée du contrat d'où un rythme
  * d'activité peut être reconstitué : elle ne se lit que dans une liste FERMÉE de lieux, sans aucun
  * découpage temporel.
+ *
+ * (c) `jur:supports-de-presentation` — aucun support de présentation (logo, charte, signature, visuel,
+ * carte) n'est servi à l'apporteur, les documents servis sont des PDF, et l'expression bannie par
+ * l'art. 1.2 n'est écrite que là où l'interdiction est citée.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -15,6 +20,11 @@ import {
   estJuge,
   jugerLesLectures,
 } from '../../../scripts/gates/jur-date-contact-inerte';
+import {
+  EXEMPTIONS_KIT_DE_VENTE,
+  estServi,
+  jugerLesSupports,
+} from '../../../scripts/gates/jur-supports-de-presentation';
 
 const fichier = (chemin: string, source: string) => ({ chemin, source });
 const familles = (chemin: string, source: string) =>
@@ -77,5 +87,43 @@ describe('REQ-JUR-040 — jur:date-contact-inerte : la date du contact ne se lit
       'agregation_temporelle',
       'source_illisible',
     ]);
+  });
+});
+
+const supports = (chemin: string, texte: string | null = null) =>
+  jugerLesSupports([{ chemin, texte }]).fautes.map((f) => f.famille);
+
+describe('REQ-JUR-041 — jur:supports-de-presentation : aucun support de présentation, aucun document modifiable, aucun kit de vente', () => {
+  it('REQ-JUR-041 : TÉMOIN — l’expression bannie, hors des exemptions nommées, rougit ; dans une exemption, non', () => {
+    expect(
+      supports('src/content/micro-copy/espace/ressources.ts', "const t = 'Le kit de vente.';")
+    ).toEqual(['kit_de_vente']);
+    expect(supports('src/server/x.ts', 'export const kitDeVente = 1;')).toEqual(['kit_de_vente']);
+    expect(supports('docs/requirements.json', '{"t": "kit de vente"}')).toEqual([]);
+    expect(Object.keys(EXEMPTIONS_KIT_DE_VENTE)).toContain(
+      'src/domain/lexique/lexique-interdit.ts'
+    );
+  });
+
+  it('REQ-JUR-041 : TÉMOIN — un logo, un gabarit de signature ou une image servis à l’apporteur rougissent', () => {
+    expect(supports('public/logo-axion.png')).toEqual(['support_de_presentation']);
+    expect(supports('src/content/ressources/signature-email.html', '<p></p>')).toEqual([
+      'support_de_presentation',
+    ]);
+    expect(supports('src/app/(espace)/accueil/visuel.svg')).toEqual(['support_de_presentation']);
+  });
+
+  it('REQ-JUR-041 : TÉMOIN — un document modifiable servi rougit ; un PDF, non', () => {
+    expect(supports('ressources/offre.pptx')).toEqual(['document_modifiable']);
+    expect(supports('ressources/offre.docx')).toEqual(['document_modifiable']);
+    expect(supports('ressources/documents-de-presentation.pdf')).toEqual([]);
+  });
+
+  it('REQ-JUR-041 : contre-témoins — la page de signature du contrat (du code), un logo de la console : vert', () => {
+    expect(
+      supports('src/app/(espace)/mon-contrat/signature/page.tsx', 'export default 1;')
+    ).toEqual([]);
+    expect(estServi('src/app/(console)/console/logo.svg')).toBe(false);
+    expect(supports('src/app/(console)/console/logo.svg')).toEqual([]);
   });
 });

@@ -795,6 +795,15 @@
       "preuveRouge": "pnpm jur:date-contact-inerte:prove — 3 familles sur 5 témoins, 3 contre-témoins verts. Dépôt intact -> EXIT=0, 258 fichiers de src/, 5 mentions de dateContact. Rouge constaté par: A05"
     },
     {
+      "id": "jur:supports-de-presentation",
+      "phase": 1,
+      "script": "scripts/gates/jur-supports-de-presentation.ts",
+      "tache": "JUR-T30",
+      "verifie": "Liste des fichiers suivis (git ls-files) et texte des fichiers textuels. L'expression « kit de vente » (et kit-de-vente, kitDeVente) dans tout fichier textuel suivi, hors des EXEMPTIONS nommées qui CITENT l'interdiction (SSOT du lexique, registres des gardes, des tâches et des exigences, gardes et témoins), rougit (kit_de_vente) ; dans ce qui est servi à l'apporteur (public/, src/app/(espace)/, src/components/espace/, src/content/ressources/, ressources/), un fichier d'image ou de graphisme, ou un fichier qui n'est pas du code et dont le nom désigne un logo, une charte, une signature, un visuel, une carte ou un kit, rougit (support_de_presentation) ; un document de traitement de texte, de présentation ou de tableur, et non un PDF, rougit (document_modifiable). CE QU'ELLE NE TIENT PAS : un support servi par une adresse externe ou inséré en base.",
+      "fixtureRouge": "une ressource de l'espace qui annonce un kit de vente",
+      "preuveRouge": "pnpm jur:supports-de-presentation:prove — 3 familles sur 5 témoins, 4 contre-témoins verts. Dépôt intact -> EXIT=0, 1433 fichiers suivis, 8 exemptions nommées. Rouge constaté par: A05"
+    },
+    {
       "id": "jur:aucune-progression",
       "phase": 0,
       "script": "scripts/gates/jur-aucune-progression.ts",

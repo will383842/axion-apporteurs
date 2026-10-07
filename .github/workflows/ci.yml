@@ -332,6 +332,12 @@ jobs:
         run: pnpm jur:date-contact-inerte
       - name: La garde de la date du contact sait rougir
         run: pnpm jur:date-contact-inerte:prove
+      # JUR-T30 (art. 1.2 et ancien art. 22) : aucun support de presentation servi a l apporteur, aucun
+      # document modifiable, aucune expression bannie par l art. 1.2. La preuve suit, par paire.
+      - name: Charte — aucun support de presentation servi
+        run: pnpm jur:supports-de-presentation
+      - name: La garde des supports de presentation sait rougir
+        run: pnpm jur:supports-de-presentation:prove
       # SEC-46 : aucun style en ligne ni HTML injecte sous src/app/ — la politique de contenu les
       # refuserait en silence. La preuve suit, par paire.
       - name: Securite — aucun style en ligne sous src/app
