@@ -41,7 +41,7 @@ npx tsx scripts/lot/paquets-de-fusion.ts taille --apres <t> --premier-coup oui|n
 
 1. Le paquet est testé **ensemble, une fois**, sur la pointe de `main` : worktree jetable détaché sur
    `origin/main`, chaque PR fusionnée localement (`git fetch origin pull/<n>/head` puis
-   `git merge --no-edit FETCH_HEAD`), `pnpm prevol`, worktree retiré.
+   `git merge --no-edit FETCH_HEAD`), le pré-vol complet, worktree retiré.
 2. **Rouge** : le paquet est coupé en deux, et chaque moitié retestée, jusqu'à isoler la fautive. Les saines
    fusionnent ; la fautive seule retourne à son auteur.
 3. **Vert** : ses PR passent la séquence ci-dessus **une par une** — gate-a verte, `pnpm gov:pr --pr <n>`
