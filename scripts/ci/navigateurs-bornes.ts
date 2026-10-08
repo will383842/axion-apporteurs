@@ -32,8 +32,6 @@ export const PAUSES_MS: readonly number[] = [30_000, 60_000];
 /** L'attente bornée du verrou d'apt avant chaque tentative des dépendances, et son pas. */
 export const ATTENTE_VERROU_MS = 75_000;
 export const PAS_VERROU_MS = 5_000;
-/** La durée de l'étape (`timeout-minutes: 15` dans ci.yml). */
-export const DUREE_ETAPE_MS = 15 * 60_000;
 
 /** Une tentative bornée : `true` si la commande est sortie en 0 dans le délai. */
 export type Tentative = (delaiMs: number) => boolean;

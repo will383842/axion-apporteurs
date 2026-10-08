@@ -4,9 +4,10 @@
  * système (apt, jamais tuées), puis le téléchargement des navigateurs (trois tentatives bornées).
  */
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import * as module_ from '../../../scripts/ci/navigateurs-bornes';
 import {
   DELAI_PAR_TENTATIVE_MS,
-  DUREE_ETAPE_MS,
   OPTIONS_DEPENDANCES,
   PAUSES_MS,
   TENTATIVES,
@@ -16,6 +17,37 @@ import {
   installerEnDeuxTemps,
   installerLesDependances,
 } from '../../../scripts/ci/navigateurs-bornes';
+
+const CI = '.github/workflows/ci.yml';
+
+/**
+ * Lecture ciblée (aucun parseur YAML au dépôt) : la `timeout-minutes` de CHAQUE étape « Navigateurs
+ * des passes d accessibilite » de ci.yml, en millisecondes ; `NaN` pour une étape qui n'en porte pas.
+ */
+function dureesDesEtapes(yml: string): number[] {
+  const lignes = yml.split('\n');
+  const durees: number[] = [];
+  lignes.forEach((l, i) => {
+    const m = /^(\s*)- name: Navigateurs des passes d accessibilite\s*$/.exec(l);
+    if (!m) return;
+    const retrait = m[1]!.length;
+    let duree = Number.NaN;
+    for (let j = i + 1; j < lignes.length; j++) {
+      const r = /^(\s*)(?:- |#|\S)/.exec(lignes[j]!);
+      if (r && r[1]!.length <= retrait) break;
+      const t = /^\s*timeout-minutes:\s*(\d+)\s*$/.exec(lignes[j]!);
+      if (t) duree = Number(t[1]) * 60_000;
+    }
+    durees.push(duree);
+  });
+  return durees;
+}
+
+/** Les durées d'étape qui ne laissent pas la moitié aux dépendances (une durée absente compte). */
+function budgetDepasse(durees: number[]): number[] {
+  const borne = TENTATIVES * DELAI_PAR_TENTATIVE_MS + PAUSES_MS.reduce((a, b) => a + b, 0);
+  return durees.filter((d) => !(borne <= d / 2));
+}
 
 const suite = (...issues: boolean[]) => {
   const appels: number[] = [];
@@ -93,9 +125,26 @@ describe('REQ-QA-016 — QA-T74 : apt n’est jamais tué, donc jamais orphelin 
     expect(n.appels).toHaveLength(1);
   });
 
-  it('REQ-QA-016 — le temps borné (téléchargements et pauses) laisse au moins la moitié de l’étape aux dépendances', () => {
-    const borne = TENTATIVES * DELAI_PAR_TENTATIVE_MS + PAUSES_MS.reduce((a, b) => a + b, 0);
-    expect(borne).toBeLessThanOrEqual(DUREE_ETAPE_MS / 2);
+  it('REQ-QA-016 — le temps borné (téléchargements et pauses) laisse au moins la moitié de CHAQUE étape de ci.yml aux dépendances', () => {
+    // RM-01 : la durée de l'étape n'est écrite qu'à ci.yml ; le script n'en garde aucune copie.
+    expect('DUREE_ETAPE_MS' in module_).toBe(false);
+    const durees = dureesDesEtapes(readFileSync(CI, 'utf8'));
+    expect(durees).toHaveLength(2);
+    expect(budgetDepasse(durees)).toEqual([]);
+  });
+
+  it('REQ-QA-016 — TÉMOIN : une étape de ci.yml baissée sous le double du budget rougit, et une étape sans durée aussi', () => {
+    const yml = readFileSync(CI, 'utf8');
+    const baisse = yml.replace(
+      /(- name: Navigateurs des passes d accessibilite\n(?:.*\n)*?\s*timeout-minutes:\s*)\d+/,
+      '$110'
+    );
+    expect(budgetDepasse(dureesDesEtapes(baisse))).toEqual([10 * 60_000]);
+    const sansDuree = yml.replace(
+      /(- name: Navigateurs des passes d accessibilite\n(?:.*\n)*?)\s*timeout-minutes:\s*\d+\n/,
+      '$1\n'
+    );
+    expect(budgetDepasse(dureesDesEtapes(sansDuree)).some(Number.isNaN)).toBe(true);
   });
 });
 
