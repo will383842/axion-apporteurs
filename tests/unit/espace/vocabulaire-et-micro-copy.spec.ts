@@ -919,6 +919,10 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/notifications.ts › DECISIONS_PURGEES › mise_en_demeure : Axion-IA vous a adressé une mise en demeure au titre de l'article {article} du contrat. Le détail des faits n'est plus conservé, sa durée de conservation ayant pris fin. Cette mise en demeure n'est ni un avertissement ni une mesure disciplinaire, et elle ne constitue pas un antécédent.
       espace/notifications.ts › DECISIONS_PURGEES › manquement_grave : Axion-IA a résilié votre contrat d'apporteur sans préavis, par une décision motivée, en application de l'article 11.2 ; le détail du motif n'est plus conservé, sa durée de conservation ayant pris fin. Le contrat a pris fin le {dateEffet}.
       espace/notifications.ts › DECISIONS_PURGEES › suspension : Axion-IA a suspendu l'enregistrement de vos nouveaux dépôts du {dateDebut} au {dateFin}, le temps d'une vérification, au titre de l'article 3.7 du contrat. Le détail des faits n'est plus conservé, sa durée de conservation ayant pris fin. Cette suspension n'a eu d'effet ni sur les entreprises que vous avez déposées, ni sur vos commandes, ni sur vos commissions, et elle ne constitue pas un antécédent.
+      espace/verification.ts › VERIFICATION_INDISPONIBLE › titre : Vérification indisponible pour le moment
+      espace/verification.ts › VERIFICATION_INDISPONIBLE › phrase : Vous pourrez vérifier cette entreprise un peu plus tard. Vous pouvez aussi la déposer dès maintenant, sans la vérifier.
+      espace/verification.ts › VERIFICATION_INDISPONIBLE › action › libelle : Déposer une entreprise
+      espace/verification.ts › VERIFICATION_INDISPONIBLE › action › route : /deposer
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › titre : Votre lien de connexion à votre espace
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › appel : Ouvrir mon espace
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › titre : {entreprise} : la confirmation de l'échange est en cours
