@@ -83,6 +83,9 @@ enum TypeEvenementJournal {
   utilisateur_console_modifie
   journal_acces_gel_modifie
   apporteur_mis_en_demeure
+  /// SEC-15 : la pose et la levée du gel des dépôts (migration 004920), en fin d'enum comme en base.
+  apporteur_gel_modifie
+  acces_coordonnees_reservee
 
   @@map("type_evenement_journal")
 }
@@ -126,6 +129,16 @@ model Evenement {
 }
 
 // ── DM-06 : l'apporteur ─────────────────────────────────────────────────────
+
+/// SEC-15 (REQ-SEC-019) : le gel des dépôts, à TROIS valeurs. `suspendu` si et seulement si le gel
+/// n'est pas `libre` (CHECK `apporteurs_suspendu_si_gele`, SQL brut).
+enum EtatGel {
+  libre
+  gele_non_confirmation
+  gele_fraude
+
+  @@map("etat_gel")
+}
 
 /// Les neuf statuts STOCKÉS de l'apporteur (REQ-DM-011, `docs/GLOSSAIRE.md` §2). `actif` et
 /// `dormant` sont dérivés par `src/domain/apporteur/activite.ts`, jamais stockés (REQ-CPL-027).
@@ -254,8 +267,9 @@ model Apporteur {
   qualiteExercice       QualiteExercice?       @map("qualite_exercice")
   professionReglementee ProfessionReglementee? @map("profession_reglementee")
 
-  /// Surcharge manuelle du seuil de vérification prioritaire (REQ-DM-010). NULLE = le défaut,
-  /// DÉRIVÉ du palier par `seuilPrioritaire()` (HYP-D3) — aucun défaut littéral en base (RM-10).
+  /// Surcharge manuelle du seuil de vérification prioritaire (REQ-DM-010). SEC-56 : aucun code ne la
+  /// lit ni ne l'écrit plus, aucun palier ni seuil de dépôts n'existe par apporteur (REQ-JUR-032) ;
+  /// la colonne et son CHECK tombent à la seconde PR de SEC-56, après le déploiement de celle-ci.
   seuilVerificationPrioritaire   Int?      @map("seuil_verification_prioritaire")
   /// La trace de la surcharge : présente si et seulement si la surcharge l'est (CHECK en SQL brut).
   seuilVerificationPrioritaireAt DateTime? @map("seuil_verification_prioritaire_at") @db.Timestamptz(3)
@@ -293,6 +307,20 @@ model Apporteur {
   /// (déclencheur `apporteurs_version_de_session`, SQL brut).
   sessionVersion Int @default(0) @map("session_version")
 
+  /// SEC-15 (REQ-SEC-019, REQ-SEC-038) : le gel des dépôts, la suspension de vérification du contrat v2,
+  /// art. 3.7 al. 3. Posé et levé par la seule fonction de `src/server/apporteur/suspension.ts` ; la
+  /// garde `apporteurs_gel_garde` (SQL brut) n'admet que la pose et la levée. L'instant est celui de la
+  /// pose ET de la notification : les quinze jours en courent.
+  etatGel              EtatGel             @default(libre) @map("etat_gel")
+  depotsGelesDepuis    DateTime?           @map("depots_geles_depuis") @db.Timestamptz(3)
+  gelAnomalieId        String?             @map("gel_anomalie_id") @db.Uuid
+  gelAnomalie          Anomalie?           @relation("GelDesDepots", fields: [gelAnomalieId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  gelPoseParId         String?             @map("gel_pose_par_id") @db.Uuid
+  gelPosePar           UtilisateurConsole? @relation("GelsPoses", fields: [gelPoseParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// La décision `suspension` du même apporteur, qui porte les faits notifiés (voie (a), A02, 6036131730).
+  gelDecisionContratId String?             @map("gel_decision_contrat_id") @db.Uuid
+  gelDecisionContrat   DecisionDeContrat?  @relation("GelParDecision", fields: [gelDecisionContratId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
   /// L'acceptation de la politique de confidentialité (REQ-JUR-025) : la date et la version, ensemble
   /// ou aucune (CHECK en SQL brut).
   confidentialiteAccepteeAt DateTime? @map("confidentialite_acceptee_at") @db.Timestamptz(3)
@@ -309,11 +337,11 @@ model Apporteur {
   personnesDeclarees      PersonneDeclaree[]
   piecesKyc               PieceKyc[]
   notificationsEspace     NotificationEspace[]
-  decisionsDeContrat      DecisionDeContrat[]
+  decisionsDeContrat      DecisionDeContrat[]      @relation("DecisionsDeLApporteur")
   preferencesNotification PreferenceNotification[]
   verifications           Verification[]
   alertesLiberation       AlerteLiberation[]
-  anomalies               Anomalie[]
+  anomalies               Anomalie[]               @relation("AnomaliesDeLApporteur")
   contestations           Contestation[]
   appareilsConnus         AppareilConnu[]
 
@@ -455,28 +483,31 @@ model UtilisateurConsole {
   valideAt               DateTime?            @map("valide_at") @db.Timestamptz(3)
   administrateursValides UtilisateurConsole[] @relation("ValidationDesAdministrateurs")
 
-  liensMagiques            LienMagique[]
-  sessionsEspace           SessionEspace[]
-  attributions             Attribution[]            @relation("AttributionsDuConseiller")
-  suspensionsDePeremption  Attribution[]            @relation("SuspensionsDePeremption")
-  verifications            Verification[]
-  anomaliesTraitees        Anomalie[]
-  rattachementsDecides     RattachementManuel[]
-  contestationsRepondues   Contestation[]
-  qualificationsSaisies    Qualification[]
-  accesJournalises         JournalAccesConsole[]
+  liensMagiques                LienMagique[]
+  sessionsEspace               SessionEspace[]
+  attributions                 Attribution[]            @relation("AttributionsDuConseiller")
+  suspensionsDePeremption      Attribution[]            @relation("SuspensionsDePeremption")
+  annulationsApresConfirmation Attribution[]            @relation("AnnulationsApresConfirmation")
+  verifications                Verification[]
+  anomaliesTraitees            Anomalie[]
+  rattachementsDecides         RattachementManuel[]
+  contestationsRepondues       Contestation[]
+  qualificationsSaisies        Qualification[]
+  accesJournalises             JournalAccesConsole[]
   /// SEC-61 : les gels du journal des accès qui visent l'utilisateur, ceux qu'il a posés, levés.
-  gelsJournalVises         JournalAccesConsoleGel[] @relation("GelsJournalVises")
-  gelsJournalPoses         JournalAccesConsoleGel[] @relation("GelsJournalPoses")
-  gelsJournalLeves         JournalAccesConsoleGel[] @relation("GelsJournalLeves")
-  sirensListeNoireAjoutes  SirenListeNoire[]
-  tracesListeNoireAjoutees SirenListeNoireTrace[]   @relation("TracesListeNoireAjoutees")
-  tracesListeNoireRetirees SirenListeNoireTrace[]   @relation("TracesListeNoireRetirees")
+  gelsJournalVises             JournalAccesConsoleGel[] @relation("GelsJournalVises")
+  /// SEC-15 : les gels des dépôts posés par cet administrateur, jusqu'à leur levée.
+  gelsPoses                    Apporteur[]              @relation("GelsPoses")
+  gelsJournalPoses             JournalAccesConsoleGel[] @relation("GelsJournalPoses")
+  gelsJournalLeves             JournalAccesConsoleGel[] @relation("GelsJournalLeves")
+  sirensListeNoireAjoutes      SirenListeNoire[]
+  tracesListeNoireAjoutees     SirenListeNoireTrace[]   @relation("TracesListeNoireAjoutees")
+  tracesListeNoireRetirees     SirenListeNoireTrace[]   @relation("TracesListeNoireRetirees")
   /// CPL-T06 : les décisions de candidature dont l'utilisateur est l'auteur.
-  decisionsCandidature     DecisionCandidature[]
+  decisionsCandidature         DecisionCandidature[]
   /// CPL-T24 : les RIB que l'utilisateur a vérifiés, et ceux qu'il a confirmés.
-  ribsVerifies             PieceKyc[]               @relation("RibsVerifies")
-  ribsConfirmes            PieceKyc[]               @relation("RibsConfirmes")
+  ribsVerifies                 PieceKyc[]               @relation("RibsVerifies")
+  ribsConfirmes                PieceKyc[]               @relation("RibsConfirmes")
 
   @@map("utilisateurs_console")
 }
@@ -860,6 +891,15 @@ enum CategorieEntreprise {
 }
 
 /// Les sept motifs de refus d'un dépôt (REQ-SEC-022), exactement.
+/// DM-71 (art. 3.3 du v2) : l'exception d'une annulation après la confirmation (forme d'A02, #806).
+enum ExceptionAnnulation {
+  erreur_identification
+  fraude
+  retablissement_apporteur
+
+  @@map("exception_annulation")
+}
+
 enum MotifRefusDepot {
   anteriorite_client
   anteriorite_devis
@@ -961,24 +1001,30 @@ model Attribution {
   lienInteretPrecisionChiffre Bytes?            @map("lien_interet_precision_chiffre")
 
   // Le temps de la machine (REQ-DM-004, REQ-DM-007, REQ-UX-022).
-  aQualifierDepuisAt               DateTime?           @map("a_qualifier_depuis_at") @db.Timestamptz(3)
-  premierContactAt                 DateTime?           @map("premier_contact_at") @db.Timestamptz(3)
-  confirmeeAt                      DateTime?           @map("confirmee_at") @db.Timestamptz(3)
-  fenetreFinAt                     DateTime?           @map("fenetre_fin_at") @db.Timestamptz(3)
-  peremptionAt                     DateTime?           @map("peremption_at") @db.Timestamptz(3)
+  aQualifierDepuisAt               DateTime?            @map("a_qualifier_depuis_at") @db.Timestamptz(3)
+  premierContactAt                 DateTime?            @map("premier_contact_at") @db.Timestamptz(3)
+  confirmeeAt                      DateTime?            @map("confirmee_at") @db.Timestamptz(3)
+  fenetreFinAt                     DateTime?            @map("fenetre_fin_at") @db.Timestamptz(3)
+  peremptionAt                     DateTime?            @map("peremption_at") @db.Timestamptz(3)
   /// La suspension de péremption : les trois ensemble ou aucune (CHECK).
-  peremptionSuspendueAt            DateTime?           @map("peremption_suspendue_at") @db.Timestamptz(3)
-  peremptionSuspendueParId         String?             @map("peremption_suspendue_par_id") @db.Uuid
-  peremptionSuspenduePar           UtilisateurConsole? @relation("SuspensionsDePeremption", fields: [peremptionSuspendueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  peremptionSuspendueJustification String?             @map("peremption_suspendue_justification") @db.Text
-  fenetreRedeclarationFinAt        DateTime?           @map("fenetre_redeclaration_fin_at") @db.Timestamptz(3)
-  purgeContactAt                   DateTime?           @map("purge_contact_at") @db.Timestamptz(3)
-  contactPurgeAt                   DateTime?           @map("contact_purge_at") @db.Timestamptz(3)
+  peremptionSuspendueAt            DateTime?            @map("peremption_suspendue_at") @db.Timestamptz(3)
+  peremptionSuspendueParId         String?              @map("peremption_suspendue_par_id") @db.Uuid
+  peremptionSuspenduePar           UtilisateurConsole?  @relation("SuspensionsDePeremption", fields: [peremptionSuspendueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  peremptionSuspendueJustification String?              @map("peremption_suspendue_justification") @db.Text
+  fenetreRedeclarationFinAt        DateTime?            @map("fenetre_redeclaration_fin_at") @db.Timestamptz(3)
+  /// DM-71 (art. 3.3 du v2, migration 005020) : l'exception d'une annulation APRÈS la confirmation et
+  /// son auteur humain, posés ensemble avec l'arrivée en `annulee`, immuables ensuite (garde
+  /// `attributions_annulation_apres_confirmation`).
+  annulationException              ExceptionAnnulation? @map("annulation_exception")
+  annulationParId                  String?              @map("annulation_par_id") @db.Uuid
+  annulationPar                    UtilisateurConsole?  @relation("AnnulationsApresConfirmation", fields: [annulationParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  purgeContactAt                   DateTime?            @map("purge_contact_at") @db.Timestamptz(3)
+  contactPurgeAt                   DateTime?            @map("contact_purge_at") @db.Timestamptz(3)
   /// L'empreinte HMAC du jeton de la page des droits du contact, jamais le jeton (DM-59). Unique
   /// quand posée (index partiel en SQL), effacée par la purge du contact.
-  jetonDroitsHash                  String?             @map("jeton_droits_hash") @db.Char(64)
+  jetonDroitsHash                  String?              @map("jeton_droits_hash") @db.Char(64)
   /// Verrou optimiste de la fiche (REQ-CPL-024).
-  versionQualification             Int                 @default(0) @map("version_qualification")
+  versionQualification             Int                  @default(0) @map("version_qualification")
 
   courrielsEnvoyes      CourrielEnvoye[]
   demandeConfirmation   DemandeConfirmation?
@@ -1260,7 +1306,7 @@ model Anomalie {
   type                  TypeAnomalie
   score                 Int?                 @db.SmallInt
   apporteurId           String?              @map("apporteur_id") @db.Uuid
-  apporteur             Apporteur?           @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  apporteur             Apporteur?           @relation("AnomaliesDeLApporteur", fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   attributionId         String?              @map("attribution_id") @db.Uuid
   attribution           Attribution?         @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   statut                StatutAnomalie       @default(ouverte)
@@ -1284,6 +1330,8 @@ model Anomalie {
   gelLitigeRef          String?              @map("gel_litige_ref") @db.VarChar(64)
   /// DM-55 : les notifications des décisions qu'elle fonde.
   notificationsEspace   NotificationEspace[]
+  /// SEC-15 : les apporteurs dont elle fonde le gel (`gele_fraude`).
+  gelsDesDepots         Apporteur[]          @relation("GelDesDepots")
 
   @@index([apporteurId])
   @@index([attributionId])
@@ -1573,6 +1621,8 @@ model DevisConnu {
 enum GesteDecisionContrat {
   mise_en_demeure
   resiliation
+  /// SEC-15 : la suspension de vérification (art. 3.7 al. 3), notifiée avec ses faits (migration 004922).
+  suspension
 
   @@map("geste_decision_contrat")
 }
@@ -1583,7 +1633,7 @@ enum GesteDecisionContrat {
 model DecisionDeContrat {
   id                  String               @id @default(uuid()) @db.Uuid
   apporteurId         String               @map("apporteur_id") @db.Uuid
-  apporteur           Apporteur            @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  apporteur           Apporteur            @relation("DecisionsDeLApporteur", fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   geste               GesteDecisionContrat
   /// La liste FERMÉE de l'art. 11.2, pour la mise en demeure seule (CHECK).
   article             String?              @db.VarChar(4)
@@ -1603,6 +1653,8 @@ model DecisionDeContrat {
   /// avec le texte (CHECK et garde) ; jamais de clair pour comparer.
   faitsEmpreinte      String?              @map("faits_empreinte") @db.Char(64)
   notificationsEspace NotificationEspace[]
+  /// SEC-15 : l'apporteur dont cette suspension fonde le gel, tant qu'il dure.
+  gelsDesDepots       Apporteur[]          @relation("GelParDecision")
 
   @@index([apporteurId])
   @@map("decisions_de_contrat")

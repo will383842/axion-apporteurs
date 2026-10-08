@@ -35,29 +35,8 @@ import {
 /** Le nom du modèle dans la donnée authentifiée des blocs chiffrés d'un apporteur. */
 export const MODELE_APPORTEUR = 'Apporteur';
 
-/** Le client d'une transaction, en alias : la forme que la règle semgrep du SQL brut admet. */
-type Tx = Prisma.TransactionClient;
-
-/**
- * SEC-19 : les droits d'un résilié courent tant qu'au moins une attribution reste `figee_resiliation`
- * (A02, #703) ; une lecture, jamais mise en cache.
- */
-async function droitsEnCoursDans(
-  client: Pick<Tx, 'attribution'>,
-  apporteurId: string
-): Promise<boolean> {
-  const figee = await client.attribution.findFirst({
-    where: { apporteurId, statut: 'figee_resiliation' },
-    select: { id: true },
-  });
-  return figee !== null;
-}
-
 /** La lecture du compte : par empreinte de courriel, puis l'adresse stockée, déchiffrée. */
-export type LectureDuCompte = Pick<
-  PortsDEmission,
-  'trouverApporteur' | 'adresseStockee' | 'droitsEnCours'
->;
+export type LectureDuCompte = Pick<PortsDEmission, 'trouverApporteur' | 'adresseStockee'>;
 
 export function lectureDuCompte(prisma: PrismaClient, cles: ClesPii): LectureDuCompte {
   return {
@@ -67,7 +46,6 @@ export function lectureDuCompte(prisma: PrismaClient, cles: ClesPii): LectureDuC
         select: { id: true, statut: true },
       });
     },
-    droitsEnCours: (apporteurId) => droitsEnCoursDans(prisma, apporteurId),
     async adresseStockee(apporteurId) {
       const ligne = await prisma.apporteur.findUnique({
         where: { id: apporteurId },
@@ -128,7 +106,6 @@ function consommationSur(tx: Prisma.TransactionClient): TransactionDeConsommatio
       });
       return a?.statut ?? null;
     },
-    droitsEnCours: (apporteurId) => droitsEnCoursDans(tx, apporteurId),
     async ouvrirSession(session) {
       await tx.sessionEspace.create({ data: session });
     },
@@ -168,16 +145,7 @@ export function transactionDeConfirmation(prisma: PrismaClient): PortsDesApparei
           });
           if (ligne === null) return null;
           const { lienMagiqueId, ...session } = ligne;
-          if (session.apporteur === null || session.apporteurId === null) {
-            return { ligne: session, lienMagiqueId };
-          }
-          // SEC-19 (A09, #563 5983094689) : les droits en cours, relus dans la MÊME transaction,
-          // comme le fait le dépôt des sessions. Le juge voit la session telle qu'elle est.
-          const droitsEnCours = await droitsEnCoursDans(tx, session.apporteurId);
-          return {
-            ligne: { ...session, apporteur: { ...session.apporteur, droitsEnCours } },
-            lienMagiqueId,
-          };
+          return { ligne: session, lienMagiqueId };
         },
         appareils: depotDAppareils(tx),
       })
@@ -190,10 +158,9 @@ export function transactionDeConfirmation(prisma: PrismaClient): PortsDesApparei
  * dépassent jamais cinq, et la base le double (CHECK et déclencheur `liens_magiques_code_fige`).
  */
 function codeSur(tx: Prisma.TransactionClient): TransactionDuCode {
-  const { statutApporteur, droitsEnCours, ouvrirSession, appareils } = consommationSur(tx);
+  const { statutApporteur, ouvrirSession, appareils } = consommationSur(tx);
   return {
     statutApporteur,
-    droitsEnCours,
     ouvrirSession,
     appareils,
     async lienActifDe(emailHash, maintenant) {
