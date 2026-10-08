@@ -27520,6 +27520,35 @@
           "tests/unit/qualite/navigateurs-bornes.spec.ts"
         ]
       }
+    },
+    {
+      "id": "GOV-157",
+      "titre": "La chaîne de lots économe : deux lentilles, second tour ciblé, contexte réduit (ADR-0024, W16)",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-011"
+      ],
+      "paths": [
+        ".claude/skills/lot/SKILL.md",
+        "scripts/lot/composer.ts",
+        "scripts/lot/lot.workflow.js",
+        "tests/unit/gouvernance/chaine-de-lots-econome.spec.ts"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 128, sur le feu vert de Williams du 2026-10-08 (rendre la chaîne de lots économe). Le workflow de lot (`scripts/lot/lot.workflow.js`) suit `partners/ADR-0024` et W16 (`docs/DECISIONS.md` §1), sans retirer aucun garde-fou : (1) deux lentilles partout, `exactitude` et `securite`, plus l architecte (A02) sur une tâche `schema` ; plus de lentille `simplicite` (RM-01 est jugée par `exactitude`) ni d agent de mutation (Stryker la mesure en porte A, `pnpm mutation:pr`) ; le refus de `securite` ou de `schema` est un veto, que le lead ne lève pas. (2) Au second tour, seules les lentilles qui ont refusé relisent en entier, plus `securite` toujours ; une lentille qui avait accepté reconfirme sur le seul delta du correctif et poste son avis sur la tête neuve. (3) Le contexte de chaque agent est réduit : le composeur (`scripts/lot/composer.ts`, `exigencesDuLot()`) écrit dans le lot le texte des SEULES exigences citées, lu dans `docs/requirements.json` (une REQ absente vaut `null`, un registre absent ne bloque pas la composition), et le workflow le colle dans le prompt au lieu de faire ouvrir le registre entier. (4) Le skill `lot` (`.claude/skills/lot/SKILL.md`) décrit la même chaîne. TÉMOIN (`tests/unit/gouvernance/chaine-de-lots-econome.spec.ts`), rouge d abord : il JOUE le workflow avec des agents de témoin, compte les agents lancés et ce qu on leur donne à lire ; une troisième lentille hors `schema`, une relecture entière par une lentille qui avait accepté, ou `securite` absente du second tour le font rougir.",
+      "tests": {
+        "REQ-GOV-011": [
+          "tests/unit/gouvernance/chaine-de-lots-econome.spec.ts"
+        ]
+      }
     }
   ]
 }
