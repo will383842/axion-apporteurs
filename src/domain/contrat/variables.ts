@@ -63,7 +63,6 @@ export const VARIABLES: Readonly<Record<string, SourceDeVariable>> = {
   // Les délais et seuils du contrat.
   FENETRE_MOIS: { ...SSOT_SEUILS, constante: 'FENETRE_MOIS' },
   PEREMPTION_JOURS: { ...SSOT_SEUILS, constante: 'PEREMPTION_JOURS' },
-  SEUIL_VERSEMENT: { ...SSOT_SEUILS, constante: 'SEUIL_VERSEMENT' },
   PREAVIS_JOURS: { ...SSOT_SEUILS, constante: 'PREAVIS_JOURS' },
   // JUR-T54 — la condition (b) de la prolongation de l'art. 3.4 al. 3.
   PROLONGATION_FAITS_RECENTS_JOURS: {
@@ -73,23 +72,20 @@ export const VARIABLES: Readonly<Record<string, SourceDeVariable>> = {
   // JUR-T40 — les cinq délais de l'art. 3.2 (W20), tous dans la SSOT (`src/domain/seuils/ssot.ts`),
   // source « contrat art. 3.2 » ; le gabarit les résout. DM-13 les lit sans les redéclarer.
   CONFIRMATION_TACITE_JOURS: { ...SSOT_SEUILS, constante: 'CONFIRMATION_TACITE_JOURS' },
+  // JUR-T66 — le délai de prise de contact de la Société (art. 3.2, v2).
+  PRISE_DE_CONTACT_SOCIETE_JOURS: {
+    ...SSOT_SEUILS,
+    constante: 'PRISE_DE_CONTACT_SOCIETE_JOURS',
+  },
   // JUR-T31 — la réserve après un acte de l'Apporteur (art. 3.5 al. 4).
   RESERVE_APRES_ACTE_APPORTEUR_JOURS: {
     ...SSOT_SEUILS,
     constante: 'RESERVE_APRES_ACTE_APPORTEUR_JOURS',
   },
-  LIBERATION_SIGNALEE_INJOIGNABLE_MAX: {
-    ...SSOT_SEUILS,
-    constante: 'LIBERATION_SIGNALEE_INJOIGNABLE_MAX',
-  },
   LIBERATION_SIGNALEE_JOURS: { ...SSOT_SEUILS, constante: 'LIBERATION_SIGNALEE_JOURS' },
   CARENCE_REDEPOT_APRES_LIBERATION_JOURS: {
     ...SSOT_SEUILS,
     constante: 'CARENCE_REDEPOT_APRES_LIBERATION_JOURS',
-  },
-  CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS: {
-    ...SSOT_SEUILS,
-    constante: 'CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS',
   },
   // Le parrainage : taux et fenêtre versionnés en configuration (HYP-E1-19).
   PARRAINAGE_TAUX: { genre: 'configuration', cle: 'parrainage.taux', decision: 'HYP-E1-19' },

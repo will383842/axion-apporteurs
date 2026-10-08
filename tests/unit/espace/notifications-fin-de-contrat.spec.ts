@@ -21,7 +21,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { EcranNotifications } from '../../../src/app/(espace)/notifications/ecran';
-import { routeOuverte, niveauDAcces } from '../../../src/domain/apporteur/acces-espace';
+import {
+  routeOuverte,
+  niveauDAcces,
+  type NiveauDAcces,
+} from '../../../src/domain/apporteur/acces-espace';
 import { FAITS_ANOMALIE_CARACTERES_MAX } from '../../../src/domain/seuils/ssot';
 import { MODELE_DECISION_DE_CONTRAT } from '../../../src/server/apporteur/resiliation';
 import { CHAMPS_PII, encryptPii, type ClesPii } from '../../../src/server/securite/pii';
@@ -57,7 +61,8 @@ async function clesDeTest(): Promise<ClesPii> {
 type Decision = {
   id: string;
   apporteurId: string;
-  geste: 'mise_en_demeure' | 'resiliation';
+  geste: 'mise_en_demeure' | 'resiliation' | 'suspension';
+  creeAt?: Date;
   article: string | null;
   texteChiffre: Uint8Array | null;
   dateReception: Date | null;
@@ -142,9 +147,16 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('REQ-UX-016 — l’espace rend mise_en_demeure et resiliation (UX-P1-59)', () => {
   // UX-P1-58 : `decision_attribution` y entre, rendue par son propre lecteur.
-  it('REQ-UX-016 : les clés rendues sont EXACTEMENT premier_rang_libere, mise_en_demeure, resiliation et decision_attribution', () => {
+  it('REQ-UX-016 : les clés rendues sont EXACTEMENT premier_rang_libere, mise_en_demeure, resiliation, decision_attribution et suspension_declarations', () => {
     expect([...CLES_RENDUES_DANS_L_ESPACE].sort()).toEqual(
-      ['decision_attribution', 'mise_en_demeure', 'premier_rang_libere', 'resiliation'].sort()
+      [
+        'decision_attribution',
+        'mise_en_demeure',
+        'premier_rang_libere',
+        'resiliation',
+        // SEC-15 : la suspension de vérification, rendue depuis sa décision.
+        'suspension_declarations',
+      ].sort()
     );
   });
 
@@ -256,7 +268,7 @@ describe('REQ-UX-047 — les faits à l’écran : même nettoyage, même borne,
   });
 });
 
-describe('REQ-UX-016 — la résiliation, vue par le résilié en lecture', () => {
+describe('REQ-UX-016 — la résiliation, rendue par le passage de l’espace (SEC-70 : le résilié ne l’y lit plus)', () => {
   const resiliation = async (
     resiliationMotif = 'ordinaire_apporteur',
     purge: { texte?: string } | null = null
@@ -315,7 +327,8 @@ describe('REQ-UX-016 — la résiliation, vue par le résilié en lecture', () =
     const [n] = await notificationsDeLEspace(c, MOI, { cles, lireUnFait });
     expect(n?.titre).toBe("Fin de votre contrat d'apporteur");
     expect(n?.corps).toContain('votre décision de résilier le contrat');
-    expect(n?.route).toBe('/mes-commissions');
+    // SEC-70 : l'appel de la résiliation ne mène à aucune route de l'espace (juriste, #824 6043086595).
+    expect(n?.route).toBeNull();
   });
 
   it('REQ-UX-016 : échec FERMÉ — sans lecteur de la charge, ou sur une autre charge, la résiliation n’apparaît pas', async () => {
@@ -375,8 +388,90 @@ describe('REQ-UX-016 — la résiliation, vue par le résilié en lecture', () =
     expect(np?.corps).toBe(ni?.corps);
   });
 
-  it('REQ-UX-016 : TÉMOIN — un résilié en `lecture` ouvre /notifications (SEGMENTS_LECTURE)', () => {
-    expect(niveauDAcces('resilie', true)).toBe('lecture');
-    expect(routeOuverte('lecture', 'notifications')).toBe(true);
+  it('REQ-UX-016 : TÉMOIN — SEC-70 : un résilié n’ouvre PLUS /notifications ; la résiliation lui parvient par courriel', () => {
+    const avecDroits = niveauDAcces as (statut: string, droitsEnCours?: boolean) => NiveauDAcces;
+    expect(avecDroits('resilie', true)).toBe('ferme');
+    expect(routeOuverte(avecDroits('resilie', true), 'notifications')).toBe(false);
+  });
+});
+
+describe('REQ-SEC-018 — la suspension, rendue depuis sa décision (SEC-15, voie (a))', () => {
+  /** Posée le 2026-10-07 à 09:30, heure de Paris : levée au plus tard le 22 octobre 2026. */
+  const POSEE = new Date('2026-10-07T07:30:00.000Z');
+  async function suspension(o: { purgee?: boolean; apporteurId?: string } = {}) {
+    const cles = await clesDeTest();
+    const decision: Decision = {
+      id: DECISION,
+      apporteurId: o.apporteurId ?? MOI,
+      geste: 'suspension',
+      article: '3.7',
+      texteChiffre: o.purgee
+        ? null
+        : encryptPii(
+            { modele: MODELE_DECISION_DE_CONTRAT, champ: CHAMPS_PII.texte.chiffre, id: DECISION },
+            "L'entreprise déclarée a indiqué n'avoir eu aucun échange avec vous",
+            cles
+          ),
+      dateReception: null,
+      dateEffet: null,
+      evenementId: 51n,
+      textePurgeAt: o.purgee ? quand : null,
+      acteurId: EMPLOYE,
+      creeAt: POSEE,
+    };
+    const notification: Notification = {
+      id: '2',
+      apporteurId: MOI,
+      cle: 'suspension_declarations',
+      creeAt: POSEE,
+      evenementId: 51n,
+      decisionContratId: DECISION,
+      attribution: null,
+    };
+    return { cles, decision, notification };
+  }
+
+  it('REQ-SEC-018 : TÉMOIN — la suspension s’affiche avec ses faits et sa date de levée, quinze jours civils après la pose', async () => {
+    const { cles, decision, notification } = await suspension();
+    const { c } = client([notification], [decision], {});
+    const [n] = await notificationsDeLEspace(c, MOI, { cles });
+    expect(n?.titre).toBe("Vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA");
+    expect(n?.corps).toContain(
+      "L'entreprise déclarée a indiqué n'avoir eu aucun échange avec vous."
+    );
+    expect(n?.corps).toContain('22 octobre 2026');
+    expect(n?.corps).toContain("ni pour l'accès à votre espace");
+  });
+
+  it('REQ-SEC-018 : TÉMOIN à deux faces — la suspension d’un AUTRE apporteur n’est pas rendue', async () => {
+    const { cles, decision, notification } = await suspension({ apporteurId: EMPLOYE });
+    const { c } = client([notification], [decision], {});
+    expect(await notificationsDeLEspace(c, MOI, { cles })).toEqual([]);
+  });
+
+  it('REQ-SEC-018 : TÉMOIN — une suspension aux faits purgés rend le texte FERMÉ de la juriste, mot pour mot, du jour de la notification à celui de la levée', async () => {
+    const { cles, decision, notification } = await suspension({ purgee: true });
+    const { c } = client([notification], [decision], {});
+    const finDUneSuspension = vi.fn(async () => new Date('2026-10-15T09:00:00.000Z'));
+    const [n] = await notificationsDeLEspace(c, MOI, { cles, finDUneSuspension });
+    expect(n?.titre).toBe("Vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA");
+    expect(n?.corps).toBe(
+      "Axion-IA a suspendu l'enregistrement de vos nouveaux dépôts du {dateDebut} au {dateFin}, le temps d'une vérification, au titre de l'article 3.7 du contrat. Le détail des faits n'est plus conservé, sa durée de conservation ayant pris fin. Cette suspension n'a eu d'effet ni sur les entreprises que vous avez déposées, ni sur vos commandes, ni sur vos commissions, et elle ne constitue pas un antécédent."
+        .replace('{dateDebut}', '7 octobre 2026')
+        .replace('{dateFin}', '15 octobre 2026')
+    );
+    // La fin se lit au journal, depuis le fait de la pose : jamais depuis le texte purgé.
+    expect(finDUneSuspension).toHaveBeenCalledWith('51');
+    // Aucun fragment de l'ancien texte des faits ne subsiste.
+    expect(n?.corps).not.toContain('aucun échange');
+  });
+
+  it('REQ-SEC-018 : TÉMOIN à deux faces — une fin illisible, ou aucun lecteur de la fin, ne rend rien (échec fermé)', async () => {
+    const { cles, decision, notification } = await suspension({ purgee: true });
+    const { c } = client([notification], [decision], {});
+    expect(
+      await notificationsDeLEspace(c, MOI, { cles, finDUneSuspension: async () => null })
+    ).toEqual([]);
+    expect(await notificationsDeLEspace(c, MOI, { cles })).toEqual([]);
   });
 });

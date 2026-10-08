@@ -29,6 +29,7 @@ import {
 import type { MotifResiliation } from '../../domain/apporteur/statut';
 import type { AccesApporteur } from '../acces/for-apporteur';
 import type { DemandeDEnvoi } from '../integrations/zeptomail/emetteur';
+import { adresseDeContact } from '../../config/entite';
 import {
   GABARITS,
   schemaGabarit,
@@ -82,12 +83,13 @@ export const LONGUEUR_DU_MOTIF_MAX =
 
 /**
  * SEC-19 : les `{faits}` d'une mise en demeure suivent les règles de `{faits}` de DM-55 (A02, #703) —
+ * et, SEC-15, ceux d'une suspension —
  * la même borne, `FAITS_ANOMALIE_CARACTERES_MAX`. Toute autre clé garde la borne commune.
  */
 const borneDe = (cle: GabaritDeLApporteur, parametre: string): number =>
   parametre === 'motif'
     ? LONGUEUR_DU_MOTIF_MAX
-    : cle === 'mise_en_demeure' && parametre === 'faits'
+    : (cle === 'mise_en_demeure' || cle === 'suspension_declarations') && parametre === 'faits'
       ? FAITS_ANOMALIE_CARACTERES_MAX.valeur
       : LONGUEUR_DE_VALEUR_MAX;
 
@@ -237,15 +239,24 @@ export interface DemandeDeNotification {
 /**
  * La composition d'un courriel de notification, UNE fois pour tous ses émetteurs (`notifier()` et
  * le passage d'envoi de DM-55) : le titre en sujet ; le corps, puis l'appel à l'action suivi du lien
- * de sa route quand elle existe.
+ * de sa route quand elle existe. SEC-70 : un gabarit `lien: 'contact_entite'` mène au mailto: de
+ * l'adresse de contact de l'entité ; sans adresse renseignée, l'appel part SANS lien.
  */
 export function composerLeCourriel(
   cle: string,
   texte: TexteRendu,
-  urlDeLEspace: URL
+  urlDeLEspace: URL,
+  contact: string | null = adresseDeContact()
 ): { sujet: string; corps: string } {
-  const route = GABARITS[cleDeLaTable(cle)].route;
-  const lien = route === null ? null : new URL(route, urlDeLEspace).href;
+  const gabarit: LigneDeNotification = GABARITS[cleDeLaTable(cle)];
+  const lien =
+    gabarit.lien === 'contact_entite'
+      ? contact === null
+        ? null
+        : `mailto:${contact}`
+      : gabarit.route === null
+        ? null
+        : new URL(gabarit.route, urlDeLEspace).href;
   const corps = [texte.corps, lien === null ? texte.appel : `${texte.appel} : ${lien}`]
     .filter((x): x is string => x !== null)
     .join('\n\n');

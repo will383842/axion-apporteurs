@@ -423,6 +423,13 @@ export type Pr = {
   tachesBase?: Tache[] | null;
   /** GOV-152 : le registre de la base COURANTE, pour le seul risque (union monotone). */
   tachesBaseCourante?: Tache[] | null;
+  /**
+   * GOV-153 : le registre de la PR lu à SA TÊTE (`head.sha`). En CI, `actions/checkout` sert le
+   * commit de FUSION (main courante + PR) : le disque mêle à la PR ce que main a changé depuis son
+   * départ, alors que `tachesBase` est la base de FUSION. `null` : tête illisible (échec fermé).
+   * Absent : le disque EST la tête (lecture locale).
+   */
+  tachesTete?: Tache[] | null;
   /** Les commentaires d'issue de la PR, sous `--pr <n>` : un avis posté là ne compte pour rien. */
   commentaires?: CommentaireBrut[] | null;
   /**
@@ -1716,7 +1723,24 @@ function prParEvenement(): Pr | null {
   );
   // GOV-152, condition de la sécurité (6036322341) : le risque lit AUSSI la base courante.
   pr.tachesBaseCourante = projeter(tachesDeLaBase(ev.pull_request.base.sha));
+  // GOV-153 (#319, 6042120798) : le disque est le commit de FUSION ; le registre de la PR se lit à
+  // sa tête, pour s'apparier à la base de fusion.
+  pr.tachesTete = projeter(tachesDeLaBase(ev.pull_request.head.sha));
   return pr;
+}
+
+/**
+ * GOV-153 : le dépôt que juge `controler`. Quand la PR porte le registre de SA TÊTE (CI), c'est lui
+ * qui fait foi, et non le disque. Une tête illisible arrête la garde (échec fermé).
+ */
+export function depotDeLaTete(depot: Depot, pr: Pr | null): Depot {
+  if (!pr || pr.tachesTete === undefined) return depot;
+  if (pr.tachesTete === null) {
+    throw new Error(
+      'gov:pr — le registre de la tête de la PR est illisible (`git show <head.sha>:docs/tasks.json`) : la garde refuse plutôt que de juger le commit de fusion.'
+    );
+  }
+  return { ...depot, taches: pr.tachesTete };
 }
 
 /** La PR telle que l'événement `pull_request` la sert. */
@@ -3084,7 +3108,7 @@ if (LANCE_EN_SCRIPT) {
 
   // ── mode normal ──────────────────────────────────────────────────────────────
 
-  const depot = lireDepot();
+  let depot = lireDepot();
   const iPr = process.argv.indexOf('--pr');
   const iApres = process.argv.indexOf('--apres-fusion');
   let pr: Pr | null = null;
@@ -3130,6 +3154,8 @@ if (LANCE_EN_SCRIPT) {
     pr = prParEvenement();
     if (pr)
       portee += ', puis la PR de l’événement GitHub — SANS les revues, qui n’existent pas encore';
+    // Une tête illisible LÈVE : la garde s'arrête en erreur (échec fermé), sans sortie nommée de plus.
+    depot = depotDeLaTete(depot, pr);
   }
 
   // LE RISQUE EST IMPRIMÉ DÈS QU'UNE PR EST CONNUE (GOV-077) : c'est cette ligne que l'orchestrateur

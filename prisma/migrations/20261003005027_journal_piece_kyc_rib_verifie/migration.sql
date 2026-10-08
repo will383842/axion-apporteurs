@@ -1,5 +1,5 @@
 -- SEC-69 (REQ-UX-027) — le premier regard d'un RIB a son événement chaîné propre (la sécurité, #747, 5986810177 §2).
--- Préfixe PROVISOIRE : 20261003005070 (le prochain libre annoncé sur #831), à confirmer par A02. ADDITIVE : une valeur du type de journal, aucune colonne.
+-- Préfixe : 20261003005027, donné par A02 (revue de la forme sur #836). ADDITIVE : une valeur du type de journal, aucune colonne.
 --
 -- Un fait daté, en ajout seul, sur l'agrégat `piece_kyc` : la vérification hors bande d'un RIB, par un
 -- utilisateur de la console. Sa charge est fermée `{ type, acteur }` : ni IBAN, ni empreinte, ni fichier.
