@@ -160,9 +160,11 @@ const LENTILLE_SCHEMA = {
 const roleDev = (t) => (t.repo === 'axionia' ? 'dev-axionia' : 'dev-partners');
 
 // LE CONTEXTE D'UN AGENT — les seuls champs qui servent, et le texte des seules REQ citées.
-// L'objet brut de la tâche portait `deps`, `hyp`, `owner`, `lot`, `issue`… que personne ne lit, et
+// L'objet brut de la tâche portait `deps`, `owner`, `lot`, `issue`… que personne ne lit, et
 // le prompt envoyait vers des vues générées absentes d'un arbre neuf (elles sont hors git, GOV-123)
-// et vers un dossier qui n'existe pas. `acceptance` ne va qu'à ceux qui jugent le périmètre.
+// et vers un dossier qui n'existe pas. `hyp` reste : il déclenche le `stop` du développeur.
+// `acceptance` va à tous ceux qui reçoivent ce contexte (dev, lentilles, lead) : les critères de
+// sécurité d'une tâche sensible n'y vivent souvent que là. Le release manager ne le reçoit pas.
 const CHAMPS_UTILES = [
   'id',
   'titre',
@@ -170,16 +172,14 @@ const CHAMPS_UTILES = [
   'zone',
   'paths',
   'reqs',
+  'hyp',
   'tests',
   'sensible',
   'schema',
+  'acceptance',
 ];
-const ficheDe = (t, avecAcceptance) =>
-  Object.fromEntries(
-    [...CHAMPS_UTILES, ...(avecAcceptance ? ['acceptance'] : [])]
-      .filter((k) => t[k] !== undefined)
-      .map((k) => [k, t[k]])
-  );
+const ficheDe = (t) =>
+  Object.fromEntries(CHAMPS_UTILES.filter((k) => t[k] !== undefined).map((k) => [k, t[k]]));
 const FILTRER_UNE_REQ =
   "node -e \"const r=require('./docs/requirements.json').exigences.find(x=>x.id==='<id>');console.log(r&&r.texte)\"";
 const exigencesDe = (t) =>
@@ -192,8 +192,8 @@ const exigencesDe = (t) =>
     })
     .join('\n');
 
-const contexte = (t, { acceptance = true } = {}) => `Tâche à traiter (champs utiles) :
-${JSON.stringify(ficheDe(t, acceptance))}
+const contexte = (t) => `Tâche à traiter (champs utiles) :
+${JSON.stringify(ficheDe(t))}
 
 Exigences citées :
 ${exigencesDe(t)}
@@ -261,7 +261,7 @@ Tu es un développeur (${role}). Cycle imposé :
         ...aRelire.map(
           (l) => () =>
             agent(
-              `${contexte(t, { acceptance: l.cle === 'exactitude' })}
+              `${contexte(t)}
 
 Tu relis la PR #${dev.pr} sous la lentille « ${l.cle} ». ${l.consigne}
 Tu ne modifies RIEN : tu lis le diff (\`gh pr diff ${dev.pr}\`), tu vérifies, tu rends un avis, puis tu le postes avec \`gh pr review ${dev.pr}\`.
@@ -272,7 +272,7 @@ Le développeur affirme avoir vu ce test rougir avant d'écrire le code : « ${d
         ...aReconfirmer.map(
           (l) => () =>
             agent(
-              `${contexte(t, { acceptance: l.cle === 'exactitude' })}
+              `${contexte(t)}
 
 Tu avais ACCEPTÉ la PR #${dev.pr} sous la lentille « ${l.cle} » ; un correctif a été poussé depuis. Ne relis QUE ce qu'il a changé : le diff entre le commit de ton accord (\`gh pr view ${dev.pr} --json reviews\`) et la tête (\`gh pr view ${dev.pr} --json headRefOid\`). ${l.consigne}
 Rends ton avis sur ce delta et poste-le sur la tête avec \`gh pr review ${dev.pr}\` : sans lui, ton accord est périmé et la fusion refusée. Rouge annoncé par le correctif : « ${dev.rouge} ».`,

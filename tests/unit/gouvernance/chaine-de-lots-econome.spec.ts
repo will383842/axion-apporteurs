@@ -193,8 +193,43 @@ describe('la chaîne de lots — le contexte donné à chaque agent', () => {
     const dev = appels.find((a) => a.label === `dev:${TACHE.id}`)!;
     expect(dev.prompt).toContain('TEXTE-DE-L-EXIGENCE-CITEE');
     expect(dev.prompt).toContain('ACCEPTATION-DU-TEMOIN');
-    for (const absent of ['"deps"', '"hyp"', '"owner"', 'HYP-TEMOIN']) {
+    for (const absent of ['"deps"', '"owner"']) {
       expect(dev.prompt).not.toContain(absent);
+    }
+  });
+
+  it('REQ-GOV-011 — le développeur reçoit `hyp` : c’est lui qui déclenche le `stop` d’une décision sans hypothèse', async () => {
+    const { appels } = await jouer((label) => (label.startsWith('dev:') ? DEV_LIVRE : accord));
+    const dev = appels.find((a) => a.label === `dev:${TACHE.id}`)!;
+    expect(dev.prompt).toContain('"hyp":["HYP-TEMOIN"]');
+  });
+
+  const lentillesDUneTacheSensible = async () => {
+    const sensible = { ...TACHE, schema: true, sensible: ['auth'] };
+    const { appels } = await jouer(
+      (label) => (label.startsWith('dev:') ? DEV_LIVRE : accord),
+      sensible
+    );
+    expect(revues(appels, 1)).toEqual(['exactitude', 'schema', 'securite']);
+    return appels.filter((x) => x.label.startsWith('revue:'));
+  };
+
+  it('REQ-GOV-011 — chaque lentille (exactitude, securite, schema) reçoit `acceptance` : les critères de sécurité d’une tâche sensible n’y vivent souvent que là', async () => {
+    for (const a of await lentillesDUneTacheSensible()) {
+      expect(a.prompt, `${a.label} → acceptance`).toContain('ACCEPTATION-DU-TEMOIN');
+    }
+  });
+
+  it('REQ-GOV-011 — chaque lentille reçoit `hyp`, `sensible`, `schema` et `paths`', async () => {
+    for (const a of await lentillesDUneTacheSensible()) {
+      for (const attendu of [
+        '"hyp":["HYP-TEMOIN"]',
+        '"sensible":["auth"]',
+        '"schema":true',
+        '"paths":["scripts/lot/x.ts"]',
+      ]) {
+        expect(a.prompt, `${a.label} → ${attendu}`).toContain(attendu);
+      }
     }
   });
 
