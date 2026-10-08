@@ -1,11 +1,14 @@
 export const meta = {
   name: 'lot-axion-partners',
   description:
-    'Exécute un lot de tâches : développement en worktrees, revue à deux lentilles (plus l architecte sur une tâche schema), fusion sérialisée, critique de complétude',
+    'Exécute un lot de tâches : développement en worktrees, revue à deux lentilles (plus l architecte sur une tâche schema), fusion par paquets adaptatifs, critique de complétude',
   phases: [
     { title: 'Dev', detail: 'un développeur par tâche, en worktree isolé, test rouge d abord' },
     { title: 'Revue', detail: '2 lentilles, plus schema, 2 tours maximum' },
-    { title: 'Fusion', detail: 'une PR à la fois, atterrissage vérifié' },
+    {
+      title: 'Fusion',
+      detail: 'par paquets adaptatifs, une fusion à la fois, atterrissage vérifié',
+    },
     { title: 'Clôture', detail: 'critique de complétude' },
   ],
 };
@@ -16,8 +19,10 @@ export const meta = {
 // SORTIE : { lotId, resultats: [...], stops: [...], manques: [...] }
 //
 // INVARIANTS
-//   - la fusion est SÉRIALISÉE (une PR à la fois) même si le développement est parallèle : c'est la
-//     règle de la maison sur `main` (jamais deux producteurs, cf. famine du déploiement).
+//   - la fusion se fait par PAQUETS ADAPTATIFS (GOV-158, décision de Williams du 2026-10-08, #319) :
+//     les PR acceptées sont rangées en paquets sans fichier commun par `scripts/lot/paquets-de-fusion.ts`,
+//     testées ensemble une fois, puis fusionnées UNE à la fois, chacune `--match-head-commit`, son
+//     atterrissage vérifié avant la suivante (RM-09) : jamais deux producteurs sur `main`.
 //   - DEUX lentilles partout, `exactitude` et `securite`, plus `schema` (A02) sur une tâche `schema`
 //     (`W16`, `partners/ADR-0024`, `docs/CHARTE-AGENTS.md` §6). Plus de `simplicite` : RM-01 est
 //     jugée par `exactitude`. Plus d'agent de mutation : Stryker la MESURE en porte A
@@ -208,10 +213,6 @@ const stops = [];
 phase('Dev');
 log(`Lot ${lot.id} — ${lot.taches.length} tâche(s) : ${lot.taches.map((t) => t.id).join(', ')}`);
 
-// File de fusion : une PR à la fois, quel que soit le parallélisme du développement.
-let file = Promise.resolve();
-const auTour = (fn) => (file = file.then(fn, fn));
-
 const resultats = await pipeline(
   lot.taches,
 
@@ -327,32 +328,49 @@ Corrige, pousse sur la même branche. Ne réponds pas aux motifs par un commenta
       aReconfirmer = lentilles.filter((l) => !aRelire.includes(l));
     }
     return { dev, refuse: true, motif: 'deux tours épuisés' };
-  },
-
-  // ── étape 3 : fusion, sérialisée ───────────────────────────────────────────────────────────────
-  // La fusion rend un objet FUSION ; on le REMBOÎTE dans l'objet de revue au lieu de le substituer.
-  // Sans ça, la clôture perdait `dev.taskId` et `dev.pr` pour toutes les tâches fusionnées, et
-  // comptait « livrée » toute PR fusionnée — même avec `atterri: false`, l'objet FUSION n'ayant
-  // aucun champ `refuse`.
-  (revue, t) => {
-    if (!revue || revue.refuse || arret) return revue;
-    return auTour(() =>
-      agent(
-        // Le release manager n'a besoin que de l'identité de la tâche : ni l'acceptation, ni les REQ.
-        `Tâche ${t.id} — ${t.titre}. Horodatage de référence pour ce lot : ${now}.
-
-Tu es le release manager. Fusionne la PR #${revue.dev.pr}, UNE SEULE à la fois :
-1. \`gh pr view ${revue.dev.pr} --json mergeStateStatus,statusCheckRollup\` ; si BEHIND → \`gh pr update-branch\`.
-2. Attends les gates SANS en lire le défilement : \`gh pr checks ${revue.dev.pr} --watch --interval 60 > /dev/null 2>&1; echo "checks=$?"\`. Code 0 : toutes vertes. Sinon, nomme les seules rouges (\`gh pr checks ${revue.dev.pr} --json name,state -q '.[] | select(.state != "SUCCESS") | .name'\`) et rends \`atterri: false\` avec ce motif.
-3. Relis l'état ET fusionne dans le MÊME appel (une PR verte peut passer BEHIND entre les deux) : \`gh pr merge ${revue.dev.pr} --squash --match-head-commit <sha-de-tête> --subject "$(gh pr view ${revue.dev.pr} --json title -q .title) (#${revue.dev.pr})" --body "$(gh pr view ${revue.dev.pr} --json body -q .body | grep -m1 '^Lot:')" --delete-branch\` — \`--body\` recopie la ligne \`Lot:\` dans le message d'écrasement, le seul texte que \`lot:cloture\` lit (GOV-104).
-4. Vérifie l'atterrissage : \`pnpm deploy:verify <sha>\` (en-tête \`x-partners-build-sha\`). Tant que ce n'est pas vérifié, la PR suivante n'est pas fusionnée.
-5. Rends \`sha\` (le SHA **ENTIER** du commit de fusion, 40 hexadécimaux) et \`fusionneeAt\` (l'instant de fusion en UTC, \`AAAA-MM-JJTHH:MM:SSZ\`) — \`gh pr view ${revue.dev.pr} --json mergeCommit,mergedAt\`. Ce n'est pas de la décoration : si la tâche vit dans un AUTRE dépôt, ces deux valeurs sont la SEULE trace de sa livraison que ce dépôt-ci pourra porter (GOV-038), et \`pnpm lot:cloture\` refusera de clore sans elles. Un SHA abrégé ne convient pas.
-Tu ne fusionnes jamais une PR dont tu es l'auteur.`,
-        { label: `fusion:${t.id}`, phase: 'Fusion', schema: FUSION, agentType: 'release-manager' }
-      )
-    ).then((fusion) => ({ ...revue, fusion }));
   }
 );
+
+// ── fusion, par paquets adaptatifs ─────────────────────────────────────────────────────────────────
+// La composition, la taille et le découpage sont dérivés par `scripts/lot/paquets-de-fusion.ts` : le
+// workflow ne les recopie pas (RM-01). Un SEUL release manager reçoit toutes les PR acceptées, parce
+// que la taille d'un paquet dépend de l'issue du précédent. Chaque FUSION rendue est REMBOÎTÉE dans
+// l'objet de revue de sa PR ; une PR qu'il ne rend pas n'a pas atterri.
+const FUSIONS = {
+  type: 'object',
+  properties: { fusions: { type: 'array', items: FUSION } },
+  required: ['fusions'],
+};
+const pretes = resultats.filter((r) => r && !r.refuse && r.dev?.pr != null);
+if (pretes.length && !arret) {
+  phase('Fusion');
+  const liste = pretes.map((r) => `#${r.dev.pr} (${r.dev.taskId})`).join(', ');
+  const rendu = await agent(
+    // Le release manager n'a besoin que de l'identité des tâches : ni l'acceptation, ni les REQ.
+    `Lot ${lot.id}. Horodatage de référence pour ce lot : ${now}. PR acceptées : ${liste}.
+
+Tu es le release manager. Fusionne ces PR par PAQUETS ADAPTATIFS (GOV-158) ; aucune garde ne tombe.
+1. Compose : \`npx tsx scripts/lot/paquets-de-fusion.ts composer --taille <t> --prs <n,n,…> --ordre-a02 <migration,migration,…>\` — la taille part de 4 ; l'ordre des migrations est celui que l'architecte (A02) a fixé dans sa revue \`schema\`, jamais deviné : sans lui, une PR qui porte une migration refuse la composition. Il rend des paquets sans fichier commun, migrations dans cet ordre. Ne compose JAMAIS un paquet à la main.
+2. Teste le paquet ENSEMBLE, une fois, sur la pointe de \`main\` : worktree jetable détaché sur \`origin/main\`, \`git fetch origin pull/<n>/head\` puis \`git merge --no-edit FETCH_HEAD\` pour chaque PR, \`pnpm install --offline --frozen-lockfile\`, \`pnpm prevol\` ; retire ce worktree ensuite.
+3. Rouge : \`npx tsx scripts/lot/paquets-de-fusion.ts moities --prs <paquet>\`, puis recommence 2 sur chaque moitié jusqu'à isoler la fautive. Les saines fusionnent ; la fautive seule rend \`atterri: false\` avec son motif. Avant de fusionner une saine : \`npx tsx scripts/lot/paquets-de-fusion.ts attente --prs <saines restantes> --ecartees <écartées> --ordre-a02 <…>\` — une PR qu'il nomme ATTEND (sa migration suit celle d'une écartée) : elle n'est pas fusionnée et rend \`atterri: false\`, motif « en attente de la migration de #<n> ».
+4. Vert : fusionne ses PR UNE SEULE à la fois, dans l'ordre du paquet. Pour chacune : \`gh pr view <n> --json mergeStateStatus,statusCheckRollup\` ; si BEHIND → \`gh pr update-branch <n>\` ; \`gh pr checks <n> --watch --interval 60 > /dev/null 2>&1; echo "checks=$?"\` (gate-a verte exigée) ; \`pnpm gov:pr --pr <n>\` (avis par tête, veto de \`securite\`) ; puis relis l'état ET fusionne dans le MÊME appel : \`gh pr merge <n> --squash --match-head-commit <sha-de-tête> --subject "$(gh pr view <n> --json title -q .title) (#<n>)" --body "$(gh pr view <n> --json body -q .body | grep -m1 '^Lot:')" --delete-branch\` — \`--body\` recopie la ligne \`Lot:\` dans le message d'écrasement, le seul texte que \`lot:cloture\` lit (GOV-104). Une garde rouge sur la tête : la PR est fautive, pas fusionnée.
+5. Après CHAQUE fusion, vérifie l'atterrissage : \`pnpm deploy:verify <sha>\` (en-tête \`x-partners-build-sha\`). Tant que ce n'est pas vérifié, la PR suivante n'est pas fusionnée (RM-09).
+6. Taille du paquet suivant : \`npx tsx scripts/lot/paquets-de-fusion.ts taille --apres <t> --premier-coup oui|non\` — elle monte tant que les paquets passent du premier coup, revient au départ après un échec.
+7. Rends \`fusions\`, une entrée par PR, avec \`sha\` (le SHA **ENTIER** du commit de fusion, 40 hexadécimaux) et \`fusionneeAt\` (l'instant de fusion en UTC, \`AAAA-MM-JJTHH:MM:SSZ\`) — \`gh pr view <n> --json mergeCommit,mergedAt\`. Si la tâche vit dans un AUTRE dépôt, ces deux valeurs sont la SEULE trace de sa livraison que ce dépôt-ci pourra porter (GOV-038), et \`pnpm lot:cloture\` refusera de clore sans elles. Un SHA abrégé ne convient pas.
+Tu ne fusionnes jamais une PR dont tu es l'auteur.`,
+    { label: `fusion:${lot.id}`, phase: 'Fusion', schema: FUSIONS, agentType: 'release-manager' }
+  );
+  const parPr = new Map((rendu?.fusions ?? []).map((f) => [f.pr, f]));
+  for (const r of pretes) {
+    r.fusion = parPr.get(r.dev.pr) ?? {
+      pr: r.dev.pr,
+      sha: null,
+      fusionneeAt: null,
+      atterri: false,
+      motif: 'non rendue par le release manager',
+    };
+  }
+}
 
 phase('Clôture');
 const livrees = resultats.filter((r) => r && !r.refuse && r.fusion?.atterri);
