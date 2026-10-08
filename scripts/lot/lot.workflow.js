@@ -1,11 +1,14 @@
 export const meta = {
   name: 'lot-axion-partners',
   description:
-    'Exécute un lot de tâches : développement en worktrees, revue à trois lentilles, mutation prouvée, fusion sérialisée, critique de complétude',
+    'Exécute un lot de tâches : développement en worktrees, revue à deux lentilles (plus l architecte sur une tâche schema), fusion par paquets adaptatifs, critique de complétude',
   phases: [
     { title: 'Dev', detail: 'un développeur par tâche, en worktree isolé, test rouge d abord' },
-    { title: 'Revue', detail: '3 lentilles + vérificateur rouge, 2 tours maximum' },
-    { title: 'Fusion', detail: 'une PR à la fois, atterrissage vérifié' },
+    { title: 'Revue', detail: '2 lentilles, plus schema, 2 tours maximum' },
+    {
+      title: 'Fusion',
+      detail: 'par paquets adaptatifs, une fusion à la fois, atterrissage vérifié',
+    },
     { title: 'Clôture', detail: 'critique de complétude' },
   ],
 };
@@ -16,10 +19,19 @@ export const meta = {
 // SORTIE : { lotId, resultats: [...], stops: [...], manques: [...] }
 //
 // INVARIANTS
-//   - la fusion est SÉRIALISÉE (une PR à la fois) même si le développement est parallèle : c'est la
-//     règle de la maison sur `main` (jamais deux producteurs, cf. famine du déploiement).
-//   - sur une tâche `sensible`, un refus de la lentille sécurité est un VETO ; les deux autres
-//     lentilles restent à la majorité.
+//   - la fusion se fait par PAQUETS ADAPTATIFS (GOV-158, décision de Williams du 2026-10-08, #319) :
+//     les PR acceptées sont rangées en paquets sans fichier commun par `scripts/lot/paquets-de-fusion.ts`,
+//     testées ensemble une fois, puis fusionnées UNE à la fois, chacune `--match-head-commit`, son
+//     atterrissage vérifié avant la suivante (RM-09) : jamais deux producteurs sur `main`.
+//   - DEUX lentilles partout, `exactitude` et `securite`, plus `schema` (A02) sur une tâche `schema`
+//     (`W16`, `partners/ADR-0024`, `docs/CHARTE-AGENTS.md` §6). Plus de `simplicite` : RM-01 est
+//     jugée par `exactitude`. Plus d'agent de mutation : Stryker la MESURE en porte A
+//     (`pnpm mutation:pr`), que le release manager exige verte avant de fusionner.
+//   - une PR passe la revue quand AUCUNE lentille ne refuse. Le refus de `securite` (et celui de
+//     `schema`) est un VETO sur toute PR : le lead n'est jamais convoqué pour le lever.
+//   - au second tour, seules les lentilles qui ont refusé relisent en entier, plus `securite`
+//     toujours ; une lentille qui avait accepté RECONFIRME sur le seul delta du correctif — son
+//     accord serait sinon périmé sur la tête neuve, et `gov:pr` refuserait la fusion (§6, GOV-145).
 //   - un `stop` d'un agent arrête l'ensemble du lot : on ne devine jamais une décision de Will.
 //   - CHAQUE appel `agent()` porte un `agentType` correspondant à un fichier de `.claude/agents/` :
 //     sans lui, les `tools` restreints des fiches (le relecteur privé de Write/Edit, le release
@@ -79,26 +91,6 @@ const AVIS = {
   required: ['refuse', 'motifs'],
 };
 
-const MUT = {
-  type: 'object',
-  properties: {
-    prouve: { type: 'boolean' },
-    mutations: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          fichier: { type: 'string' },
-          mutation: { type: 'string' },
-          testRouge: { type: ['string', 'null'] },
-        },
-        required: ['fichier', 'mutation', 'testRouge'],
-      },
-    },
-  },
-  required: ['prouve', 'mutations'],
-};
-
 const LEAD = {
   type: 'object',
   properties: {
@@ -148,19 +140,17 @@ const LENTILLES = [
   {
     cle: 'exactitude',
     consigne:
-      'Le code fait-il EXACTEMENT ce que disent les REQ citées, ni plus ni moins ? Vérifie chaque REQ une par une contre le diff. Un écart de périmètre est un refus.',
+      'Le code fait-il EXACTEMENT ce que disent les REQ citées, ni plus ni moins ? Vérifie chaque REQ une par une contre le diff. Un écart de périmètre est un refus. Une valeur retapée alors qu’elle existe déjà ailleurs est un refus (RM-01). Le test annoncé rouge porte-t-il bien sur la REQ ?',
   },
   {
     cle: 'securite',
     consigne:
-      "Cloisonnement (aucun accès hors `forApporteur()`), défaut = refus, 404 byte-identique, PII chiffrée, journal sans PII, idempotence, aucune fuite dans un message d'erreur. Sur une tâche sensible, ton refus est un VETO.",
-  },
-  {
-    cle: 'simplicite',
-    consigne:
-      "Dérivation depuis une source unique (jamais une recopie), pas de duplication d'une règle existante, altitude du code, nommage français conforme aux CONVENTIONS. Une valeur littérale qui existe déjà ailleurs est un refus.",
+      "Cloisonnement (aucun accès hors `forApporteur()`), défaut = refus, 404 byte-identique, PII chiffrée, journal sans PII, idempotence, aucune fuite dans un message d'erreur. Ton refus est un VETO, sur toute PR.",
   },
 ];
+
+// Un refus de ces lentilles-là ne se lève pas par le lead : c'est un VETO (`docs/CHARTE-AGENTS.md` §6).
+const VETOS = ['securite', 'schema'];
 
 // Quatrième lentille, ajoutée UNIQUEMENT sur les tâches `schema` (prisma/** ou packages/contracts/**) :
 // l'approbation de l'architecte (A02) y est bloquante (plan §2.1, GOV-007). Sans elle, une migration
@@ -174,22 +164,54 @@ const LENTILLE_SCHEMA = {
 
 const roleDev = (t) => (t.repo === 'axionia' ? 'dev-axionia' : 'dev-partners');
 
-const contexte = (t) => `Tâche à traiter :
-${JSON.stringify(t, null, 1)}
+// LE CONTEXTE D'UN AGENT — les seuls champs qui servent, et le texte des seules REQ citées.
+// L'objet brut de la tâche portait `deps`, `owner`, `lot`, `issue`… que personne ne lit, et
+// le prompt envoyait vers des vues générées absentes d'un arbre neuf (elles sont hors git, GOV-123)
+// et vers un dossier qui n'existe pas. `hyp` reste : il déclenche le `stop` du développeur.
+// `acceptance` va à tous ceux qui reçoivent ce contexte (dev, lentilles, lead) : les critères de
+// sécurité d'une tâche sensible n'y vivent souvent que là. Le release manager ne le reçoit pas.
+const CHAMPS_UTILES = [
+  'id',
+  'titre',
+  'repo',
+  'zone',
+  'paths',
+  'reqs',
+  'hyp',
+  'tests',
+  'sensible',
+  'schema',
+  'acceptance',
+];
+const ficheDe = (t) =>
+  Object.fromEntries(CHAMPS_UTILES.filter((k) => t[k] !== undefined).map((k) => [k, t[k]]));
+const FILTRER_UNE_REQ =
+  "node -e \"const r=require('./docs/requirements.json').exigences.find(x=>x.id==='<id>');console.log(r&&r.texte)\"";
+const exigencesDe = (t) =>
+  (t.reqs ?? [])
+    .map((r) => {
+      const texte = lot.exigences?.[r];
+      return texte
+        ? `- ${r} : ${texte}`
+        : `- ${r} : texte absent du lot — lis-le filtré : ${FILTRER_UNE_REQ}`;
+    })
+    .join('\n');
 
-Documents à lire AVANT d'écrire quoi que ce soit, dans cet ordre : docs/PLAN-STATE.md, docs/REGLES-MAISON.md,
-docs/CONVENTIONS.md, ta fiche de rôle, les REQ citées dans docs/REQUIREMENTS.md, puis les sections de docs/spec/
-que la tâche référence. Horodatage de référence pour ce lot : ${now}.`;
+const contexte = (t) => `Tâche à traiter (champs utiles) :
+${JSON.stringify(ficheDe(t))}
+
+Exigences citées :
+${exigencesDe(t)}
+
+Règles : docs/REGLES-MAISON.md, citées par numéro, et les documents de ta fiche de rôle. Ne lis JAMAIS en entier
+docs/tasks.json, docs/requirements.json ni docs/gates.json : filtre-les par identifiant (\`node -e\` ou \`jq\`).
+Horodatage de référence pour ce lot : ${now}.`;
 
 let arret = null;
 const stops = [];
 
 phase('Dev');
 log(`Lot ${lot.id} — ${lot.taches.length} tâche(s) : ${lot.taches.map((t) => t.id).join(', ')}`);
-
-// File de fusion : une PR à la fois, quel que soit le parallélisme du développement.
-let file = Promise.resolve();
-const auTour = (fn) => (file = file.then(fn, fn));
 
 const resultats = await pipeline(
   lot.taches,
@@ -217,7 +239,7 @@ Tu es un développeur (${role}). Cycle imposé :
     );
   },
 
-  // ── étape 2 : revue à trois lentilles + mutation, deux tours ────────────────────────────────────
+  // ── étape 2 : revue à deux lentilles (plus schema), deux tours ──────────────────────────────────
   async (dev, t) => {
     if (!dev || arret) return null;
     if (dev.statut === 'stop') {
@@ -226,12 +248,18 @@ Tu es un développeur (${role}). Cycle imposé :
       return { dev, refuse: true };
     }
 
-    // La quatrième lentille n'est convoquée que sur une tâche `schema` — son refus est un second VETO.
+    // La troisième lentille n'est convoquée que sur une tâche `schema` — son refus est un second VETO.
     const lentilles = t.schema ? [...LENTILLES, LENTILLE_SCHEMA] : LENTILLES;
+    const outil = (l) => ({ phase: 'Revue', schema: AVIS, agentType: l.agentType ?? 'relecteur' });
 
+    // Tour 1 : toutes relisent en entier. Tour 2 : voir l'en-tête (refus + securite en entier, les
+    // autres reconfirment sur le delta).
+    let aRelire = lentilles;
+    let aReconfirmer = [];
     for (let tour = 1; tour <= 2; tour++) {
-      const avis = await parallel(
-        lentilles.map(
+      const lancees = [...aRelire, ...aReconfirmer];
+      const avis = await parallel([
+        ...aRelire.map(
           (l) => () =>
             agent(
               `${contexte(t)}
@@ -239,42 +267,37 @@ Tu es un développeur (${role}). Cycle imposé :
 Tu relis la PR #${dev.pr} sous la lentille « ${l.cle} ». ${l.consigne}
 Tu ne modifies RIEN : tu lis le diff (\`gh pr diff ${dev.pr}\`), tu vérifies, tu rends un avis, puis tu le postes avec \`gh pr review ${dev.pr}\`.
 Le développeur affirme avoir vu ce test rougir avant d'écrire le code : « ${dev.rouge} ». Vérifie que c'est plausible et que le test porte bien sur la REQ.`,
-              {
-                label: `revue:${t.id}:${l.cle}:${tour}`,
-                phase: 'Revue',
-                schema: AVIS,
-                agentType: l.agentType ?? 'relecteur',
-              }
+              { label: `revue:${t.id}:${l.cle}:${tour}`, ...outil(l) }
             )
-        )
-      );
+        ),
+        ...aReconfirmer.map(
+          (l) => () =>
+            agent(
+              `${contexte(t)}
+
+Tu avais ACCEPTÉ la PR #${dev.pr} sous la lentille « ${l.cle} » ; un correctif a été poussé depuis. Ne relis QUE ce qu'il a changé : le diff entre le commit de ton accord (\`gh pr view ${dev.pr} --json reviews\`) et la tête (\`gh pr view ${dev.pr} --json headRefOid\`). ${l.consigne}
+Rends ton avis sur ce delta et poste-le sur la tête avec \`gh pr review ${dev.pr}\` : sans lui, ton accord est périmé et la fusion refusée. Rouge annoncé par le correctif : « ${dev.rouge} ».`,
+              { label: `reaccord:${t.id}:${l.cle}`, ...outil(l) }
+            )
+        ),
+      ]);
       const rendus = avis.map((a, i) => ({
-        lentille: lentilles[i].cle,
+        lentille: lancees[i].cle,
         ...(a || { refuse: true, motifs: ['relecteur absent'] }),
       }));
-      const secu = rendus.find((r) => r.lentille === 'securite');
-      const arch = rendus.find((r) => r.lentille === 'schema');
-      const veto = ((t.sensible?.length ?? 0) > 0 && secu?.refuse) || (t.schema && arch?.refuse);
-      const refus = rendus.filter((r) => r.refuse).length;
+      const refusees = rendus.filter((r) => r.refuse);
+      if (refusees.length === 0) return { dev, refuse: false };
 
-      if (!veto && refus < 2) {
-        const mut = await agent(
-          `${contexte(t)}
-
-Tu es le vérificateur « vu rougir » sur la PR #${dev.pr}. Pour chaque garde ajoutée : mute le code (inverse une condition, retire un \`where\`, supprime une contrainte) et PROUVE que le test correspondant échoue. Vérifie aussi que les fixtures viennent du producteur réel et qu'aucun helper de test ne porte de valeur par défaut sur ce que le test fait varier. Restaure le code après chaque mutation.`,
-          {
-            label: `mutation:${t.id}`,
-            phase: 'Revue',
-            schema: MUT,
-            agentType: 'verificateur-rouge',
-          }
-        );
-        if (mut?.prouve) return { dev, refuse: false };
-        rendus.push({ lentille: 'mutation', refuse: true, motifs: ['gardes non prouvées'] });
-      }
-
-      const motifs = rendus.filter((r) => r.refuse).flatMap((r) => r.motifs);
+      const motifs = refusees.flatMap((r) => r.motifs.map((m) => `${r.lentille} : ${m}`));
       if (tour === 2) {
+        const vetos = refusees.filter((r) => VETOS.includes(r.lentille));
+        if (vetos.length > 0) {
+          return {
+            dev,
+            refuse: true,
+            motif: `veto ${vetos.map((r) => r.lentille).join(', ')} : ${motifs.join(' · ')}`,
+          };
+        }
         const lead = await agent(
           `${contexte(t)}
 
@@ -285,40 +308,69 @@ Tu es le lead de la zone « ${t.zone} ». Tranche : soit tu acceptes en justifia
         return { dev, refuse: !lead?.accepte, motif: lead?.motif ?? 'lead absent' };
       }
 
-      await agent(
+      // Le rendu du correctif est LU : son `rouge` va aux relecteurs du tour 2, son `stop` arrête le lot.
+      const correctif = await agent(
         `${contexte(t)}
 
 Ta PR #${dev.pr} est refusée. Motifs : ${motifs.join(' · ')}.
 Corrige, pousse sur la même branche. Ne réponds pas aux motifs par un commentaire : corrige le code ou le test.`,
         { label: `dev:${t.id}:tour${tour + 1}`, phase: 'Revue', schema: DEV, agentType: roleDev(t) }
       );
+      if (correctif) dev = { ...dev, ...correctif, pr: correctif.pr ?? dev.pr };
+      if (dev.statut === 'stop') {
+        stops.push({ tache: t.id, ...(dev.stop || {}) });
+        arret = arret || 'stop développeur';
+        return { dev, refuse: true };
+      }
+      aRelire = lentilles.filter(
+        (l) => l.cle === 'securite' || refusees.some((r) => r.lentille === l.cle)
+      );
+      aReconfirmer = lentilles.filter((l) => !aRelire.includes(l));
     }
     return { dev, refuse: true, motif: 'deux tours épuisés' };
-  },
-
-  // ── étape 3 : fusion, sérialisée ───────────────────────────────────────────────────────────────
-  // La fusion rend un objet FUSION ; on le REMBOÎTE dans l'objet de revue au lieu de le substituer.
-  // Sans ça, la clôture perdait `dev.taskId` et `dev.pr` pour toutes les tâches fusionnées, et
-  // comptait « livrée » toute PR fusionnée — même avec `atterri: false`, l'objet FUSION n'ayant
-  // aucun champ `refuse`.
-  (revue, t) => {
-    if (!revue || revue.refuse || arret) return revue;
-    return auTour(() =>
-      agent(
-        `${contexte(t)}
-
-Tu es le release manager. Fusionne la PR #${revue.dev.pr}, UNE SEULE à la fois :
-1. \`gh pr view ${revue.dev.pr} --json mergeStateStatus,statusCheckRollup\` ; si BEHIND → \`gh pr update-branch\`.
-2. \`gh pr checks ${revue.dev.pr} --watch\` : toutes vertes, sinon rends \`atterri: false\` avec le motif.
-3. Relis l'état ET fusionne dans le MÊME appel (une PR verte peut passer BEHIND entre les deux) : \`gh pr merge ${revue.dev.pr} --squash --match-head-commit <sha-de-tête> --subject "$(gh pr view ${revue.dev.pr} --json title -q .title) (#${revue.dev.pr})" --body "$(gh pr view ${revue.dev.pr} --json body -q .body | grep -m1 '^Lot:')" --delete-branch\` — \`--body\` recopie la ligne \`Lot:\` dans le message d'écrasement, le seul texte que \`lot:cloture\` lit (GOV-104).
-4. Vérifie l'atterrissage : \`pnpm deploy:verify <sha>\` (en-tête \`x-partners-build-sha\`). Tant que ce n'est pas vérifié, la PR suivante n'est pas fusionnée.
-5. Rends \`sha\` (le SHA **ENTIER** du commit de fusion, 40 hexadécimaux) et \`fusionneeAt\` (l'instant de fusion en UTC, \`AAAA-MM-JJTHH:MM:SSZ\`) — \`gh pr view ${revue.dev.pr} --json mergeCommit,mergedAt\`. Ce n'est pas de la décoration : si la tâche vit dans un AUTRE dépôt, ces deux valeurs sont la SEULE trace de sa livraison que ce dépôt-ci pourra porter (GOV-038), et \`pnpm lot:cloture\` refusera de clore sans elles. Un SHA abrégé ne convient pas.
-Tu ne fusionnes jamais une PR dont tu es l'auteur.`,
-        { label: `fusion:${t.id}`, phase: 'Fusion', schema: FUSION, agentType: 'release-manager' }
-      )
-    ).then((fusion) => ({ ...revue, fusion }));
   }
 );
+
+// ── fusion, par paquets adaptatifs ─────────────────────────────────────────────────────────────────
+// La composition, la taille et le découpage sont dérivés par `scripts/lot/paquets-de-fusion.ts` : le
+// workflow ne les recopie pas (RM-01). Un SEUL release manager reçoit toutes les PR acceptées, parce
+// que la taille d'un paquet dépend de l'issue du précédent. Chaque FUSION rendue est REMBOÎTÉE dans
+// l'objet de revue de sa PR ; une PR qu'il ne rend pas n'a pas atterri.
+const FUSIONS = {
+  type: 'object',
+  properties: { fusions: { type: 'array', items: FUSION } },
+  required: ['fusions'],
+};
+const pretes = resultats.filter((r) => r && !r.refuse && r.dev?.pr != null);
+if (pretes.length && !arret) {
+  phase('Fusion');
+  const liste = pretes.map((r) => `#${r.dev.pr} (${r.dev.taskId})`).join(', ');
+  const rendu = await agent(
+    // Le release manager n'a besoin que de l'identité des tâches : ni l'acceptation, ni les REQ.
+    `Lot ${lot.id}. Horodatage de référence pour ce lot : ${now}. PR acceptées : ${liste}.
+
+Tu es le release manager. Fusionne ces PR par PAQUETS ADAPTATIFS (GOV-158) ; aucune garde ne tombe.
+1. Compose : \`npx tsx scripts/lot/paquets-de-fusion.ts composer --taille <t> --prs <n,n,…> --ordre-a02 <migration,migration,…>\` — la taille part de 4 ; l'ordre des migrations est celui que l'architecte (A02) a fixé dans sa revue \`schema\`, jamais deviné : sans lui, une PR qui porte une migration refuse la composition. Il rend des paquets sans fichier commun, migrations dans cet ordre. Ne compose JAMAIS un paquet à la main.
+2. Teste le paquet ENSEMBLE, une fois, sur la pointe de \`main\` : worktree jetable détaché sur \`origin/main\`, \`git fetch origin pull/<n>/head\` puis \`git merge --no-edit FETCH_HEAD\` pour chaque PR, \`pnpm install --offline --frozen-lockfile\`, \`pnpm prevol\` ; retire ce worktree ensuite.
+3. Rouge : \`npx tsx scripts/lot/paquets-de-fusion.ts moities --prs <paquet>\`, puis recommence 2 sur chaque moitié jusqu'à isoler la fautive. Les saines fusionnent ; la fautive seule rend \`atterri: false\` avec son motif. Avant de fusionner une saine : \`npx tsx scripts/lot/paquets-de-fusion.ts attente --prs <saines restantes> --ecartees <écartées> --ordre-a02 <…>\` — une PR qu'il nomme ATTEND (sa migration suit celle d'une écartée) : elle n'est pas fusionnée et rend \`atterri: false\`, motif « en attente de la migration de #<n> ».
+4. Vert : fusionne ses PR UNE SEULE à la fois, dans l'ordre du paquet. Pour chacune : \`gh pr view <n> --json mergeStateStatus,statusCheckRollup\` ; si BEHIND → \`gh pr update-branch <n>\` ; \`gh pr checks <n> --watch --interval 60 > /dev/null 2>&1; echo "checks=$?"\` (gate-a verte exigée) ; \`pnpm gov:pr --pr <n>\` (avis par tête, veto de \`securite\`) ; puis relis l'état ET fusionne dans le MÊME appel : \`gh pr merge <n> --squash --match-head-commit <sha-de-tête> --subject "$(gh pr view <n> --json title -q .title) (#<n>)" --body "$(gh pr view <n> --json body -q .body | grep -m1 '^Lot:')" --delete-branch\` — \`--body\` recopie la ligne \`Lot:\` dans le message d'écrasement, le seul texte que \`lot:cloture\` lit (GOV-104). Une garde rouge sur la tête : la PR est fautive, pas fusionnée.
+5. Après CHAQUE fusion, vérifie l'atterrissage : \`pnpm deploy:verify <sha>\` (en-tête \`x-partners-build-sha\`). Tant que ce n'est pas vérifié, la PR suivante n'est pas fusionnée (RM-09).
+6. Taille du paquet suivant : \`npx tsx scripts/lot/paquets-de-fusion.ts taille --apres <t> --premier-coup oui|non\` — elle monte tant que les paquets passent du premier coup, revient au départ après un échec.
+7. Rends \`fusions\`, une entrée par PR, avec \`sha\` (le SHA **ENTIER** du commit de fusion, 40 hexadécimaux) et \`fusionneeAt\` (l'instant de fusion en UTC, \`AAAA-MM-JJTHH:MM:SSZ\`) — \`gh pr view <n> --json mergeCommit,mergedAt\`. Si la tâche vit dans un AUTRE dépôt, ces deux valeurs sont la SEULE trace de sa livraison que ce dépôt-ci pourra porter (GOV-038), et \`pnpm lot:cloture\` refusera de clore sans elles. Un SHA abrégé ne convient pas.
+Tu ne fusionnes jamais une PR dont tu es l'auteur.`,
+    { label: `fusion:${lot.id}`, phase: 'Fusion', schema: FUSIONS, agentType: 'release-manager' }
+  );
+  const parPr = new Map((rendu?.fusions ?? []).map((f) => [f.pr, f]));
+  for (const r of pretes) {
+    r.fusion = parPr.get(r.dev.pr) ?? {
+      pr: r.dev.pr,
+      sha: null,
+      fusionneeAt: null,
+      atterri: false,
+      motif: 'non rendue par le release manager',
+    };
+  }
+}
 
 phase('Clôture');
 const livrees = resultats.filter((r) => r && !r.refuse && r.fusion?.atterri);
@@ -347,9 +399,10 @@ Résultats : ${JSON.stringify(
     null,
     1
   )}
-Écartées par le composeur : ${JSON.stringify(lot.ecartees, null, 1)}
+Écartées par le composeur : ${JSON.stringify(lot.ecartees)}
+Exigences citées par le lot : ${JSON.stringify(lot.exigences ?? {})}
 
-Tu es le critique de complétude. Question unique : QU'EST-CE QUI MANQUE ? Une REQ citée mais non couverte par un test ? Une étape du cycle de vie sans tâche ? Une dépendance externe sans repli ? Une décision découverte en route et non enregistrée ? Lis docs/REQUIREMENTS.md et, **s'il existe**, docs/TRACEABILITY.md (généré par GOV-011 ; son absence n'est pas un manque avant cette tâche). Chaque manque devient une tâche proposée.`,
+Tu es le critique de complétude. Question unique : QU'EST-CE QUI MANQUE ? Une REQ citée mais non couverte par un test ? Une étape du cycle de vie sans tâche ? Une dépendance externe sans repli ? Une décision découverte en route et non enregistrée ? Le lien REQ → tâches est le champ \`taches\` de docs/requirements.json : lis-le FILTRÉ par identifiant (${FILTRER_UNE_REQ.replace('r&&r.texte', 'r&&r.taches')}), jamais le registre entier. Chaque manque devient une tâche proposée.`,
   { label: 'completude', phase: 'Clôture', schema: A40, agentType: 'critique-completude' }
 );
 
