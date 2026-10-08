@@ -37,7 +37,6 @@ describe('REQ-JUR-029 — le point de départ, aux trois cas de la juriste', () 
           geste: 'resiliation',
           dateEffet: jour('2026-11-30'),
           creeAt: new Date('2026-10-04T08:00:00Z'),
-          litiges: [],
         },
         null
       )
@@ -67,6 +66,19 @@ describe('REQ-JUR-029 — le point de départ, aux trois cas de la juriste', () 
         null
       )
     ).toEqual(civil(2026, 10, 4));
+  });
+
+  it('REQ-JUR-029 : TÉMOIN — une SUSPENSION n’a pas encore de départ : son texte est GARDÉ, même vingt ans après sa pose (SEC-15 ; A02, #794 6036131730, point 4)', () => {
+    // La règle de la juriste (la levée, sinon la fin du contrat) se lit au journal : elle vient avec
+    // la lecture de la résiliation opposable. D'ici là, aucune purge par défaut.
+    for (const resiliation of [null, { dateEffet: jour('2027-01-31') }]) {
+      expect(
+        departDuTexte(
+          { geste: 'suspension', dateEffet: null, creeAt: new Date('2006-10-07T07:30:00Z') },
+          resiliation
+        )
+      ).toBeNull();
+    }
   });
 
   it('REQ-JUR-029 : une résiliation sans date_effet n’a pas de départ (échec fermé : le texte est gardé)', () => {

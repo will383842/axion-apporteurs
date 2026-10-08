@@ -83,23 +83,25 @@ export const SEUILS = {
     renvois: [],
     verifieLe: '2026-10-01',
   },
-  // JUR-T40 — la fin d'une demande vérifiée sans prise de contact concluante (HYP-W20-LIBERATION,
-  // tranchée par Williams le 2026-09-29) et la carence avant une nouvelle déclaration
-  // (HYP-W20-CARENCE-REDEPOT, arbitrage de -d7 sur délégation, même jour). L'art. 3.2 en est la
-  // source, et il les écrit par variables.
-  LIBERATION_SIGNALEE_INJOIGNABLE_MAX: {
-    valeur: 3,
-    unite: 'tentatives',
-    source: 'contrat art. 3.2 (HYP-W20-LIBERATION)',
-    renvois: art('3.2'),
-    verifieLe: '2026-10-01',
-  },
+  // JUR-T66 — la fin de l'attribution faute d'adresse valide et la carence unique qui la suit (art. 3.2
+  // du contrat v2, qui fait foi). La libération après N tentatives et la carence graduée de JUR-T40
+  // sont retirées : le contrat ne les connaît plus.
   LIBERATION_SIGNALEE_JOURS: {
     valeur: 45,
     unite: 'jours',
-    source: 'contrat art. 3.2 (HYP-W20-LIBERATION)',
+    source:
+      "contrat art. 3.2 (JUR-T66) : à défaut d'adresse valide dans ce délai à compter de la déclaration, l'attribution prend fin (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi, décision du 2026-10-07, #474, 6032680253) ; HYP-W20-LIBERATION",
     renvois: art('3.2'),
-    verifieLe: '2026-10-01',
+    verifieLe: '2026-10-07',
+  },
+  // JUR-T66 — le délai dans lequel la Société prend contact avec la personne déclarée (art. 3.2, v2).
+  PRISE_DE_CONTACT_SOCIETE_JOURS: {
+    valeur: 30,
+    unite: 'jours',
+    source:
+      "contrat art. 3.2 (JUR-T66) : la Société prend contact avec la personne déclarée dans ce délai à compter de l'enregistrement de la déclaration (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi, décision du 2026-10-07, #474, 6032680253)",
+    renvois: art('3.2'),
+    verifieLe: '2026-10-07',
   },
   CARENCE_REDEPOT_APRES_LIBERATION_JOURS: {
     valeur: 30,
@@ -118,13 +120,6 @@ export const SEUILS = {
       'deux protections pour l’apporteur ») et réponse « A. » au point 6, réserve de 30 jours gardée',
     renvois: art('3.5'),
     verifieLe: '2026-10-03',
-  },
-  CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS: {
-    valeur: 90,
-    unite: 'jours',
-    source: 'contrat art. 3.2 (HYP-W20-CARENCE-REDEPOT)',
-    renvois: art('3.2'),
-    verifieLe: '2026-10-01',
   },
   ANTERIORITE_CLIENT_MOIS: {
     valeur: 24,
@@ -228,8 +223,9 @@ export const SEUILS = {
   SEUIL_VERSEMENT: {
     valeur: 5_000,
     unite: 'centimes',
-    source: 'contrat art. 5.1 ; REQ-ARG-015',
-    renvois: art('5.1'),
+    source:
+      "REQ-ARG-015 — RÈGLE ABSENTE du contrat depuis JUR-T66 : art. 5.1, « aucun montant minimum n'est appliqué » (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi, décision du 2026-10-07, #474, 6032680253) ; à retirer du code avec T-ARG-045, qui n'a encore rien émis",
+    renvois: [],
     verifieLe: LE,
   },
   CONTESTATION_FACTURE_JOURS: {
@@ -240,18 +236,19 @@ export const SEUILS = {
     verifieLe: LE,
   },
   VERSEMENT_JOURS_OUVRES: {
-    valeur: 10,
+    valeur: 2,
     unite: 'jours_ouvres',
-    source: 'contrat art. 5.3',
-    renvois: art('5.3'),
+    source:
+      "contrat art. 5.3 (JUR-T66) : délai INDICATIF, ni échéance ni engagement (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi (décision du 2026-10-07, #474, 6032680253))",
+    renvois: art('5.3', '5.4'),
     verifieLe: LE,
   },
   VERSEMENT_PLAFOND_JOURS: {
-    valeur: 60,
+    valeur: 30,
     unite: 'jours',
     source:
-      'contrat art. 5.3 (valeur confrontée, renvoi vérifié) — À RELIRE, non encore confronté : C. com. L.441-10, I',
-    renvois: art('5.3'),
+      "contrat art. 5.3 (JUR-T66) : l'échéance de chaque autofacture est le trentième jour suivant son émission (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi (décision du 2026-10-07, #474, 6032680253)) — À RELIRE, non encore confronté : C. com. L.441-10, I",
+    renvois: art('5.3', '5.4'),
     verifieLe: LE,
   },
   FORCLUSION_CONTESTATION_MOIS: {
@@ -262,9 +259,10 @@ export const SEUILS = {
     verifieLe: LE,
   },
   REPONSE_CONTESTATION_JOURS: {
-    valeur: 15,
+    valeur: 30,
     unite: 'jours',
-    source: 'contrat art. 3.3 et 5.6',
+    source:
+      "contrat art. 3.3 et 5.6 (JUR-T66, contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi (décision du 2026-10-07, #474, 6032680253))",
     renvois: art('3.3', '5.6'),
     verifieLe: LE,
   },

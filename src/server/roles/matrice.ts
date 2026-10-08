@@ -46,7 +46,9 @@ export const MATRICE_DES_ROLES = {
   'action:exporter_pain001': { roles: ['admin', 'comptable'], stepUp: true },
   // SEC-30 (texte de la sécurité, point 4) : la levée d'un gel est sous step-up dès maintenant.
   'action:lever_gel': { roles: ['admin'], stepUp: true },
-  'action:suspendre_apporteur': { roles: ['admin'], stepUp: false },
+  // SEC-15 : une décision défavorable notifiée avec ses faits (art. 3.7 al. 3), au rang de la mise en
+  // demeure : sous step-up (sécurité, #794 6039195762).
+  'action:suspendre_apporteur': { roles: ['admin'], stepUp: true },
   'action:resilier_apporteur': { roles: ['admin'], stepUp: false },
   'action:exporter_das2': { roles: ['admin'], stepUp: true },
   // DM-12 (REQ-DM-034, amendement A1-01) : le rattachement manuel motivé, au qualifieur (glossaire §7)
@@ -108,6 +110,9 @@ export const MATRICE_DES_ROLES = {
   // relèvement est exigé par le geste, que l'action rejuge.
   'ecran:mise_en_demeure': { roles: ['admin'], stepUp: false },
   'action:mettre_en_demeure': { roles: ['admin'], stepUp: true },
+  // DM-71 (art. 3.3 du v2) : l'annulation après la confirmation, pour erreur d'identification ou pour
+  // fraude, est un geste humain de l'administrateur, sous step-up (sécurité, rattrapage 119).
+  'action:annuler_apres_confirmation': { roles: ['admin'], stepUp: true },
   // JUR-T64 (code civil art. 2241) : ouvrir et clore un litige sur une décision de contrat ; la clôture
   // fait repartir la conservation du texte, l'ouverture la suspend : l'administrateur seul, sous step-up.
   'action:ouvrir_litige_decision': { roles: ['admin'], stepUp: true },

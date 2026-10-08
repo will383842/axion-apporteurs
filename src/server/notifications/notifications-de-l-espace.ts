@@ -28,9 +28,11 @@
  *
  * AUCUN ÉTAT DE LECTURE : la date de lecture n'est ni lue ni écrite ici (REQ-JUR-039).
  */
+import { fondeeSurUneAnomalie } from '../../domain/attribution/machine';
 import type { PrismaClient } from '@prisma/client';
 import { CHARGES_PAR_TYPE } from '../../domain/evenement/charges';
-import { MODELE_DECISION_DE_CONTRAT } from '../apporteur/resiliation';
+import { GESTE_DE_LA_CLE_DU_CONTRAT, MODELE_DECISION_DE_CONTRAT } from '../apporteur/resiliation';
+import { echeanceDeLevee } from '../../domain/apporteur/suspension';
 import {
   dateEnClair,
   entrepriseDeLaNotification,
@@ -83,10 +85,12 @@ export const CLES_RENDUES_DANS_L_ESPACE = [
   'mise_en_demeure',
   'resiliation',
   'decision_attribution',
+  // SEC-15 : la suspension de vérification, rendue depuis sa décision.
+  'suspension_declarations',
 ] as const;
 
-/** Les deux notifications du contrat, rendues depuis leur décision. */
-const CLES_DU_CONTRAT: readonly string[] = ['mise_en_demeure', 'resiliation'];
+/** Les notifications du contrat, rendues depuis leur décision. */
+const CLES_DU_CONTRAT: readonly string[] = Object.keys(GESTE_DE_LA_CLE_DU_CONTRAT);
 
 /**
  * {faits} À L'ÉCRAN (sécurité, #726, 5984213408, règle 2) : UNE définition, dans
@@ -134,6 +138,11 @@ export type ClientDesNotifications = Pick<
 export type OptionsDuLecteur = {
   readonly cles?: ClesPii;
   readonly lireUnFait?: (id: string) => Promise<{ type: string; charge: unknown } | null>;
+  /**
+   * SEC-15 : la fin d'une suspension, depuis le fait de sa pose (la levée, sinon la fin du contrat),
+   * par le lecteur de l'écrivain unique (`finDUneSuspension`). `null` : en cours ou illisible.
+   */
+  readonly finDUneSuspension?: (poseEvenementId: string) => Promise<Date | null>;
 };
 
 /** Une notification du contrat, telle que le lecteur la lit. */
@@ -154,7 +163,8 @@ async function decisionDeLEspace(
   apporteurId: string,
   n: LigneDuContrat,
   cles: ClesPii,
-  lireUnFait: OptionsDuLecteur['lireUnFait']
+  lireUnFait: OptionsDuLecteur['lireUnFait'],
+  finDUneSuspension: OptionsDuLecteur['finDUneSuspension']
 ): Promise<TexteRendu | null> {
   if (n.decisionContratId === null || n.evenementId === null) return null;
   const d = await client.decisionDeContrat.findFirst({
@@ -167,9 +177,15 @@ async function decisionDeLEspace(
       dateEffet: true,
       evenementId: true,
       textePurgeAt: true,
+      creeAt: true,
     },
   });
-  if (d === null || d.geste !== n.cle || d.evenementId !== n.evenementId) return null;
+  if (
+    d === null ||
+    d.geste !== GESTE_DE_LA_CLE_DU_CONTRAT[n.cle] ||
+    d.evenementId !== n.evenementId
+  )
+    return null;
   // Un texte PURGÉ n'est plus lu : la notification reste, avec le texte fermé de la juriste.
   const purge = d.textePurgeAt !== null;
   let faits: string | undefined;
@@ -188,6 +204,31 @@ async function decisionDeLEspace(
     faits = propre;
   }
   try {
+    // SEC-15 : la suspension, avec ses faits et sa date de levée. Purgée, le texte FERMÉ de la juriste,
+    // du jour de la notification à celui de sa fin ; une date illisible ne rend rien.
+    if (d.geste === 'suspension') {
+      if (d.creeAt === undefined) return null;
+      if (purge) {
+        const fin =
+          finDUneSuspension === undefined
+            ? null
+            : await finDUneSuspension(n.evenementId.toString());
+        if (fin === null) return null;
+        const t = TEXTES_DES_NOTIFICATIONS.suspension_declarations;
+        return {
+          titre: t.titre,
+          appel: t.appel,
+          corps: DECISIONS_PURGEES.suspension
+            .replace('{dateDebut}', dateEnClair(d.creeAt))
+            .replace('{dateFin}', dateEnClair(fin)),
+        };
+      }
+      if (faits === undefined) return null;
+      return rendreLaNotification('suspension_declarations', {
+        faits,
+        dateLevee: dateEnClair(new Date(echeanceDeLevee(d.creeAt.getTime()))),
+      });
+    }
     if (d.geste === 'mise_en_demeure') {
       if (d.article === null) return null;
       if (purge) {
@@ -258,8 +299,9 @@ async function decisionDAttributionDeLEspace(
   if (options.lireUnFait === undefined) return null;
   const fait = await options.lireUnFait(String(l.evenementId));
   if (fait === null || fait.type !== 'attribution_etat_modifie') return null;
-  const anomalie =
-    (fait.charge as { transition?: unknown } | null)?.transition === 'anomalie_confirmee';
+  const anomalie = fondeeSurUneAnomalie(
+    (fait.charge as { transition?: unknown } | null)?.transition
+  );
   if (anomalie && options.cles === undefined) return null;
   const faits =
     anomalie && options.cles !== undefined
@@ -314,7 +356,8 @@ export async function notificationsDeLEspace(
         apporteurId,
         { cle: n.cle, evenementId, decisionContratId },
         options.cles,
-        options.lireUnFait
+        options.lireUnFait,
+        options.finDUneSuspension
       );
       if (texte === null) continue;
       rendues.push({

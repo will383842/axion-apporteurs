@@ -34,6 +34,9 @@ import {
   type EtatAttribution,
   type TransitionAttribution,
   type TypePorteur,
+  EXCEPTION_DE_LA_TRANSITION,
+  fondeeSurUneAnomalie,
+  type ExceptionAnnulation,
 } from '../../domain/attribution/machine';
 import { ajouterEvenement } from '../evenement/journal';
 import { annulerLaDemandeDe } from '../confirmation/demandes';
@@ -113,7 +116,8 @@ export interface DemandeEcriture {
   /** DM-55 : exigée avec le motif de l'article 3.3 bis, et lui seul. */
   readonly categorieRelation?: MotifListeNoire;
   /**
-   * DM-55 : exigée pour `anomalie_confirmee`, et pour elle seule. Elle va à la NOTIFICATION, jamais
+   * DM-55 : exigée pour une transition fondée sur une anomalie (`anomalie_confirmee` ; DM-71 :
+   * `fraude_etablie`), et pour elles seules. Elle va à la NOTIFICATION, jamais
    * à la charge du journal (décision (d) de la juriste pour DM-12).
    */
   readonly anomalieId?: string;
@@ -145,6 +149,27 @@ function jugerLAnteriorite(demande: DemandeEcriture): void {
  * DM-55 : le motif, sa catégorie et l'anomalie accompagnent leur transition, et elle seule. Jugé
  * AVANT tout verrou : un refus ne laisse rien.
  */
+/**
+ * DM-71 (art. 3.3 du v2) : une exception d'annulation après la confirmation est un geste HUMAIN. Son
+ * acteur est un utilisateur de la console, jamais le système ; son exception se DÉRIVE de la
+ * transition, jamais de l'appelant. Jugé AVANT tout verrou : un refus ne laisse rien.
+ */
+function exceptionHumaine(demande: DemandeEcriture): ExceptionAnnulation | undefined {
+  const exception = (EXCEPTION_DE_LA_TRANSITION as Partial<Record<string, ExceptionAnnulation>>)[
+    demande.transition
+  ];
+  if (exception !== undefined && demande.acteur.par !== 'utilisateur_console') {
+    throw new ErreurTransitionAttribution(
+      'acteur_refuse',
+      `${demande.transition} : une exception de l'art. 3.3 est un geste humain de la console`
+    );
+  }
+  return exception;
+}
+
+/** L'auteur humain du marqueur : l'utilisateur de la console du geste (jugé par `exceptionHumaine`). */
+const acteurHumain = (acteur: Acteur): string => (acteur as { id: string }).id;
+
 function jugerLeMotif(demande: DemandeEcriture): void {
   const { transition, motifAnnulation, categorieRelation, anomalieId } = demande;
   if (
@@ -157,10 +182,10 @@ function jugerLeMotif(demande: DemandeEcriture): void {
       `${transition} : le motif est exigé pour annulee_par_la_console seule, la catégorie pour l'article 3.3 bis seul`
     );
   }
-  if ((transition === 'anomalie_confirmee') !== (anomalieId !== undefined)) {
+  if (fondeeSurUneAnomalie(transition) !== (anomalieId !== undefined)) {
     throw new ErreurTransitionAttribution(
       'anomalie_refusee',
-      `${transition} : l'anomalie est exigée pour anomalie_confirmee, et pour elle seule`
+      `${transition} : l'anomalie est exigée pour une transition fondée sur une anomalie, et pour elle seule`
     );
   }
 }
@@ -197,17 +222,20 @@ async function jugerSousLeVerrou(tx: Tx, demande: DemandeEcriture, l: Ligne): Pr
   if (demande.anomalieId === undefined) return;
   const a = await tx.anomalie.findUnique({
     where: { id: demande.anomalieId },
-    select: { statut: true, attributionId: true, apporteurId: true },
+    select: { statut: true, type: true, attributionId: true, apporteurId: true },
   });
   if (
     a === null ||
     a.statut !== 'confirmee' ||
+    // DM-71 (sécurité, #815) : une fraude ne se fonde que sur une anomalie de SINCÉRITÉ, comme le gel
+    // de SEC-15 ; une anomalie d'auto-parrainage confirmée ne la fonde jamais.
+    (demande.transition === 'fraude_etablie' && a.type !== 'sincerite') ||
     a.attributionId !== demande.attributionId ||
     a.apporteurId !== l.apporteur_id
   ) {
     throw new ErreurTransitionAttribution(
       'anomalie_refusee',
-      "anomalie_confirmee : l'anomalie n'est pas confirmée, sur cette attribution, pour ce porteur"
+      `${demande.transition} : l'anomalie n'est pas confirmée, sur cette attribution, pour ce porteur`
     );
   }
 }
@@ -259,6 +287,7 @@ export async function transitionnerUneAttribution(
   const { motifAnnulation, categorieRelation, anomalieId } = demande;
   jugerLAnteriorite(demande);
   jugerLeMotif(demande);
+  const exception = exceptionHumaine(demande);
   const l = await verrouiller(tx, attributionId);
   const de = l.statut;
   const vers = transitionnerAttribution({ de, transition, porteur: porteurDe(l) });
@@ -286,6 +315,11 @@ export async function transitionnerUneAttribution(
       ...((ETATS_LIBERES as readonly EtatAttribution[]).includes(vers)
         ? { purgeContactAt: echeanceDePurge(vers, maintenant) }
         : {}),
+      // DM-71 : une exception humaine pose son marqueur et son auteur dans la MÊME écriture que
+      // l'annulation ; la base refuse toute autre annulation après la confirmation.
+      ...(exception === undefined
+        ? {}
+        : { annulationException: exception, annulationParId: acteurHumain(acteur) }),
     },
   });
   const inscrit = await ajouterEvenement(tx, {
@@ -303,6 +337,7 @@ export async function transitionnerUneAttribution(
       ...(fait !== undefined ? { fait } : {}),
       ...(motifAnnulation !== undefined ? { motifAnnulation } : {}),
       ...(categorieRelation !== undefined ? { categorieRelation } : {}),
+      ...(exception !== undefined ? { exception } : {}),
     },
   });
   // DM-55 : la notification de la décision, dans la MÊME transaction. L'erreur de saisie de la

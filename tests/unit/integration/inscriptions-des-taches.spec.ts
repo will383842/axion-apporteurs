@@ -37,6 +37,8 @@ const m = vi.hoisted(() => ({
   purgerLesTextesDesDecisions: vi.fn(),
   // DM-60 : l'anonymisation des traces de droits du contact.
   anonymiserLesTracesDesDroits: vi.fn(),
+  // SEC-15 : la levée de plein droit des suspensions échues.
+  leverLesSuspensionsEchues: vi.fn(),
   anonymiserLesAnomalies: vi.fn(),
   purgerLesContestations: vi.fn(),
   purgerLesDementis: vi.fn(),
@@ -116,6 +118,10 @@ vi.mock('../../../src/server/taches/purger-sessions-espace', async (original) =>
 vi.mock('../../../src/server/taches/purger-utilisateurs-console', async (original) => ({
   ...(await original<object>()),
   effacerLesComptesDesactives: m.effacerLesComptesDesactives,
+}));
+vi.mock('../../../src/server/apporteur/suspension', async (original) => ({
+  ...(await original<object>()),
+  leverLesSuspensionsEchues: m.leverLesSuspensionsEchues,
 }));
 vi.mock('../../../src/server/taches/purger-textes-des-decisions', async (original) => ({
   ...(await original<object>()),
@@ -321,6 +327,7 @@ describe('REQ-QA-027 — les passages planifiés reçoivent le client et l’heu
     ['entreprises_connues_purger', 'purgerLesEntreprisesConnues'],
     ['droits_contact_purger', 'purgerLesValeursDesDroits'],
     ['droits_contact_anonymiser', 'anonymiserLesTracesDesDroits'],
+    ['suspensions_lever', 'leverLesSuspensionsEchues'],
     ['notifications_espace_purger', 'purgerLesNotificationsDeLEspace'],
     ['anomalies_anonymiser', 'anonymiserLesAnomalies'],
     ['contestations_purger', 'purgerLesContestations'],

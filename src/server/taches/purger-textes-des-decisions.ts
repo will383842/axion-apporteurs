@@ -95,13 +95,27 @@ export function departDuTexte(
   d: Decision,
   resiliationSuivante: { dateEffet: Date | null } | null
 ): DateCivile | null {
-  if (d.geste === 'resiliation') return d.dateEffet === null ? null : dateCivileDe(d.dateEffet);
-  if (resiliationSuivante !== null) {
-    return resiliationSuivante.dateEffet === null
-      ? null
-      : dateCivileDe(resiliationSuivante.dateEffet);
+  switch (d.geste) {
+    case 'resiliation':
+      return d.dateEffet === null ? null : dateCivileDe(d.dateEffet);
+    case 'mise_en_demeure':
+      if (resiliationSuivante !== null) {
+        return resiliationSuivante.dateEffet === null
+          ? null
+          : dateCivileDe(resiliationSuivante.dateEffet);
+      }
+      return jourDeParis(d.creeAt);
+    case 'suspension':
+      // SEC-15 (A02, #794 6036131730, point 4) : une suspension n'a pas de départ tant que sa règle
+      // (la première levée après la pose, sinon la fin du contrat ; juriste, 6036161128) n'est pas
+      // lue au journal. Sans départ, le texte est GARDÉ (échec fermé), jamais purgé par défaut.
+      return null;
+    default: {
+      // Un geste FUTUR ne tombe dans aucun cas par défaut : le compilateur le refuse ici.
+      const inconnu: never = d.geste;
+      throw new Error(`geste_inconnu : ${String(inconnu)}`);
+    }
   }
-  return jourDeParis(d.creeAt);
 }
 
 /**

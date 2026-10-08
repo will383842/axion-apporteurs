@@ -86,6 +86,11 @@ export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction
   'tache:traces_liste_noire_purger': 'sans_contact',
   // SEC-14 : l'ouverture d'un signalement de sincérité est un passage interne, qui ne contacte aucune entreprise.
   'tache:sincerite_ouvrir': 'sans_contact',
+  // SEC-15 (confirmé par la sécurité) : la levée de plein droit d'une suspension échue est un passage
+  // interne ; aucune entreprise n'est contactée.
+  'tache:suspensions_lever': 'sans_contact',
+  // DM-71 (sécurité) : une décision notifiée à l'apporteur, et aucune entreprise n'est contactée.
+  'action:annuler_apres_confirmation': 'sans_contact',
   // JUR-T64 (confirmé par la sécurité) : ouvrir et clore un litige sur une décision de contrat est une mesure
   // de conservation interne ; ni l'apporteur ni aucune entreprise ne sont contactés.
   'action:ouvrir_litige_decision': 'sans_contact',
