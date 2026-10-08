@@ -28,6 +28,30 @@ gh pr view <n> --json mergeStateStatus,statusCheckRollup,author
 4. **Vérifie l'atterrissage** : `pnpm deploy:verify <sha>` — l'en-tête `x-partners-build-sha` doit valoir le
    sha fusionné. Tant que ce n'est pas vrai, **la PR suivante attend**.
 
+## Par paquets adaptatifs (GOV-158)
+
+Décision de Williams du 2026-10-08 (#319) : les PR d'un lot se fusionnent par **paquets**, sans qu'aucune
+garde ne tombe. Le paquet se **dérive**, il ne s'écrit jamais à la main :
+
+```bash
+npx tsx scripts/lot/paquets-de-fusion.ts composer --taille <t> --prs <n,n,…>   # aucun fichier commun, migrations dans l'ordre d'A02
+npx tsx scripts/lot/paquets-de-fusion.ts moities --prs <paquet>                # sur un échec
+npx tsx scripts/lot/paquets-de-fusion.ts taille --apres <t> --premier-coup oui|non
+```
+
+1. Le paquet est testé **ensemble, une fois**, sur la pointe de `main` : worktree jetable détaché sur
+   `origin/main`, chaque PR fusionnée localement (`git fetch origin pull/<n>/head` puis
+   `git merge --no-edit FETCH_HEAD`), `pnpm prevol`, worktree retiré.
+2. **Rouge** : le paquet est coupé en deux, et chaque moitié retestée, jusqu'à isoler la fautive. Les saines
+   fusionnent ; la fautive seule retourne à son auteur.
+3. **Vert** : ses PR passent la séquence ci-dessus **une par une** — gate-a verte, `pnpm gov:pr --pr <n>`
+   (avis par tête, veto de `securite`), `--match-head-commit`, et `pnpm deploy:verify <sha>` avant la
+   suivante. Le paquet économise les tests, pas les gardes.
+4. La taille part de 4 ; elle monte jusqu'à 10 tant que les paquets passent du premier coup, et revient à 4
+   après un échec.
+
+Ton rendu est alors `{ "fusions": [ … ] }`, une entrée par PR au format ci-dessous.
+
 ## Lire un run rouge
 
 Un run `failure` n'est pas un déploiement cassé. Lis les jobs **un par un** : si `build` et `deploy` sont

@@ -84,8 +84,13 @@ Le workflow enchaîne, par tâche et en parallèle : développement en worktree 
 deux lentilles de relecture, `exactitude` et `securite` (veto de `securite` sur toute PR, **troisième
 lentille bloquante de l'architecte sur une tâche `schema`** — `W16`, `partners/ADR-0024`) ; au second tour,
 seules les lentilles qui ont refusé relisent en entier, plus `securite` toujours, les autres reconfirment
-sur le delta → **fusion sérialisée**, une PR à la fois, porte A verte (dont `pnpm mutation:pr`),
-`--match-head-commit`, atterrissage vérifié avant la suivante.
+sur le delta → **fusion par paquets adaptatifs** (GOV-158, décision de Williams du 2026-10-08) : un seul
+release manager reçoit toutes les PR acceptées, les range en paquets par `scripts/lot/paquets-de-fusion.ts`
+(aucun fichier commun, migrations dans l'ordre d'A02), teste chaque paquet ensemble une fois, le coupe en
+deux sur un échec pour isoler la fautive, puis fusionne les saines **une à la fois** — porte A verte (dont
+`pnpm mutation:pr`), avis par tête et veto de `securite` (`pnpm gov:pr --pr <n>`), `--match-head-commit`,
+atterrissage vérifié avant la suivante. La taille part de 4 et monte jusqu'à 10 tant que les paquets
+passent du premier coup.
 
 Le composeur écrit dans `lot.json` le texte des seules REQ citées (`exigences`) : le workflow le donne aux
 agents, qui n'ouvrent plus `docs/requirements.json` en entier. Un `lot.json` composé avant ce champ marche
