@@ -48,6 +48,7 @@ import { forApporteur } from '../../src/server/acces/for-apporteur';
 import type { DemandeDeNotification } from '../../src/server/notifications/envoyer';
 import { CASE_INFORMATION_TIERS } from '../../src/content/micro-copy/espace/information-tiers';
 import { verrouillerLesSirens } from '../../src/server/entreprise-connue/projection';
+import { poserUnGelEnBase } from './gel-en-base';
 
 let base: Base;
 let codes = 0;
@@ -104,9 +105,10 @@ type Statut = 'signe' | 'suspendu' | 'resilie';
 
 async function apporteur(statut: Statut): Promise<string> {
   codes += 1;
+  // SEC-15 : `suspendu` ne s'écrit plus seul ; l'apporteur naît `signe`, puis reçoit un VRAI gel.
   const a = await base.prisma.apporteur.create({
     data: {
-      statut,
+      statut: statut === 'suspendu' ? 'signe' : statut,
       resiliationMotif: statut === 'resilie' ? 'ordinaire_axion' : null,
       codeParrainage: `AX${String(codes).padStart(6, '0')}`,
       isTest: true,
@@ -118,6 +120,7 @@ async function apporteur(statut: Statut): Promise<string> {
       creeAt: T0,
     },
   });
+  if (statut === 'suspendu') await poserUnGelEnBase(base.prisma, a.id, T0);
   return a.id;
 }
 

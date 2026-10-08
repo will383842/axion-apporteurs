@@ -102,6 +102,7 @@
         "DM-41",
         "DM-55",
         "DM-67",
+        "DM-73",
         "UX-P1-54"
       ]
     },
@@ -281,8 +282,8 @@
     {
       "id": "REQ-DM-017",
       "domaine": "domaine-donnees",
-      "texte": "🔴 **Prorata — formule unique du dossier, en entiers, numérateur et dénominateur de MÊME nature.** La part acquise au ième encaissement vaut `floor(commissionTotaleCents × cumulEncaisseTtcCents_i / factureTtcNetCents) − Σ parts déjà acquises` ; aucune part n'est négative ; aucune part ne dépasse la commission totale ; à facture soldée, Σ des parts = `commissionTotaleCents` exactement (le dernier encaissement absorbe le reliquat d'arrondi par construction, sans traitement particulier). ⚠️ **Trois formules coexistaient dans le dossier** (contrat art. 4.3 « HT sur TTC », `REQ-ARG-004` « floor cumul TTC/TTC », l'ancien corps de cette exigence « round HT/HT ») ; le contrat a été corrigé le 2026-09-03 (A-1) et **cette formule est désormais la seule**, identique mot pour mot à `REQ-ARG-004` et à l'article 4.3. Un ratio dont le numérateur est HT et le dénominateur TTC ampute chaque part d'un sixième à 20 % de TVA et empêche la somme d'atteindre le total : un test frontière (facture 14 400 TTC / 12 000 HT en 3 × 4 800) le voit rougir avant correction.",
-      "source": "tableaux-de-bord §2.4, B1 ; arbitrage de contradiction l. 411 ; contrat art. 4.3 ; synthèse des cinq examens du 2026-09-03, A-1",
+      "texte": "🔴 **Commission acquise au paiement INTÉGRAL, sans prorata** (contrat v2, art. 4.2 et 4.3, MOT POUR MOT) : art. 4.2 « La commission est acquise lorsque la Société a encaissé l'intégralité du prix facturé au client au titre de la commande, tous payeurs confondus, y compris un opérateur de compétences ou tout autre financeur — jamais à la signature, jamais à l'émission de la facture. » ; art. 4.3 « Aucune part de commission n'est due au titre d'un paiement partiel. La commission est facturée et versée dans les conditions de l'article 5, à compter de l'encaissement complet. » Une ligne ne devient `acquise` qu'au jour où le cumul encaissé, tous payeurs confondus, atteint le prix facturé de la commande, net des avoirs (art. 4.0), les deux termes de MÊME nature, TTC — prix facturé TTC net des avoirs et cumul encaissé TTC ; un prix HT comparé à des encaissements TTC est une faute (auditeur argent, revue de #815, 5446397763) ; aucune part n'est acquise sur un paiement partiel. [gouvernance : RÉÉCRITE dans la PR de T-ARG-044 (#815), comme son acceptance le prévoit ; elle REMPLACE le texte du prorata, retiré par le v2, dont le début était « 🔴 **Prorata — formule unique du dossier, en entiers, numérateur et dé » ; citations du v2 extraites de la fiche ALN-02 de la juriste, #474, commentaire 6032703119.]",
+      "source": "tableaux-de-bord §2.4, B1 ; arbitrage de contradiction l. 411 ; contrat art. 4.3 ; synthèse des cinq examens du 2026-09-03, A-1 ; réécrite sur le contrat v2, art. 4.2 et 4.3, dans la PR de T-ARG-044 (#815 ; juriste, #474, 6032703119, ALN-02)",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -1023,7 +1024,8 @@
       "phase": 1,
       "taches": [
         "SEC-12",
-        "SEC-14"
+        "SEC-14",
+        "SEC-73"
       ]
     },
     {
@@ -1039,7 +1041,8 @@
       "taches": [
         "SEC-16",
         "SEC-41",
-        "SEC-72"
+        "SEC-72",
+        "SEC-73"
       ]
     },
     {
@@ -1499,8 +1502,8 @@
     {
       "id": "REQ-ARG-004",
       "domaine": "argent",
-      "texte": "Prorata : part acquise sur l'encaissement i = floor(commissionTotaleCents × cumulEncaisséTTC_i / factureTTCNetCents) − Σ parts précédentes ; à facture soldée, Σ parts = commissionTotaleCents exactement ; aucune part négative ; aucune part ne dépasse la commission totale.",
-      "source": "tableaux-de-bord §2.1, §2.4 ; nouvelle (ARG-02, ARG-03)",
+      "texte": "🔴 **Commission acquise au paiement INTÉGRAL, sans prorata** (contrat v2, art. 4.2 et 4.3, MOT POUR MOT) : art. 4.2 « La commission est acquise lorsque la Société a encaissé l'intégralité du prix facturé au client au titre de la commande, tous payeurs confondus, y compris un opérateur de compétences ou tout autre financeur — jamais à la signature, jamais à l'émission de la facture. » ; art. 4.3 « Aucune part de commission n'est due au titre d'un paiement partiel. La commission est facturée et versée dans les conditions de l'article 5, à compter de l'encaissement complet. » Une ligne ne devient `acquise` qu'au jour où le cumul encaissé, tous payeurs confondus, atteint le prix facturé de la commande, net des avoirs (art. 4.0), les deux termes de MÊME nature, TTC — prix facturé TTC net des avoirs et cumul encaissé TTC ; un prix HT comparé à des encaissements TTC est une faute (auditeur argent, revue de #815, 5446397763) ; aucune part n'est acquise sur un paiement partiel. [gouvernance : RÉÉCRITE dans la PR de T-ARG-044 (#815), comme son acceptance le prévoit ; elle REMPLACE le texte du prorata, retiré par le v2, dont le début était « Prorata : part acquise sur l'encaissement i = floor(commissionTotaleCe » ; citations du v2 extraites de la fiche ALN-02 de la juriste, #474, commentaire 6032703119.]",
+      "source": "tableaux-de-bord §2.1, §2.4 ; nouvelle (ARG-02, ARG-03) ; réécrite sur le contrat v2, art. 4.2 et 4.3, dans la PR de T-ARG-044 (#815 ; juriste, #474, 6032703119, ALN-02)",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -1510,7 +1513,8 @@
         "DM-04",
         "T-ARG-036",
         "T-ARG-037",
-        "T-ARG-044"
+        "T-ARG-044",
+        "T-ARG-047"
       ]
     },
     {
@@ -2567,7 +2571,8 @@
         "JUR-T40",
         "JUR-T46",
         "JUR-T48",
-        "JUR-T66"
+        "JUR-T66",
+        "JUR-T67"
       ]
     },
     {
@@ -2956,7 +2961,9 @@
         "JUR-T02",
         "JUR-T64",
         "T-ARG-033",
-        "UX-P2-20"
+        "UX-P1-65",
+        "UX-P2-20",
+        "UX-P2-21"
       ]
     },
     {
@@ -3732,6 +3739,7 @@
         "GOV-083",
         "GOV-140",
         "GOV-142",
+        "GOV-155",
         "QA-T00",
         "QA-T01",
         "QA-T07",
@@ -3788,6 +3796,7 @@
         "QA-T16",
         "QA-T33",
         "QA-T59",
+        "QA-T74",
         "UX-P0-03"
       ]
     },
@@ -4237,7 +4246,9 @@
         "GOV-090",
         "GOV-116",
         "GOV-145",
-        "GOV-152"
+        "GOV-152",
+        "GOV-153",
+        "GOV-156"
       ]
     },
     {
@@ -4263,6 +4274,7 @@
         "GOV-124",
         "GOV-126",
         "GOV-145",
+        "GOV-157",
         "QA-T60"
       ]
     },
@@ -4326,6 +4338,7 @@
         "GOV-012",
         "GOV-057",
         "GOV-151",
+        "GOV-158",
         "QA-T54",
         "QA-T55",
         "QA-T65",
@@ -4469,7 +4482,8 @@
         "GOV-118",
         "GOV-120",
         "GOV-121",
-        "GOV-134"
+        "GOV-134",
+        "GOV-154"
       ]
     },
     {
@@ -4594,7 +4608,8 @@
         "GOV-131",
         "GOV-132",
         "GOV-133",
-        "GOV-150"
+        "GOV-150",
+        "GOV-156"
       ]
     },
     {
@@ -5407,6 +5422,7 @@
         "UX-P1-61",
         "UX-P1-62",
         "UX-P1-63",
+        "UX-P1-65",
         "UX-P2-01",
         "UX-P2-02",
         "UX-P2-03",
