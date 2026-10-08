@@ -122,7 +122,12 @@ describe('REQ-QA-016 — les navigateurs des passes d’accessibilité, bornés 
     expect(paquet.scripts['a11y:navigateurs']).toMatch(/^playwright install/);
     expect(paquet.scripts['a11y:navigateurs:bornes']).toBe(`tsx ${SCRIPT_BORNE}`);
     expect(existsSync(SCRIPT_BORNE)).toBe(true);
-    expect(readFileSync(SCRIPT_BORNE, 'utf8')).toMatch(/spawnSync\('pnpm', \['a11y:navigateurs'\]/);
+    // QA-T74 : le script borné ne lance plus `a11y:navigateurs` tel quel (son `--with-deps`, tué à
+    // son délai, laissait l'apt-get de sudo orphelin, verrou en main) : il DÉRIVE ses deux commandes
+    // de ce script de package.json, sans recopier la liste des navigateurs (RM-01).
+    const script = readFileSync(SCRIPT_BORNE, 'utf8');
+    expect(script).toMatch(/scripts\['a11y:navigateurs'\]/);
+    expect(script).not.toMatch(/'chromium'|'webkit'/);
   });
 
   it('REQ-QA-016 — TÉMOIN : sans timeout, sans le script borné, version en dur, cache après une commande, chacun rougit', () => {

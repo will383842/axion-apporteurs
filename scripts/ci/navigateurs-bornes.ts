@@ -12,7 +12,7 @@
  *      tentative ne se rejoue qu'après être SORTIE d'elle-même (un échec d'apt rend le verrou) ; le
  *      verrou du runner est attendu avant chacune. Seul le `timeout-minutes` de l'étape les borne :
  *      s'il frappe, l'étape échoue, et aucune tentative ne suit l'orphelin.
- *   2. LES NAVIGATEURS (`playwright install`, sans apt) : `TENTATIVES` essais tués à
+ *   2. LES NAVIGATEURS (`playwright install`, SANS `--with-deps`, donc sans apt) : `TENTATIVES` essais tués à
  *      `DELAI_PAR_TENTATIVE_MS`, séparés par `PAUSES_MS` — tuer un téléchargement ne laisse aucun verrou.
  *
  * USAGE (forge, `.github/workflows/ci.yml`, étape « Navigateurs des passes d accessibilite ») :
@@ -20,9 +20,7 @@
  * `pnpm pre-gate` la classe LENTE (`scripts/prevol.ts`, ETAPES_LENTES) : elle ne tourne jamais en local.
  */
 import { spawnSync, type SpawnSyncOptions } from 'node:child_process';
-
-/** Les navigateurs des passes d'accessibilité. */
-export const NAVIGATEURS: readonly string[] = ['chromium', 'webkit'];
+import { readFileSync } from 'node:fs';
 
 /** Temps 1 : au plus deux tentatives des dépendances, chacune SORTIE d'elle-même avant la suivante. */
 export const TENTATIVES_DEPENDANCES = 2;
@@ -126,13 +124,43 @@ const shell = process.platform === 'win32';
 /** Temps 1 : les options du lancement des dépendances. AUCUN `timeout` : apt n'est jamais tué. */
 export const OPTIONS_DEPENDANCES: SpawnSyncOptions = { stdio: 'inherit', shell };
 
+/**
+ * PURE. Les deux commandes, DÉRIVÉES du script `a11y:navigateurs` de package.json (RM-01 : la liste
+ * des navigateurs n'est écrite que là) : `install-deps` pour apt, et `install` SANS `--with-deps` pour
+ * le téléchargement — tué à son délai, il ne laisse aucun apt orphelin. Une autre forme est refusée.
+ */
+export function commandesDerivees(script: string): {
+  dependances: string[];
+  navigateurs: string[];
+} {
+  const m = /^playwright install((?:\s+--with-deps)?)((?:\s+[a-z-]+)+)\s*$/.exec(script.trim());
+  const liste = (m?.[2] ?? '')
+    .trim()
+    .split(/\s+/)
+    .filter((n) => n && !n.startsWith('-'));
+  if (!m || liste.length === 0)
+    throw new Error(
+      `le script \`a11y:navigateurs\` (« ${script} ») n'est pas « playwright install [--with-deps] <navigateurs> »`
+    );
+  return {
+    dependances: ['exec', 'playwright', 'install-deps', ...liste],
+    navigateurs: ['exec', 'playwright', 'install', ...liste],
+  };
+}
+
+const commandes = (): ReturnType<typeof commandesDerivees> => {
+  const paquet = JSON.parse(readFileSync('package.json', 'utf8')) as {
+    scripts: Record<string, string>;
+  };
+  return commandesDerivees(paquet.scripts['a11y:navigateurs'] ?? '');
+};
+
 const tenterLesDependances: TentativeLibre = () =>
-  spawnSync('pnpm', ['exec', 'playwright', 'install-deps', ...NAVIGATEURS], OPTIONS_DEPENDANCES)
-    .status === 0;
+  spawnSync('pnpm', commandes().dependances, OPTIONS_DEPENDANCES).status === 0;
 
 /** Temps 2 : le téléchargement, tué au délai. */
 const tenterLesNavigateurs: Tentative = (delaiMs) =>
-  spawnSync('pnpm', ['exec', 'playwright', 'install', ...NAVIGATEURS], {
+  spawnSync('pnpm', commandes().navigateurs, {
     stdio: 'inherit',
     timeout: delaiMs,
     killSignal: 'SIGKILL',

@@ -11,6 +11,7 @@ import {
   PAUSES_MS,
   TENTATIVES,
   TENTATIVES_DEPENDANCES,
+  commandesDerivees,
   installerBorne,
   installerEnDeuxTemps,
   installerLesDependances,
@@ -95,5 +96,18 @@ describe('REQ-QA-016 — QA-T74 : apt n’est jamais tué, donc jamais orphelin 
   it('REQ-QA-016 — le temps borné (téléchargements et pauses) laisse au moins la moitié de l’étape aux dépendances', () => {
     const borne = TENTATIVES * DELAI_PAR_TENTATIVE_MS + PAUSES_MS.reduce((a, b) => a + b, 0);
     expect(borne).toBeLessThanOrEqual(DUREE_ETAPE_MS / 2);
+  });
+});
+
+describe('REQ-QA-016 — QA-T74 : les deux commandes, dérivées de `a11y:navigateurs`', () => {
+  it('REQ-QA-016 — TÉMOIN : le téléchargement borné ne porte jamais `--with-deps` (il prendrait le verrou d’apt)', () => {
+    const c = commandesDerivees('playwright install --with-deps chromium webkit');
+    expect(c.dependances).toEqual(['exec', 'playwright', 'install-deps', 'chromium', 'webkit']);
+    expect(c.navigateurs).toEqual(['exec', 'playwright', 'install', 'chromium', 'webkit']);
+  });
+
+  it('REQ-QA-016 — un script qui n’est pas `playwright install` est refusé, rien n’est deviné', () => {
+    expect(() => commandesDerivees('echo rien')).toThrow(/a11y:navigateurs/);
+    expect(() => commandesDerivees('playwright install --with-deps')).toThrow(/a11y:navigateurs/);
   });
 });
