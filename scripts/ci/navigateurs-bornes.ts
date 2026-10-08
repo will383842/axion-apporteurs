@@ -1,38 +1,48 @@
 /**
  * navigateurs-bornes.ts — QA-T59 (REQ-QA-016) : l'installation des navigateurs des passes
- * d'accessibilité, BORNÉE. Au plus `TENTATIVES` essais de `pnpm a11y:navigateurs`, chacun tué au bout
- * de `DELAI_PAR_TENTATIVE_MS` par l'option `timeout` de `spawnSync` (portable : aucun binaire
- * `timeout`) ; toutes échouées, sortie en 1 — une nouvelle tentative, jamais un vert de complaisance.
+ * d'accessibilité, BORNÉE ; toutes les tentatives échouées, sortie en 1 — une nouvelle tentative,
+ * jamais un vert de complaisance.
  *
- * QA-T74 — LE VERROU D'APT DU RUNNER. `playwright install --with-deps` passe par apt ; depuis le
- * 2026-10-07 vers 18 h 25 UTC, la mise à jour automatique du runner tient `/var/lib/dpkg/lock-frontend`
- * et l'installation sort en 100 (« Could not get lock »). Les trois tentatives s'enchaînaient SANS
- * PAUSE et brûlaient en quelques secondes un verrou tenu quelques minutes. Désormais, avant chaque
- * tentative, on attend que le verrou se libère (borné), et entre deux tentatives on marque une PAUSE
- * (`PAUSES_MS`). Échec fermé inchangé : trois échecs sortent en 1, aucun test n'est sauté.
+ * QA-T74 — LE VERROU D'APT, EN DEUX TEMPS. `playwright install --with-deps` faisait tout d'un bloc :
+ * apt (les dépendances système, sous sudo) PUIS le téléchargement des navigateurs. Tuer une tentative
+ * lente tuait pnpm et playwright, mais PAS l'apt-get lancé sous sudo : l'orphelin gardait
+ * `/var/lib/dpkg/lock-frontend`, et les tentatives suivantes échouaient en une seconde sur NOTRE PROPRE
+ * verrou (run 37687549026 de #842, processus 4378). D'où deux temps :
+ *   1. LES DÉPENDANCES (`playwright install-deps`, le seul à prendre le verrou) : jamais tuées. Une
+ *      tentative ne se rejoue qu'après être SORTIE d'elle-même (un échec d'apt rend le verrou) ; le
+ *      verrou du runner est attendu avant chacune. Seul le `timeout-minutes` de l'étape les borne :
+ *      s'il frappe, l'étape échoue, et aucune tentative ne suit l'orphelin.
+ *   2. LES NAVIGATEURS (`playwright install`, sans apt) : `TENTATIVES` essais tués à
+ *      `DELAI_PAR_TENTATIVE_MS`, séparés par `PAUSES_MS` — tuer un téléchargement ne laisse aucun verrou.
  *
  * USAGE (forge, `.github/workflows/ci.yml`, étape « Navigateurs des passes d accessibilite ») :
  *   pnpm a11y:navigateurs:bornes
  * `pnpm pre-gate` la classe LENTE (`scripts/prevol.ts`, ETAPES_LENTES) : elle ne tourne jamais en local.
  */
-import { spawnSync } from 'node:child_process';
+import { spawnSync, type SpawnSyncOptions } from 'node:child_process';
 
+/** Les navigateurs des passes d'accessibilité. */
+export const NAVIGATEURS: readonly string[] = ['chromium', 'webkit'];
+
+/** Temps 1 : au plus deux tentatives des dépendances, chacune SORTIE d'elle-même avant la suivante. */
+export const TENTATIVES_DEPENDANCES = 2;
+/** Temps 2 : trois tentatives du téléchargement des navigateurs, deux minutes chacune. */
 export const TENTATIVES = 3;
-/**
- * QA-T74 : 180 s par tentative (240 avant) — l attente du verrou et la tentative S ADDITIONNENT, et
- * leur somme, pauses comprises, doit tenir sous les quinze minutes de l étape avec une marge.
- */
-export const DELAI_PAR_TENTATIVE_MS = 180_000;
-/** QA-T74 : la pause APRÈS l'échec de la tentative i (i = 1, 2). */
+export const DELAI_PAR_TENTATIVE_MS = 120_000;
+/** La pause APRÈS l'échec de la tentative i (i = 1, 2), dans chacun des deux temps. */
 export const PAUSES_MS: readonly number[] = [30_000, 60_000];
-/** QA-T74 : l'attente bornée du verrou d'apt avant chaque tentative, et son pas d'interrogation. */
+/** L'attente bornée du verrou d'apt avant chaque tentative des dépendances, et son pas. */
 export const ATTENTE_VERROU_MS = 75_000;
 export const PAS_VERROU_MS = 5_000;
+/** La durée de l'étape (`timeout-minutes: 15` dans ci.yml). */
+export const DUREE_ETAPE_MS = 15 * 60_000;
 
-/** Une tentative : `true` si la commande est sortie en 0 dans le délai. */
+/** Une tentative bornée : `true` si la commande est sortie en 0 dans le délai. */
 export type Tentative = (delaiMs: number) => boolean;
+/** Une tentative SANS délai : `true` si la commande est sortie en 0. */
+export type TentativeLibre = () => boolean;
 
-/** QA-T74 : ce que la vraie installation injecte ; par défaut, rien (la fonction reste PURE). */
+/** Ce que la vraie installation injecte ; par défaut, rien (les fonctions restent PURES). */
 export type Outils = {
   /** Attend `ms` millisecondes. */
   attendre?: (ms: number) => void;
@@ -40,23 +50,48 @@ export type Outils = {
   attendreLeVerrou?: () => boolean;
 };
 
+type Resultat = { code: 0 | 1; lignes: string[] };
+
+/** PURE. Temps 1 : les dépendances, jamais tuées ; le verrou attendu avant chaque tentative. */
+export function installerLesDependances(
+  tenter: TentativeLibre,
+  tentatives = TENTATIVES_DEPENDANCES,
+  outils: Outils = {}
+): Resultat {
+  const lignes: string[] = [];
+  for (let i = 1; i <= tentatives; i++) {
+    if (outils.attendreLeVerrou && !outils.attendreLeVerrou()) {
+      lignes.push(
+        `::warning::le verrou d'apt (/var/lib/dpkg/lock-frontend) est encore tenu avant la tentative ${i} des dépendances : elle est jouée quand même`
+      );
+    }
+    if (tenter()) {
+      lignes.push(`✅ dépendances système installées à la tentative ${i} sur ${tentatives}`);
+      return { code: 0, lignes };
+    }
+    lignes.push(`::warning::dépendances système, tentative ${i} sur ${tentatives} échouée`);
+    const pause = PAUSES_MS[i - 1];
+    if (i < tentatives && pause !== undefined && outils.attendre) {
+      lignes.push(`pause de ${pause / 1000} s avant la tentative ${i + 1} des dépendances`);
+      outils.attendre(pause);
+    }
+  }
+  lignes.push(`::error::dépendances système, ${tentatives} tentatives échouées`);
+  return { code: 1, lignes };
+}
+
 /**
- * PURE. Joue au plus `tentatives` fois, s'arrête au premier succès ; rend le code de sortie et le
- * journal de chaque tentative, sans rien imprimer. Les pauses et l'attente du verrou sont injectées.
+ * PURE. Temps 2 : au plus `tentatives` téléchargements, s'arrête au premier succès ; rend le code de
+ * sortie et le journal de chaque tentative, sans rien imprimer.
  */
 export function installerBorne(
   tenter: Tentative,
   tentatives = TENTATIVES,
   delaiMs = DELAI_PAR_TENTATIVE_MS,
   outils: Outils = {}
-): { code: 0 | 1; lignes: string[] } {
+): Resultat {
   const lignes: string[] = [];
   for (let i = 1; i <= tentatives; i++) {
-    if (outils.attendreLeVerrou && !outils.attendreLeVerrou()) {
-      lignes.push(
-        `::warning::le verrou d'apt (/var/lib/dpkg/lock-frontend) est encore tenu avant la tentative ${i} : elle est jouée quand même`
-      );
-    }
     if (tenter(delaiMs)) {
       lignes.push(`✅ navigateurs installés à la tentative ${i} sur ${tentatives}`);
       return { code: 0, lignes };
@@ -74,13 +109,34 @@ export function installerBorne(
   return { code: 1, lignes };
 }
 
-/** La vraie tentative : `pnpm a11y:navigateurs`, tuée au délai. */
-const tenterPourDeVrai: Tentative = (delaiMs) =>
-  spawnSync('pnpm', ['a11y:navigateurs'], {
+/** PURE. Les deux temps, dans l'ordre ; le second ne commence que si le premier a réussi. */
+export function installerEnDeuxTemps(
+  dependances: TentativeLibre,
+  navigateurs: Tentative,
+  outils: Outils = {}
+): Resultat {
+  const d = installerLesDependances(dependances, TENTATIVES_DEPENDANCES, outils);
+  if (d.code !== 0) return d;
+  const n = installerBorne(navigateurs, TENTATIVES, DELAI_PAR_TENTATIVE_MS, outils);
+  return { code: n.code, lignes: [...d.lignes, ...n.lignes] };
+}
+
+const shell = process.platform === 'win32';
+
+/** Temps 1 : les options du lancement des dépendances. AUCUN `timeout` : apt n'est jamais tué. */
+export const OPTIONS_DEPENDANCES: SpawnSyncOptions = { stdio: 'inherit', shell };
+
+const tenterLesDependances: TentativeLibre = () =>
+  spawnSync('pnpm', ['exec', 'playwright', 'install-deps', ...NAVIGATEURS], OPTIONS_DEPENDANCES)
+    .status === 0;
+
+/** Temps 2 : le téléchargement, tué au délai. */
+const tenterLesNavigateurs: Tentative = (delaiMs) =>
+  spawnSync('pnpm', ['exec', 'playwright', 'install', ...NAVIGATEURS], {
     stdio: 'inherit',
     timeout: delaiMs,
     killSignal: 'SIGKILL',
-    shell: process.platform === 'win32',
+    shell,
   }).status === 0;
 
 /** Une pause SYNCHRONE, sans boucle active. */
@@ -107,7 +163,7 @@ const attendreLeVerrouPourDeVrai = (): boolean => {
 
 const APPELE_DIRECTEMENT = /navigateurs-bornes\.ts$/.test(process.argv[1] ?? '');
 if (APPELE_DIRECTEMENT) {
-  const r = installerBorne(tenterPourDeVrai, TENTATIVES, DELAI_PAR_TENTATIVE_MS, {
+  const r = installerEnDeuxTemps(tenterLesDependances, tenterLesNavigateurs, {
     attendre: attendrePourDeVrai,
     attendreLeVerrou: attendreLeVerrouPourDeVrai,
   });
