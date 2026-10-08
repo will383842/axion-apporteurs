@@ -27561,6 +27561,36 @@
         "fusionneeAt": "2026-10-08T08:32:07Z"
       },
       "motif": null
+    },
+    {
+      "id": "GOV-158",
+      "titre": "La fusion par paquets adaptatifs : PR indépendantes testées ensemble une fois, paquet coupé en deux sur un échec",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-014"
+      ],
+      "paths": [
+        ".claude/agents/release-manager.md",
+        ".claude/skills/lot/SKILL.md",
+        "scripts/lot/lot.workflow.js",
+        "scripts/lot/paquets-de-fusion.ts",
+        "tests/unit/gouvernance/fusion-par-paquets-adaptatifs.spec.ts"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 130, sur la décision de Williams du 2026-10-08 publiée sur #319 (6059181319) : la fusion par paquets adaptatifs, exception au gel de la phase 1. Le release-manager (A04) fusionne par paquets au lieu d une PR à la fois, sans retirer aucun garde-fou : (1) un paquet ne réunit que des PR INDÉPENDANTES, sans aucun fichier commun, et dont les migrations se suivent dans l ordre fixé par l architecte (A02) ; la composition du paquet est dérivée par `scripts/lot/paquets-de-fusion.ts`, jamais écrite à la main. (2) Le paquet est testé ENSEMBLE, une seule fois, sur la pointe de `main`. (3) La taille est adaptative : on commence à 4 ou 5 PR ; on monte à 8 ou 10 tant que les paquets passent du premier coup. (4) Un échec coupe le paquet en deux, récursivement, pour isoler la PR fautive ; les PR saines sont fusionnées, la fautive seule revient à son auteur. (5) Toutes les gardes restent : gate-a, des avis par tête, le veto de la lentille `securite`, et chaque fusion porte `--match-head-commit`. Le workflow de lot (`scripts/lot/lot.workflow.js`), la fiche `.claude/agents/release-manager.md` et le skill `lot` (`.claude/skills/lot/SKILL.md`) décrivent la même chaîne. TÉMOIN (`tests/unit/gouvernance/fusion-par-paquets-adaptatifs.spec.ts`), rouge d abord : deux PR qui partagent un fichier dans un même paquet, des migrations hors de l ordre d A02, un paquet en échec dont une PR saine n est pas fusionnée, une taille qui monte après un échec, ou une fusion sans `--match-head-commit` le font rougir.",
+      "tests": {
+        "REQ-GOV-014": [
+          "tests/unit/gouvernance/fusion-par-paquets-adaptatifs.spec.ts"
+        ]
+      }
     }
   ]
 }
