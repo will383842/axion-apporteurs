@@ -34,8 +34,9 @@ Décision de Williams du 2026-10-08 (#319) : les PR d'un lot se fusionnent par *
 garde ne tombe. Le paquet se **dérive**, il ne s'écrit jamais à la main :
 
 ```bash
-npx tsx scripts/lot/paquets-de-fusion.ts composer --taille <t> --prs <n,n,…>   # aucun fichier commun, migrations dans l'ordre d'A02
+npx tsx scripts/lot/paquets-de-fusion.ts composer --taille <t> --prs <n,n,…> --ordre-a02 <m,m,…>   # aucun fichier commun, ordre d'A02
 npx tsx scripts/lot/paquets-de-fusion.ts moities --prs <paquet>                # sur un échec
+npx tsx scripts/lot/paquets-de-fusion.ts attente --prs <saines> --ecartees <n,…> --ordre-a02 <m,m,…>
 npx tsx scripts/lot/paquets-de-fusion.ts taille --apres <t> --premier-coup oui|non
 ```
 
@@ -43,7 +44,9 @@ npx tsx scripts/lot/paquets-de-fusion.ts taille --apres <t> --premier-coup oui|n
    `origin/main`, chaque PR fusionnée localement (`git fetch origin pull/<n>/head` puis
    `git merge --no-edit FETCH_HEAD`), le pré-vol complet, worktree retiré.
 2. **Rouge** : le paquet est coupé en deux, et chaque moitié retestée, jusqu'à isoler la fautive. Les saines
-   fusionnent ; la fautive seule retourne à son auteur.
+   fusionnent ; la fautive seule retourne à son auteur. Une saine dont la migration suit celle d'une PR
+   écartée **attend** (`attente`) : la fusionner d'abord inverserait l'ordre des migrations sur `main`.
+   L'ordre d'A02 est celui que l'architecte a fixé dans sa revue `schema` ; il n'est jamais deviné.
 3. **Vert** : ses PR passent la séquence ci-dessus **une par une** — gate-a verte, `pnpm gov:pr --pr <n>`
    (avis par tête, veto de `securite`), `--match-head-commit`, et `pnpm deploy:verify <sha>` avant la
    suivante. Le paquet économise les tests, pas les gardes.

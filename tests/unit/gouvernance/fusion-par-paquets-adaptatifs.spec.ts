@@ -18,6 +18,7 @@ import {
   commandeDeFusion,
   composerPaquets,
   isolerEtFusionner,
+  ligneDeCommande,
   migrationsDe,
   moities,
   tailleSuivante,
@@ -54,7 +55,7 @@ describe('REQ-GOV-014 — la composition d’un paquet', () => {
       pr(2, ['y.ts']),
       pr(3, [MIG('20261009000001_a')]),
     ];
-    const ordre = composerPaquets(prs, 4).flat();
+    const ordre = composerPaquets(prs, 4, ['20261009000001_a', '20261009000002_b']).flat();
     const rang = (n: number) => ordre.indexOf(n);
     expect(rang(3)).toBeLessThan(rang(1));
     expect(migrationsDe(prs[0]!)).toEqual(['20261009000002_b']);
@@ -64,6 +65,25 @@ describe('REQ-GOV-014 — la composition d’un paquet', () => {
     expect(() =>
       composerPaquets([pr(1, [MIG('20261009000001_a')])], 4, ['20261009000002_b'])
     ).toThrow(/A02/);
+  });
+
+  it('REQ-GOV-014 — sans l’ordre d’A02, une PR qui porte une migration refuse la composition (rien n’est deviné)', () => {
+    expect(() => composerPaquets([pr(1, [MIG('20261009000001_a')])], 4)).toThrow(/A02/);
+    expect(composerPaquets([pr(1, ['x.ts'])], 4)).toEqual([[1]]);
+  });
+
+  it('REQ-GOV-014 — la ligne de commande TRANSMET l’ordre d’A02 au composeur, et refuse une migration hors ordre', () => {
+    const fichiers: Record<number, string[]> = { 1: [MIG('m_b')], 2: [MIG('m_a')] };
+    const lire = (n: number) => fichiers[n]!;
+    const composer = (ordre: string) =>
+      ligneDeCommande(['composer', '--taille', '4', '--prs', '1,2', '--ordre-a02', ordre], lire);
+    // L'ordre d'A02 n'est pas l'ordre lexical : c'est lui qui décide.
+    expect(composer('m_a,m_b')).toBe('[[2,1]]');
+    expect(composer('m_b,m_a')).toBe('[[1,2]]');
+    expect(() => composer('m_a')).toThrow(/A02/);
+    expect(() => ligneDeCommande(['composer', '--taille', '4', '--prs', '1,2'], lire)).toThrow(
+      /A02/
+    );
   });
 });
 
@@ -102,7 +122,7 @@ describe('REQ-GOV-014 — un échec coupe le paquet en deux', () => {
     });
     expect(tests).toEqual([[1, 2, 3, 4]]);
     expect(fusions).toEqual([1, 2, 3, 4]);
-    expect(r).toEqual({ fusionnees: [1, 2, 3, 4], fautives: [], premierCoup: true });
+    expect(r).toEqual({ fusionnees: [1, 2, 3, 4], fautives: [], enAttente: [], premierCoup: true });
   });
 
   it('REQ-GOV-014 — un paquet rouge isole la fautive, et TOUTES les saines sont fusionnées', async () => {
@@ -128,6 +148,55 @@ describe('REQ-GOV-014 — un échec coupe le paquet en deux', () => {
     expect(r.fusionnees).toEqual([1]);
     expect(r.fautives).toEqual([2]);
     expect(r.premierCoup).toBe(false);
+  });
+});
+
+describe('REQ-GOV-014 — une fautive retient les migrations qui la suivent', () => {
+  const ORDRE = ['m_a', 'm_b', 'm_c'];
+  const prs = [pr(1, [MIG('m_a')]), pr(2, [MIG('m_b')]), pr(3, ['x.ts']), pr(4, [MIG('m_c')])];
+
+  it('REQ-GOV-014 — une saine dont la migration suit celle d’une fautive attend : elle n’est pas fusionnée', async () => {
+    const fusions: number[] = [];
+    const r = await isolerEtFusionner(
+      [1, 2, 3, 4],
+      { tester: async (p) => !p.includes(1), fusionner: async (n) => void fusions.push(n) },
+      { prs, ordreA02: ORDRE }
+    );
+    expect(r.fautives).toEqual([1]);
+    expect(r.enAttente).toEqual([2, 4]);
+    expect(fusions).toEqual([3]);
+    expect(r.fusionnees).toEqual([3]);
+    expect(r.premierCoup).toBe(false);
+  });
+
+  it('REQ-GOV-014 — une fautive sans migration ne retient personne', async () => {
+    const fusions: number[] = [];
+    const r = await isolerEtFusionner(
+      [1, 2, 3, 4],
+      { tester: async (p) => !p.includes(3), fusionner: async (n) => void fusions.push(n) },
+      { prs, ordreA02: ORDRE }
+    );
+    expect(r.fautives).toEqual([3]);
+    expect(r.enAttente).toEqual([]);
+    expect(fusions).toEqual([1, 2, 4]);
+  });
+
+  it('REQ-GOV-014 — une fusion refusée sur sa tête retient elle aussi les migrations qui la suivent', async () => {
+    const fusions: number[] = [];
+    const r = await isolerEtFusionner(
+      [2, 4],
+      {
+        tester: async () => true,
+        fusionner: async (n) => {
+          if (n === 2) throw new Error('gate-a rouge');
+          fusions.push(n);
+        },
+      },
+      { prs, ordreA02: ORDRE }
+    );
+    expect(r.fautives).toEqual([2]);
+    expect(r.enAttente).toEqual([4]);
+    expect(fusions).toEqual([]);
   });
 });
 

@@ -7,8 +7,9 @@
  * citent, aucun ne recopie ses règles. Un paquet n'est jamais écrit à la main.
  *
  *   - un paquet ne réunit que des PR SANS FICHIER COMMUN ;
- *   - les migrations fusionnent dans l'ordre d'A02 — par défaut l'ordre d'application de Prisma, celui
- *     des noms de dossier que l'architecte horodate ; une migration hors de cet ordre refuse le paquet ;
+ *   - les migrations fusionnent dans l'ordre d'A02, TRANSMIS par l'architecte (`--ordre-a02`) et jamais
+ *     deviné : sans lui, ou hors de lui, une migration refuse la composition ; une PR saine dont la
+ *     migration suit celle d'une PR écartée ATTEND, elle ne fusionne pas avant elle ;
  *   - le paquet est testé ENSEMBLE, une fois, sur la pointe de `main` ;
  *   - la taille part de TAILLE_DE_DEPART et monte jusqu'à TAILLE_PLAFOND tant que les paquets passent
  *     du premier coup ; un échec la ramène au départ ;
@@ -16,7 +17,8 @@
  *   - chaque fusion reste UNE fusion `--match-head-commit`, une à la fois, gardes inchangées.
  *
  * En ligne de commande (le release manager n'écrit rien : il lit) :
- *   npx tsx scripts/lot/paquets-de-fusion.ts composer --taille 4 --prs 12,15,17
+ *   npx tsx scripts/lot/paquets-de-fusion.ts composer --taille 4 --prs 12,15,17 [--ordre-a02 <m1,m2,…>]
+ *   npx tsx scripts/lot/paquets-de-fusion.ts attente --prs 15,17 --ecartees 12 [--ordre-a02 <m1,m2,…>]
  *   npx tsx scripts/lot/paquets-de-fusion.ts taille --apres 4 --premier-coup oui|non
  *   npx tsx scripts/lot/paquets-de-fusion.ts moities --prs 12,15,17
  *   npx tsx scripts/lot/paquets-de-fusion.ts commande --pr 12 --tete <sha de tête, 40 hexadécimaux>
@@ -39,6 +41,43 @@ export function migrationsDe(p: PrAFusionner): string[] {
   });
 }
 
+/** Rangs des migrations d'une PR dans l'ordre d'A02 ; refuse un ordre absent ou une migration hors de lui. */
+export function rangsDeMigration(
+  p: PrAFusionner,
+  ordreA02: readonly string[] | undefined
+): number[] {
+  return migrationsDe(p).map((m) => {
+    if (!ordreA02)
+      throw new Error(`PR #${p.pr} : la migration ${m} exige l'ordre fixé par A02 (--ordre-a02)`);
+    const r = ordreA02.indexOf(m);
+    if (r < 0)
+      throw new Error(`PR #${p.pr} : la migration ${m} n'est pas dans l'ordre fixé par A02`);
+    return r;
+  });
+}
+
+/**
+ * Les PR qui doivent ATTENDRE : celles dont une migration suit, dans l'ordre d'A02, une migration
+ * portée par une PR écartée (fautive, ou elle-même en attente). Les fusionner d'abord inverserait
+ * l'ordre des migrations sur `main`.
+ */
+export function enAttente(
+  candidates: readonly PrAFusionner[],
+  ecartees: readonly PrAFusionner[],
+  ordreA02: readonly string[] | undefined
+): number[] {
+  const attente: number[] = [];
+  let seuil = Math.min(Infinity, ...ecartees.flatMap((p) => rangsDeMigration(p, ordreA02)));
+  for (const p of candidates) {
+    const rangs = rangsDeMigration(p, ordreA02);
+    if (rangs.some((r) => r > seuil)) {
+      attente.push(p.pr);
+      seuil = Math.min(seuil, ...rangs);
+    }
+  }
+  return attente;
+}
+
 /**
  * Ordonne les PR selon l'ordre d'A02 de leurs migrations (tri stable : une PR sans migration garde sa
  * place relative), puis les range en paquets d'au plus `taille` PR sans fichier commun. Une PR qui
@@ -52,14 +91,8 @@ export function composerPaquets(
 ): Paquet[] {
   if (!Number.isInteger(taille) || taille < 1)
     throw new Error(`taille de paquet invalide : ${taille}`);
-  const ordre = ordreA02 ?? [...new Set(prs.flatMap(migrationsDe))].sort();
   const rangDe = (p: PrAFusionner): number => {
-    const rangs = migrationsDe(p).map((m) => {
-      const r = ordre.indexOf(m);
-      if (r < 0)
-        throw new Error(`PR #${p.pr} : la migration ${m} n'est pas dans l'ordre fixé par A02`);
-      return r;
-    });
+    const rangs = rangsDeMigration(p, ordreA02);
     return rangs.length ? Math.min(...rangs) : -1;
   };
   const rangs = new Map(prs.map((p) => [p.pr, rangDe(p)]));
@@ -106,15 +139,37 @@ export type Executants = {
   /** Fusionne UNE PR, gardes comprises ; lève si une garde refuse. */
   fusionner: (pr: number) => Promise<void>;
 };
-export type IssueDuPaquet = { fusionnees: number[]; fautives: number[]; premierCoup: boolean };
+export type IssueDuPaquet = {
+  fusionnees: number[];
+  fautives: number[];
+  /** Saines retenues : leur migration suit celle d'une PR écartée. */
+  enAttente: number[];
+  premierCoup: boolean;
+};
+/** Les fichiers des PR et l'ordre d'A02 : sans eux, aucune PR n'est retenue pour ses migrations. */
+export type ContexteDesMigrations = { prs: readonly PrAFusionner[]; ordreA02?: readonly string[] };
 
 /** Teste le paquet ; vert, le fusionne PR par PR ; rouge, le coupe en deux et recommence sur chaque moitié. */
-export async function isolerEtFusionner(paquet: Paquet, x: Executants): Promise<IssueDuPaquet> {
-  const issue: IssueDuPaquet = { fusionnees: [], fautives: [], premierCoup: true };
+export async function isolerEtFusionner(
+  paquet: Paquet,
+  x: Executants,
+  contexte: ContexteDesMigrations = { prs: [] }
+): Promise<IssueDuPaquet> {
+  const issue: IssueDuPaquet = { fusionnees: [], fautives: [], enAttente: [], premierCoup: true };
+  const de = (n: number): PrAFusionner =>
+    contexte.prs.find((p) => p.pr === n) ?? { pr: n, fichiers: [] };
+  const retenue = (n: number): boolean =>
+    enAttente([de(n)], [...issue.fautives, ...issue.enAttente].map(de), contexte.ordreA02).length >
+    0;
   const traiter = async (p: Paquet): Promise<void> => {
     if (!p.length) return;
     if (await x.tester(p)) {
       for (const n of p) {
+        if (retenue(n)) {
+          issue.enAttente.push(n);
+          issue.premierCoup = false;
+          continue;
+        }
         try {
           await x.fusionner(n);
           issue.fusionnees.push(n);
@@ -150,31 +205,45 @@ export function commandeDeFusion(pr: number, tete: string): string {
 }
 
 // ── ligne de commande ────────────────────────────────────────────────────────────────────────────
+/** La ligne de commande, testable : `lireFichiers` rend les fichiers d'une PR (`gh pr view --json files`). */
+export function ligneDeCommande(
+  argv: readonly string[],
+  lireFichiers: (pr: number) => string[]
+): string {
+  const [commande, ...reste] = argv;
+  const brut = (nom: string): string | undefined => {
+    const i = reste.indexOf(`--${nom}`);
+    return i < 0 ? undefined : reste[i + 1];
+  };
+  const opt = (nom: string): string => {
+    const v = brut(nom);
+    if (v === undefined) throw new Error(`--${nom} manquant`);
+    return v;
+  };
+  const liste = (nom: string): number[] => opt(nom).split(',').filter(Boolean).map(Number);
+  const ordreA02 = brut('ordre-a02')?.split(',').filter(Boolean);
+  const prsDe = (nom: string): PrAFusionner[] =>
+    liste(nom).map((pr) => ({ pr, fichiers: lireFichiers(pr) }));
+  let sortie: unknown;
+  if (commande === 'composer')
+    sortie = composerPaquets(prsDe('prs'), Number(opt('taille')), ordreA02);
+  else if (commande === 'attente') sortie = enAttente(prsDe('prs'), prsDe('ecartees'), ordreA02);
+  else if (commande === 'taille')
+    sortie = tailleSuivante(Number(opt('apres')), opt('premier-coup') === 'oui');
+  else if (commande === 'moities') sortie = moities(liste('prs'));
+  else if (commande === 'commande') sortie = commandeDeFusion(Number(opt('pr')), opt('tete'));
+  else throw new Error('commande attendue : composer | attente | taille | moities | commande');
+  return typeof sortie === 'string' ? sortie : JSON.stringify(sortie);
+}
+
 const LANCE_EN_LIGNE_DE_COMMANDE = /[\\/]paquets-de-fusion\.[tj]s$/.test(process.argv[1] ?? '');
 if (LANCE_EN_LIGNE_DE_COMMANDE) {
-  const [commande, ...reste] = process.argv.slice(2);
-  const opt = (nom: string): string => {
-    const i = reste.indexOf(`--${nom}`);
-    if (i < 0 || reste[i + 1] === undefined) throw new Error(`--${nom} manquant`);
-    return reste[i + 1]!;
-  };
-  const numeros = () => opt('prs').split(',').map(Number);
   const fichiersDe = (n: number): string[] =>
     (
       JSON.parse(
         execFileSync('gh', ['pr', 'view', String(n), '--json', 'files'], { encoding: 'utf8' })
       ) as { files: { path: string }[] }
     ).files.map((f) => f.path);
-  let sortie: unknown;
-  if (commande === 'composer')
-    sortie = composerPaquets(
-      numeros().map((pr) => ({ pr, fichiers: fichiersDe(pr) })),
-      Number(opt('taille'))
-    );
-  else if (commande === 'taille')
-    sortie = tailleSuivante(Number(opt('apres')), opt('premier-coup') === 'oui');
-  else if (commande === 'moities') sortie = moities(numeros());
-  else if (commande === 'commande') sortie = commandeDeFusion(Number(opt('pr')), opt('tete'));
-  else throw new Error('commande attendue : composer | taille | moities | commande');
-  process.stdout.write(`${typeof sortie === 'string' ? sortie : JSON.stringify(sortie)}\n`);
+  process.stdout.write(`${ligneDeCommande(process.argv.slice(2), fichiersDe)}
+`);
 }
