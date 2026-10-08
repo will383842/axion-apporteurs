@@ -27500,7 +27500,8 @@
       "paths": [
         "scripts/ci/navigateurs-bornes.ts",
         "tests/unit/qualite/navigateurs-bornes.spec.ts",
-        "config/gel-phase-1.json"
+        "config/gel-phase-1.json",
+        "tests/unit/qualite/ci-navigateurs-a11y.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -27514,7 +27515,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 126 (#843 ; une PR de qualité ne verse pas sa propre tâche, arbitrage de la coordination), EXPRESS ; le code et le témoin sont livrés par #842 ; EXCEPTION AU GEL de la phase 1 (GOV-150), décidée par la coordination sous la délégation d'arbitrage de Williams (#319, commentaire 6044754455). Depuis le 2026-10-07 vers 18 h 25 UTC, environ la moitié des runs tombent sur le runner : la mise à jour automatique d'apt tient /var/lib/dpkg/lock-frontend, et playwright install --with-deps sort en 100 (« Could not get lock »). Les trois tentatives de QA-T59 s'enchaînaient sans pause. QA-T74 : avant chaque tentative, sous Linux, attendre que le verrou se libère (sudo -n fuser, toutes les 5 s, borné à 75 s) ; chaque tentative tuée à 180 s (240 s avant, QA-T59) ; entre deux tentatives, une pause de 30 s puis de 60 s, aucune après la dernière ; le pire cas, attente du verrou ET tentative ADDITIONNÉES (refus de l'exactitude sur #842), vaut 3 × (75 + 180) + 90 = 855 s, sous les quinze minutes de l'étape avec 45 s de marge. Le runner n'est pas touché (unattended-upgrades n'est pas arrêté). Échec fermé inchangé : trois échecs sortent en 1, aucun test n'est sauté. TÉMOINS : une pause entre deux tentatives échouées et aucune après la dernière, le verrou attendu avant chacune ; le pire cas calculé sur la SOMME, sous quinze minutes avec une marge ; un verrou encore tenu ne saute pas la tentative et il est nommé. DETTE NOMMÉE : les commentaires de .github/workflows/ci.yml (étape « Navigateurs des passes d accessibilite », dans les deux éclats) disent encore « quatre minutes » ; ils seront corrigés par la prochaine tâche qui touche ce workflow (GOV-155), sans étape neuve. QA-T59 garde son acceptance : ses 240 s se lisent 180 s depuis QA-T74 (note au prochain rattrapage).",
+      "acceptance": "Versée au rattrapage 126 (#843 ; une PR de qualité ne verse pas sa propre tâche, arbitrage de la coordination), EXPRESS ; le code et le témoin sont livrés par #842 ; EXCEPTION AU GEL de la phase 1 (GOV-150), décidée par la coordination sous la délégation d'arbitrage de Williams (#319, commentaire 6044754455). Acceptance réécrite au rattrapage 129 pour décrire le remède livré par #842. Le défaut : depuis le 2026-10-07 vers 18 h 25 UTC, environ la moitié des runs tombent sur le runner ; playwright install --with-deps passe par apt, la mise à jour automatique d'apt tient /var/lib/dpkg/lock-frontend, et l'installation sort en 100 (« Could not get lock »). La cause traitée : tuer une tentative à son délai tuait pnpm et playwright, mais PAS l'apt-get lancé sous sudo par --with-deps ; l'orphelin gardait le verrou, et les tentatives suivantes échouaient sur notre propre verrou (run 37687549026). QA-T74, en deux temps (`installerEnDeuxTemps` dans scripts/ci/navigateurs-bornes.ts, pure, outils injectés) : (1) LES DÉPENDANCES, `playwright install-deps` : chaque tentative n'est JAMAIS tuée (aucun délai ni signal dans `OPTIONS_DEPENDANCES`) et ne se rejoue qu'après être sortie d'elle-même, deux tentatives au plus ; avant chacune, sous Linux, le verrou d'apt du runner est attendu (sudo -n fuser, toutes les 5 s, 75 s au plus) ; un verrou encore tenu ne saute pas la tentative, il est nommé ; seul le timeout-minutes de l'étape (15 min) les borne. (2) LES NAVIGATEURS, `playwright install` SANS --with-deps, donc sans apt, seulement après des dépendances réussies : trois tentatives, chacune tuée à 120 s (tuer un téléchargement ne laisse aucun verrou), séparées d'une pause de 30 s puis de 60 s, aucune après la dernière ; ce temps borné (450 s) laisse au moins la moitié de l'étape aux dépendances. (3) Les deux commandes sont DÉRIVÉES du script a11y:navigateurs de package.json (`commandesDerivees`, RM-01) : la liste des navigateurs n'est pas recopiée, package.json (réservé à A02) n'est pas modifié, et un script qui n'a pas la forme « playwright install [--with-deps] <navigateurs> » est refusé, rien n'est deviné. Le runner n'est pas touché (unattended-upgrades n'est pas arrêté), ci.yml non plus. Échec fermé inchangé : l'échec de l'un des deux temps sort en 1, aucun test n'est sauté. TÉMOINS (tests/unit/qualite/navigateurs-bornes.spec.ts, et tests/unit/qualite/ci-navigateurs-a11y.spec.ts pour le lien entre package.json et le script borné) : le lancement des dépendances ne porte aucun délai ; le verrou attendu avant chaque tentative des dépendances, deux au plus, échec fermé ; un verrou encore tenu est nommé ; une pause entre deux téléchargements échoués et aucune après le dernier ; le téléchargement borné ne porte jamais --with-deps ; un script a11y:navigateurs d'une autre forme est refusé. DETTE NOMMÉE : les commentaires de .github/workflows/ci.yml (étape « Navigateurs des passes d accessibilite », dans les deux éclats) disent encore « quatre minutes » ; ils seront corrigés par la prochaine tâche qui touche ce workflow (GOV-155), sans étape neuve. QA-T59 garde son acceptance : sa borne par tentative se lit 120 s depuis QA-T74.",
       "tests": {
         "REQ-QA-016": [
           "tests/unit/qualite/navigateurs-bornes.spec.ts"
@@ -27542,13 +27543,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Versée au rattrapage 128, sur le feu vert de Williams du 2026-10-08 (rendre la chaîne de lots économe). Le workflow de lot (`scripts/lot/lot.workflow.js`) suit `partners/ADR-0024` et W16 (`docs/DECISIONS.md` §1), sans retirer aucun garde-fou : (1) deux lentilles partout, `exactitude` et `securite`, plus l architecte (A02) sur une tâche `schema` ; plus de lentille `simplicite` (RM-01 est jugée par `exactitude`) ni d agent de mutation (Stryker la mesure en porte A, `pnpm mutation:pr`) ; le refus de `securite` ou de `schema` est un veto, que le lead ne lève pas. (2) Au second tour, seules les lentilles qui ont refusé relisent en entier, plus `securite` toujours ; une lentille qui avait accepté reconfirme sur le seul delta du correctif et poste son avis sur la tête neuve. (3) Le contexte de chaque agent est réduit : le composeur (`scripts/lot/composer.ts`, `exigencesDuLot()`) écrit dans le lot le texte des SEULES exigences citées, lu dans `docs/requirements.json` (une REQ absente vaut `null`, un registre absent ne bloque pas la composition), et le workflow le colle dans le prompt au lieu de faire ouvrir le registre entier. (4) Le skill `lot` (`.claude/skills/lot/SKILL.md`) décrit la même chaîne. TÉMOIN (`tests/unit/gouvernance/chaine-de-lots-econome.spec.ts`), rouge d abord : il JOUE le workflow avec des agents de témoin, compte les agents lancés et ce qu on leur donne à lire ; une troisième lentille hors `schema`, une relecture entière par une lentille qui avait accepté, ou `securite` absente du second tour le font rougir.",
       "tests": {
         "REQ-GOV-011": [
           "tests/unit/gouvernance/chaine-de-lots-econome.spec.ts"
         ]
-      }
+      },
+      "branch": "t/gov-157-chaine-econome",
+      "owner": "A01",
+      "pr": 847,
+      "attestation": {
+        "pr": 847,
+        "sha": "a417a4ee854ab447cf8ec9f1b7673f33720f1aea",
+        "fusionneeAt": "2026-10-08T08:32:07Z"
+      },
+      "motif": null
     }
   ]
 }
