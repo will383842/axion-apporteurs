@@ -1,6 +1,6 @@
 -- DM-49 (REQ-DM-064, D-OPCO-6) — `attributions.idcc_saisi` : l'IDCC facultatif de quatre chiffres, en clair,
 -- sans aucun document. Forme d'A02, acceptée par la lentille sécurité (lot OPCO, rattrapage 54).
--- Préfixe PROVISOIRE : 20261003005080 (le prochain libre annoncé sur #831), à confirmer par A02. ADDITIVE.
+-- Préfixe : 20261003005026, donné par A02 (revue de la forme sur #838). ADDITIVE.
 --
 -- Colonne NULLABLE, `CHAR(4)` : un TEXTE, parce que les zéros de tête comptent (« 0044 ») ; EN CLAIR,
 -- parce qu'un IDCC désigne la convention collective de l'entreprise, pas une personne. La base refuse
