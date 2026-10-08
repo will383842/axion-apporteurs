@@ -377,9 +377,13 @@ function principal(): void {
     );
   }
   mkdirSync(join('docs/lots', id), { recursive: true });
-  const registreDesExigences = JSON.parse(readFileSync('docs/requirements.json', 'utf8')) as {
-    exigences: { id: string; texte: string }[];
-  };
+  // Registre absent (dépôt jetable d'un témoin) : chaque REQ citée vaut `null`, et le workflow donne
+  // alors à l'agent la commande qui la filtre. On ne compose pas moins pour autant.
+  const registreDesExigences = (
+    existsSync('docs/requirements.json')
+      ? JSON.parse(readFileSync('docs/requirements.json', 'utf8'))
+      : { exigences: [] }
+  ) as { exigences: { id: string; texte: string }[] };
   const exigences = exigencesDuLot(retenues, registreDesExigences.exigences);
   const lot = { id, phase, repo, taches: retenues, ecartees, exigences };
   writeFileSync(chemin, JSON.stringify(lot, null, 2) + '\n');

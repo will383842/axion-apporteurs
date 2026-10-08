@@ -163,7 +163,17 @@ const roleDev = (t) => (t.repo === 'axionia' ? 'dev-axionia' : 'dev-partners');
 // L'objet brut de la tâche portait `deps`, `hyp`, `owner`, `lot`, `issue`… que personne ne lit, et
 // le prompt envoyait vers des vues générées absentes d'un arbre neuf (elles sont hors git, GOV-123)
 // et vers un dossier qui n'existe pas. `acceptance` ne va qu'à ceux qui jugent le périmètre.
-const CHAMPS_UTILES = ['id', 'titre', 'repo', 'zone', 'paths', 'reqs', 'tests', 'sensible', 'schema'];
+const CHAMPS_UTILES = [
+  'id',
+  'titre',
+  'repo',
+  'zone',
+  'paths',
+  'reqs',
+  'tests',
+  'sensible',
+  'schema',
+];
 const ficheDe = (t, avecAcceptance) =>
   Object.fromEntries(
     [...CHAMPS_UTILES, ...(avecAcceptance ? ['acceptance'] : [])]
@@ -176,7 +186,9 @@ const exigencesDe = (t) =>
   (t.reqs ?? [])
     .map((r) => {
       const texte = lot.exigences?.[r];
-      return texte ? `- ${r} : ${texte}` : `- ${r} : texte absent du lot — lis-le filtré : ${FILTRER_UNE_REQ}`;
+      return texte
+        ? `- ${r} : ${texte}`
+        : `- ${r} : texte absent du lot — lis-le filtré : ${FILTRER_UNE_REQ}`;
     })
     .join('\n');
 
@@ -279,7 +291,11 @@ Rends ton avis sur ce delta et poste-le sur la tête avec \`gh pr review ${dev.p
       if (tour === 2) {
         const vetos = refusees.filter((r) => VETOS.includes(r.lentille));
         if (vetos.length > 0) {
-          return { dev, refuse: true, motif: `veto ${vetos.map((r) => r.lentille).join(', ')} : ${motifs.join(' · ')}` };
+          return {
+            dev,
+            refuse: true,
+            motif: `veto ${vetos.map((r) => r.lentille).join(', ')} : ${motifs.join(' · ')}`,
+          };
         }
         const lead = await agent(
           `${contexte(t)}

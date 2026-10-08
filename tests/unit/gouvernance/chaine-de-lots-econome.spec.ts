@@ -73,7 +73,10 @@ async function jouer(repondre: Repondre, tache: Record<string, unknown> = TACHE)
   };
   const parallel = (thunks: (() => Promise<unknown>)[]) =>
     Promise.all(thunks.map((f) => f().catch(() => null)));
-  const pipeline = (items: unknown[], ...etapes: ((p: unknown, i: unknown, n: number) => unknown)[]) =>
+  const pipeline = (
+    items: unknown[],
+    ...etapes: ((p: unknown, i: unknown, n: number) => unknown)[]
+  ) =>
     Promise.all(
       items.map(async (item, n) => {
         let r: unknown = item;
@@ -115,7 +118,9 @@ const revues = (appels: Appel[], tour: number) =>
 
 describe('la chaîne de lots — deux lentilles, et la mutation à Stryker', () => {
   it('REQ-GOV-011 — une tâche ordinaire reçoit exactement exactitude et securite, sans simplicite ni agent de mutation', async () => {
-    const { appels, sortie } = await jouer((label) => (label.startsWith('dev:') ? DEV_LIVRE : accord));
+    const { appels, sortie } = await jouer((label) =>
+      label.startsWith('dev:') ? DEV_LIVRE : accord
+    );
     expect(revues(appels, 1)).toEqual(['exactitude', 'securite']);
     expect(appels.some((a) => a.agentType === 'verificateur-rouge')).toBe(false);
     expect(appels.some((a) => a.label.includes('simplicite'))).toBe(false);
