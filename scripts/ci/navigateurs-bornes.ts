@@ -20,7 +20,9 @@
  * `pnpm pre-gate` la classe LENTE (`scripts/prevol.ts`, ETAPES_LENTES) : elle ne tourne jamais en local.
  */
 import { spawnSync, type SpawnSyncOptions } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
+import { homedir, userInfo } from 'node:os';
+import { join } from 'node:path';
 
 /** Temps 1 : au plus deux tentatives des dépendances, chacune SORTIE d'elle-même avant la suivante. */
 export const TENTATIVES_DEPENDANCES = 2;
@@ -32,6 +34,26 @@ export const PAUSES_MS: readonly number[] = [30_000, 60_000];
 /** L'attente bornée du verrou d'apt avant chaque tentative des dépendances, et son pas. */
 export const ATTENTE_VERROU_MS = 75_000;
 export const PAS_VERROU_MS = 5_000;
+/**
+ * Le dossier, sous `$HOME`, où apt garde les paquets .deb des navigateurs ; ci.yml le met en cache
+ * (`~/` + ce chemin, gardé par `ci-navigateurs-a11y.spec.ts`). Runs 37761685272 et 37763717776 : les
+ * 126 Mo venus du miroir à quelques dizaines de ko/s ont dépassé les 15 min de l'étape.
+ */
+export const DOSSIER_PAQUETS = '.cache/apt-navigateurs';
+
+/** PURE. La configuration d'apt qui range ET garde les archives dans `dossier` (absolu). */
+export function configurationApt(dossier: string): string {
+  if (!dossier.startsWith('/') || /["\n;]/.test(dossier))
+    throw new Error(
+      `le dossier des paquets d'apt doit être absolu et sans guillemet : « ${dossier} »`
+    );
+  return [
+    `Dir::Cache::Archives "${dossier.replace(/\/$/, '')}/";`,
+    'APT::Keep-Downloaded-Packages "true";',
+    'Binary::apt::APT::Keep-Downloaded-Packages "true";',
+    '',
+  ].join('\n');
+}
 
 /** Une tentative bornée : `true` si la commande est sortie en 0 dans le délai. */
 export type Tentative = (delaiMs: number) => boolean;
@@ -153,8 +175,39 @@ const commandes = (): ReturnType<typeof commandesDerivees> => {
   return commandesDerivees(paquet.scripts['a11y:navigateurs'] ?? '');
 };
 
-const tenterLesDependances: TentativeLibre = () =>
-  spawnSync('pnpm', commandes().dependances, OPTIONS_DEPENDANCES).status === 0;
+/**
+ * Sous Linux, apt range ses archives dans le dossier mis en cache (restauré par ci.yml avant cette
+ * étape) ; après coup, le dossier est rendu à l'utilisateur du job, pour que l'action de cache le
+ * lise. Un échec ici n'est qu'un cache perdu : il est NOMMÉ, et l'installation continue.
+ */
+const brancherLeCacheDesPaquets = (): void => {
+  if (process.platform !== 'linux') return;
+  const dossier = join(homedir(), DOSSIER_PAQUETS);
+  mkdirSync(join(dossier, 'partial'), { recursive: true });
+  const ecrit = spawnSync('sudo', ['-n', 'tee', '/etc/apt/apt.conf.d/99-navigateurs-cache'], {
+    input: configurationApt(dossier),
+    stdio: ['pipe', 'ignore', 'inherit'],
+  });
+  if (ecrit.status !== 0)
+    console.log(`::warning::le cache des paquets d'apt n'est pas branché (sortie ${ecrit.status})`);
+};
+
+const rendreLeCacheDesPaquets = (): void => {
+  if (process.platform !== 'linux') return;
+  const { uid, gid } = userInfo();
+  spawnSync('sudo', ['-n', 'chown', '-R', `${uid}:${gid}`, join(homedir(), DOSSIER_PAQUETS)], {
+    stdio: 'inherit',
+  });
+};
+
+const tenterLesDependances: TentativeLibre = () => {
+  brancherLeCacheDesPaquets();
+  try {
+    return spawnSync('pnpm', commandes().dependances, OPTIONS_DEPENDANCES).status === 0;
+  } finally {
+    rendreLeCacheDesPaquets();
+  }
+};
 
 /** Temps 2 : le téléchargement, tué au délai. */
 const tenterLesNavigateurs: Tentative = (delaiMs) =>

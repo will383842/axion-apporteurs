@@ -27501,7 +27501,9 @@
         "scripts/ci/navigateurs-bornes.ts",
         "tests/unit/qualite/navigateurs-bornes.spec.ts",
         "config/gel-phase-1.json",
-        "tests/unit/qualite/ci-navigateurs-a11y.spec.ts"
+        "tests/unit/qualite/ci-navigateurs-a11y.spec.ts",
+        ".github/workflows/ci.yml",
+        "scripts/gates/gov-conventions.ts"
       ],
       "schema": false,
       "sensible": [],

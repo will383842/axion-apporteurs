@@ -160,3 +160,17 @@ describe('REQ-QA-016 — QA-T74 : les deux commandes, dérivées de `a11y:naviga
     expect(() => commandesDerivees('playwright install --with-deps')).toThrow(/a11y:navigateurs/);
   });
 });
+
+describe('REQ-QA-016 — QA-T74 : apt garde ses paquets dans le dossier mis en cache', () => {
+  it('REQ-QA-016 — la configuration d’apt pointe les archives vers le dossier, et les garde', () => {
+    const conf = module_.configurationApt('/home/runner/.cache/apt-navigateurs');
+    expect(conf).toContain('Dir::Cache::Archives "/home/runner/.cache/apt-navigateurs/";');
+    expect(conf).toContain('APT::Keep-Downloaded-Packages "true";');
+    expect(conf).toContain('Binary::apt::APT::Keep-Downloaded-Packages "true";');
+  });
+
+  it('REQ-QA-016 — TÉMOIN : un dossier relatif ou porteur d’un guillemet est refusé, rien n’est écrit à apt', () => {
+    expect(() => module_.configurationApt('.cache/apt')).toThrow(/absolu/);
+    expect(() => module_.configurationApt('/tmp/a"b')).toThrow(/absolu/);
+  });
+});
