@@ -20256,7 +20256,7 @@
       "externe": null,
       "estimateDays": 0.25,
       "statut": "fusionnee",
-      "acceptance": "Constat de la coordination le 2026-10-01, versé en priorité : l'étape « Navigateurs des passes d accessibilite » de `.github/workflows/ci.yml` (`pnpm a11y:navigateurs`, soit `playwright install --with-deps chromium webkit`) s'est BLOQUÉE deux fois le même jour, plus de 25 minutes sur #330 et sur #333, `apt-get` pendant ; il a fallu relancer à la main, et chaque PR touchée perd environ 30 minutes. (1) L'étape porte un `timeout-minutes` borné. (2) Une nouvelle tentative automatique, bornée en nombre, relance l'installation qui a expiré ; au-delà, l'étape échoue en le disant. (3) Les navigateurs Playwright sont mis en cache (`actions/cache` sur `~/.cache/ms-playwright`, clé dérivée du verrou, `navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}`, puisque le verrou épingle Playwright (RM-01) et qu'aucune commande n'est lancée pour la lire) ; un cache trouvé saute le téléchargement des navigateurs, les dépendances système restant installées. (4) TÉMOIN de structure (`tests/unit/qualite/ci-navigateurs-a11y.spec.ts`), rouge d'abord : il exige sur cette étape un `timeout-minutes`, la nouvelle tentative bornée et l'étape de cache avec sa clé ; retirer l'un des trois le fait rougir. (5) `package.json` (chemin réservé à A02) n'est pas modifié : tout se fait dans le workflow. `ci.yml` est aussi déclaré par QA-T20b, QA-T16 et GOV-063 : jamais dans le même lot. ARBITRAGE A01 (rattrapage 45, mesure de A06 sur main 2e38febd) : la porte A est figée ENTIÈRE par `scripts/gates/gov-conventions.ts` (sept violations mesurées : étapes non figées et repointées, porte altérée par `timeout-minutes`, action tierce non relevée, action après la première commande du job, commande intégrée). Donc : (a) l'étape de cache se place juste après `setup-node`, AVANT `pnpm install` ; (b) la clé dérive du verrou, et l'étape qui lisait la version de Playwright disparaît (une montée de dépendance refroidit le cache une fois, ce qui est accepté) ; (c) les étapes nouvelles ou modifiées, `timeout-minutes: 15` et la boucle de trois tentatives sous `timeout 240` compris, sont figées dans `PORTE_A_FIGEE` ; (d) `actions/cache@v4` est relevée dans `OUTILLAGE_FIGE` avec son commit (v4 = 0057852bfaa89a56745cba8c7296529d2fc39830, `runs.using: node20`, relevé sur la forge le 2026-10-02). `scripts/gates/gov-conventions.ts` entre dans les paths ; il est aussi déclaré par GOV-063 (non revendiquée). PRÉCISION A01 (rattrapage 46, mesure de A06) : `pnpm pre-gate` refuse un `run:` de plusieurs lignes ou portant un `$` ; les trois tentatives s'écrivent donc en UNE ligne (`timeout 240 pnpm a11y:navigateurs || …` trois fois, `timeout-minutes: 15`), mêmes bornes, la dernière tentative donne son code. Le témoin « aucune liste morte » de `tests/unit/gouvernance/relectures-sans-defaut.spec.ts` reconnaît le script par la MÊME règle que `etapesRapides()` (`pnpm <script>` comme mot dans la commande), et une étape qui ne lance pas le script le rougit toujours. ARBITRAGE A01 (rattrapage 48, mesure de A06) : REQ-GOV-018 (`gardes-transposees.spec.ts`) exige que toute commande des YAML de `.github/` soit `pnpm <script>` sous forme fermée ; aucune ligne `timeout … || …` ne l'est. Les tentatives bornées vivent donc dans `scripts/ci/navigateurs-bornes.ts` (cœur PUR testable : au plus 3 tentatives de `pnpm a11y:navigateurs`, chacune tuée à 240 s par l'option `timeout` de `spawnSync`, portable, sortie 1 si toutes échouent), lancé par le script `a11y:navigateurs:bornes` de `package.json` (label `role:architecte`) ; `ci.yml` appelle `pnpm a11y:navigateurs:bornes` (`timeout-minutes: 15` gardé) ; `ETAPES_LENTES` de `scripts/prevol.ts` déclare `a11y:navigateurs:bornes` à la place de `a11y:navigateurs` ; `PORTE_A_FIGEE` suit. Témoin du cœur : `tests/unit/qualite/navigateurs-bornes.spec.ts`. Un script shell dans `package.json` est écarté (ne tourne pas sous Windows, aucun cœur testable). `package.json` est partagé avec GOV-063, JUR-T35 et QA-T61.",
+      "acceptance": "Constat de la coordination le 2026-10-01, versé en priorité : l'étape « Navigateurs des passes d accessibilite » de `.github/workflows/ci.yml` (`pnpm a11y:navigateurs`, soit `playwright install --with-deps chromium webkit`) s'est BLOQUÉE deux fois le même jour, plus de 25 minutes sur #330 et sur #333, `apt-get` pendant ; il a fallu relancer à la main, et chaque PR touchée perd environ 30 minutes. (1) L'étape porte un `timeout-minutes` borné. (2) Une nouvelle tentative automatique, bornée en nombre, relance l'installation qui a expiré ; au-delà, l'étape échoue en le disant. (3) Les navigateurs Playwright sont mis en cache (`actions/cache` sur `~/.cache/ms-playwright`, clé dérivée du verrou, `navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}`, puisque le verrou épingle Playwright (RM-01) et qu'aucune commande n'est lancée pour la lire) ; un cache trouvé saute le téléchargement des navigateurs, les dépendances système restant installées. (4) TÉMOIN de structure (`tests/unit/qualite/ci-navigateurs-a11y.spec.ts`), rouge d'abord : il exige sur cette étape un `timeout-minutes`, la nouvelle tentative bornée et l'étape de cache avec sa clé ; retirer l'un des trois le fait rougir. (5) `package.json` (chemin réservé à A02) n'est pas modifié : tout se fait dans le workflow. `ci.yml` est aussi déclaré par QA-T20b, QA-T16 et GOV-063 : jamais dans le même lot. ARBITRAGE A01 (rattrapage 45, mesure de A06 sur main 2e38febd) : la porte A est figée ENTIÈRE par `scripts/gates/gov-conventions.ts` (sept violations mesurées : étapes non figées et repointées, porte altérée par `timeout-minutes`, action tierce non relevée, action après la première commande du job, commande intégrée). Donc : (a) l'étape de cache se place juste après `setup-node`, AVANT `pnpm install` ; (b) la clé dérive du verrou, et l'étape qui lisait la version de Playwright disparaît (une montée de dépendance refroidit le cache une fois, ce qui est accepté) ; (c) les étapes nouvelles ou modifiées, `timeout-minutes: 15` et la boucle de trois tentatives sous `timeout 240` compris, sont figées dans `PORTE_A_FIGEE` ; (d) `actions/cache@v4` est relevée dans `OUTILLAGE_FIGE` avec son commit (v4 = 0057852bfaa89a56745cba8c7296529d2fc39830, `runs.using: node20`, relevé sur la forge le 2026-10-02). `scripts/gates/gov-conventions.ts` entre dans les paths ; il est aussi déclaré par GOV-063 (non revendiquée). PRÉCISION A01 (rattrapage 46, mesure de A06) : `pnpm pre-gate` refuse un `run:` de plusieurs lignes ou portant un `$` ; les trois tentatives s'écrivent donc en UNE ligne (`timeout 240 pnpm a11y:navigateurs || …` trois fois, `timeout-minutes: 15`), mêmes bornes, la dernière tentative donne son code. Le témoin « aucune liste morte » de `tests/unit/gouvernance/relectures-sans-defaut.spec.ts` reconnaît le script par la MÊME règle que `etapesRapides()` (`pnpm <script>` comme mot dans la commande), et une étape qui ne lance pas le script le rougit toujours. ARBITRAGE A01 (rattrapage 48, mesure de A06) : REQ-GOV-018 (`gardes-transposees.spec.ts`) exige que toute commande des YAML de `.github/` soit `pnpm <script>` sous forme fermée ; aucune ligne `timeout … || …` ne l'est. Les tentatives bornées vivent donc dans `scripts/ci/navigateurs-bornes.ts` (cœur PUR testable : au plus 3 tentatives de `pnpm a11y:navigateurs`, chacune tuée à 240 s par l'option `timeout` de `spawnSync`, portable, sortie 1 si toutes échouent), lancé par le script `a11y:navigateurs:bornes` de `package.json` (label `role:architecte`) ; `ci.yml` appelle `pnpm a11y:navigateurs:bornes` (`timeout-minutes: 15` gardé) ; `ETAPES_LENTES` de `scripts/prevol.ts` déclare `a11y:navigateurs:bornes` à la place de `a11y:navigateurs` ; `PORTE_A_FIGEE` suit. Témoin du cœur : `tests/unit/qualite/navigateurs-bornes.spec.ts`. Un script shell dans `package.json` est écarté (ne tourne pas sous Windows, aucun cœur testable). `package.json` est partagé avec GOV-063, JUR-T35 et QA-T61.\n[gouvernance, rattrapage 127 : la borne de 240 s par tentative citée plus haut se lit 180 s depuis QA-T74 (#842), qui ajoute l'attente du verrou d'apt et une pause entre deux tentatives ; le pire cas de l'étape vaut 855 s.]",
       "tests": {
         "REQ-QA-016": [
           "tests/unit/qualite/ci-navigateurs-a11y.spec.ts"
@@ -23202,14 +23202,23 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "acceptance": "Versée au rattrapage 82, tâche jumelle de SEC-51, sur le point 5 de l'avis de la lentille sécurité (2026-10-03), arbitrage de la coordination. La LECTURE d'une fiche n'est pas du démarchage et reste permise, la vérification en a besoin. Mais l'accès aux COORDONNÉES du contact d'une entreprise réservée est journalisé (acteur, attribution, date, par identifiants seuls) : c'est la seule trace qui permette de constater un démarchage hors outil pendant la réserve (HYP-W19-NON-EXPLOITATION). (1) Un accesseur UNIQUE côté serveur (`src/server/securite/acces-coordonnees.ts`) déchiffre les coordonnées du contact (via `pii.ts`) pour la console, et écrit un événement de journal, dans la même transaction, quand l'entreprise est réservée (la garde de SEC-51). Aucune autre voie de la console ne déchiffre ces coordonnées. (2) La charge de l'événement est fermée : type, acteur, attribution, horodatage ; jamais de nom, d'adresse, de téléphone ni de cause de la réserve. Le type de journal entre à l'enum et au glossaire (migration additive ; forme à confirmer par A02 à la revendication). (3) Les écrans de console qui affichent les coordonnées (fiche de qualification, fiche prospect) appellent cet accesseur. (4) TÉMOINS : un accès pendant la réserve → un événement, par identifiants seuls ; un accès hors réserve → aucun ; un déchiffrement par une autre voie de la console → rouge (témoin dérivé des fichiers suivis). Auteur : A05. Lentilles sécurité et schema (A02).\n\nTÉMOIN DE L'ART. 3.5 (rattrapage 120) : il revient à SEC-52, sur décision de la coordination (#786, commentaire 6035589959, point 3), après la revue de refus de l'exactitude sur #788 (revue 5440669242, point 3). Décision, MOT POUR MOT : 3. **Le témoin de l'art. 3.5** (l'échéance en console, sans l'apporteur) : décision de la coordination, il revient à **SEC-52** (« tout accès de la console aux coordonnées du contact d'une entreprise réservée… »), qui dépend de SEC-51. Nomme-la dans le corps de #788, sous une limite nommée. La gouvernance le versera au prochain rattrapage.\nRevue, MOT POUR MOT : 3. **Le témoin de l'art. 3.5** (rattrapage 89 : « la console affiche l'échéance de la réserve, et aucun identifiant ni nom de l'apporteur ») est déclaré « dû à la tâche d'écran qui lira la fiche », sans nom de tâche. Une dette de l'acceptance doit être versée au registre, dans une tâche NOMMÉE, sinon elle se perd. C'est au prochain rattrapage, et le corps doit nommer la tâche.",
+      "statut": "fusionnee",
+      "acceptance": "Versée au rattrapage 82, tâche jumelle de SEC-51, sur le point 5 de l'avis de la lentille sécurité (2026-10-03), arbitrage de la coordination. La LECTURE d'une fiche n'est pas du démarchage et reste permise, la vérification en a besoin. Mais l'accès aux COORDONNÉES du contact d'une entreprise réservée est journalisé (acteur, attribution, date, par identifiants seuls) : c'est la seule trace qui permette de constater un démarchage hors outil pendant la réserve (HYP-W19-NON-EXPLOITATION). (1) Un accesseur UNIQUE côté serveur (`src/server/securite/acces-coordonnees.ts`) déchiffre les coordonnées du contact (via `pii.ts`) pour la console, et écrit un événement de journal quand l'entreprise est réservée : la trace de l'accès est écrite d'abord, puis la lecture se fait, en échec fermé (si la trace échoue, rien n'est lu), en deux transactions (la garde de SEC-51). Aucune autre voie de la console ne déchiffre ces coordonnées. (2) La charge de l'événement est fermée : type, acteur, attribution, horodatage ; jamais de nom, d'adresse, de téléphone ni de cause de la réserve. Le type de journal entre à l'enum et au glossaire (migration additive ; forme à confirmer par A02 à la revendication). (3) Les écrans de console qui affichent les coordonnées (fiche de qualification, fiche prospect) appellent cet accesseur. (4) TÉMOINS : un accès pendant la réserve → un événement, par identifiants seuls ; un accès hors réserve → aucun ; un déchiffrement par une autre voie de la console → rouge (témoin dérivé des fichiers suivis). Auteur : A05. Lentilles sécurité et schema (A02).\n\nTÉMOIN DE L'ART. 3.5 (rattrapage 120) : il revient à SEC-52, sur décision de la coordination (#786, commentaire 6035589959, point 3), après la revue de refus de l'exactitude sur #788 (revue 5440669242, point 3). Décision, MOT POUR MOT : 3. **Le témoin de l'art. 3.5** (l'échéance en console, sans l'apporteur) : décision de la coordination, il revient à **SEC-52** (« tout accès de la console aux coordonnées du contact d'une entreprise réservée… »), qui dépend de SEC-51. Nomme-la dans le corps de #788, sous une limite nommée. La gouvernance le versera au prochain rattrapage.\nRevue, MOT POUR MOT : 3. **Le témoin de l'art. 3.5** (rattrapage 89 : « la console affiche l'échéance de la réserve, et aucun identifiant ni nom de l'apporteur ») est déclaré « dû à la tâche d'écran qui lira la fiche », sans nom de tâche. Une dette de l'acceptance doit être versée au registre, dans une tâche NOMMÉE, sinon elle se perd. C'est au prochain rattrapage, et le corps doit nommer la tâche.\n[gouvernance, rattrapage 127 : le point (1) disait « dans la même transaction » ; il suit l'arbitrage de la coordination sur #828 (6048241016, voie (b)), avec l'accord de la sécurité (6048406472). Un accès ne peut jamais être lu sans avoir été tracé ; le seul écart possible est une trace sans lecture.]",
       "tests": {
         "REQ-SEC-042": [
           "tests/unit/securite/acces-coordonnees.spec.ts",
           "tests/integration/acces-coordonnees.spec.ts"
         ]
-      }
+      },
+      "branch": "t/sec-52",
+      "owner": "A05",
+      "pr": 828,
+      "attestation": {
+        "pr": 828,
+        "sha": "ee4f4a5acc709e6eb24d924eae00ce9166fad0d3",
+        "fusionneeAt": "2026-10-07T23:59:20Z"
+      },
+      "motif": null
     },
     {
       "id": "UX-P1-49",
@@ -23605,7 +23614,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Versée au rattrapage 84, tâche CORRECTIVE, BLOQUANTE avant la mise en service : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat. REQ-DM-009, REQ-DM-010 et REQ-JUR-032 sont réécrites sur les textes de la juriste : aucun palier, aucun score, aucun taux et aucun seuil de dépôts n'existe par apporteur ; la priorité d'appel est un ordre de travail interne fondé sur la capacité de la Société et une surcharge manuelle motivée. (1) `seuilPrioritaire()` (`src/domain/attribution/seuil-prioritaire.ts`, livré par CPL-T13) perd `palierConfiance` : il ne lit plus que la capacité et la surcharge manuelle, et ne compte rien par apporteur. (2) `apporteurs.seuil_verification_prioritaire` et `seuil_verification_prioritaire_at` (SEC-47) tombent, avec leur rendu dans `for-apporteur.ts` : en DEUX PR, forme FERME d'A02 : D'ABORD le code et `prisma/schema.prisma`, SANS migration (le code cesse de lire et d'écrire les deux colonnes) ; PUIS, après le déploiement de la première, la migration `DROP CONSTRAINT apporteurs_seuil_surcharge_tracee` et `DROP COLUMN`, sous l'EXEMPTION NOMMÉE du témoin des migrations additives (`tests/integration/migrations-additives.spec.ts`), avec un ADR court (décision de Williams du 2026-10-03). La seconde PR porte le label `role:architecte` (`docs/adr/`). (3) `attributions.verification_prioritaire` (DM-07) ne se pose plus par un seuil de dépôts : seule une surcharge manuelle motivée par des éléments propres à la demande la met en vérification (REQ-DM-010). (4) Si un code livré pose `verificationPrioritaire` à la suspension d'un apporteur, cette tâche le retire aussi : REQ-SEC-019 amendée, art. 3.7 al. 3 (aucune attribution en cours n'est mise en vérification du seul fait de la suspension). TÉMOINS (`tests/integration/sans-palier.spec.ts`) : cent dépôts d'un même apporteur ne posent aucune vérification ; aucune colonne ni fonction ne porte un palier ou un seuil par apporteur ; la mise en vérification sans motif est refusée ; une suspension ne met aucune attribution en vérification. Label `schema`, préfixe à la revendication. Auteur : A05. Lentilles sécurité, schema (A02) et A07. BLOQUANTE AVANT LA MISE EN SERVICE (marqueur uniformisé, rattrapage 108, exactitude).\n\nDETTE NOMMÉE (rattrapage 120 ; corps de la PR #789), MOT POUR MOT :\n- **DETTE 2 : deux témoins de l'acceptance ne sont pas livrés**, en base, dans `sans-palier.spec.ts` : « la mise en vérification sans motif est refusée » et « cent dépôts d'un même apporteur ne posent aucune vérification ». Aucune surcharge manuelle motivée n'existe encore en code : il n'y a rien à juger en base. À VERSER au registre au prochain rattrapage, sur la tâche qui livrera cette surcharge, ou sur la seconde PR de SEC-56 : sinon la clôture de SEC-56 les effacerait. Ce que cette PR livre à leur place : des témoins de lecture du dépôt suivi par git (aucun code ne pose la vérification à vrai).\n[gouvernance : ces deux témoins restent dus, sur la seconde PR de SEC-56 ou sur la tâche qui livrera la surcharge manuelle motivée ; ils sont versés ici pour que la clôture de la première PR ne les efface pas.]",
       "tests": {
         "REQ-DM-009": [
@@ -23617,7 +23626,16 @@
         "REQ-JUR-032": [
           "tests/integration/sans-palier.spec.ts"
         ]
-      }
+      },
+      "branch": "t/sec-56",
+      "owner": "A05",
+      "pr": 789,
+      "attestation": {
+        "pr": 789,
+        "sha": "88095f97813b7ec434ca76b5035c10fea1ed812c",
+        "fusionneeAt": "2026-10-07T21:35:16Z"
+      },
+      "motif": null
     },
     {
       "id": "DM-62",
@@ -26357,7 +26375,7 @@
     {
       "hyp": [],
       "externe": null,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "phase": 1,
       "repo": "partners",
       "schema": true,
@@ -26415,7 +26433,16 @@
         "REQ-JUR-007": [
           "tests/unit/domaine/anteriorite-apres-confirmation.spec.ts"
         ]
-      }
+      },
+      "branch": "t/lot-b-dm71-targ044",
+      "owner": "A05",
+      "pr": 815,
+      "attestation": {
+        "pr": 815,
+        "sha": "9b3b6c5d10aa11735f5aafa13710b0a557b2359c",
+        "fusionneeAt": "2026-10-07T22:59:55Z"
+      },
+      "motif": null
     },
     {
       "hyp": [],
@@ -26495,7 +26522,7 @@
     {
       "hyp": [],
       "externe": null,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "phase": 1,
       "repo": "partners",
       "schema": false,
@@ -26545,12 +26572,21 @@
         "REQ-DM-011": [
           "tests/unit/securite/acces-coupe-a-la-fin-du-contrat.spec.ts"
         ]
-      }
+      },
+      "branch": "t/sec-70",
+      "owner": "A05",
+      "pr": 839,
+      "attestation": {
+        "pr": 839,
+        "sha": "4c9a3127e59cd686e3601489c1efbd6b18287407",
+        "fusionneeAt": "2026-10-07T21:55:56Z"
+      },
+      "motif": null
     },
     {
       "hyp": [],
       "externe": null,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "phase": 1,
       "repo": "partners",
       "schema": false,
@@ -26583,7 +26619,16 @@
         "REQ-JUR-003": [
           "tests/unit/contrat/gabarit-recopie-contrat-v2.spec.ts"
         ]
-      }
+      },
+      "branch": "t/jur-t66-bis",
+      "owner": "A07",
+      "pr": 810,
+      "attestation": {
+        "pr": 810,
+        "sha": "8c76ae8bf611dd12f0726cc0ebb7c7c8280c732f",
+        "fusionneeAt": "2026-10-07T20:25:13Z"
+      },
+      "motif": null
     },
     {
       "hyp": [],
@@ -26800,13 +26845,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Versée au rattrapage 120 (gouvernance, d'après la coordination, sur la recommandation de la sécurité). La vérification d'une entreprise reste FERMÉE tant qu'elle n'a pas de plafond (rattrapage 96) : cette tâche la débloque, et EXT-T06 n'est visible qu'après elle, sans en dépendre pour sa fusion. Le plafond est porté par le secret `PARTNERS_VERIFICATION_PLAFONDS`, déclaré par son NOM seul (`src/lib/env.ts`, `docs/env.md`, `.env.example`), cinq clés fermées, nommées par la PR, avec un défaut FERMÉ ; les compteurs de la famille `verif:` (par identité et par empreinte d'adresse réseau), au registre des débits (`rate-limit.ts`, sous la garde `securite:rate-famille`), à la place de `compterAvantLaDecision` ; des fenêtres glissantes, sur la journée et en rafale ; un message de refus neutre, au texte de la juriste. VALEURS : en configuration privée, posées par d4 sur délégation de Williams (07/10), à confirmer par lui ; aucun chiffre au registre ni dans un fichier suivi par git (règle de publication). \n\nPRINCIPE DE LA SÉCURITÉ (#319, commentaire 6036696268, sans chiffre), MOT POUR MOT (extrait : de « Le principe » jusqu'à la fin) :\n**Le principe, trois bornes qui forment un tout** (registre `rate-limit.ts`, famille `verif:`), toutes en **fenêtres glissantes** et en **échec FERMÉ** (`surPanne: refuser`) :\n1. un plafond **par apporteur sur la journée** ;\n2. un plafond **par apporteur en rafale**, sur une fenêtre courte, qui arrête un script sans gêner un humain ;\n3. un plafond **par empreinte d'adresse réseau sur la journée**, qui borne plusieurs comptes derrière une même machine sans bloquer un bureau partagé.\n\n**La règle de calibrage** : le plafond journalier couvre la journée la plus active d'un apporteur qui prospecte, sans jamais gêner un usage réel. Il rend en même temps lente et visible une cartographie en masse par le signal `dejaDeclaree` (EXT-T06).\n\n**Ce que le plafond N'EST PAS** (point pour la juriste, à confirmer en une ligne) :\n- ce n'est PAS une limite des DÉPÔTS d'un apporteur (décision de Williams du 2026-10-03, SEC-56) ;\n- ce n'est PAS un compteur qui juge l'apporteur (REQ-JUR-031).\n\nC'est une protection TECHNIQUE d'une consultation, comme la limite de débit du dépôt (SEC-12). Elle n'a aucun effet sur les attributions, les commissions ni le statut, n'entre dans aucun score ni aucune anomalie, et ne se journalise que comme un refus de débit. Le refus est NOMMÉ, il dit à l'apporteur qu'il pourra reprendre plus tard, et il ne donne ni compte ni chiffre.\n\n**Une revue après un premier mois d'usage réel**, sur un seul nombre agrégé : combien d'apporteurs ont atteint le plafond, jamais leur identité.\n\nCONDITIONS DE LA JURISTE (#319, commentaire 6036671294, sans lesquelles le plafond deviendrait un compteur au sens de l'art. 3.7 al. 3 du v2), MOT POUR MOT :\n1. **Le dépôt ne passe JAMAIS par lui.** Si une déclaration exigeait une vérification préalable, plafonner les vérifications plafonnerait les dépôts. Ce serait contraire à SEC-56 et à l'art. 3.7 al. 3 (« sur le nombre de déclarations, sur leur rythme »). Le dépôt garde sa seule limite technique, identique pour tous (SEC-12).\n2. **Il est technique et identique pour tous**, sans aucun effet sur l'apporteur : pas de trace à sa fiche, pas d'Anomalie, pas de score, pas d'antécédent. Aucune décision ne peut s'en servir, ni suspension, ni mise en demeure, ni résiliation (art. 3.7 al. 3 et 11.2). Le dépasser ouvre seulement l'attente de la fenêtre.\n3. **Le message est neutre** : il dit l'attente, pas une faute.\n4. **Pas d'effet sur la réserve** : une vérification refusée par le plafond n'est PAS une vérification au sens de l'art. 3.5. Elle n'ouvre aucune réserve de 30 jours et n'en écrit aucune.\n\nTEXTE DU REFUS NEUTRE (juriste, #319, commentaire 6039077581, qui intègre la rectification de vocabulaire 6036797355, point 4), MOT POUR MOT : « Titre : Vérification indisponible pour le moment\nPhrase : Vous pourrez vérifier cette entreprise un peu plus tard. Vous pouvez aussi la déposer dès maintenant, sans la vérifier.\nAction : l'action commune existante ACTIONS_COMMUNES.deposerUneEntreprise (route /deposer) »\nSes règles et ses témoins, même commentaire, MOT POUR MOT :\n**Règles** :\n- Le texte ne contient ni chiffre, ni durée, ni « trop », ni « limite », ni « seuil ». Il ne laisse deviner ni l'existence d'un compte ni sa valeur, et ne suggère aucune faute (condition 3).\n- La seconde phrase est VRAIE et doit le rester : le dépôt ne passe jamais par la vérification (condition 1). Si ce n'était plus le cas, le texte deviendrait faux, et le plafond deviendrait une limite des dépôts.\n- Le même texte vaut pour les trois fenêtres (la journée, la rafale, l'adresse). Il ne dit pas laquelle a joué.\n- L'écran n'écrit rien, ni à la fiche de l'apporteur ni au journal des décisions. Aucune réserve de l'art. 3.5 n'est ouverte (condition 4).\n\n**Témoins** :\n- le rendu du refus ne contient aucun chiffre ;\n- il est identique pour les trois fenêtres ;\n- l'action mène à `/deposer`.\n\nARBITRAGE DE LA COORDINATION (#319, commentaire 6036979782, sans chiffre ; le segment de son point 1 est versé à REQ-SEC-021), points 2 à 4, MOT POUR MOT :\n**2. La garde `securite:rate-famille` gagne une troisième marque**, « lues en configuration privée », plus étroite que l'ancienne sentinelle retirée le 04/10 (#691). Ses conditions, celles de la sécurité :\n- la sentinelle `LIMITE_HORS_DEPOT` n'est admise QUE pour les trois compteurs `verif:` ci-dessus, liste fermée nommée dans la garde ; sur tout autre compteur, elle rougit, avec un témoin ;\n- chaque compteur à sentinelle est nommé dans le texte en vigueur de REQ-SEC-021 ;\n- la variable nommée est `PARTNERS_VERIFICATION_PLAFONDS`, déclarée dans `env.ts` ;\n- `surPanne: refuser` est obligatoire, avec un témoin à deux faces.\n\n**3. `PARTNERS_VERIFICATION_PLAFONDS` est un SECRET**, et non une variable, sur le modèle de `PARTNERS_SINCERITE_REGLAGE`.\n- Il porte une liste FERMÉE de cinq clés (trois limites, deux fenêtres), dont les noms sont fixés par la PR de SEC-72.\n- Chaque clé est bornée : une limite vaut au moins 1 ; une fenêtre va d'une minute à quelques jours.\n- La cohérence est exigée : la rafale est sous le plafond journalier, et le plafond par adresse au moins égal à celui par apporteur.\n- S'il est absent, illisible, incomplet ou incohérent, la vérification est REFUSÉE. Le refus nomme la clé et un motif fermé, jamais la valeur.\n- Aucune vraie valeur dans le dépôt : les tests fabriquent des valeurs factices, et un témoin statique vérifie que la variable n'est jamais journalisée.\n\n**4. Le provisionnement** se fait par une étape dédiée, hors de la pose automatique des secrets de l'application. Elle valide avant de poser, et ne remplace jamais un plafond déjà posé. Les valeurs sont retenues à titre provisoire par d4, sur délégation de Williams (07/10), à confirmer par lui.\n\nCHEMINS ET TÉMOIN (gouvernance) : proposés, donnés par l'auteur écrans (A06, après EXT-T06), relayés par la coordination ; il les ajuste dans sa PR s'il le faut (GOV-145). Témoin des quatre conditions : `tests/unit/securite/plafonds-verification.spec.ts`.\n\nSECOND SECRET (rattrapage 122 ; coordination, #319, commentaire 6038679021, point 1) : la liste fermée de la configuration privée passe à cinq compteurs ; `verif:` lit `PARTNERS_VERIFICATION_PLAFONDS` et `ecrit:` lit `PARTNERS_ECRIT_PLAFONDS`, correspondance FERMÉE avec un témoin ; les conditions de SEC-72 valent pour ce second secret (UX-P1-62). Aucun chiffre dans le dépôt.",
       "tests": {
         "REQ-SEC-021": [
           "tests/unit/securite/plafonds-verification.spec.ts"
         ]
-      }
+      },
+      "branch": "t/sec-72",
+      "owner": "A06",
+      "pr": 832,
+      "attestation": {
+        "pr": 832,
+        "sha": "6644d51bbaa921762b8009b7c76add68a145d1e0",
+        "fusionneeAt": "2026-10-08T01:15:51Z"
+      },
+      "motif": null
     },
     {
       "id": "UX-P1-61",
