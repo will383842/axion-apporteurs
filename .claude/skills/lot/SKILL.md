@@ -1,6 +1,6 @@
 ---
 name: lot
-description: Exécute un lot de tâches d'Axion Partners de bout en bout — compose le lot depuis docs/tasks.json, lance le workflow (développement, revue à trois lentilles, mutation prouvée, fusion sérialisée), puis clôture en écrivant les statuts. À invoquer avec /lot [phase] [repo]. C'est le point d'entrée UNIQUE d'une session d'autopilote.
+description: Exécute un lot de tâches d'Axion Partners de bout en bout — compose le lot depuis docs/tasks.json, lance le workflow (développement, revue à deux lentilles, mutation mesurée par Stryker en porte A, fusion sérialisée), puis clôture en écrivant les statuts. À invoquer avec /lot [phase] [repo]. C'est le point d'entrée UNIQUE d'une session d'autopilote.
 ---
 
 # /lot — une session, un lot
@@ -81,9 +81,15 @@ il meurt sur `lot.taches is undefined` à la première ligne (le script le refus
 En cas d'interruption : relancer avec `resumeFromRunId` — les agents terminés sont rejoués depuis le cache.
 
 Le workflow enchaîne, par tâche et en parallèle : développement en worktree isolé (test rouge d'abord) →
-trois lentilles de relecture (veto sécurité sur les tâches sensibles, **quatrième lentille bloquante de
-l'architecte sur une tâche `schema`**) → vérificateur « vu rougir » → **fusion sérialisée**, une PR à la
-fois, atterrissage vérifié avant la suivante.
+deux lentilles de relecture, `exactitude` et `securite` (veto de `securite` sur toute PR, **troisième
+lentille bloquante de l'architecte sur une tâche `schema`** — `W16`, `partners/ADR-0024`) ; au second tour,
+seules les lentilles qui ont refusé relisent en entier, plus `securite` toujours, les autres reconfirment
+sur le delta → **fusion sérialisée**, une PR à la fois, porte A verte (dont `pnpm mutation:pr`),
+`--match-head-commit`, atterrissage vérifié avant la suivante.
+
+Le composeur écrit dans `lot.json` le texte des seules REQ citées (`exigences`) : le workflow le donne aux
+agents, qui n'ouvrent plus `docs/requirements.json` en entier. Un `lot.json` composé avant ce champ marche
+encore — l'agent reçoit alors la commande qui filtre la REQ.
 
 ## 5. Clôturer — c'est toi, pas le workflow
 
