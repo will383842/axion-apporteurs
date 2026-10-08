@@ -91,6 +91,8 @@ export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction
   // SEC-15 (confirmé par la sécurité) : la levée de plein droit d'une suspension échue est un passage
   // interne ; aucune entreprise n'est contactée.
   'tache:suspensions_lever': 'sans_contact',
+  // DM-71 (sécurité) : une décision notifiée à l'apporteur, et aucune entreprise n'est contactée.
+  'action:annuler_apres_confirmation': 'sans_contact',
 };
 
 /** Les actions et tâches qui doivent appeler la garde de la réserve. */

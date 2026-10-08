@@ -17,7 +17,6 @@
  * projection, qui recalcule l'état présent, n'est pas touchée.
  */
 import { TypeEvenementRecu, type PrismaClient } from '@prisma/client';
-import { ETATS_OCCUPANTS } from '../../domain/attribution/etats';
 import {
   estPrestationFacturee,
   factureHtDuDevis,
@@ -28,7 +27,6 @@ import {
   type FaitsIdentifiesDeLEntreprise,
 } from '../../domain/entreprise-connue/anteriorite-retroactive';
 import { refDuFaitFondateur, transitionnerUneAttribution } from '../attribution/transitionner';
-import { occupe } from '../../domain/attribution/etats';
 
 type Charge = Record<string, unknown>;
 export type FaitRecu = { eventType: TypeEvenementRecu; charge: unknown; survenuAt: Date };
@@ -219,7 +217,10 @@ export async function rapprocherLesAnteriorites(
       await prisma.attribution.findMany({
         where: {
           siren: { in: sirens },
-          statut: { in: [...ETATS_OCCUPANTS] },
+          // DM-71 (art. 3.3 du v2) : l'antériorité n'annule qu'une attribution NON CONFIRMÉE. Un état
+          // confirmé n'est jamais lu ; la base le refuserait de toute façon (garde
+          // `attributions_annulation_apres_confirmation`).
+          statut: 'provisoire',
           ...(apres === null ? {} : { id: { gt: apres } }),
         },
         select: { id: true, siren: true, statut: true, deposeeAt: true },
@@ -233,7 +234,7 @@ export async function rapprocherLesAnteriorites(
       if (connuDepuis.get(a.siren)! >= a.deposeeAt.getTime()) continue;
       examinees += 1;
       if (!faitsDe.has(a.siren)) faitsDe.set(a.siren, await lireLesFaitsDuSiren(prisma, a.siren));
-      if (!occupe(a.statut)) continue;
+      if (a.statut !== 'provisoire') continue;
       const fondement = fondementAuDepot(
         faitsDatesAuDepot(faitsDe.get(a.siren)!, a.deposeeAt),
         a.deposeeAt

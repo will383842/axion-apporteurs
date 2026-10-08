@@ -1,5 +1,5 @@
 -- SEC-66 (REQ-JUR-015, art. 11.1) — la résiliation par la Société, notifiée ; forme (b) d'A02 (#703,
--- 5983008261). Préfixe réservé par A02 (#561, 5988058061) : 20261003004780. ADDITIVE : une valeur du
+-- 5983008261). Préfixe : 20261003005029 (A02, #319 6052531048, la règle de l'intervalle). ADDITIVE : une valeur du
 -- type de journal, aucune colonne, aucun changement de `decisions_de_contrat` ni de sa garde.
 --
 -- Le fait daté de la DÉCISION de résilier (`ordinaire_axion`), sur l'agrégat `apporteur`, à la charge

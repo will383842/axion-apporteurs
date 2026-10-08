@@ -432,21 +432,19 @@ describe('REQ-SEC-032 — la transaction de résiliation : statut, sessions, jou
 });
 
 /**
- * La LECTURE SEULE d'un apporteur résilié (REQ-SEC-032, art. 12.3), dans le cadre de la sécurité et
- * d'A02 (#703) : une liste blanche EXPLICITE de segments, défaut fermé ; ouverte tant qu'au moins une
- * attribution `figee_resiliation` n'est pas éteinte (`droitsEnCours`), fermée ensuite.
+ * SEC-70 (contrat v2, art. 12.3) : le résilié n'a plus de niveau `lecture` — l'accès à l'espace est
+ * coupé à la fin du contrat, quels que soient ses droits en cours. La liste blanche de lecture de
+ * SEC-19 reste en DÉFENSE (condition 3 de la sécurité, #474 6032838727), inatteignable.
  */
 describe('REQ-SEC-032 — le niveau « lecture » d’un résilié', () => {
-  it('REQ-SEC-032 : TÉMOIN — un résilié dont les droits courent est en LECTURE ; sans droits, l’espace est FERMÉ', async () => {
-    const { niveauDAcces, peutOuvrirLEspace } =
-      await import('../../../src/domain/apporteur/acces-espace');
-    expect(niveauDAcces('resilie', true)).toBe('lecture');
-    expect(peutOuvrirLEspace('resilie', true)).toBe(true);
-    expect(niveauDAcces('resilie', false)).toBe('ferme');
-    expect(niveauDAcces('resilie')).toBe('ferme');
-    // les droits en cours ne changent rien aux autres statuts
-    expect(niveauDAcces('signe', true)).toBe('plein');
-    expect(niveauDAcces('refuse', true)).toBe('ferme');
+  it('REQ-SEC-032 : TÉMOIN — SEC-70 : un résilié est FERMÉ, même avec des droits en cours (l’ancienne signature de SEC-19 n’y change rien)', async () => {
+    const m = await import('../../../src/domain/apporteur/acces-espace');
+    const avecDroits = m.niveauDAcces as (statut: string, droitsEnCours?: boolean) => string;
+    expect(avecDroits('resilie', true)).toBe('ferme');
+    expect(m.niveauDAcces('resilie')).toBe('ferme');
+    expect(m.peutOuvrirLEspace('resilie')).toBe(false);
+    expect(m.niveauDAcces('signe')).toBe('plein');
+    expect(m.niveauDAcces('refuse')).toBe('ferme');
   });
 
   it('REQ-SEC-032 : TÉMOIN — la liste blanche de lecture est EXACTEMENT celle de la sécurité', async () => {
@@ -489,11 +487,13 @@ describe('REQ-SEC-032 — le niveau « lecture » d’un résilié', () => {
 });
 
 /**
- * La SESSION porte le refus d'écriture (critère 2 de la sécurité, #703) : le niveau `lecture` est
- * refusé — motif `lecture_seule` — par `actionEspace()` et par `exigerSessionRelevee()`, sauf
- * l'acceptation de la politique, geste nommé. Le niveau se relit en base à chaque requête.
+ * SEC-70 : la SESSION d'un résilié est REFUSÉE (`statut_ferme`) à chaque requête, par le juge, par
+ * `actionEspace()` et par `exigerSessionRelevee()`, l'acceptation de la politique comprise, quels
+ * que soient ses droits en cours. Le niveau se relit à chaque requête : une session ouverte en lecture
+ * sous SEC-19 tombe à la requête suivante (condition 2 de la sécurité). Le motif `lecture_seule`
+ * reste dans la liste, en défense.
  */
-describe('REQ-SEC-032 — la session d’un résilié ne peut plus écrire', () => {
+describe('REQ-SEC-032 — la session d’un résilié est refusée (SEC-70)', () => {
   const MAINTENANT = new Date('2026-10-04T10:00:00Z');
 
   function ports(statut: string, droitsEnCours: boolean, lienConsommeAt: Date | null = MAINTENANT) {
@@ -524,29 +524,31 @@ describe('REQ-SEC-032 — la session d’un résilié ne peut plus écrire', () 
     expect(MOTIFS_DE_REFUS).toContain('lecture_seule');
   });
 
-  it('REQ-SEC-032 : TÉMOIN — le juge rend la LECTURE à un résilié dont les droits courent, et FERME sans eux', async () => {
+  it('REQ-SEC-032 : TÉMOIN — SEC-70 : le juge FERME un résilié, avec ou sans droits en cours', async () => {
     const { exigerSession } = await import('../../../src/server/auth/session');
-    const lu = await exigerSession('jeton', ports('resilie', true));
-    expect(lu.ok && lu.session.niveau).toBe('lecture');
+    expect(await exigerSession('jeton', ports('resilie', true))).toEqual({
+      ok: false,
+      motif: 'statut_ferme',
+    });
     expect(await exigerSession('jeton', ports('resilie', false))).toEqual({
       ok: false,
       motif: 'statut_ferme',
     });
   });
 
-  it('REQ-SEC-032 : TÉMOIN — actionEspace REFUSE la lecture (lecture_seule) sans exécuter le corps', async () => {
+  it('REQ-SEC-032 : TÉMOIN — SEC-70 : actionEspace REFUSE le résilié (statut_ferme) sans exécuter le corps', async () => {
     const { actionEspace } = await import('../../../src/server/auth/session');
     const corps = vi.fn(async () => 'ecrit');
     for (const segment of ['mes-commissions', 'mon-contrat', 'notifications'] as const) {
       expect(await actionEspace(segment, 'jeton', ports('resilie', true), corps)).toEqual({
         ok: false,
-        motif: 'lecture_seule',
+        motif: 'statut_ferme',
       });
     }
     expect(corps).not.toHaveBeenCalled();
   });
 
-  it('REQ-SEC-032 : actionEspace laisse passer l’ACCEPTATION de la politique, geste nommé de la lecture', async () => {
+  it('REQ-SEC-032 : TÉMOIN — SEC-70 : même l’ACCEPTATION de la politique est refusée au résilié', async () => {
     const { actionEspace } = await import('../../../src/server/auth/session');
     const { SEGMENT_DE_L_ACCEPTATION } = await import('../../../src/domain/apporteur/acces-espace');
     expect(
@@ -556,7 +558,7 @@ describe('REQ-SEC-032 — la session d’un résilié ne peut plus écrire', () 
         ports('resilie', true),
         async () => 'acceptee'
       )
-    ).toEqual({ ok: true, valeur: 'acceptee' });
+    ).toEqual({ ok: false, motif: 'statut_ferme' });
   });
 
   it('REQ-SEC-032 : contre-témoin — un apporteur signé écrit toujours par actionEspace', async () => {
@@ -566,17 +568,17 @@ describe('REQ-SEC-032 — la session d’un résilié ne peut plus écrire', () 
     ).toEqual({ ok: true, valeur: 'ecrit' });
   });
 
-  it('REQ-SEC-032 : TÉMOIN — exigerSessionRelevee REFUSE la lecture, même relevée de frais', async () => {
+  it('REQ-SEC-032 : TÉMOIN — SEC-70 : exigerSessionRelevee REFUSE le résilié, même relevé de frais', async () => {
     const { exigerSessionRelevee } = await import('../../../src/server/auth/session');
     expect(await exigerSessionRelevee('jeton', ports('resilie', true))).toEqual({
       ok: false,
-      motif: 'lecture_seule',
+      motif: 'statut_ferme',
     });
     const signe = await exigerSessionRelevee('jeton', ports('signe', false));
     expect(signe.ok).toBe(true);
   });
 
-  it('REQ-SEC-032 : TÉMOIN — une session ouverte AVANT la résiliation ne peut plus écrire APRÈS : le niveau se relit à chaque requête', async () => {
+  it('REQ-SEC-032 : TÉMOIN — une session ouverte AVANT la résiliation est refusée APRÈS : le niveau se relit à chaque requête', async () => {
     const { actionEspace } = await import('../../../src/server/auth/session');
     let statut = 'signe';
     let droits = false;
@@ -591,7 +593,7 @@ describe('REQ-SEC-032 — la session d’un résilié ne peut plus écrire', () 
     droits = true;
     expect(await actionEspace('mes-commissions', 'jeton', p, async () => 2)).toEqual({
       ok: false,
-      motif: 'lecture_seule',
+      motif: 'statut_ferme',
     });
   });
 });
@@ -626,7 +628,7 @@ describe('REQ-SEC-032 — la résiliation révoque les sessions ouvertes', () =>
       jugerSession(
         {
           ...ouverteAvant,
-          apporteur: { statut: 'resilie', sessionVersion: 3, droitsEnCours: true },
+          apporteur: { statut: 'resilie', sessionVersion: 3 },
         },
         maintenant,
         'k1'
@@ -762,8 +764,10 @@ describe('REQ-JUR-006 — le rendu de la mise en demeure et de la résiliation',
       "Axion-IA résilie votre contrat d'apporteur, comme le permet l'article 11.1. Le préavis court à compter de l'envoi de ce message : le contrat prend fin le 1er novembre 2026. " +
         PARAGRAPHE_COMMUN_DE_LA_RESILIATION
     );
+    // SEC-70 : la phrase de reconnexion est retirée ; celle de la juriste (#703, 6033893005) la remplace.
+    expect(t.corps).not.toMatch(/reconnect/i);
     expect(t.corps).toContain(
-      "Vous gardez l'accès en lecture à votre espace jusqu'à l'extinction de vos droits : reconnectez-vous avec votre adresse e-mail pour y accéder."
+      "Votre accès à l'espace en ligne prend fin à la date de fin du contrat."
     );
   });
 
@@ -1183,37 +1187,33 @@ describe('REQ-JUR-006 — le rendu par le passage, depuis la décision', () => {
 });
 
 /**
- * La sécurité (#703, 5981521068, condition 1) : la reconnexion par lien reste OUVERTE au résilié dont
- * les droits courent — en demande de lien comme en consommation —, et la session neuve naît au niveau
- * LECTURE, jamais PLEIN. Les droits ne sont lus que pour un résilié ; un port absent vaut « aucun
- * droit » : défaut fermé.
+ * SEC-70 (condition 1 de la sécurité, #474 6032838727) : la reconnexion par lien est FERMÉE au résilié,
+ * quels que soient ses droits en cours — il ne reçoit ni ne consomme aucun lien, et sa demande reçoit
+ * la même réponse qu'une adresse inconnue (le travail est différé). Aucun droit n'est plus lu.
  */
-describe('REQ-SEC-032 — la reconnexion par lien d’un résilié', () => {
-  it('REQ-SEC-032 : TÉMOIN — un résilié dont les droits courent peut recevoir et consommer un lien ; sans droits, non', async () => {
+describe('REQ-SEC-032 — la reconnexion par lien d’un résilié est FERMÉE (SEC-70)', () => {
+  it('REQ-SEC-032 : TÉMOIN — un résilié ne reçoit ni ne consomme aucun lien, même avec des droits en cours, et aucun droit n’est lu', async () => {
     const { ouvertureDuCompte } = await import('../../../src/server/auth/lien-magique');
-    const lus: string[] = [];
-    const droits = (v: boolean) => async (id: string) => {
-      lus.push(id);
-      return v;
-    };
-    expect(await ouvertureDuCompte('resilie', 'a-1', droits(true))).toBe(true);
-    expect(await ouvertureDuCompte('resilie', 'a-1', droits(false))).toBe(false);
-    // Port absent : aucun droit, défaut fermé.
-    expect(await ouvertureDuCompte('resilie', 'a-1', undefined)).toBe(false);
-    expect(lus).toStrictEqual(['a-1', 'a-1']);
-  });
-
-  it('REQ-SEC-032 : les droits ne sont lus QUE pour un résilié ; les autres statuts gardent leur jugement', async () => {
-    const { ouvertureDuCompte } = await import('../../../src/server/auth/lien-magique');
+    const avecDroits = ouvertureDuCompte as (
+      statut: string | null,
+      apporteurId?: string,
+      droitsEnCours?: (id: string) => Promise<boolean>
+    ) => Promise<boolean>;
     const lire = vi.fn(async () => true);
-    expect(await ouvertureDuCompte('signe', 'a-1', lire)).toBe(true);
-    expect(await ouvertureDuCompte('kyc_en_cours', 'a-1', lire)).toBe(true);
-    expect(await ouvertureDuCompte('refuse', 'a-1', lire)).toBe(false);
-    expect(await ouvertureDuCompte(null, 'a-1', lire)).toBe(false);
+    expect(await avecDroits('resilie', 'a-1', lire)).toBe(false);
+    expect(await ouvertureDuCompte('resilie')).toBe(false);
     expect(lire).not.toHaveBeenCalled();
   });
 
-  it('REQ-SEC-032 : TÉMOIN — la session neuve d’un résilié naît au niveau LECTURE, jamais PLEIN', async () => {
+  it('REQ-SEC-032 : les autres statuts gardent leur jugement', async () => {
+    const { ouvertureDuCompte } = await import('../../../src/server/auth/lien-magique');
+    expect(await ouvertureDuCompte('signe')).toBe(true);
+    expect(await ouvertureDuCompte('kyc_en_cours')).toBe(true);
+    expect(await ouvertureDuCompte('refuse')).toBe(false);
+    expect(await ouvertureDuCompte(null)).toBe(false);
+  });
+
+  it('REQ-SEC-032 : TÉMOIN — SEC-70 : une session d’un résilié, même ouverte par un lien émis avant, est refusée (statut_ferme), jamais en LECTURE', async () => {
     const { jugerSession } = await import('../../../src/server/auth/session');
     const v = jugerSession(
       {
@@ -1223,13 +1223,13 @@ describe('REQ-SEC-032 — la reconnexion par lien d’un résilié', () => {
         expireAt: new Date('2027-03-02T00:00:00.000Z'),
         revoqueAt: null,
         sessionVersion: 3,
-        apporteur: { statut: 'resilie', sessionVersion: 3, droitsEnCours: true },
+        apporteur: { statut: 'resilie', sessionVersion: 3 },
         lienMagique: { consommeAt: MAINTENANT },
       },
       MAINTENANT,
       'k1'
     );
-    expect(v.ok && v.session.niveau).toBe('lecture');
+    expect(v).toEqual({ ok: false, motif: 'statut_ferme' });
   });
 
   it('REQ-SEC-032 : TÉMOIN STATIQUE — la demande ET la consommation du lien passent par ouvertureDuCompte, jamais par peutOuvrirLEspace seul', () => {
@@ -1272,12 +1272,11 @@ describe('REQ-JUR-006 — ordinaire_axion passe par la notification préalable, 
 });
 
 /**
- * La sécurité (#703, critère 2) : la garde des actions sensibles de l'appareil appelle `exigerSession`
- * directement ; elle REFUSE donc elle-même le niveau `lecture` (`lecture_seule`), AVANT de juger
- * l'appareil.
+ * La garde des actions sensibles de l'appareil appelle `exigerSession` directement ; SEC-70 : elle
+ * REFUSE donc elle-même le résilié (`statut_ferme`), AVANT de juger l'appareil.
  */
-describe('REQ-SEC-032 — la garde de l’appareil refuse la lecture', () => {
-  it('REQ-SEC-032 : TÉMOIN — exigerAppareilConfirme rend lecture_seule pour un résilié en lecture, sans lire l’appareil', async () => {
+describe('REQ-SEC-032 — la garde de l’appareil refuse le résilié (SEC-70)', () => {
+  it('REQ-SEC-032 : TÉMOIN — exigerAppareilConfirme rend statut_ferme pour un résilié, même aux droits en cours, sans lire l’appareil', async () => {
     const { exigerAppareilConfirme } = await import('../../../src/server/auth/appareil');
     const lus: string[] = [];
     const session = {
@@ -1311,7 +1310,7 @@ describe('REQ-SEC-032 — la garde de l’appareil refuse la lecture', () => {
     );
     expect(await exigerAppareilConfirme('jeton', 'appareil-1', ports as never)).toEqual({
       ok: false,
-      motif: 'lecture_seule',
+      motif: 'statut_ferme',
     });
     expect(lus).toStrictEqual([]);
   });
