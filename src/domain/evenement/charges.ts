@@ -34,6 +34,8 @@ import {
   ETATS_ATTRIBUTION,
   MOTIFS_ANNULATION_CONSOLE,
   MOTIFS_LISTE_NOIRE,
+  EXCEPTIONS_ANNULATION,
+  EXCEPTION_DE_LA_TRANSITION,
   EVENEMENTS_ATTRIBUTION,
   NAISSANCES_ATTRIBUTION,
 } from '../attribution/machine';
@@ -111,7 +113,8 @@ export type TypeEvenementJournal =
   | 'utilisateur_console_modifie'
   | 'journal_acces_gel_modifie'
   | 'apporteur_mis_en_demeure'
-  | 'apporteur_gel_modifie';
+  | 'apporteur_gel_modifie'
+  | 'acces_coordonnees_reservee';
 
 /**
  * SEC-61 : le gel du journal des accès à la console — ses gestes, ses motifs (les valeurs de
@@ -233,51 +236,68 @@ export const CHARGES_PAR_TYPE = {
       motifAnnulation: z.enum(MOTIFS_ANNULATION_CONSOLE).optional(),
       /** DM-55 : la catégorie de l'article 3.3 bis, exigée avec ce motif et lui seul. */
       categorieRelation: z.enum(MOTIFS_LISTE_NOIRE).optional(),
+      /**
+       * DM-71 (art. 3.3 du v2) : l'exception d'une annulation après la confirmation, exigée pour les
+       * deux transitions humaines et elles seules, avec LEUR valeur. Ni texte ni anomalie (DM-12, (d)).
+       */
+      exception: z.enum(EXCEPTIONS_ANNULATION).optional(),
     })
     .strict()
-    .superRefine(({ de, transition, critere, fait, motifAnnulation, categorieRelation }, ctx) => {
-      if ((de === null) !== NAISSANCES.includes(transition)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['de'],
-          message: 'naissance_incoherente',
-        });
+    .superRefine(
+      ({ de, transition, critere, fait, motifAnnulation, categorieRelation, exception }, ctx) => {
+        if ((de === null) !== NAISSANCES.includes(transition)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['de'],
+            message: 'naissance_incoherente',
+          });
+        }
+        if ((transition === 'anteriorite_etablie') !== (critere !== undefined)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['critere'],
+            message: 'critere_incoherent',
+          });
+        }
+        // Le fait fondateur accompagne le critère, et sa nature est celle que le critère nomme.
+        const natureAttendue =
+          critere === undefined ? undefined : critere === 'cliente' ? 'facture' : 'devis';
+        const exceptionAttendue = (EXCEPTION_DE_LA_TRANSITION as Partial<Record<string, string>>)[
+          transition
+        ];
+        if (exception !== exceptionAttendue) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['exception'],
+            message: 'exception_incoherente',
+          });
+        }
+        if ((transition === 'annulee_par_la_console') !== (motifAnnulation !== undefined)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['motifAnnulation'],
+            message: 'motif_annulation_incoherent',
+          });
+        }
+        if (
+          (motifAnnulation === 'entreprise_relevant_de_l_article_3_3_bis') !==
+          (categorieRelation !== undefined)
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['categorieRelation'],
+            message: 'categorie_incoherente',
+          });
+        }
+        if (fait?.nature !== natureAttendue) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['fait'],
+            message: 'fait_incoherent',
+          });
+        }
       }
-      if ((transition === 'anteriorite_etablie') !== (critere !== undefined)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['critere'],
-          message: 'critere_incoherent',
-        });
-      }
-      // Le fait fondateur accompagne le critère, et sa nature est celle que le critère nomme.
-      const natureAttendue =
-        critere === undefined ? undefined : critere === 'cliente' ? 'facture' : 'devis';
-      if ((transition === 'annulee_par_la_console') !== (motifAnnulation !== undefined)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['motifAnnulation'],
-          message: 'motif_annulation_incoherent',
-        });
-      }
-      if (
-        (motifAnnulation === 'entreprise_relevant_de_l_article_3_3_bis') !==
-        (categorieRelation !== undefined)
-      ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['categorieRelation'],
-          message: 'categorie_incoherente',
-        });
-      }
-      if (fait?.nature !== natureAttendue) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['fait'],
-          message: 'fait_incoherent',
-        });
-      }
-    }),
+    ),
   /** DM-08 (REQ-DM-007) : le marqueur qui suspend la péremption, posé par un rôle habilité. */
   attribution_peremption_suspendue: z
     .object({ acteur: FORMES.acteur(), suspendueAt: FORMES.horodatage() })
@@ -439,6 +459,20 @@ export const CHARGES_PAR_TYPE = {
   apporteur_mis_en_demeure: z
     .object({
       article: z.enum(ARTICLES_MISE_EN_DEMEURE),
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
+    })
+    .strict(),
+  /**
+   * SEC-52 (REQ-SEC-042, forme d'A02 sur #786) : un accès de la console aux coordonnées du contact d'une
+   * entreprise RÉSERVÉE, agrégat `attribution` (l'id de l'attribution est `agregatId`, la date celle de
+   * l'événement). Par identifiants SEULS : QUI a lu (un utilisateur de la console, HYP-A02-ACTEUR-JOURNAL),
+   * et rien d'autre — ni nom, ni adresse, ni téléphone, ni SIREN, ni apporteur, ni cause ni date de la
+   * réserve. C'est la seule trace qui permette de constater un démarchage hors outil pendant la réserve.
+   */
+  acces_coordonnees_reservee: z
+    .object({
       acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
         message: 'acteur_console_attendu',
       }),

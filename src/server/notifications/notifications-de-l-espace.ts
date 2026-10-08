@@ -28,6 +28,7 @@
  *
  * AUCUN ÉTAT DE LECTURE : la date de lecture n'est ni lue ni écrite ici (REQ-JUR-039).
  */
+import { fondeeSurUneAnomalie } from '../../domain/attribution/machine';
 import type { PrismaClient } from '@prisma/client';
 import { CHARGES_PAR_TYPE } from '../../domain/evenement/charges';
 import { GESTE_DE_LA_CLE_DU_CONTRAT, MODELE_DECISION_DE_CONTRAT } from '../apporteur/resiliation';
@@ -298,8 +299,9 @@ async function decisionDAttributionDeLEspace(
   if (options.lireUnFait === undefined) return null;
   const fait = await options.lireUnFait(String(l.evenementId));
   if (fait === null || fait.type !== 'attribution_etat_modifie') return null;
-  const anomalie =
-    (fait.charge as { transition?: unknown } | null)?.transition === 'anomalie_confirmee';
+  const anomalie = fondeeSurUneAnomalie(
+    (fait.charge as { transition?: unknown } | null)?.transition
+  );
   if (anomalie && options.cles === undefined) return null;
   const faits =
     anomalie && options.cles !== undefined
