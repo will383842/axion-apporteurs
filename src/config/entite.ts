@@ -426,6 +426,19 @@ export function entiteContractante(registre: Registre = registreDuDepot()) {
   };
 }
 
+/** Une adresse électronique, sans espace, avec un domaine pointé. */
+const FORME_D_ADRESSE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+/**
+ * SEC-70 (juriste, #824 6043086595) : l'adresse de contact de l'entité, celle de la demande écrite
+ * (art. 12.3 du v2). La clé `entite.adresseDeContact` est posée au registre par UX-P1-64. À
+ * renseigner, absente ou hors forme : `null`, et l'appelant n'en fait aucun lien (échec fermé).
+ */
+export function adresseDeContact(registre: Registre = registreDuDepot()): string | null {
+  const lue = valeur(registre, 'entite.adresseDeContact');
+  return lue === undefined || estSentinelle(lue) || !FORME_D_ADRESSE.test(lue) ? null : lue;
+}
+
 export function domaines(registre: Registre = registreDuDepot()) {
   return { servi: lire(registre, 'domaines.servi'), envoi: lire(registre, 'domaines.envoi') };
 }

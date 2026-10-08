@@ -3,16 +3,19 @@
  *
  * UN SEUL VERDICT, défaut FERMÉ : un statut absent de la liste blanche, inconnu ou mal orthographié
  * ne donne pas accès.
- *   — `plein` : `signe` et `suspendu` — la suspension déconnecte mais ne coupe pas l'accès
- *     (REQ-SEC-032) ;
+ *   — `plein` : `signe` et `suspendu` — la suspension ne gèle que l'enregistrement des nouvelles
+ *     déclarations : elle ne déconnecte pas et ne coupe pas l'accès (contrat v2, art. 3.7 al. 3 ;
+ *     REQ-SEC-032) ;
  *   — `limite` : `kyc_en_cours` et `pret_a_signer` — l'apporteur entre, mais ne voit que « Ma
  *     conformité » et « Mon contrat » (décision de Williams du 2026-10-01, qui amende
  *     HYP-SEC03-ACCES) ;
- *   — `lecture` : `resilie`, tant que ses droits courent (SEC-19, REQ-SEC-032, art. 12.3) — une
- *     liste blanche EXPLICITE de segments en lecture, et aucune écriture ; les droits courent tant
- *     qu'au moins une attribution `figee_resiliation` n'est pas éteinte (A02, #703) : l'appelant
- *     les relit en base avec le statut, à chaque requête ;
- *   — `ferme` : tout le reste, et `resilie` dont les droits sont éteints.
+ *   — `ferme` : tout le reste, `resilie` COMPRIS. SEC-70 (contrat v2, art. 12.3 : « son lien
+ *     personnel est révoqué à la fin du contrat » ; décision de Williams, art. 2.8) : l'ACCÈS À
+ *     L'ESPACE est coupé à la fin du contrat, quels que soient ses droits en cours. Les autofactures,
+ *     les décomptes et les motifs de blocage partent par courrier électronique.
+ *   — `lecture` (SEC-19) n'est plus RENDU par `niveauDAcces` depuis SEC-70 : le niveau, sa liste de
+ *     segments et le refus `lecture_seule` des gardes restent en DÉFENSE, inatteignables (condition
+ *     3 de la sécurité, #474 6032838727).
  *
  * LES SEGMENTS SONT UNE UNION FERMÉE (décision A02, SEC-43) : le premier segment de chaque route de
  * l'espace (`docs/ESPACE-ROUTES.md`, l'accueil `/` s'appelle `accueil`) est dans exactement une des
@@ -81,20 +84,16 @@ export type SegmentProtege =
 /** Le niveau d'accès à l'espace. */
 export type NiveauDAcces = 'plein' | 'limite' | 'lecture' | 'ferme';
 
-/**
- * `droitsEnCours` : vrai si un résilié a encore au moins une attribution `figee_resiliation` non
- * éteinte (A02, #703). Il ne vaut que pour `resilie` ; absent, il est faux — défaut fermé.
- */
-export function niveauDAcces(statut: string | null, droitsEnCours = false): NiveauDAcces {
+/** Le niveau d'un statut. SEC-70 : un résilié est FERMÉ, sans exception. */
+export function niveauDAcces(statut: string | null): NiveauDAcces {
   if (statut === 'signe' || statut === 'suspendu') return 'plein';
   if (statut === 'kyc_en_cours' || statut === 'pret_a_signer') return 'limite';
-  if (statut === 'resilie' && droitsEnCours) return 'lecture';
   return 'ferme';
 }
 
-/** Vrai si le statut ouvre l'espace, pleinement, en ouverture limitée ou en lecture. */
-export function peutOuvrirLEspace(statut: string | null, droitsEnCours = false): boolean {
-  return niveauDAcces(statut, droitsEnCours) !== 'ferme';
+/** Vrai si le statut ouvre l'espace, pleinement ou en ouverture limitée. */
+export function peutOuvrirLEspace(statut: string | null): boolean {
+  return niveauDAcces(statut) !== 'ferme';
 }
 
 /**

@@ -7,9 +7,10 @@
  * puis TOUS les autres faits sont lus, quelle que soit la cause — le travail, donc le délai, ne
  * dépend pas de la réponse ; la vérification est journalisée ; l'état seul est rendu.
  *
- * ÉCHEC FERMÉ SUR LES LIMITES (rattrapage 96). Aucun chiffre n'est posé tant que Williams n'a pas
- * tranché : un compteur ABSENT du registre REFUSE la vérification (`compterAvantLaDecision`).
- * « Aucun chiffre » ne devient jamais « pas de limite ». Les noms des compteurs ne s'écrivent qu'au
+ * ÉCHEC FERMÉ SUR LES LIMITES (rattrapage 96, SEC-72). Les plafonds sont hors dépôt, dans un secret
+ * (`compterAuRegistre`) : absents ou illisibles, chaque compteur REFUSE la vérification.
+ * « Aucun chiffre » ne devient jamais « pas de limite ». Le refus est le même pour les trois fenêtres ;
+ * il n'écrit rien et n'est lu par aucune décision. Le DÉPÔT ne passe jamais par ce service. Les noms des compteurs ne s'écrivent qu'au
  * registre (garde `securite:rate-famille`) : ce service ne demande que QUOI compter. Une adresse
  * sans empreinte ne se compte pas : refusée aussi.
  *
