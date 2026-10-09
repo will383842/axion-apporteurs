@@ -1573,6 +1573,7 @@ describe('REQ-SEC-023 — SEC-30 : le step-up déclaré dans la matrice (arbitra
     'action:exporter_pain001',
     'action:exporter_das2',
     'action:voir_iban_en_clair',
+    'action:resilier_apporteur',
   ] as const)(
     'REQ-SEC-023 : TÉMOIN À DEUX FACES — %s : une session ouverte il y a le délai de relèvement est refusée « releve_requis » ; un instant avant, elle passe',
     (droit) => {

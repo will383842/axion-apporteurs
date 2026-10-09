@@ -27,6 +27,15 @@ import {
   ouvreDroitALaCommission,
   sortieDeFinDeContrat,
 } from '../../../src/domain/apporteur/effets-de-la-fin';
+import { dateEffetAtteinte, minuitDeParisDuJour } from '../../../src/domain/apporteur/resiliation';
+
+// Un espion TRANSPARENT sur la source unique de l'instant de fin (RM-01) : il rend ce que rend
+// l'original, et dit seulement qui l'appelle.
+vi.mock('../../../src/domain/apporteur/effets-de-la-fin', async (importOriginal) => {
+  const orig =
+    await importOriginal<typeof import('../../../src/domain/apporteur/effets-de-la-fin')>();
+  return { ...orig, finDuContratAvecPreavis: vi.fn(orig.finDuContratAvecPreavis) };
+});
 
 const A_ANNULER: readonly EtatAttribution[] = ['en_attente', 'provisoire'];
 const A_FAIRE_EXPIRER: readonly EtatAttribution[] = ['active', 'rdv_pris', 'proposition'];
@@ -114,7 +123,8 @@ const double = <T>(x: unknown): T => x as T;
 
 const portsDe = (
   role: 'admin' | 'comptable' | 'qualifieur' | 'lecteur' | null,
-  creeAt = new Date('2026-10-07T07:30:00.000Z')
+  // Ouverte il y a cinq minutes : dans le délai de relèvement, que le step-up de SEC-66 exige désormais.
+  creeAt = new Date('2026-10-07T07:55:00.000Z')
 ) => {
   const jetonValide = 'jeton-de-console';
   return {
@@ -238,18 +248,27 @@ describe('REQ-DM-011 — le geste de résiliation en console est réservé à un
     }
   });
 
-  it('REQ-DM-011 : TÉMOIN — le step-up est honoré : une session non relevée reçoit releve_requis, sans effet, dès que la matrice exige le step-up pour ce droit', async () => {
+  it('REQ-DM-011 : TÉMOIN — le step-up est honoré : une session non relevée reçoit releve_requis, sans effet, le step-up étant posé par SEC-66 sur ce droit', async () => {
     // Ouverte depuis plus que le délai de relèvement (REQ-SEC-004).
     const ancienne = new Date('2026-10-07T06:00:00.000Z');
     const j = await jouer('admin', ADMIN_ACTIF, ancienne);
-    if (exigeLeStepUp('action:resilier_apporteur')) {
-      expect(j.r).toStrictEqual({ ok: false, motif: 'releve_requis' });
-      expect(j.transaction).not.toHaveBeenCalled();
-      expect(j.resilierUnApporteur).not.toHaveBeenCalled();
-    } else {
-      // Tant que SEC-66 n'a pas posé le step-up sur ce droit, la session ancienne passe : la PR
-      // qui le pose rend ce témoin strict, et aucune route n'appelle le geste d'ici là.
-      expect(j.r).toMatchObject({ ok: true });
+    // SEC-66 a posé le step-up sur ce droit (condition de la sécurité, #762, 6032378375) : ce témoin est strict.
+    expect(exigeLeStepUp('action:resilier_apporteur')).toBe(true);
+    expect(j.r).toStrictEqual({ ok: false, motif: 'releve_requis' });
+    expect(j.transaction).not.toHaveBeenCalled();
+    expect(j.resilierUnApporteur).not.toHaveBeenCalled();
+  });
+});
+
+// @req REQ-JUR-015
+describe('SEC-66 — la FIN du contrat vaut `dateEffetAtteinte` (rattrapage 122, #319, 6038679021)', () => {
+  it('REQ-JUR-015 : TÉMOIN — `dateEffetAtteinte` bascule EXACTEMENT à `finDuContratAvecPreavis`, qu’elle appelle (source unique, RM-01), en hiver, en été et aux jours de changement d’heure', () => {
+    for (const jour of ['2026-11-03', '2026-07-03', '2026-03-29', '2026-10-25']) {
+      const fin = finDuContratAvecPreavis(minuitDeParisDuJour(jour));
+      vi.mocked(finDuContratAvecPreavis).mockClear();
+      expect(dateEffetAtteinte(jour, fin - 1)).toBe(false);
+      expect(dateEffetAtteinte(jour, fin)).toBe(true);
+      expect(vi.mocked(finDuContratAvecPreavis)).toHaveBeenCalled();
     }
   });
 });

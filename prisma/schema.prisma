@@ -87,6 +87,7 @@ enum TypeEvenementJournal {
   apporteur_gel_modifie
   acces_coordonnees_reservee
   piece_kyc_rib_verifie
+  apporteur_resiliation_notifiee
   decision_contrat_litige_modifie
 
   @@map("type_evenement_journal")

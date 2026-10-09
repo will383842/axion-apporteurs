@@ -192,6 +192,39 @@ export async function lireLaChargeDUnFait(
 }
 
 /**
+ * SEC-66 (A02, #561, 5988205180) — la trace DURABLE de l'opposabilité d'une résiliation par la
+ * Société : le passage à `resilie` qui CITE la ligne `decisions_de_contrat` (`decisionContratId`),
+ * ou `null` s'il n'est cité par aucun passage — la décision est alors caduque, sans aucune colonne
+ * d'état. Le journal n'est jamais purgé : la réponse survit à la purge de la notification et de son
+ * courriel. Deux lecteurs : la tâche de la date d'effet, SANS filtre (une décision n'est citée qu'une
+ * fois, sur quelque apporteur que ce soit : `decision_deja_citee`) ; la purge des textes (DM-70,
+ * départ des cinq ans d'une mise en demeure), AVEC le filtre `apporteurId` : un passage d'un autre
+ * apporteur ne rend jamais opposable la décision de celui-ci. Une lecture seule, par le module du
+ * journal.
+ */
+export async function passageQuiCiteLaDecision(
+  client: PrismaClient | Prisma.TransactionClient,
+  decisionContratId: string,
+  apporteurId?: string
+): Promise<string | null> {
+  if (apporteurId !== undefined && !UUID_CANONIQUE.test(apporteurId)) {
+    throw new Error('lecture_du_journal_refusee : agrégat hors forme');
+  }
+  const l = await client.evenement.findFirst({
+    where: {
+      type: 'apporteur_statut_modifie',
+      ...(apporteurId === undefined
+        ? {}
+        : { agregat: 'apporteur' as const, agregatId: apporteurId }),
+      charge: { path: ['decisionContratId'], equals: decisionContratId },
+    },
+    select: { id: true },
+    orderBy: { id: 'asc' },
+  });
+  return l === null ? null : l.id.toString();
+}
+
+/**
  * SEC-15 — la FIN d'une suspension, lue au journal par son écrivain unique (A02, #794, 6036174464,
  * d'après la juriste, 6036161128) : la PREMIÈRE levée du gel postérieure au fait de la pose ; à défaut,
  * le premier passage de l'apporteur à `resilie` (la fin du contrat). La garde du gel interdit un gel

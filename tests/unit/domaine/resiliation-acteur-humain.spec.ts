@@ -4,6 +4,7 @@
 // @req REQ-SEC-003
 // @req REQ-SEC-005
 // @req REQ-JUR-006
+// @req REQ-JUR-015
 /**
  * SEC-19 — la résiliation et ce qu'elle ne peut JAMAIS être : une sanction de l'inactivité.
  *
@@ -66,6 +67,7 @@ describe('REQ-JUR-042 — aucun motif de résiliation ne nomme l’inactivité',
 const journalSimule = vi.hoisted(() => ({
   ajouterEvenement: vi.fn(),
   lireLaChargeDUnFait: vi.fn(),
+  passageQuiCiteLaDecision: vi.fn(),
 }));
 vi.mock('../../../src/server/evenement/journal', () => journalSimule);
 // La transition d'une attribution a ses propres témoins (DM-08) : ici, seul l'APPEL est jugé.
@@ -1246,11 +1248,12 @@ describe('REQ-SEC-032 — la reconnexion par lien d’un résilié est FERMÉE (
 
 /**
  * La juriste (#703, 5982404858), voie (2) retenue par la coordination : le préavis d'une résiliation
- * par la Société court de l'ENVOI de l'écrit. Tant que la tâche jumelle (notifier à la décision) n'est
- * pas livrée, la résiliation REFUSE `ordinaire_axion` — échec fermé, refus nommé, rien d'écrit.
+ * par la Société court de l'ENVOI de l'écrit. SEC-66 lève le refus d'`ordinaire_axion` par son geste
+ * dédié (`notifierLaResiliationParLaSociete`, puis la tâche à la date d'effet). La résiliation À LA
+ * MAIN, elle, refuse toujours ce motif : le passage à `resilie` se fait par la tâche, et non à la main.
  */
-describe('REQ-JUR-006 — ordinaire_axion attend la notification préalable', () => {
-  it('REQ-JUR-006 : TÉMOIN — la résiliation ordinaire_axion est refusée (preavis_non_notifie), et rien n’est écrit ; les trois autres motifs passent', async () => {
+describe('REQ-JUR-006 — ordinaire_axion passe par la notification préalable, jamais à la main', () => {
+  it('REQ-JUR-006 : TÉMOIN — la résiliation ordinaire_axion à la main est refusée (preavis_non_notifie), et rien n’est écrit ; son chemin est le geste de SEC-66', async () => {
     const { resilierUnApporteur } = await import('../../../src/server/apporteur/resiliation');
     journalSimule.ajouterEvenement.mockReset();
     journalSimule.ajouterEvenement.mockResolvedValue({ id: '1', selfHash: 'x' });
@@ -1558,5 +1561,484 @@ describe('REQ-JUR-006 — l’idempotence de la mise en demeure', () => {
     const { STATUTS_APPORTEUR } = await import('../../../src/domain/apporteur/statut');
     expect(STATUTS_APPORTEUR.filter((s) => estSousContrat(s))).toEqual(['signe', 'suspendu']);
     expect(estSousContrat(null)).toBe(false);
+  });
+});
+
+// ── SEC-66 : la résiliation par la Société (`ordinaire_axion`), forme (b) d'A02 ─────────────────
+
+describe('REQ-JUR-015 — SEC-66 : la date d’effet et l’opposabilité, règles pures', () => {
+  it('REQ-JUR-015 : TÉMOIN — la date d’effet est le jour civil de PARIS de la décision plus le préavis', async () => {
+    const { dateEffetDeLaResiliationParLaSociete, jourCivilDeParis } =
+      await import('../../../src/domain/apporteur/resiliation');
+    // 23 h 30 à Paris le 4 octobre (UTC+2) : le jour de Paris est le 4, le jour UTC aussi.
+    expect(jourCivilDeParis(Date.parse('2026-10-04T21:30:00.000Z'))).toBe('2026-10-04');
+    expect(dateEffetDeLaResiliationParLaSociete(Date.parse('2026-10-04T21:30:00.000Z'))).toBe(
+      '2026-11-03'
+    );
+    // Minuit à Paris le 5 : encore le 4 en UTC, mais le 5 à Paris.
+    expect(jourCivilDeParis(Date.parse('2026-10-04T22:00:00.000Z'))).toBe('2026-10-05');
+    expect(dateEffetDeLaResiliationParLaSociete(Date.parse('2026-10-04T22:00:00.000Z'))).toBe(
+      '2026-11-04'
+    );
+    // Les mois et jours sur deux chiffres ; le passage d'année.
+    expect(dateEffetDeLaResiliationParLaSociete(Date.parse('2026-12-15T10:00:00.000Z'))).toBe(
+      '2027-01-14'
+    );
+    expect(jourCivilDeParis(Date.parse('2027-01-05T10:00:00.000Z'))).toBe('2027-01-05');
+  });
+
+  it('REQ-JUR-015 : TÉMOIN — opposable si et seulement si un courriel est ENVOYÉ le jour de Paris de la décision', async () => {
+    const { estUneResiliationOpposable } =
+      await import('../../../src/domain/apporteur/resiliation');
+    const jour = '2026-10-04';
+    const a = (statut: string, iso: string | null) => ({
+      statut,
+      envoyeAt: iso === null ? null : Date.parse(iso),
+    });
+    const juge = (...courriels: ReturnType<typeof a>[]) =>
+      estUneResiliationOpposable({ dateReception: jour, courriels });
+    expect(juge(a('envoye', '2026-10-04T21:59:59.999Z'))).toBe(true);
+    expect(juge(a('envoye', '2026-10-03T22:00:00.000Z'))).toBe(true);
+    expect(juge(a('envoye', '2026-10-04T22:00:00.000Z'))).toBe(false);
+    expect(juge(a('envoye', '2026-10-03T21:59:59.999Z'))).toBe(false);
+    expect(juge(a('echec', '2026-10-04T08:00:00.000Z'))).toBe(false);
+    expect(juge(a('retenu_dmarc_non_verifie', '2026-10-04T08:00:00.000Z'))).toBe(false);
+    expect(juge(a('envoye', null))).toBe(false);
+    expect(juge()).toBe(false);
+    // Un échec puis un envoi le même jour : opposable.
+    expect(juge(a('echec', null), a('envoye', '2026-10-04T09:00:00.000Z'))).toBe(true);
+  });
+
+  it('REQ-JUR-015 : TÉMOIN — la date d’effet est atteinte au minuit, heure de Paris, qui SUIT son jour : tout ce jour est encore au contrat', async () => {
+    const { dateEffetAtteinte } = await import('../../../src/domain/apporteur/resiliation');
+    // Heure d'hiver : le 3 novembre se termine à 23 h 00 UTC.
+    expect(dateEffetAtteinte('2026-11-03', Date.parse('2026-11-02T23:00:00.000Z'))).toBe(false);
+    expect(dateEffetAtteinte('2026-11-03', Date.parse('2026-11-03T22:59:59.999Z'))).toBe(false);
+    expect(dateEffetAtteinte('2026-11-03', Date.parse('2026-11-03T23:00:00.000Z'))).toBe(true);
+    expect(dateEffetAtteinte('2026-11-03', Date.parse('2026-12-01T08:00:00.000Z'))).toBe(true);
+    // Heure d'été : le 3 juillet se termine à 22 h 00 UTC.
+    expect(dateEffetAtteinte('2026-07-03', Date.parse('2026-07-03T21:59:59.999Z'))).toBe(false);
+    expect(dateEffetAtteinte('2026-07-03', Date.parse('2026-07-03T22:00:00.000Z'))).toBe(true);
+  });
+
+  it('REQ-JUR-015 : TÉMOIN — la date d’effet de la charge est EXACTEMENT minuit, heure de Paris, en hiver comme en été', async () => {
+    const { minuitDeParisDuJour, jourCivilDeParis } =
+      await import('../../../src/domain/apporteur/resiliation');
+    expect(new Date(minuitDeParisDuJour('2026-11-03')).toISOString()).toBe(
+      '2026-11-02T23:00:00.000Z'
+    );
+    expect(new Date(minuitDeParisDuJour('2026-07-03')).toISOString()).toBe(
+      '2026-07-02T22:00:00.000Z'
+    );
+    expect(jourCivilDeParis(minuitDeParisDuJour('2026-11-03'))).toBe('2026-11-03');
+    expect(jourCivilDeParis(minuitDeParisDuJour('2026-07-03'))).toBe('2026-07-03');
+  });
+});
+
+/** Le monde de la tâche à la date d'effet : le verrou, les décisions, et ce qu'on écrit. */
+function mondeDeLaTache(
+  statutInitial: string,
+  decisions: {
+    id: string;
+    evenementId: bigint;
+    dateReception: Date | null;
+    dateEffet: Date | null;
+    courriels: { statut: string; envoyeAt: Date | null }[];
+  }[]
+) {
+  const t = txSimule(statutInitial);
+  const lectures: unknown[] = [];
+  (t.tx as unknown as Record<string, unknown>).decisionDeContrat = {
+    findMany: async (q: unknown) => {
+      t.ordre.push('decisions');
+      lectures.push(q);
+      return decisions.map((d) => ({
+        id: d.id,
+        evenementId: d.evenementId,
+        dateReception: d.dateReception,
+        dateEffet: d.dateEffet,
+        notificationsEspace: [{ courriels: d.courriels }],
+      }));
+    },
+  };
+  return { ...t, lecturesDesDecisions: lectures };
+}
+
+const NOTIFIEE = (dateEffet = '2026-11-02T23:00:00.000Z', acteur: unknown = CONSOLE) => ({
+  type: 'apporteur_resiliation_notifiee',
+  charge: { motif: 'ordinaire_axion', dateEffet, acteur },
+});
+const JOUR = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+const ENVOYE_LE_4 = { statut: 'envoye', envoyeAt: new Date('2026-10-04T08:00:00.000Z') };
+// Le lendemain de la date d'effet (3 novembre), à minuit de Paris : elle est atteinte.
+const EFFET = new Date('2026-11-03T23:00:00.000Z');
+
+describe('REQ-JUR-015 — SEC-66 : le geste « notifier la résiliation par la Société »', () => {
+  beforeEach(() => {
+    journalSimule.ajouterEvenement.mockReset();
+    journalSimule.ajouterEvenement.mockResolvedValue({ id: '77', selfHash: 'x' });
+  });
+
+  it('REQ-JUR-015 : TÉMOIN — sous le verrou : l’événement, la décision datée et la notification, sans changement de statut', async () => {
+    const { notifierLaResiliationParLaSociete } =
+      await import('../../../src/server/apporteur/resiliation');
+    const t = txSimule('signe');
+    const decision = new Date('2026-10-04T21:30:00.000Z');
+    const r = await notifierLaResiliationParLaSociete(
+      t.tx,
+      { apporteurId: ID, acteur: CONSOLE, maintenant: decision },
+      await clesDeTest()
+    );
+    expect(r.evenementId).toBe(77n);
+    expect(r.dateEffet).toStrictEqual(JOUR('2026-11-03'));
+    expect(t.ordre).toStrictEqual(['verrou', 'decision', 'notification']);
+    expect(journalSimule.ajouterEvenement.mock.calls[0]![1]).toStrictEqual({
+      type: 'apporteur_resiliation_notifiee',
+      agregat: 'apporteur',
+      agregatId: ID,
+      survenuAt: decision,
+      charge: {
+        motif: 'ordinaire_axion',
+        dateEffet: '2026-11-02T23:00:00.000Z',
+        acteur: CONSOLE,
+      },
+    });
+    const ecrit = t.ecrits[0] as { decision: { data: Record<string, unknown> } };
+    expect(ecrit.decision.data).toMatchObject({
+      apporteurId: ID,
+      geste: 'resiliation',
+      dateReception: JOUR('2026-10-04'),
+      dateEffet: JOUR('2026-11-03'),
+      evenementId: 77n,
+    });
+    expect(ecrit.decision.data).not.toHaveProperty('texteChiffre');
+    expect(t.ecrits[1]).toMatchObject({
+      notification: { data: { apporteurId: ID, cle: 'resiliation', evenementId: 77n } },
+    });
+    expect(r.decisionId).toBe(
+      (t.ecrits[1] as { notification: { data: { decisionContratId: string } } }).notification.data
+        .decisionContratId
+    );
+    // Aucun changement de statut, aucune attribution touchée, aucun jeton révoqué.
+    expect(t.mises).toStrictEqual([]);
+    expect(t.revocations).toStrictEqual([]);
+  });
+
+  it('REQ-JUR-015 : TÉMOIN — un suspendu se notifie aussi ; le système et un apporteur hors contrat sont refusés, sans rien écrire', async () => {
+    const { notifierLaResiliationParLaSociete } =
+      await import('../../../src/server/apporteur/resiliation');
+    const suspendu = txSimule('suspendu');
+    await notifierLaResiliationParLaSociete(
+      suspendu.tx,
+      { apporteurId: ID, acteur: CONSOLE, maintenant: MAINTENANT },
+      await clesDeTest()
+    );
+    expect(suspendu.ecrits).toHaveLength(2);
+    const systeme = txSimule('signe');
+    const e1 = await refusDe(
+      notifierLaResiliationParLaSociete(
+        systeme.tx,
+        {
+          apporteurId: ID,
+          acteur: JSON.parse('{"par":"systeme"}') as typeof CONSOLE,
+          maintenant: MAINTENANT,
+        },
+        await clesDeTest()
+      )
+    );
+    expect(e1.code).toBe('acteur_non_humain');
+    expect(systeme.ordre).toStrictEqual([]);
+    for (const statut of ['candidat', 'resilie', 'en_signature']) {
+      const t = txSimule(statut);
+      const e = await refusDe(
+        notifierLaResiliationParLaSociete(
+          t.tx,
+          { apporteurId: ID, acteur: CONSOLE, maintenant: MAINTENANT },
+          await clesDeTest()
+        )
+      );
+      expect(e.code, statut).toBe('statut_sans_contrat');
+      expect(t.ordre, statut).toStrictEqual(['verrou']);
+    }
+    expect(journalSimule.ajouterEvenement).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('REQ-JUR-015 — SEC-66 : la date d’effet, pour un apporteur', () => {
+  beforeEach(() => {
+    journalSimule.ajouterEvenement.mockReset();
+    journalSimule.ajouterEvenement.mockResolvedValue({ id: '90', selfHash: 'x' });
+    journalSimule.lireLaChargeDUnFait.mockReset();
+    journalSimule.lireLaChargeDUnFait.mockResolvedValue(NOTIFIEE());
+    journalSimule.passageQuiCiteLaDecision.mockReset();
+    journalSimule.passageQuiCiteLaDecision.mockResolvedValue(null);
+    transitionnerSimule.transitionnerUneAttribution.mockReset();
+    transitionnerSimule.transitionnerUneAttribution.mockResolvedValue({});
+  });
+
+  const OPPOSABLE = {
+    id: 'd-1',
+    evenementId: 41n,
+    dateReception: JOUR('2026-10-04'),
+    dateEffet: JOUR('2026-11-03'),
+    courriels: [ENVOYE_LE_4],
+  };
+
+  it('REQ-JUR-015 : TÉMOIN — à la date d’effet : resilie, ordinaire_axion, la décision CITÉE, l’acteur de la décision, puis les effets de l’art. 12', async () => {
+    const { resilierALaDateDEffetUnApporteur } =
+      await import('../../../src/server/apporteur/resiliation');
+    const m = mondeDeLaTache('signe', [OPPOSABLE]);
+    expect(await resilierALaDateDEffetUnApporteur(m.tx, ID, EFFET)).toBe(true);
+    expect(m.lecturesDesDecisions[0]).toStrictEqual({
+      where: { apporteurId: ID, geste: 'resiliation' },
+      select: {
+        id: true,
+        evenementId: true,
+        dateReception: true,
+        dateEffet: true,
+        notificationsEspace: {
+          select: { courriels: { select: { statut: true, envoyeAt: true } } },
+        },
+      },
+      orderBy: { evenementId: 'desc' },
+    });
+    expect(journalSimule.lireLaChargeDUnFait).toHaveBeenCalledWith(m.tx, '41');
+    expect(journalSimule.passageQuiCiteLaDecision).toHaveBeenCalledWith(m.tx, 'd-1');
+    expect(m.mises).toStrictEqual([
+      {
+        where: { id: ID },
+        data: {
+          statut: 'resilie',
+          resiliationMotif: 'ordinaire_axion',
+          sessionVersion: { increment: 1 },
+        },
+      },
+    ]);
+    expect(journalSimule.ajouterEvenement.mock.calls[0]![1]).toStrictEqual({
+      type: 'apporteur_statut_modifie',
+      agregat: 'apporteur',
+      agregatId: ID,
+      survenuAt: EFFET,
+      charge: {
+        de: 'signe',
+        vers: 'resilie',
+        transition: 'resilier',
+        resiliationMotif: 'ordinaire_axion',
+        decisionContratId: 'd-1',
+        acteur: CONSOLE,
+      },
+    });
+    expect(m.ordre).toStrictEqual([
+      'verrou',
+      'decisions',
+      'apporteur.update',
+      'attributions',
+      'verrou',
+      'jetons',
+    ]);
+    // Aucune seconde décision, aucune seconde notification.
+    expect(m.ecrits).toStrictEqual([]);
+  });
+
+  it('REQ-JUR-015 : TÉMOIN — rien avant la date d’effet, rien sans décision opposable, rien hors contrat', async () => {
+    const { resilierALaDateDEffetUnApporteur } =
+      await import('../../../src/server/apporteur/resiliation');
+    const veille = mondeDeLaTache('signe', [OPPOSABLE]);
+    expect(
+      await resilierALaDateDEffetUnApporteur(veille.tx, ID, new Date('2026-11-02T22:59:59.999Z'))
+    ).toBe(false);
+    expect(veille.mises).toStrictEqual([]);
+    const caduques = [
+      { ...OPPOSABLE, courriels: [] },
+      { ...OPPOSABLE, courriels: [{ statut: 'echec', envoyeAt: null }] },
+      {
+        ...OPPOSABLE,
+        courriels: [{ statut: 'envoye', envoyeAt: new Date('2026-10-04T22:00:00.000Z') }],
+      },
+      { ...OPPOSABLE, dateReception: null },
+      { ...OPPOSABLE, dateEffet: null },
+    ];
+    for (const d of caduques) {
+      const m = mondeDeLaTache('signe', [d]);
+      expect(await resilierALaDateDEffetUnApporteur(m.tx, ID, EFFET)).toBe(false);
+      expect(m.mises).toStrictEqual([]);
+    }
+    for (const statut of ['resilie', 'candidat']) {
+      const m = mondeDeLaTache(statut, [OPPOSABLE]);
+      expect(await resilierALaDateDEffetUnApporteur(m.tx, ID, EFFET), statut).toBe(false);
+      expect(m.ordre, statut).toStrictEqual(['verrou']);
+    }
+    const suspendu = mondeDeLaTache('suspendu', [OPPOSABLE]);
+    expect(await resilierALaDateDEffetUnApporteur(suspendu.tx, ID, EFFET)).toBe(true);
+    expect(journalSimule.ajouterEvenement).toHaveBeenCalledTimes(1);
+  });
+
+  it('REQ-JUR-015 : TÉMOIN — seule une décision de la Société compte : une autre résiliation, ou une charge illisible, est passée', async () => {
+    const { resilierALaDateDEffetUnApporteur } =
+      await import('../../../src/server/apporteur/resiliation');
+    const autres = [
+      { type: 'apporteur_statut_modifie', charge: { resiliationMotif: 'ordinaire_apporteur' } },
+      { type: 'apporteur_resiliation_notifiee', charge: { motif: 'ordinaire_axion' } },
+      null,
+    ];
+    for (const fait of autres) {
+      journalSimule.lireLaChargeDUnFait.mockResolvedValueOnce(fait);
+      const m = mondeDeLaTache('signe', [OPPOSABLE]);
+      expect(await resilierALaDateDEffetUnApporteur(m.tx, ID, EFFET)).toBe(false);
+      expect(m.mises).toStrictEqual([]);
+    }
+  });
+
+  it('REQ-ARG-026 : TÉMOIN — la plus récente opposable compte : une caduque plus récente est passée, une opposable plus récente l’emporte', async () => {
+    const { resilierALaDateDEffetUnApporteur } =
+      await import('../../../src/server/apporteur/resiliation');
+    const plusRecente = {
+      id: 'd-2',
+      evenementId: 52n,
+      dateReception: JOUR('2026-10-11'),
+      dateEffet: JOUR('2026-11-10'),
+      courriels: [{ statut: 'envoye', envoyeAt: new Date('2026-10-11T08:00:00.000Z') }],
+    };
+    // La plus récente, opposable, n'est pas échue : rien, même si l'ancienne l'est.
+    journalSimule.lireLaChargeDUnFait.mockResolvedValue(NOTIFIEE('2026-11-09T23:00:00.000Z'));
+    const m1 = mondeDeLaTache('signe', [plusRecente, OPPOSABLE]);
+    expect(await resilierALaDateDEffetUnApporteur(m1.tx, ID, EFFET)).toBe(false);
+    expect(journalSimule.lireLaChargeDUnFait).toHaveBeenCalledTimes(1);
+    // La plus récente, caduque : l'ancienne, opposable, compte.
+    journalSimule.lireLaChargeDUnFait.mockReset();
+    journalSimule.lireLaChargeDUnFait.mockResolvedValue(NOTIFIEE());
+    const m2 = mondeDeLaTache('signe', [{ ...plusRecente, courriels: [] }, OPPOSABLE]);
+    expect(await resilierALaDateDEffetUnApporteur(m2.tx, ID, EFFET)).toBe(true);
+    expect(journalSimule.ajouterEvenement.mock.calls[0]![1]).toMatchObject({
+      charge: { decisionContratId: 'd-1' },
+    });
+  });
+
+  it('REQ-JUR-015 : TÉMOIN — une décision déjà citée est refusée, nommée, et rien n’est écrit', async () => {
+    const { resilierALaDateDEffetUnApporteur } =
+      await import('../../../src/server/apporteur/resiliation');
+    journalSimule.passageQuiCiteLaDecision.mockResolvedValue('88');
+    const m = mondeDeLaTache('signe', [OPPOSABLE]);
+    const e = await refusDe(resilierALaDateDEffetUnApporteur(m.tx, ID, EFFET));
+    expect(e.code).toBe('decision_deja_citee');
+    expect(m.mises).toStrictEqual([]);
+    expect(journalSimule.ajouterEvenement).not.toHaveBeenCalled();
+  });
+
+  it('REQ-JUR-015 : TÉMOIN — le rendu d’une décision de la Société : le jour même il annonce la date, un autre jour ou sans instant il refuse', async () => {
+    const { rendreUneDecisionDeContrat } =
+      await import('../../../src/server/apporteur/resiliation');
+    const decision = {
+      apporteurId: ID,
+      geste: 'resiliation',
+      article: null,
+      texteChiffre: null,
+      dateReception: JOUR('2026-10-04'),
+      dateEffet: JOUR('2026-11-03'),
+      evenementId: 41n,
+      textePurgeAt: null,
+    };
+    const monde = { decisionDeContrat: { findUnique: async () => decision } };
+    const tx = monde as never;
+    const n = {
+      cle: 'resiliation',
+      apporteurId: ID,
+      evenementId: '41',
+      decisionContratId: 'd-1',
+    };
+    const composer = (cle: string, t: { corps: string | null }) => ({
+      sujet: cle,
+      corps: t.corps ?? '',
+    });
+    const cles = await clesDeTest();
+    const rendre = (envoyeLe?: Date) =>
+      rendreUneDecisionDeContrat(tx, n, {
+        cles,
+        composer,
+        ...(envoyeLe === undefined ? {} : { envoyeLe }),
+      });
+    const r = await rendre(new Date('2026-10-04T21:59:59.999Z'));
+    expect((r as { corps: string }).corps).toContain(
+      "Axion-IA résilie votre contrat d'apporteur, comme le permet l'article 11.1. Le préavis court à compter de l'envoi de ce message : le contrat prend fin le 3 novembre 2026."
+    );
+    expect(await rendre(new Date('2026-10-04T22:00:00.000Z'))).toEqual({
+      nonRendue: 'decision_non_notifiee',
+    });
+    expect(await rendre(new Date('2026-10-03T21:59:59.999Z'))).toEqual({
+      nonRendue: 'decision_non_notifiee',
+    });
+    expect(await rendre()).toEqual({ nonRendue: 'decision_non_notifiee' });
+    // Une charge de décision illisible ne se rend pas.
+    journalSimule.lireLaChargeDUnFait.mockResolvedValue({
+      type: 'apporteur_resiliation_notifiee',
+      charge: { motif: 'ordinaire_apporteur' },
+    });
+    expect(await rendre(new Date('2026-10-04T08:00:00.000Z'))).toEqual({
+      nonRendue: 'charge_illisible',
+    });
+    // Le passage à `resilie` sans motif ne se rend pas non plus.
+    journalSimule.lireLaChargeDUnFait.mockResolvedValue({
+      type: 'apporteur_statut_modifie',
+      charge: { de: 'signe', vers: 'suspendu', transition: 'suspendre', acteur: CONSOLE },
+    });
+    expect(await rendre(new Date('2026-10-04T08:00:00.000Z'))).toEqual({
+      nonRendue: 'charge_illisible',
+    });
+  });
+});
+
+describe('REQ-JUR-015 — SEC-66 : le passage du lanceur à la date d’effet', () => {
+  const resiliationSimulee = vi.hoisted(() => ({ parApporteur: vi.fn() }));
+
+  it('REQ-JUR-015 : TÉMOIN — le passage lit les candidats sous contrat dont la date d’effet est atteinte, une transaction par apporteur, et nomme ses refus', async () => {
+    vi.resetModules();
+    vi.doMock('../../../src/server/apporteur/resiliation', async (original) => ({
+      ...(await original<typeof import('../../../src/server/apporteur/resiliation')>()),
+      resilierALaDateDEffetUnApporteur: resiliationSimulee.parApporteur,
+    }));
+    const { resilierALaDateDEffet } =
+      await import('../../../src/server/taches/resilier-a-date-effet');
+    const { ErreurResiliation } = await import('../../../src/server/apporteur/resiliation');
+    const lus: unknown[] = [];
+    const transactions: string[] = [];
+    const prisma = {
+      decisionDeContrat: {
+        findMany: async (q: unknown) => {
+          lus.push(q);
+          return [{ apporteurId: 'a-1' }, { apporteurId: 'a-2' }, { apporteurId: 'a-3' }];
+        },
+      },
+      $transaction: async (fn: (tx: unknown) => Promise<unknown>) => {
+        transactions.push('tx');
+        return fn('TX');
+      },
+    };
+    resiliationSimulee.parApporteur
+      .mockResolvedValueOnce(true)
+      .mockRejectedValueOnce(new ErreurResiliation('decision_deja_citee', 'déjà citée'))
+      .mockResolvedValueOnce(false);
+    const bilan = await resilierALaDateDEffet(prisma as never, EFFET);
+    expect(bilan).toStrictEqual({ resilies: 1, refus_decision_deja_citee: 1 });
+    expect(lus[0]).toStrictEqual({
+      where: {
+        geste: 'resiliation',
+        dateEffet: { lt: JOUR('2026-11-04') },
+        apporteur: { statut: { in: ['signe', 'suspendu'] } },
+      },
+      select: { apporteurId: true },
+      distinct: ['apporteurId'],
+      orderBy: { apporteurId: 'asc' },
+    });
+    expect(transactions).toHaveLength(3);
+    expect(resiliationSimulee.parApporteur.mock.calls).toStrictEqual([
+      ['TX', 'a-1', EFFET],
+      ['TX', 'a-2', EFFET],
+      ['TX', 'a-3', EFFET],
+    ]);
+    // Une erreur qui n'est pas un refus nommé remonte.
+    resiliationSimulee.parApporteur.mockRejectedValueOnce(new Error('base perdue'));
+    await expect(resilierALaDateDEffet(prisma as never, EFFET)).rejects.toThrow('base perdue');
+    vi.doUnmock('../../../src/server/apporteur/resiliation');
+    vi.resetModules();
   });
 });
