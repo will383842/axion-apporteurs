@@ -133,8 +133,31 @@ const CHIFFRES: { motif: RegExp; quoi: string }[] = [
   },
 ];
 
+/**
+ * (d) SEC-48 — une donnée du POSTE de travail : l'identité système (`uid=…(nom)`, `gid=…`, la sortie
+ * de `id`) et le dossier personnel, qui nomme l'utilisateur. Mesuré le 2026-10-02 : une expansion du
+ * shell (`` `id` `` dans une chaîne entre guillemets doubles) a versé l'identité du poste dans un
+ * commentaire de `prisma/schema.prisma` (PR #480). Le dossier personnel se lit sous ses trois
+ * écritures, sans égard à la casse : `C:\Users\…` (doublé dans une chaîne compris), `C:/Users/…` et
+ * `/c/Users/…` de Git Bash. UNE SEULE forme est permise, et nommée (lentille sécurité) : le marqueur
+ * littéral `<nom>`. Tout autre segment après `Users` rougit, nom réel ou inventé : le
+ * dépôt dit un chemin par son rôle (`%USERPROFILE%`, `~`, relatif au dépôt), jamais par une personne.
+ * Un segment qui COMMENCE par une ponctuation n'est pas un nom : `C:\Users\, C:/Users/` énumère les
+ * écritures (la fiche même de SEC-48 dans `docs/tasks.json`), il ne désigne aucun poste.
+ */
+const SEGMENT = '[^\\\\/\\s`\'",;:.)\\]}>][^\\\\/\\s`\'"]*';
+const POSTE: RegExp[] = [
+  /\buid=\d+\(/,
+  /\bgid=\d+\b/,
+  new RegExp(`\\b[A-Za-z]:(?:\\\\{1,2}|/)Users(?:\\\\{1,2}|/)(?!<nom>)${SEGMENT}`, 'i'),
+  new RegExp(`(?:^|[^\\w.])/(?:mnt/)?[a-z]/Users/(?!<nom>)${SEGMENT}`, 'i'),
+  // Le même dossier ENCODÉ, tel que l'outil de session nomme ses projets (`C--Users-<nom>-Documents`).
+  /\b[A-Za-z]--Users-(?!<nom>)[^-\s`'"/\\]+/i,
+];
+const DONNEE_DU_POSTE = 'donnee_du_poste';
+
 /** Toutes les familles que la garde prétend couvrir. `--prove` les exige toutes. */
-const FAMILLES = ['doctrine', ...CHIFFRES.map((c) => c.quoi)];
+const FAMILLES = ['doctrine', ...CHIFFRES.map((c) => c.quoi), DONNEE_DU_POSTE];
 
 type Faute = { famille: string; message: string };
 
@@ -149,6 +172,14 @@ function fautesDeLigne(ligne: string, fichier: string, i: number): Faute[] {
           `Reformule sans nommer le risque, ou sors le fichier du dépôt.`,
       });
     }
+  }
+  if (POSTE.some((m) => m.test(ligne))) {
+    out.push({
+      famille: DONNEE_DU_POSTE,
+      message:
+        `${fichier}:${i + 1} — ${DONNEE_DU_POSTE} : l'identité système ou le dossier personnel du poste. ` +
+        `Un chemin se dit relatif au dépôt ou se lit dans l'environnement ; une sortie de commande ne se verse jamais.`,
+    });
   }
   const sansLegaux = neutraliserMontantsLegaux(ligne);
   for (const { motif, quoi } of CHIFFRES) {
@@ -214,6 +245,21 @@ if (process.argv.includes('--prove')) {
       ligne: `Taux de parrainage **10 %** versionné, appliqué aux lignes commission`,
       famille: 'taux de rémunération en toutes lettres',
     },
+    // SEC-48 : la ligne même que l'expansion du shell avait versée (#480), puis le dossier personnel
+    // sous chacune de ses formes.
+    {
+      ligne: `/// La clé primaire uid=1001(poste) gid=1001 groups=1001`,
+      famille: DONNEE_DU_POSTE,
+    },
+    { ligne: `groups gid=1000`, famille: DONNEE_DU_POSTE },
+    { ligne: `cd C:\\Users\\poste\\Documents\\Projets`, famille: DONNEE_DU_POSTE },
+    { ligne: `'C:\\\\Users\\\\poste\\\\Documents'`, famille: DONNEE_DU_POSTE },
+    { ligne: `voir C:/Users/poste/Documents/Projets/outils/`, famille: DONNEE_DU_POSTE },
+    // Un nom inventé, ou un fichier à la racine de Users, n'est pas la forme permise : il rougit aussi.
+    { ligne: `'C:/Users/x.ts',`, famille: DONNEE_DU_POSTE },
+    { ligne: `C:\\USERS\\Poste`, famille: DONNEE_DU_POSTE },
+    { ligne: `~/.claude/projects/C--Users-poste-Documents-Projets/`, famille: DONNEE_DU_POSTE },
+    { ligne: `git -C /c/Users/poste/Documents/Projets worktree add`, famille: DONNEE_DU_POSTE },
   ];
 
   // Contre-témoins : ce que la garde ne doit PAS faire rougir. Une garde qui rougit sur tout
@@ -226,6 +272,16 @@ if (process.argv.includes('--prove')) {
     `"verifie": "100 % des cellules (etat x evenement) testees pour Attribution et LigneCommission"`,
     `Stryker sur src/domain : seuil aligne sur la mesure puis >= 80 % bloquant sur les fichiers touches`,
     `le libelle apporteur de la commission n'affiche jamais « 0 € », jamais un taux devine`,
+    // SEC-48 : un uuid n'est pas un uid ; un chemin dit par sa variable ou par son rôle ne nomme personne.
+    // La seule forme permise, le marqueur littéral, sous les trois écritures.
+    `cd C:\\Users\\<nom>\\Documents\\Projets`,
+    `'C:/Users/<nom>/x.ts',`,
+    `git -C /c/Users/<nom>/Documents/Projets worktree add`,
+    'new URL(`${racine}/api/v1/deploy?uuid=${uuid}&force=false`)',
+    `%USERPROFILE%\\Documents\\Projets\\axion-apporteurs`,
+    `cd <dossier des projets>\\axion-apporteurs`,
+    // L'énumération des écritures, sans nom : la fiche de SEC-48 elle-même.
+    `les trois écritures C:\\\\Users\\\\, C:/Users/ et /c/Users/, insensibles à la casse`,
   ];
 
   const rouges = new Set<string>();
