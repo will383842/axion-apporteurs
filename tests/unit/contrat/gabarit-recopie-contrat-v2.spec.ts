@@ -200,3 +200,29 @@ describe('REQ-JUR-003 — le gabarit recopie le contrat v2 d’axion-ia, dans le
     expect(FIXTURE).not.toContain('## Annexe 1');
   });
 });
+
+/**
+ * JUR-T67 — la version 2.1 du contrat v2 (axion-ia, commit 44fd09a9c, `CONTRAT_VERSION = "2.1"`,
+ * décision de Williams du 2026-10-07) : les ajouts des art. 4.1, 13.1 et 17, MOT POUR MOT, et le libellé
+ * de version du gabarit. L'A1.7 (annexe 1) relève de JUR-T43 : il n'est pas témoigné ici.
+ */
+const PHRASES_NEUVES_2_1 = [
+  "Les produits créés après la signature relèvent de l'annexe 1, A1.7.",
+  "La publication de la commission d'un produit créé après la signature (annexe 1, A1.7) n'est pas une modification du contrat.",
+  'et de la grille de référence publiée, pour les seuls produits créés après la signature (annexe 1, A1.7).',
+] as const;
+
+describe('REQ-JUR-003 — le gabarit recopie la version 2.1 du contrat v2 (JUR-T67)', () => {
+  it.each(PHRASES_NEUVES_2_1)(
+    'REQ-JUR-003 : TÉMOIN — la phrase neuve de la 2.1 « %s » est dans le v2 recopié ET dans le gabarit',
+    (phrase) => {
+      expect(norme(V2_CORPS)).toContain(norme(phrase));
+      expect(norme(G_CORPS)).toContain(norme(phrase));
+    }
+  );
+
+  it('REQ-JUR-003 : la fixture est celle de la 2.1 (commit 44fd09a9c), et le gabarit porte la version 2.1', () => {
+    expect(FIXTURE).toMatch(/commit\s+44fd09a9c\s+\(CONTRAT_VERSION « 2\.1 »\)/);
+    expect(GABARIT.split(/\r?\n/)[0]).toBe("# Contrat d'apporteur d'affaires — version 2.1");
+  });
+});

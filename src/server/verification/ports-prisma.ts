@@ -8,6 +8,7 @@ import type { PrismaClient } from '@prisma/client';
 import { ETATS_OCCUPANTS } from '../../domain/attribution/etats';
 import { horlogeSysteme } from '../../lib/horloge';
 import { anterioriteDe } from '../entreprise-connue/projection';
+import { derniereFinSurLeSiren } from '../evenement/journal';
 import { limiter } from '../securite/rate-limit';
 import type { PortsDeVerification } from './verifier';
 
@@ -34,7 +35,13 @@ export function portsDeLaBase(
   prisma: PrismaClient
 ): Pick<
   PortsDeVerification,
-  'compter' | 'anteriorite' | 'surLaListe' | 'occupation' | 'journaliser'
+  | 'compter'
+  | 'anteriorite'
+  | 'surLaListe'
+  | 'occupation'
+  | 'derniereFin'
+  | 'maintenant'
+  | 'journaliser'
 > {
   return {
     compter: compterAuRegistre,
@@ -53,6 +60,9 @@ export function portsDeLaBase(
       ]);
       return { occupee: occupants > 0, enFile };
     },
+    // EXT-T06 : la dernière fin, par le lecteur RÉSERVÉ du journal ; une date ou null, rien d'autre.
+    derniereFin: (siren) => derniereFinSurLeSiren(prisma, siren),
+    maintenant: () => new Date(horlogeSysteme.maintenant()),
     journaliser: async (l) => {
       await prisma.verification.create({ data: l });
     },

@@ -24969,7 +24969,16 @@
         "tests/unit/securite/matrice-des-roles.spec.ts",
         "docs/CONSOLE-ROUTES.md",
         "scripts/gates/ux-exhaustivite.ts",
-        "tests/unit/console/confirmer-anomalie.spec.ts"
+        "tests/unit/console/confirmer-anomalie.spec.ts",
+        "docs/maquettes/anomalies.html",
+        "docs/maquettes/VALIDATION.md",
+        "tests/unit/espace/maquettes-validees.spec.ts",
+        "tests/unit/console/maquettes-epuree.spec.ts",
+        "tests/unit/espace/charte-commune.spec.ts",
+        "tests/unit/console/maquettes-barre-laterale.spec.ts",
+        "src/content/micro-copy/console/etats-vides.ts",
+        "src/server/console/navigation.ts",
+        "vitest.mutation.config.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -25638,6 +25647,10 @@
         "tests/unit/domaine/journal-charges.spec.ts",
         "tests/unit/domaine/resiliation-acteur-humain.spec.ts",
         "tests/unit/securite/matrice-des-roles.spec.ts",
+        "src/server/taches/purger-textes-des-decisions.ts",
+        "tests/unit/integration/purge-decisions-de-contrat.spec.ts",
+        "tests/unit/domaine/fin-du-contrat.spec.ts",
+        "src/server/demarchage/actions-classees.ts",
         "docs/GLOSSAIRE.md"
       ],
       "schema": true,
@@ -25678,7 +25691,15 @@
         "prisma/migrations/",
         "tests/integration/gel-litige-decisions-de-contrat.spec.ts",
         "src/server/taches/purger-textes-des-decisions.ts",
-        "src/domain/seuils/ssot.ts"
+        "src/domain/seuils/ssot.ts",
+        "src/domain/evenement/charges.ts",
+        "src/server/console/litiges-des-decisions.ts",
+        "src/server/roles/matrice.ts",
+        "tests/unit/domaine/journal-charges.spec.ts",
+        "tests/unit/integration/gel-litige-decisions-de-contrat.spec.ts",
+        "tests/unit/integration/purge-decisions-de-contrat.spec.ts",
+        "tests/unit/securite/litiges-decisions-de-contrat.spec.ts",
+        "src/server/demarchage/actions-classees.ts"
       ],
       "schema": true,
       "sensible": [],
@@ -26201,7 +26222,10 @@
       "zone": "securite",
       "paths": [
         "src/domain/evenement/charges.ts",
-        "tests/unit/domaine/evenement-verification-rib.spec.ts"
+        "tests/unit/domaine/evenement-verification-rib.spec.ts",
+        "src/server/conformite/rib.ts",
+        "tests/unit/domaine/journal-charges.spec.ts",
+        "tests/unit/securite/rib-quatre-yeux.spec.ts"
       ],
       "schema": false,
       "sensible": [],

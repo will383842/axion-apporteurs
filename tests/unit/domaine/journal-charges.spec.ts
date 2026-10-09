@@ -2,6 +2,7 @@
 // @req REQ-DM-031
 // @req REQ-DM-027
 // @req REQ-SEC-058
+// @req REQ-JUR-015
 /**
  * `journal-charges.spec.ts` — les charges FERMÉES du journal (`src/domain/evenement/charges.ts`),
  * jugées valeur par valeur : la forme d'une empreinte, les constructeurs de formes, la charge de
@@ -51,16 +52,22 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
       'apporteur_gel_modifie',
       // SEC-19 (A02, #703) : la mise en demeure datée d'un apporteur, par article.
       'apporteur_mis_en_demeure',
+      // SEC-66 (A02, #703) : la décision de la Société de résilier, sans changement de statut.
+      'apporteur_resiliation_notifiee',
       'apporteur_statut_modifie',
       'attribution_contact_purge',
       'attribution_etat_modifie',
       'attribution_peremption_suspendue',
       'attribution_porteur_reaffecte',
       'contestation_modifiee',
+      // JUR-T64 (A02, #703) : l'ouverture et la clôture d'un litige sur une décision de contrat.
+      'decision_contrat_litige_modifie',
       'demande_confirmation_etat_modifie',
       // SEC-61 : la pose et la levée d'un gel du journal des accès à la console.
       'journal_acces_gel_modifie',
       'journal_ouvert',
+      // SEC-69 : le premier regard d'un RIB, sa vérification hors bande.
+      'piece_kyc_rib_verifie',
       'piece_kyc_statut_modifie',
       'rattachement_manuel_modifie',
       // SEC-30 : tout changement d'un utilisateur de la console, dans la transaction du geste.
@@ -217,6 +224,14 @@ describe('REQ-DM-033 REQ-DM-043 — le gel pour litige au journal : le geste, ja
           const z = champ as { safeParse: (v: unknown) => { success: boolean } };
           expect(z.safeParse('INC-0001').success, `${type}.${cle}`).toBe(false);
           expect(z.safeParse('a'.repeat(64)).success, `${type}.${cle}`).toBe(true);
+          continue;
+        }
+        // JUR-T64 (forme d'A02, #703 6041868006) : `litigeId` est l'IDENTIFIANT de la ligne du litige,
+        // jamais sa référence : une clé suffixée `Id` refuse une référence en clair et n'admet qu'un UUID.
+        if (cle.endsWith('Id')) {
+          const z = champ as { safeParse: (v: unknown) => { success: boolean } };
+          expect(z.safeParse('RG-24/01234').success, `${type}.${cle}`).toBe(false);
+          expect(z.safeParse(ID).success, `${type}.${cle}`).toBe(true);
           continue;
         }
         // CPL-T07 : « refus » n'est pas une référence — le motif FERMÉ d'un refus de pièce
@@ -422,6 +437,49 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
     expect(u('desactiver', null, 'lecteur')).toEqual(['vers:roles_incoherents_avec_le_geste']);
   });
 
+  it('REQ-JUR-029 : TÉMOIN — JUR-T64 : le litige d’une décision porte son geste, ses deux identifiants, un motif FERMÉ de SON geste et l’acteur de la console, rien d’autre', () => {
+    const base = { litigeId: ID, decisionContratId: ID, acteur: CONSOLE };
+    for (const motif of [
+      'contestation_ecrite',
+      'reclamation_formelle',
+      'mediation',
+      'action_en_justice',
+    ]) {
+      passe('decision_contrat_litige_modifie', { ...base, geste: 'ouvrir', motif });
+    }
+    for (const motif of ['reponse_donnee', 'accord', 'decision_definitive', 'desistement']) {
+      passe('decision_contrat_litige_modifie', { ...base, geste: 'clore', motif });
+    }
+    // Un motif de clôture à l'ouverture, ou l'inverse : refusé, nommé.
+    expect(
+      refus('decision_contrat_litige_modifie', { ...base, geste: 'ouvrir', motif: 'accord' })
+    ).toEqual(['motif:motif_hors_du_geste']);
+    expect(
+      refus('decision_contrat_litige_modifie', { ...base, geste: 'clore', motif: 'mediation' })
+    ).toEqual(['motif:motif_hors_du_geste']);
+    expect(
+      refus('decision_contrat_litige_modifie', { ...base, geste: 'ouvrir', motif: 'autre' })
+    ).toHaveLength(1);
+    // NI texte NI référence : la charge est fermée.
+    expect(
+      refus('decision_contrat_litige_modifie', {
+        ...base,
+        geste: 'ouvrir',
+        motif: 'mediation',
+        reference: 'RG-2027-1',
+      })
+    ).toHaveLength(1);
+    // Un utilisateur de la console, jamais le système.
+    expect(
+      refus('decision_contrat_litige_modifie', {
+        ...base,
+        geste: 'ouvrir',
+        motif: 'mediation',
+        acteur: { par: 'systeme' },
+      })
+    ).toEqual(['acteur:acteur_console_attendu']);
+  });
+
   it('REQ-JUR-006 : la mise en demeure ne porte que l’article, pris dans la liste FERMÉE de l’art. 11.2, et l’acteur de la console', () => {
     for (const article of ['3.7', '6', '7', '8', '9', '23']) {
       passe('apporteur_mis_en_demeure', { article, acteur: CONSOLE });
@@ -469,5 +527,67 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
         intrus
       ).toHaveLength(1);
     }
+  });
+
+  it('REQ-JUR-015 : SEC-66 — la décision de la Société porte le motif ordinaire_axion, un horodatage de minuit et l’acteur de la console, rien d’autre', () => {
+    const juste = {
+      motif: 'ordinaire_axion',
+      dateEffet: '2026-11-02T23:00:00.000Z',
+      acteur: CONSOLE,
+    };
+    passe('apporteur_resiliation_notifiee', juste);
+    for (const motif of ['ordinaire_apporteur', 'manquement_grave', 'fin_de_plein_droit']) {
+      expect(refus('apporteur_resiliation_notifiee', { ...juste, motif }), motif).toHaveLength(1);
+    }
+    expect(
+      refus('apporteur_resiliation_notifiee', { ...juste, dateEffet: '2026-11-03' })
+    ).toHaveLength(1);
+    expect(refus('apporteur_resiliation_notifiee', { ...juste, texte: 'x' })).toHaveLength(1);
+    expect(
+      refus('apporteur_resiliation_notifiee', { ...juste, acteur: { par: 'systeme' } })
+    ).toEqual(['acteur:acteur_console_attendu']);
+  });
+
+  it('REQ-JUR-015 : SEC-66 — le passage à resilie pour ordinaire_axion CITE sa décision ; aucun autre passage ne cite', () => {
+    const resilie = {
+      de: 'signe',
+      vers: 'resilie',
+      transition: 'resilier',
+      resiliationMotif: 'ordinaire_axion',
+      acteur: CONSOLE,
+    };
+    passe('apporteur_statut_modifie', { ...resilie, decisionContratId: ID });
+    // Sans citation, refusé ; une citation hors forme aussi.
+    expect(refus('apporteur_statut_modifie', resilie)).toEqual([
+      'decisionContratId:citation_de_la_decision_incoherente',
+    ]);
+    expect(refus('apporteur_statut_modifie', { ...resilie, decisionContratId: '42' })[0]).toMatch(
+      /^decisionContratId:/
+    );
+    // Une citation sur un autre motif, ou sur un autre passage, refusée.
+    for (const resiliationMotif of [
+      'ordinaire_apporteur',
+      'manquement_grave',
+      'fin_de_plein_droit',
+    ]) {
+      passe('apporteur_statut_modifie', { ...resilie, resiliationMotif });
+      expect(
+        refus('apporteur_statut_modifie', {
+          ...resilie,
+          resiliationMotif,
+          decisionContratId: ID,
+        }),
+        resiliationMotif
+      ).toEqual(['decisionContratId:citation_de_la_decision_incoherente']);
+    }
+    expect(
+      refus('apporteur_statut_modifie', {
+        de: 'signe',
+        vers: 'suspendu',
+        transition: 'suspendre',
+        acteur: CONSOLE,
+        decisionContratId: ID,
+      })
+    ).toEqual(['decisionContratId:citation_de_la_decision_incoherente']);
   });
 });

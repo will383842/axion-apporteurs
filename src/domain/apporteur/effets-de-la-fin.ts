@@ -16,6 +16,7 @@ import {
   ETATS_ATTRIBUTION,
   TRANSITIONS_ATTRIBUTION,
   type EtatAttribution,
+  type TransitionAttribution,
 } from '../attribution/machine';
 import { dateDepuisJours, joursDeLaDate } from '../temps/calendrier-civil';
 import type { Instant } from '../temps/horloge';
@@ -63,4 +64,79 @@ export function ouvreDroitALaCommission(commande: {
   readonly finDuContrat: Instant;
 }): boolean {
   return commande.commandeSigneeAt < commande.finDuContrat;
+}
+
+/**
+ * DM-73, voie (b) d'A02 (juriste, #824, 6043135877 ; coordination, 6043156854) : une commande signée
+ * AVANT la fin mais reçue APRÈS l'annulation de l'attribution ne la fait pas revenir (art. 12.1). Le
+ * droit, rattaché à la commande (art. 12.3), ne reste ouvert que si l'attribution est sortie par la FIN
+ * DU CONTRAT, jamais par l'antériorité, le démenti ou la fraude (art. 3.3, 3.7). La borne d'instant est
+ * celle d'`ouvreDroitALaCommission`, jamais recalculée. Condition 1 de la juriste : l'entreprise était
+ * occupée par cette attribution à la date de la signature (`occupeeDepuis`, son dépôt).
+ */
+export function laCommandeTardiveOuvreDroit(commande: {
+  readonly commandeSigneeAt: Instant;
+  readonly finDuContrat: Instant;
+  readonly occupeeDepuis: Instant;
+  readonly sortie: TransitionAttribution;
+}): boolean {
+  return (
+    commande.sortie === 'fin_de_contrat' &&
+    commande.occupeeDepuis <= commande.commandeSigneeAt &&
+    ouvreDroitALaCommission(commande)
+  );
+}
+
+/**
+ * DM-73 : l'instant de fin du contrat, vu d'une attribution sortie par la fin du contrat. C'est
+ * l'instant de sa sortie au journal, borné par la fin avec préavis (`finDuContratAvecPreavis`, source
+ * unique) quand la résiliation porte un jour d'effet : un passage planifié qui court après minuit ne
+ * prolonge pas le contrat.
+ */
+export function finDuContratDeLaSortie(sortie: {
+  readonly sortieAt: Instant;
+  readonly jourDEffet: Instant | null;
+}): Instant {
+  return sortie.jourDEffet === null
+    ? sortie.sortieAt
+    : Math.min(sortie.sortieAt, finDuContratAvecPreavis(sortie.jourDEffet));
+}
+
+/** Une occupation d'une entreprise, telle que la chaîne des commissions la lit. */
+export interface OccupationDeLEntreprise {
+  readonly attributionId: string;
+  readonly occupeeDepuis: Instant;
+  /**
+   * Nulle tant que l'attribution occupe sans être sortie par la fin du contrat. Sinon, la transition de
+   * sortie et l'instant de fin du contrat (pour une autre sortie, l'instant de la sortie : il ne sert pas).
+   */
+  readonly sortie: {
+    readonly transition: TransitionAttribution;
+    readonly finDuContrat: Instant;
+  } | null;
+}
+
+/**
+ * DM-73, condition 3 de la juriste (art. 4.4) : la commande appartient à l'attribution qui occupait
+ * l'entreprise à la date de sa SIGNATURE, et à elle seule — jamais à un occupant arrivé après. Une
+ * attribution sortie par la fin du contrat (`figee` ou `fin_de_contrat`) ne la reçoit que signée avant
+ * la fin ; une autre sortie (antériorité, démenti, fraude, péremption…) n'en reçoit aucune. Rend
+ * l'identifiant, ou nul si aucune attribution n'y a droit.
+ */
+export function attributionDeLaCommande(
+  commandeSigneeAt: Instant,
+  occupations: readonly OccupationDeLEntreprise[]
+): string | null {
+  const ayantDroit = occupations.filter((o) =>
+    o.sortie === null
+      ? o.occupeeDepuis <= commandeSigneeAt
+      : laCommandeTardiveOuvreDroit({
+          commandeSigneeAt,
+          finDuContrat: o.sortie.finDuContrat,
+          occupeeDepuis: o.occupeeDepuis,
+          // `figee` garde le droit des commandes signées avant la fin, comme `fin_de_contrat` (12.3).
+          sortie: o.sortie.transition === 'figee' ? 'fin_de_contrat' : o.sortie.transition,
+        })
+  );
+  return ayantDroit.length === 1 ? ayantDroit[0]!.attributionId : null;
 }

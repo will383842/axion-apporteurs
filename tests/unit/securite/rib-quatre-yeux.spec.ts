@@ -205,7 +205,12 @@ describe('REQ-DM-027 — vérifier un RIB : le premier regard', () => {
 
   it('REQ-DM-027 : TÉMOIN — la vérification pose le regard et sa date, une fois, sans toucher le statut', async () => {
     const f = fauxClient({ piece: pieceRib(), ouvreurs: [AUTRE_ADMIN.id] });
-    await verifierUnRib(f.client, { acteur: ADMIN, pieceId: PIECE, maintenant: MAINTENANT });
+    await verifierUnRib(f.client, {
+      acteur: ADMIN,
+      pieceId: PIECE,
+      maintenant: MAINTENANT,
+      ecrireUnFait: async (_tx, e) => void f.evenements.push(e),
+    });
     expect(ecritures(f.appels)).toEqual([
       {
         quoi: 'ecrire',

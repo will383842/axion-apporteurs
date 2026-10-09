@@ -114,7 +114,10 @@ export type TypeEvenementJournal =
   | 'journal_acces_gel_modifie'
   | 'apporteur_mis_en_demeure'
   | 'apporteur_gel_modifie'
-  | 'acces_coordonnees_reservee';
+  | 'acces_coordonnees_reservee'
+  | 'piece_kyc_rib_verifie'
+  | 'apporteur_resiliation_notifiee'
+  | 'decision_contrat_litige_modifie';
 
 /**
  * SEC-61 : le gel du journal des accès à la console — ses gestes, ses motifs (les valeurs de
@@ -123,6 +126,25 @@ export type TypeEvenementJournal =
 export const GESTES_GEL_JOURNAL = ['poser', 'lever'] as const;
 export const MOTIFS_GEL_JOURNAL = ['incident', 'litige'] as const;
 export const PORTEES_GEL_JOURNAL = ['utilisateur', 'cible'] as const;
+
+/**
+ * JUR-T64 (juriste, #703 6041829569 ; forme d'A02, #703 6041868006) : les gestes d'un litige sur une
+ * décision de contrat et leurs motifs FERMÉS — les valeurs de `MotifOuvertureLitige` et
+ * `MotifClotureLitige`, confrontées au schéma par la garde des énumérations.
+ */
+export const GESTES_LITIGE = ['ouvrir', 'clore'] as const;
+export const MOTIFS_OUVERTURE_LITIGE = [
+  'contestation_ecrite',
+  'reclamation_formelle',
+  'mediation',
+  'action_en_justice',
+] as const;
+export const MOTIFS_CLOTURE_LITIGE = [
+  'reponse_donnee',
+  'accord',
+  'decision_definitive',
+  'desistement',
+] as const;
 
 /** DM-08 : le porteur d'une attribution, une forme UNIQUE — sa population et son identifiant. */
 const PORTEUR = () =>
@@ -149,15 +171,30 @@ export const CHARGES_PAR_TYPE = {
       vers: z.enum(STATUTS_APPORTEUR),
       transition: z.enum(TRANSITIONS_DU_JOURNAL_APPORTEUR),
       resiliationMotif: z.enum(MOTIFS_RESILIATION).optional(),
+      /**
+       * SEC-66 (A02, #561, 5988205180, voie 2) : l'UUID de la ligne `decisions_de_contrat` (geste
+       * `resiliation`) de la décision OPPOSABLE qui fonde le passage à `resilie` pour `ordinaire_axion`
+       * — et lui seul. Cette ligne est aussi permanente que le journal : il garde ainsi quelle décision
+       * a été opposée, après la purge de sa notification. Un UUID ne peut rien porter d'autre.
+       */
+      decisionContratId: FORMES.identifiant().optional(),
       acteur: FORMES.acteur(),
     })
     .strict()
-    .superRefine(({ de, transition }, ctx) => {
+    .superRefine(({ de, transition, vers, resiliationMotif, decisionContratId }, ctx) => {
       if ((de === null) !== (transition === 'creer')) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['de'],
           message: 'naissance_incoherente',
+        });
+      }
+      const exigee = vers === 'resilie' && resiliationMotif === 'ordinaire_axion';
+      if (exigee !== (decisionContratId !== undefined)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['decisionContratId'],
+          message: 'citation_de_la_decision_incoherente',
         });
       }
     }),
@@ -478,6 +515,63 @@ export const CHARGES_PAR_TYPE = {
       }),
     })
     .strict(),
+  /**
+   * SEC-69 (la sécurité, #747, 5986810177 §2) : le PREMIER regard d'un RIB — sa vérification hors bande —
+   * a son événement chaîné propre, sur l'agrégat `piece_kyc`. Le journal chaîné rend une réécriture
+   * visible ; avant lui, seule la garde de la base protégeait ce regard. Un fait daté, PAS un
+   * changement de statut (la pièce reste `a_verifier`) : `piece_kyc_statut_modifie` n'est pas touché.
+   * L'acteur est le vérificateur, un utilisateur de la console ; ni IBAN, ni empreinte, ni fichier.
+   */
+  piece_kyc_rib_verifie: z
+    .object({
+      type: z.literal('rib'),
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
+    })
+    .strict(),
+  /**
+   * SEC-66 (forme (b) d'A02, #703, 5983008261) : la DÉCISION de la Société de résilier le contrat
+   * (art. 11.1), agrégat `apporteur`. Ce n'est pas un changement de statut : l'apporteur reste `signe`
+   * pendant le préavis. Le motif, la date d'effet annoncée (jour civil de Paris de la décision plus
+   * `PREAVIS_JOURS`) et l'acteur de la console ; aucun texte libre.
+   */
+  apporteur_resiliation_notifiee: z
+    .object({
+      motif: z.literal('ordinaire_axion'),
+      /** Minuit, heure de Paris, du jour d'effet, en ISO 8601 UTC (A02, 5988205180). */
+      dateEffet: FORMES.horodatage(),
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
+    })
+    .strict(),
+  /**
+   * JUR-T64 (forme d'A02, #703 6041868006) : l'ouverture ou la clôture d'un litige sur une décision de
+   * contrat, agrégat `apporteur`. Le motif est celui de SON geste ; NI texte NI référence. La table
+   * `litiges_decisions_de_contrat` est l'ÉTAT, ce fait daté en est la trace.
+   */
+  decision_contrat_litige_modifie: z
+    .object({
+      geste: z.enum(GESTES_LITIGE),
+      litigeId: FORMES.identifiant(),
+      decisionContratId: FORMES.identifiant(),
+      motif: z.enum([...MOTIFS_OUVERTURE_LITIGE, ...MOTIFS_CLOTURE_LITIGE]),
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
+    })
+    .strict()
+    .superRefine((c, ctx) => {
+      const permis: readonly string[] =
+        c.geste === 'ouvrir' ? MOTIFS_OUVERTURE_LITIGE : MOTIFS_CLOTURE_LITIGE;
+      if (!permis.includes(c.motif))
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['motif'],
+          message: 'motif_hors_du_geste',
+        });
+    }),
 } satisfies Record<TypeEvenementJournal, z.ZodTypeAny>;
 
 /**

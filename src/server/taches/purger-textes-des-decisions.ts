@@ -17,26 +17,35 @@
  * anniversaire appartient encore au délai de cinq ans (code civil art. 2229, la prescription n'est
  * acquise que lorsque le dernier jour du terme est accompli) ; la veille et le jour même, rien.
  *
- * LIMITE NOMMÉE (arbitrage de la coordination, source publiée sur #766, commentaire 6033957822) :
- * seule compte, pour le départ d'une mise en demeure, une résiliation fondée sur
- * `apporteur_statut_modifie` — la coupure immédiate de SEC-19, opposable par construction. Toute
- * autre décision, dont la résiliation notifiée avec préavis de SEC-66, laisse la mise en demeure à
- * son `cree_at`, comme une décision caduque. La caducité de SEC-66 se dérivait de la notification et
- * de son courriel, que DM-61 supprime au bout de douze mois. A02 a depuis posé une trace DURABLE,
- * `decisionContratId` (#561, 5988205180) : sa lecture est portée par SEC-66, qui fusionne en second
- * (source 6033957822). Aucune purge ne peut survenir avant cinq ans.
+ * LA LECTURE PAR `decisionContratId` (SEC-66, #781 ; source publiée sur #766, 6033957822). Sont
+ * opposables, pour le départ d'une mise en demeure : la coupure immédiate de SEC-19 (un fait
+ * `apporteur_statut_modifie`, opposable par construction), et la résiliation notifiée de SEC-66 (un fait
+ * `apporteur_resiliation_notifiee`) QUE CITE un passage à `resilie` par `decisionContratId`, l'UUID de
+ * sa ligne : la trace DURABLE de l'opposabilité que A02 a posée au journal (#561, 5988205180). Une
+ * résiliation notifiée que nul passage ne cite est CADUQUE : elle ne compte pas, et la mise en demeure
+ * garde son `cree_at`. La caducité ne se lit donc plus sur la notification ni sur son courriel,
+ * supprimés à douze mois : le journal ne se purge jamais, et la limite nommée de DM-70 tombe. Toute
+ * autre décision ne compte pas. Aucune purge ne peut survenir avant cinq ans.
  *
  * L'écriture est celle qu'admet la garde dédiée de SEC-19 : le texte ET `faits_empreinte` vidés,
  * `texte_purge_at` posé, dans la même instruction, une fois. La ligne nue (geste, article, dates,
  * événement) reste, et `rendreUneDecisionDeContrat` refuse ensuite de rendre le texte. Une résiliation
- * sans texte n'est jamais prise. Le gel pendant un litige (code civil art. 2241) relève de JUR-T64.
+ * sans texte n'est jamais prise.
+ *
+ * JUR-T64, LE GEL POUR LITIGE (code civil art. 2241 et 2231 ; juriste, #703 6041829569 ; forme d'A02,
+ * #703 6041868006) : tant qu'un litige est OUVERT sur une décision, son texte n'est JAMAIS purgé — le
+ * passage la saute en requête, à la lecture comme à l'écriture, et le filet de la base
+ * (`decisions_de_contrat_gel_litige`) ferme le contournement. À la clôture, le départ devient le PLUS
+ * TARDIF du départ ordinaire et du jour civil de Paris de la DERNIÈRE clôture ; l'échéance reste celle
+ * ci-dessous.
  *
  * Par lots bornés, en avançant sur l'identifiant : un texte gardé n'est pas relu dans le passage.
  * Idempotente : un texte purgé n'est plus sélectionné.
  */
 import type { GesteDecisionContrat, PrismaClient } from '@prisma/client';
 import { SEUILS } from '../../domain/seuils/ssot';
-import { lireLaChargeDUnFait } from '../evenement/journal';
+import { lireLaChargeDUnFait, passageQuiCiteLaDecision } from '../evenement/journal';
+import { creerJournal, type Journal } from '../../lib/logger';
 import { versParis } from '../../domain/temps/paris';
 import { MS_PAR_JOUR, joursDeLaDate, type DateCivile } from '../../domain/temps/calendrier-civil';
 
@@ -56,8 +65,15 @@ type Decision = {
   creeAt: Date;
 };
 
-/** Une ligne du lot : ce que la purge en lit, rien d'autre. */
-type Candidate = Decision & { id: string; apporteurId: string };
+/** Une ligne du lot : ce que la purge en lit, rien d'autre (JUR-T64 : sa DERNIÈRE clôture de litige). */
+type Candidate = Decision & {
+  id: string;
+  apporteurId: string;
+  litiges: { closAt: Date | null }[];
+};
+
+/** JUR-T64 : aucun litige OUVERT sur la décision. */
+const SANS_LITIGE_OUVERT = { litiges: { none: { closAt: null } } } as const;
 
 /** Une colonne DATE, telle que Prisma la rend (minuit UTC du jour civil). */
 const dateCivileDe = (d: Date): DateCivile => ({
@@ -103,6 +119,19 @@ export function departDuTexte(
   }
 }
 
+/**
+ * JUR-T64 (art. 2231) : après la clôture d'un litige, le départ est le PLUS TARDIF du départ ordinaire et
+ * du jour civil de Paris de la DERNIÈRE clôture. Un départ illisible reste illisible (texte gardé).
+ */
+export function departApresLesLitiges(
+  departOrdinaire: DateCivile | null,
+  derniereClotureAt: Date | null
+): DateCivile | null {
+  if (departOrdinaire === null || derniereClotureAt === null) return departOrdinaire;
+  const cloture = jourDeParis(derniereClotureAt);
+  return joursDeLaDate(cloture) > joursDeLaDate(departOrdinaire) ? cloture : departOrdinaire;
+}
+
 /** L'échéance : le départ plus la durée, en années civiles ; un jour absent devient le dernier du mois. */
 export function echeanceDuTexte(depart: DateCivile): DateCivile {
   const annee = depart.annee + SEUILS.DECISION_CONTRAT_TEXTE_CONSERVATION_ANS.valeur;
@@ -130,21 +159,64 @@ function bornePrealable(maintenant: Date): Date {
   return borne;
 }
 
+/**
+ * JUR-T64 — l'alerte d'exploitation (juriste, #703 6042136542 ; condition de la sécurité) : un litige
+ * OUVERT depuis `LITIGE_DECISION_OUVERT_ALERTE_JOURS` jours ou plus alerte à CHAQUE passage, tant qu'il
+ * reste ouvert (arbitrage de la coordination : sans schéma, sans trou si un passage manque ; l'alerte cesse
+ * à la clôture). Elle ne clôt rien, et ne nomme ni l'apporteur ni les faits : le nombre, puis la décision
+ * (son identifiant) et l'âge en jours.
+ */
+async function alerterLesLitigesAnciens(
+  prisma: PrismaClient,
+  maintenant: Date,
+  journal: Pick<Journal, 'warn'>
+): Promise<void> {
+  const periode = SEUILS.LITIGE_DECISION_OUVERT_ALERTE_JOURS.valeur;
+  const ouverts = await prisma.litigeDecisionDeContrat.findMany({
+    where: {
+      closAt: null,
+      ouvertAt: { lte: new Date(maintenant.getTime() - periode * MS_PAR_JOUR) },
+    },
+    select: { decisionId: true, ouvertAt: true },
+  });
+  const litiges = ouverts.map((l) => ({
+    decisionId: l.decisionId,
+    ageJours: Math.floor((maintenant.getTime() - l.ouvertAt.getTime()) / MS_PAR_JOUR),
+  }));
+  if (litiges.length > 0)
+    journal.warn('litiges_decisions_ouverts_anciens', { nombre: litiges.length, litiges });
+}
+
 export async function purgerLesTextesDesDecisions(
   prisma: PrismaClient,
-  maintenant: Date
+  maintenant: Date,
+  p: { journal?: Pick<Journal, 'warn'> } = {}
 ): Promise<{ textesPurges: number }> {
+  await alerterLesLitigesAnciens(prisma, maintenant, p.journal ?? creerJournal());
   const aPurger = {
     textePurgeAt: null,
     NOT: { texteChiffre: null },
     creeAt: { lte: bornePrealable(maintenant) },
+    ...SANS_LITIGE_OUVERT,
   };
   let textesPurges = 0;
   let apres: string | null = null;
   for (;;) {
     const lot: Candidate[] = await prisma.decisionDeContrat.findMany({
       where: apres === null ? aPurger : { ...aPurger, id: { gt: apres } },
-      select: { id: true, apporteurId: true, geste: true, dateEffet: true, creeAt: true },
+      select: {
+        id: true,
+        apporteurId: true,
+        geste: true,
+        dateEffet: true,
+        creeAt: true,
+        litiges: {
+          where: { NOT: { closAt: null } },
+          select: { closAt: true },
+          orderBy: { closAt: 'desc' },
+          take: 1,
+        },
+      },
       orderBy: { id: 'asc' },
       take: LOT_DE_PURGE_DES_DECISIONS,
     });
@@ -159,16 +231,28 @@ export async function purgerLesTextesDesDecisions(
         ? []
         : await prisma.decisionDeContrat.findMany({
             where: { apporteurId: { in: apporteursMisEnDemeure }, geste: 'resiliation' },
-            select: { apporteurId: true, dateEffet: true, creeAt: true, evenementId: true },
+            select: {
+              id: true,
+              apporteurId: true,
+              dateEffet: true,
+              creeAt: true,
+              evenementId: true,
+            },
             orderBy: [{ creeAt: 'asc' }, { id: 'asc' }],
           });
-    // LIMITE NOMMÉE (en tête) : seule la résiliation fondée sur un changement de statut compte. Le
-    // type de son fait se lit par `evenementId`, au module du journal : la relation vers le journal
-    // n'est jamais employée par le code (condition d'A02).
+    // Seule une résiliation OPPOSABLE compte (en tête). Le type de son fait se lit par `evenementId`, au
+    // module du journal : la relation vers le journal n'est jamais employée par le code (condition
+    // d'A02). La notifiée de SEC-66 n'est opposable que si un passage à `resilie` la cite.
     const resiliations: typeof toutes = [];
     for (const r of toutes) {
       const fait = await lireLaChargeDUnFait(prisma, r.evenementId.toString());
-      if (fait?.type === 'apporteur_statut_modifie') resiliations.push(r);
+      if (
+        fait?.type === 'apporteur_statut_modifie' ||
+        (fait?.type === 'apporteur_resiliation_notifiee' &&
+          (await passageQuiCiteLaDecision(prisma, r.id, r.apporteurId)) !== null)
+      ) {
+        resiliations.push(r);
+      }
     }
 
     const echus = lot
@@ -181,12 +265,20 @@ export async function purgerLesTextesDesDecisions(
                   joursDeLaDate(jourDeParis(r.creeAt)) >= joursDeLaDate(jourDeParis(d.creeAt))
               ) ?? null)
             : null;
-        return texteEchu(departDuTexte(d, suivante), maintenant);
+        return texteEchu(
+          departApresLesLitiges(departDuTexte(d, suivante), d.litiges[0]?.closAt ?? null),
+          maintenant
+        );
       })
       .map((d) => d.id);
     if (echus.length > 0) {
       const { count } = await prisma.decisionDeContrat.updateMany({
-        where: { id: { in: echus }, textePurgeAt: null, NOT: { texteChiffre: null } },
+        where: {
+          id: { in: echus },
+          textePurgeAt: null,
+          NOT: { texteChiffre: null },
+          ...SANS_LITIGE_OUVERT,
+        },
         data: { texteChiffre: null, faitsEmpreinte: null, textePurgeAt: maintenant },
       });
       textesPurges += count;

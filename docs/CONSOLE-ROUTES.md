@@ -85,6 +85,8 @@ encore, l'accueil montre un état vide guidant qui dit ce qui arrive et à quel 
 | `/console/apporteurs/[id]` | Fiche apporteur, cinq blocs, décision retenu, vivier ou refusé | admin, qualifieur, comptable | 1 | prévue | REQ-CPL-027, REQ-JUR-031 | `apporteur-fiche.html` | UX-P1-12 | non |
 | `/console/apporteurs/[id]/conformite` | Dossier de conformité : pièces, vérification, ouverture et validation | admin, qualifieur | 1 | livrée | REQ-DM-027 | `apporteur-fiche.html` (bloc conformité) | CPL-T07 | non |
 | `/console/apporteurs/[id]/mise-en-demeure` | Mise en demeure : article de la liste fermée, faits, envoi daté par le courriel | admin | 1 | livrée | REQ-UX-047, REQ-JUR-006 | `mise-en-demeure.html` | UX-P1-57 | non |
+| `/console/anomalies` | Anomalies de sincérité ouvertes, les plus anciennes d'abord, sans score, rang ni seuil | admin | 1 | livrée | REQ-UX-047, REQ-SEC-023 | `anomalies.html` | UX-P1-56 | non |
+| `/console/anomalies/[id]` | Confirmer une anomalie de sincérité avec ses faits retenus, chiffrés ; aucun gel posé | admin | 1 | livrée | REQ-UX-047, REQ-SEC-023, REQ-DM-033 | `anomalies.html` | UX-P1-56 | non |
 | `/console/attributions` | Attributions : filtres état, département, apporteur ; rattachement manuel motivé | admin, qualifieur, lecteur (lecture) | 1 | prévue | REQ-UX-037 | `attributions-contrats.html` | UX-P1-13 | non |
 | `/console/attributions/[id]` | Fiche prospect : échanges, fiche de qualification, journal | admin, qualifieur | 1 | prévue | REQ-EXT-003, REQ-EXT-005 | `fiche-prospect.html` | EXT-T02a | non |
 | `/console/contrats` | Contrats : versions signées | admin, comptable | 1 | prévue | REQ-UX-037 | `attributions-contrats.html` | UX-P1-13 | non |

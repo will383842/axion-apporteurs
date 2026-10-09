@@ -59,6 +59,8 @@ export const TACHES = {
   sessions_purger: { req: 'REQ-SEC-003' },
   /** SEC-65 — l'effacement du nom et de l'adresse d'un accès désactivé de la console, cinq ans après. */
   utilisateurs_console_effacer: { req: 'REQ-JUR-068' },
+  /** SEC-66 — le passage à `resilie` d'une résiliation par la Société, à sa date d'effet. */
+  resiliations_a_date_effet: { req: 'REQ-JUR-015' },
   /** DM-65 — l'effacement, cinq ans après le retrait, de la trace de la liste tenue par la Société. */
   traces_liste_noire_purger: { req: 'REQ-DM-028' },
   /**
@@ -87,6 +89,8 @@ export const TACHES = {
   dementis_purger: { req: 'REQ-DM-043' },
   /** DM-70 — la purge du texte d'une décision de contrat, cinq ans après son point de départ. */
   decisions_contrat_purger: { req: 'REQ-JUR-029' },
+  /** DM-51 — le rappel d'échéance de l'attestation `rc_pro`, une fois par échéance (`rappelerLesAttestationsRcPro`). */
+  rc_pro_rappeler: { req: 'REQ-DM-027' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;

@@ -37,6 +37,7 @@
  */
 import type { Prisma, PrismaClient, TypeEvenementJournal, AgregatJournal } from '@prisma/client';
 import { CHARGES_PAR_TYPE, TRANSITIONS_DU_JOURNAL_APPORTEUR } from '../../domain/evenement/charges';
+import { ETATS_TERMINES, type TransitionAttribution } from '../../domain/attribution/machine';
 import { calculerSelfHash, type LigneJournal } from '../../domain/evenement/journal';
 
 /**
@@ -192,6 +193,39 @@ export async function lireLaChargeDUnFait(
 }
 
 /**
+ * SEC-66 (A02, #561, 5988205180) — la trace DURABLE de l'opposabilité d'une résiliation par la
+ * Société : le passage à `resilie` qui CITE la ligne `decisions_de_contrat` (`decisionContratId`),
+ * ou `null` s'il n'est cité par aucun passage — la décision est alors caduque, sans aucune colonne
+ * d'état. Le journal n'est jamais purgé : la réponse survit à la purge de la notification et de son
+ * courriel. Deux lecteurs : la tâche de la date d'effet, SANS filtre (une décision n'est citée qu'une
+ * fois, sur quelque apporteur que ce soit : `decision_deja_citee`) ; la purge des textes (DM-70,
+ * départ des cinq ans d'une mise en demeure), AVEC le filtre `apporteurId` : un passage d'un autre
+ * apporteur ne rend jamais opposable la décision de celui-ci. Une lecture seule, par le module du
+ * journal.
+ */
+export async function passageQuiCiteLaDecision(
+  client: PrismaClient | Prisma.TransactionClient,
+  decisionContratId: string,
+  apporteurId?: string
+): Promise<string | null> {
+  if (apporteurId !== undefined && !UUID_CANONIQUE.test(apporteurId)) {
+    throw new Error('lecture_du_journal_refusee : agrégat hors forme');
+  }
+  const l = await client.evenement.findFirst({
+    where: {
+      type: 'apporteur_statut_modifie',
+      ...(apporteurId === undefined
+        ? {}
+        : { agregat: 'apporteur' as const, agregatId: apporteurId }),
+      charge: { path: ['decisionContratId'], equals: decisionContratId },
+    },
+    select: { id: true },
+    orderBy: { id: 'asc' },
+  });
+  return l === null ? null : l.id.toString();
+}
+
+/**
  * SEC-15 — la FIN d'une suspension, lue au journal par son écrivain unique (A02, #794, 6036174464,
  * d'après la juriste, 6036161128) : la PREMIÈRE levée du gel postérieure au fait de la pose ; à défaut,
  * le premier passage de l'apporteur à `resilie` (la fin du contrat). La garde du gel interdit un gel
@@ -269,5 +303,78 @@ export async function acteursDUneTransition(
     const lu = CHARGES_PAR_TYPE.apporteur_statut_modifie.safeParse(f.charge);
     if (!lu.success) throw new Error('lecture_du_journal_refusee : charge hors schéma');
     return lu.data.acteur.id ?? null;
+  });
+}
+
+/**
+ * EXT-T06 — LECTEUR RÉSERVÉ du signal « Déjà déposée par le passé » (conditions de la sécurité, relayées
+ * par la coordination). Il rend la date de fin de la DERNIÈRE attribution terminée sur ce SIREN, quel
+ * qu'en soit le porteur, ou `null` ; RIEN d'autre : ni porteur, ni identifiant, ni charge, ni nombre.
+ *   — Les événements se trouvent par les ATTRIBUTIONS du SIREN (`agregat_id` parmi leurs ids), jamais
+ *     en lisant un SIREN dans une charge.
+ *   — UNE seule requête, agrégée en base (le dernier événement de chaque attribution, par une jointure
+ *     latérale) : le temps de réponse ne dépend pas du nombre d'attributions terminées (note de la
+ *     sécurité sur #812).
+ *   — Une attribution compte si son état est dans la liste FERMÉE `ETATS_TERMINES`, et si son DERNIER
+ *     `attribution_etat_modifie` dit, lisiblement, qu'elle y est passée ; la fin est son `survenuAt`.
+ *   — ÉCHEC FERMÉ : une charge illisible, un événement absent ou discordant, une erreur de lecture
+ *     rendent `null`, donc AUCUN signal : échouer ne rend rien de différent de « jamais déposée ».
+ * Seul le service de la vérification l'appelle ; le booléen se calcule en mémoire, jamais stocké ni
+ * journalisé.
+ */
+export async function derniereFinSurLeSiren(
+  client: Pick<PrismaClient, '$queryRaw'> | Prisma.TransactionClient,
+  siren: string
+): Promise<Date | null> {
+  try {
+    const terminees = await client.$queryRaw<
+      { statut: string; survenu_at: Date | null; charge: unknown }[]
+    >`
+      SELECT a.statut::text AS statut, d.survenu_at, d.charge
+      FROM attributions a
+      LEFT JOIN LATERAL (
+        SELECT e.survenu_at, e.charge FROM evenements e
+        WHERE e.type = 'attribution_etat_modifie' AND e.agregat = 'attribution' AND e.agregat_id = a.id
+        ORDER BY e.survenu_at DESC, e.id DESC
+        LIMIT 1
+      ) d ON true
+      WHERE a.siren = ${siren} AND a.statut::text = ANY(${[...ETATS_TERMINES]}::text[])`;
+    let fin: Date | null = null;
+    for (const a of terminees) {
+      const lue = CHARGES_PAR_TYPE.attribution_etat_modifie.safeParse(a.charge);
+      if (a.survenu_at === null || !lue.success || lue.data.vers !== a.statut) return null;
+      if (fin === null || a.survenu_at > fin) fin = a.survenu_at;
+    }
+    return fin;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * DM-73 — LECTEUR RÉSERVÉ de la chaîne des commissions : pour chaque attribution d'un SIREN, hors file,
+ * la DERNIÈRE transition au journal et son instant ; une attribution sans fait n'y figure pas. UNE
+ * requête, par les attributions du SIREN (jointure latérale), comme `derniereFinSurLeSiren`. Seuls la
+ * transition et l'instant sortent, jamais la charge. Chaque charge est jugée par SON schéma ; une
+ * charge illisible LÈVE : la désignation d'un bénéficiaire échoue fermée, elle ne devine pas.
+ */
+export async function dernieresTransitionsSurLeSiren(
+  client: Pick<PrismaClient, '$queryRaw'> | Prisma.TransactionClient,
+  siren: string
+): Promise<{ attributionId: string; transition: TransitionAttribution; survenuAt: Date }[]> {
+  const lignes = await client.$queryRaw<{ id: string; survenu_at: Date; charge: unknown }[]>`
+    SELECT a.id::text AS id, d.survenu_at, d.charge
+    FROM attributions a
+    JOIN LATERAL (
+      SELECT e.survenu_at, e.charge FROM evenements e
+      WHERE e.type = 'attribution_etat_modifie' AND e.agregat = 'attribution' AND e.agregat_id = a.id
+      ORDER BY e.id DESC
+      LIMIT 1
+    ) d ON true
+    WHERE a.siren = ${siren} AND a.statut::text <> 'en_attente'`;
+  return lignes.map((l) => {
+    const lue = CHARGES_PAR_TYPE.attribution_etat_modifie.safeParse(l.charge);
+    if (!lue.success) throw new Error('lecture_du_journal_refusee : charge hors schéma');
+    return { attributionId: l.id, transition: lue.data.transition, survenuAt: l.survenu_at };
   });
 }

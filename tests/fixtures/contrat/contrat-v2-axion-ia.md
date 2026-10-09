@@ -1,7 +1,8 @@
 <!--
   Le contrat apporteur v2 d'axion-ia, tel que JUR-T66 le recopie (décision de Williams du 2026-10-07,
-  #474, 6032680253). Source : axion-ia, `src/features/apporteurs-reseau/contrat-v2.ts`, au commit
-  833954dab (CONTRAT_VERSION « 2 »), lue en lecture seule le 2026-10-07.
+  #474, 6032680253), mis à la version 2.1 par JUR-T67. Source : axion-ia,
+  `src/features/apporteurs-reseau/contrat-v2.ts`, au commit 44fd09a9c (CONTRAT_VERSION « 2.1 »), lue en
+  lecture seule le 2026-10-09.
   RÉDUIT au corps et à l'annexe 2 : l'annexe 1 (la grille) n'est pas reprise. CHAQUE NOMBRE est masqué
   en « § », et la doctrine que gov:publication refuse hors du gabarit, en « ⁂ » : le témoin `gabarit-recopie-contrat-v2.spec.ts` compare les nombres comme des jokers, et ce
   dépôt public ne porte ainsi aucune valeur de l'économie du réseau. Ne pas éditer à la main.
@@ -330,7 +331,7 @@ SIREN.
 
 **§ — Grille.** La rémunération est exclusivement constituée de commissions, selon la **grille figurant
 en annexe §** (version § du {{GRILLE_DATE}}), annexée au présent contrat et en
-faisant partie intégrante.
+faisant partie intégrante. Les produits créés après la signature relèvent de l'annexe §, A§.
 
 Cette grille est **propre au présent contrat**. Elle est arrêtée palier par palier avant la génération du
 contrat. Elle peut différer,
@@ -816,7 +817,8 @@ facturation ayant pris fin, la facture est alors établie dans les conditions de
 ### Article § — Modification
 
 **§** Toute modification du présent contrat ou de la grille annexée fait l'objet d'un avenant soumis à
-la signature de l'Apporteur.
+la signature de l'Apporteur. La publication de la commission d'un produit créé après la signature (annexe §,
+A§) n'est pas une modification du contrat.
 
 **§** Tant que l'Apporteur n'a pas signé un avenant, **les conditions de la version qu'il a signée
 continuent de s'appliquer** — à ses attributions en cours comme à ses déclarations nouvelles, ainsi qu'aux
@@ -882,7 +884,8 @@ documents de présentation ou d'un courrier électronique, **ni aucun support pu
 Société, notamment les pages de son site présentant les commissions,** n'a valeur contractuelle, **à
 l'exception des documents que le présent contrat désigne — autofactures, avoirs et décomptes, notifications de
 l'article §, décisions relatives aux attributions et extraits du registre de l'article § —, qui font
-partie de l'exécution du contrat. La présente stipulation ne limite ni n'exclut le devoir d'information de
+partie de l'exécution du contrat, et de la grille de référence publiée, pour les seuls produits créés après la
+signature (annexe §, A§). La présente stipulation ne limite ni n'exclut le devoir d'information de
 l'article §-§ du code civil.**
 
 ---

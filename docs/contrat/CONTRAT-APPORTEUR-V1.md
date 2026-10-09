@@ -1,4 +1,4 @@
-# Contrat d'apporteur d'affaires — gabarit v1
+# Contrat d'apporteur d'affaires — version 2.1
 
 <!-- Gabarit public, texte figé par la décision W11. Chaque variable entre doubles accolades est
      déclarée, avec sa source, dans src/domain/contrat/variables.ts ; l'annexe 2 est
@@ -306,7 +306,7 @@ SIREN.
 
 **4.1 — Grille.** La rémunération est exclusivement constituée de commissions, selon la **grille figurant
 en annexe 1** (version `{{GRILLE_VERSION}}` du `{{GRILLE_DATE}}`), annexée au présent contrat et en
-faisant partie intégrante.
+faisant partie intégrante. Les produits créés après la signature relèvent de l'annexe 1, A1.7.
 
 Cette grille est **propre au présent contrat**. Elle est arrêtée palier par palier avant la génération du
 contrat. Elle peut différer,
@@ -782,7 +782,8 @@ facturation ayant pris fin, la facture est alors établie dans les conditions de
 
 ### Article 13 — Modification
 **13.1** Toute modification du présent contrat ou de la grille annexée fait l'objet d'un avenant soumis à
-la signature de l'Apporteur.
+la signature de l'Apporteur. La publication de la commission d'un produit créé après la signature (annexe 1,
+A1.7) n'est pas une modification du contrat.
 
 **13.2** Tant que l'Apporteur n'a pas signé un avenant, **les conditions de la version qu'il a signée
 continuent de s'appliquer** — à ses attributions en cours comme à ses déclarations nouvelles, ainsi qu'aux
@@ -844,7 +845,8 @@ documents de présentation ou d'un courrier électronique, **ni aucun support pu
 Société, notamment les pages de son site présentant les commissions,** n'a valeur contractuelle, **à
 l'exception des documents que le présent contrat désigne — autofactures, avoirs et décomptes, notifications de
 l'article 20, décisions relatives aux attributions et extraits du registre de l'article 3.5 —, qui font
-partie de l'exécution du contrat. La présente stipulation ne limite ni n'exclut le devoir d'information de
+partie de l'exécution du contrat, et de la grille de référence publiée, pour les seuls produits créés après la
+signature (annexe 1, A1.7). La présente stipulation ne limite ni n'exclut le devoir d'information de
 l'article 1112-1 du code civil.**
 
 ---

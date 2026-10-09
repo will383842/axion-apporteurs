@@ -20,6 +20,7 @@
 import type { SujetDeCompteur } from '../securite/rate-limit';
 import {
   causeDuJournal,
+  dejaDeclareeParLePasse,
   etatDeVerification,
   type CauseDeVerification,
   type EtatDeLEntreprise,
@@ -63,11 +64,22 @@ export type PortsDeVerification = {
    */
   entreprise: (siren: string) => Promise<EtatDeLEntreprise | 'indisponible'>;
   occupation: (siren: string) => Promise<{ occupee: boolean; enFile: number }>;
+  /**
+   * EXT-T06 : la fin de la DERNIÈRE attribution terminée sur le SIREN, par le lecteur réservé du
+   * journal ; `null` si aucune, ou si elle est illisible (échec fermé : aucun signal).
+   */
+  derniereFin: (siren: string) => Promise<Date | null>;
+  maintenant: () => Date;
   journaliser: (ligne: LigneDuJournal) => Promise<void>;
 };
 
 export type ResultatDeVerification =
-  | { ok: true; dto: { etat: EtatVerification } }
+  /**
+   * EXT-T06 (REQ-EXT-006, condition 1 de la sécurité) : `dejaDeclaree` est TOUJOURS présent, à la même
+   * place, vrai ou faux : la forme de la réponse ne dit rien. Il n'est vrai que pour `libre`, et pour
+   * un apporteur ; jamais pour la console.
+   */
+  | { ok: true; dto: { etat: EtatVerification; dejaDeclaree: boolean } }
   | { ok: false; refus: 'siren_invalide' | 'limite' | 'registre_indisponible' };
 
 const REFUS_LIMITE = { ok: false, refus: 'limite' } as const;
@@ -90,10 +102,12 @@ export async function verifierUneEntreprise(
   const entreprise = await ports.entreprise(siren);
   if (entreprise === 'indisponible') return { ok: false, refus: 'registre_indisponible' };
   // Puis tous les faits, toujours : aucune cause ne s'arrête plus tôt qu'une autre.
-  const [anteriorite, surLaListe, occupation] = await Promise.all([
+  // La dernière fin aussi, TOUJOURS, dans la même lecture : le délai ne dépend pas du signal.
+  const [anteriorite, surLaListe, occupation, derniereFin] = await Promise.all([
     ports.anteriorite(siren),
     ports.surLaListe(siren),
     ports.occupation(siren),
+    ports.derniereFin(siren).catch(() => null),
   ]);
   const faits = { anteriorite, surLaListe, entreprise, ...occupation };
 
@@ -105,5 +119,9 @@ export async function verifierUneEntreprise(
     resultat: causeDuJournal(faits),
     ipHash: demande.ipHash,
   });
-  return { ok: true, dto: { etat: etatDeVerification(faits) } };
+  // Le signal n'est ni journalisé ni stocké : il se dérive ici, et seulement pour un apporteur.
+  const dejaDeclaree =
+    'apporteurId' in demande.porteur &&
+    dejaDeclareeParLePasse(faits, derniereFin?.getTime() ?? null, ports.maintenant().getTime());
+  return { ok: true, dto: { etat: etatDeVerification(faits), dejaDeclaree } };
 }

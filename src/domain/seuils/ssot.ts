@@ -362,6 +362,14 @@ export const SEUILS = {
     renvois: [],
     verifieLe: LE,
   },
+  LITIGE_DECISION_OUVERT_ALERTE_JOURS: {
+    valeur: 180,
+    unite: 'jours',
+    source:
+      'RGPD art. 5.1 e) (limitation de la conservation) et 5.2 (responsabilité) : revue périodique d’un gel de conservation ; périodicité de la juriste, #703 6042136542',
+    renvois: [],
+    verifieLe: LE,
+  },
   CONSERVATION_PIECES_ANS: {
     valeur: 10,
     unite: 'ans',
@@ -462,6 +470,26 @@ export const SEUILS = {
     source: 'REQ-DM-033, demande de la juriste au rattrapage 85 (DM-62)',
     renvois: [],
     verifieLe: '2026-10-03',
+  },
+  // DM-51 : le rappel d'échéance de l'attestation `rc_pro`, un service (art. 6.4 : aucune n'est
+  // exigée) ; la fenêtre court de `expire_at - délai` (incluse) à `expire_at` (exclue).
+  RC_PRO_RAPPEL_AVANT_ECHEANCE_JOURS: {
+    valeur: 30,
+    unite: 'jours',
+    source: 'REQ-DM-027 (rappel J-30)',
+    renvois: [],
+    verifieLe: '2026-10-09',
+  },
+  // INT-T76-P (forme d'A02, #737) : la fenêtre où la réception TRAITE encore la v3 du contrat, en
+  // jours civils de Paris, comptée du `received_at` du premier événement v4 reçu et accepté ; borne
+  // EXCLUSIVE au minuit de Paris qui suit le dernier jour. Au-delà, une v3 est inscrite `held`.
+  BASCULE_CONTRAT_V3_V4_JOURS: {
+    valeur: 7,
+    unite: 'jours',
+    source:
+      "arbitrage A02 (INT-T76-P, #737), par délégation : couvre le déploiement en lockstep des deux dépôts et les rejeux de l'outbox d'axion-ia ; au-delà, la v3 est `held` et rejouable, rien n'est perdu",
+    renvois: [],
+    verifieLe: '2026-10-05',
   },
 } as const satisfies Record<string, Seuil>;
 
@@ -643,6 +671,19 @@ export function budgetUx(nom: string): BudgetUx {
  * caractères de contrôle. Elle se juge à la SAISIE dans la console (tâche à venir) ; à l'ENVOI, elle
  * n'est qu'un filet : au-delà, aucun courriel, jamais une troncature.
  */
+/**
+ * EXT-T06 (REQ-EXT-006) — l'ancienneté minimale du signal « Déjà déposée par le passé » : il n'apparaît
+ * que si la DERNIÈRE attribution terminée sur le SIREN l'est depuis PLUS de ce nombre de jours civils de
+ * Paris ; avant, l'état « disponible » est rendu tel quel (juriste, à la demande de la sécurité).
+ */
+export const SIGNAL_DEJA_DECLAREE_ANCIENNETE_JOURS = {
+  valeur: 30,
+  unite: 'jours',
+  source:
+    'juriste, à la demande de la sécurité (#319, 6036622439) : la dernière fin, en jours civils de Paris',
+  verifieLe: '2026-10-07',
+} as const;
+
 export const FAITS_ANOMALIE_CARACTERES_MAX = {
   valeur: 1000,
   unite: 'points_de_code',

@@ -19,6 +19,10 @@
  *     test trouvé » n'est pas un rouge : `non_execute_sur_main`.
  *  5. L'arbre de `<base>` est retiré, succès ou échec.
  *
+ * LE NIVEAU (GOV-160, décision de Williams sur #319) : le test vu rouge d'abord n'est exigé que des
+ * PR que `gov-pr-niveaux` classe CRITIQUES — son classement est relu (`niveauDuDepot`), jamais
+ * recopié. Une PR normale ou légère sort en 0 sans exécuter ses tests contre la base, et le DIT.
+ *
  * LA SEULE SORTIE : `@no-red-first:` suivi d'une justification d'au moins vingt caractères, dans le
  * fichier. Il n'est alors pas exécuté, et la justification est IMPRIMÉE. Un marqueur nu est un refus.
  *
@@ -42,6 +46,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { niveauDuDepot, type Niveau } from './gov-pr-niveaux';
 
 export const ID_REGISTRE = 'red-first';
 export const MARQUEUR = '@no-red-first';
@@ -68,6 +73,11 @@ export interface Univers {
   horsVitest: string[];
   /** Lance un test nouveau contre le code de `<base>`. */
   executer: (chemin: string) => Execution;
+  /**
+   * Le niveau de la PR selon `gov-pr-niveaux` (GOV-160). Le test vu rouge d'abord n'est exigé qu'au
+   * niveau CRITIQUE ; absent, la PR est jugée comme critique.
+   */
+  niveau?: Niveau;
 }
 
 export interface Decision {
@@ -108,6 +118,17 @@ function derniereLigne(sortie: string): string {
 
 /** PURE : juge un univers, n'écrit rien, ne sort pas. */
 export function decider(u: Univers): Decision {
+  if (u.niveau !== undefined && u.niveau !== 'critique') {
+    return {
+      code: 0,
+      fautes: [],
+      lignes: [
+        `✅ ${ID_REGISTRE} — PR de niveau ${u.niveau.toUpperCase()} : le test vu rouge d'abord n'est ` +
+          `exigé qu'au niveau CRITIQUE (GOV-160). ${u.nouveaux.length} test(s) nouveau(x) non jugé(s).`,
+        ...u.nouveaux.map((n) => `   · ${n.chemin} — non jugé (niveau ${u.niveau})`),
+      ],
+    };
+  }
   const fautes: Faute[] = [];
   const details: string[] = [];
   let exemptes = 0;
@@ -213,6 +234,18 @@ function prouver(): Decision {
   lignes.push(
     `   ${contre.code === 0 ? '✓' : '✗'} contre-témoin : un test rouge contre main passe`
   );
+  // GOV-160 : le même test déjà vert passe sur une PR NORMALE, et reste refusé sur une PR CRITIQUE.
+  const vertSurMain: Execution = { code: 0, sortie: 'Tests  1 passed (1)' };
+  const normale = decider({ ...temoin("it('x', () => {});", vertSurMain), niveau: 'normal' });
+  if (normale.code !== 0) echecs++;
+  lignes.push(
+    `   ${normale.code === 0 ? '✓' : '✗'} contre-témoin : PR NORMALE, test déjà vert — non exigé`
+  );
+  const critique = decider({ ...temoin("it('x', () => {});", vertSurMain), niveau: 'critique' });
+  if (critique.code !== 1) echecs++;
+  lignes.push(
+    `   ${critique.code === 1 ? '✓' : '✗'} témoin : PR CRITIQUE, test déjà vert — refusé`
+  );
   const tete =
     echecs === 0
       ? `✅ ${ID_REGISTRE} --prove — les ${TEMOINS.length} familles rougissent chacune sur son témoin, et le contre-témoin passe.`
@@ -306,7 +339,16 @@ function arbreDeLaBase(base: string): { executer: Univers['executer']; retirer: 
   return { executer, retirer };
 }
 
+/** Le titre de la PR (il nomme la tâche, qui peut rendre la PR critique) : vide hors `pull_request`. */
+function titreDeLaPr(): string {
+  const chemin = process.env['GITHUB_EVENT_PATH'];
+  if (process.env['GITHUB_EVENT_NAME'] !== 'pull_request' || !chemin) return '';
+  const e = JSON.parse(readFileSync(chemin, 'utf8')) as { pull_request?: { title?: string } };
+  return e.pull_request?.title ?? '';
+}
+
 function juger(base: string): Decision {
+  const { niveau } = niveauDuDepot(base, 'HEAD', titreDeLaPr());
   const ajoutes = cheminsDuDiff(base, 'A');
   const inclus = inclusParVitest();
   const tests = ajoutes.filter((c) => RESSEMBLE_A_UN_TEST.test(c) || inclus.has(c));
@@ -314,12 +356,18 @@ function juger(base: string): Decision {
     .filter((c) => inclus.has(c))
     .map((chemin) => ({ chemin, texte: readFileSync(chemin, 'utf8') }));
   const horsVitest = tests.filter((c) => !inclus.has(c));
-  if (nouveaux.length === 0) {
-    return decider({ base, nouveaux, horsVitest, executer: () => ({ code: 1, sortie: '' }) });
+  if (nouveaux.length === 0 || niveau !== 'critique') {
+    return decider({
+      base,
+      nouveaux,
+      horsVitest,
+      niveau,
+      executer: () => ({ code: 1, sortie: '' }),
+    });
   }
   const { executer, retirer } = arbreDeLaBase(base);
   try {
-    return decider({ base, nouveaux, horsVitest, executer });
+    return decider({ base, nouveaux, horsVitest, niveau, executer });
   } finally {
     retirer();
   }

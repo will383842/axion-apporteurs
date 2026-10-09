@@ -23,7 +23,7 @@ import {
   chaineCanoniqueDeRelecture,
   NombreNonCanonique,
 } from '../../../packages/contracts/signature-relecture';
-import { artefacts } from '../../../scripts/contracts/export';
+import { NOM_JSON_SCHEMA, artefacts } from '../../../scripts/contracts/export';
 import { kidDe, type Trousseau } from '../../../src/lib/env';
 import {
   CHEMIN_RELECTURE,
@@ -463,11 +463,12 @@ describe('REQ-INT-012 — contracts.sha256 couvre la chaîne canonique et ses ve
       .update(readFileSync(`${racine}/packages/contracts/${chemin}`))
       .digest('hex');
 
-  it('REQ-INT-012 : les deux fichiers ont leur ligne, APRÈS celle de contracts.v3.json, lue en premier par axion-ia', () => {
+  it('REQ-INT-012 : les deux fichiers ont leur ligne, APRÈS celle du contrat courant, lue en premier par axion-ia', () => {
     const lignes = readFileSync(`${racine}/packages/contracts/contracts.sha256`, 'utf8')
       .trimEnd()
       .split('\n');
-    expect(lignes[0]).toMatch(/^[0-9a-f]{64} {2}contracts\.v3\.json$/);
+    expect(lignes[0]).toMatch(/^[0-9a-f]{64} {2}contracts\.v\d+\.json$/);
+    expect(lignes[0]!.endsWith(`  ${NOM_JSON_SCHEMA}`)).toBe(true);
     expect(lignes.slice(1)).toEqual(FICHIERS.map((f) => `${sha(f)}  ${f}`));
   });
 

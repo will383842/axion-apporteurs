@@ -2,6 +2,7 @@
 // @req REQ-SEC-022
 // @req REQ-JUR-011
 // @req REQ-SEC-021
+// @req REQ-EXT-006
 /**
  * G-SEC-ORACLE — « Vérifier une entreprise » ne fait pas d'oracle (SEC-16, rattrapages 95 et 96).
  *
@@ -35,6 +36,26 @@ import {
   sujetDepuisEmpreinte,
 } from '../../../src/server/securite/rate-limit';
 
+/**
+ * Le compteur de PRODUCTION est jugé sur son AIGUILLAGE (quel compteur, dans quel ordre, quel verdict
+ * rendu), sans cache : un `limiter` de substitution, posé test par test. Hors de ces tests, la
+ * substitution est nulle et le vrai `limiter` sert — les autres témoins n'en voient rien.
+ */
+const substitut = vi.hoisted(() => ({
+  limiter: null as
+    null | ((nom: string, sujet: string, maintenant: number) => Promise<{ autorise: boolean }>),
+}));
+vi.mock('../../../src/server/securite/rate-limit', async (original) => {
+  const vrai = await original<typeof import('../../../src/server/securite/rate-limit')>();
+  return {
+    ...vrai,
+    limiter: ((...a: Parameters<typeof vrai.limiter>) =>
+      substitut.limiter === null
+        ? vrai.limiter(...a)
+        : substitut.limiter(a[0], a[1], a[2])) as typeof vrai.limiter,
+  };
+});
+
 /** La famille des compteurs de la vérification (REQ-SEC-016), lue au registre, jamais retapée. */
 const FAMILLE = PREFIXES_DE_FAMILLE[2];
 import {
@@ -43,6 +64,9 @@ import {
 } from '../../../src/server/verification/registre-public';
 import { compterAuRegistre, portsDeLaBase } from '../../../src/server/verification/ports-prisma';
 import { ETATS_OCCUPANTS } from '../../../src/domain/attribution/etats';
+import { ETATS_ATTRIBUTION, ETATS_TERMINES } from '../../../src/domain/attribution/machine';
+import { SIGNAL_DEJA_DECLAREE_ANCIENNETE_JOURS } from '../../../src/domain/seuils/ssot';
+import { derniereFinSurLeSiren } from '../../../src/server/evenement/journal';
 import type { PrismaClient } from '@prisma/client';
 import type {
   DependancesDuMandataire,
@@ -55,6 +79,11 @@ import { MOTIFS_DE_SAISIE_MANUELLE } from '../../../src/server/integrations/rech
 const RACINE = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
 
 const SIREN = '100000001';
+/** L'heure du signal : midi à Paris, le 15 octobre 2026. */
+const MAINTENANT_DU_SIGNAL = new Date('2026-10-15T10:00:00.000Z');
+/** Une fin il y a N jours civils de Paris, à midi. */
+const ilYA = (jours: number) => new Date(MAINTENANT_DU_SIGNAL.getTime() - jours * 86_400_000);
+
 const LIBRE: FaitsDeVerification = {
   anteriorite: false,
   surLaListe: false,
@@ -127,7 +156,10 @@ describe('REQ-UX-007 — quatre états, et rien d’autre', () => {
 
 type Trace = string[];
 
-function ports(faits: FaitsDeVerification, o: { refuse?: string } = {}) {
+function ports(
+  faits: FaitsDeVerification,
+  o: { refuse?: string; derniereFin?: Date | null | 'echec' } = {}
+) {
   const trace: Trace = [];
   const journal: unknown[] = [];
   const p: PortsDeVerification = {
@@ -142,6 +174,12 @@ function ports(faits: FaitsDeVerification, o: { refuse?: string } = {}) {
       trace.push('occupation'),
       { occupee: faits.occupee, enFile: faits.enFile }
     ),
+    derniereFin: async () => {
+      trace.push('derniere_fin');
+      if (o.derniereFin === 'echec') throw new Error('lecture impossible');
+      return o.derniereFin ?? null;
+    },
+    maintenant: () => MAINTENANT_DU_SIGNAL,
     journaliser: async (l) => {
       trace.push('journal');
       journal.push(l);
@@ -158,7 +196,7 @@ const DEMANDE: DemandeDeVerification = {
   ipHash: 'c'.repeat(16),
 };
 
-const LECTURES = ['anteriorite', 'liste', 'entreprise', 'occupation'];
+const LECTURES = ['anteriorite', 'liste', 'entreprise', 'occupation', 'derniere_fin'];
 
 describe('G-SEC-ORACLE — deux causes d’un même état, la même réponse, après le même travail', () => {
   const causesNonDisponible: [string, Partial<FaitsDeVerification>][] = [
@@ -174,7 +212,9 @@ describe('G-SEC-ORACLE — deux causes d’un même état, la même réponse, ap
       const { p } = ports({ ...LIBRE, ...f });
       rendus.add(JSON.stringify(await verifierUneEntreprise(p, DEMANDE)));
     }
-    expect([...rendus]).toEqual([JSON.stringify({ ok: true, dto: { etat: 'non_disponible' } })]);
+    expect([...rendus]).toEqual([
+      JSON.stringify({ ok: true, dto: { etat: 'non_disponible', dejaDeclaree: false } }),
+    ]);
   });
 
   it('REQ-UX-007 : TÉMOIN — suivie : un apporteur ou la Société, au même stade, la même réponse', async () => {
@@ -189,10 +229,12 @@ describe('G-SEC-ORACLE — deux causes d’un même état, la même réponse, ap
       })
     );
     expect(a).toBe(b);
-    expect(a).toBe(JSON.stringify({ ok: true, dto: { etat: 'suivie_place_disponible' } }));
+    expect(a).toBe(
+      JSON.stringify({ ok: true, dto: { etat: 'suivie_place_disponible', dejaDeclaree: false } })
+    );
   });
 
-  it('REQ-UX-007 : la réponse ne porte qu’un état — ni date, ni nom, ni identifiant', async () => {
+  it('REQ-UX-007 : la réponse ne porte qu’un état et le booléen du signal — ni date, ni nom, ni identifiant', async () => {
     for (const f of [
       LIBRE,
       { ...LIBRE, occupee: true, enFile: 2 },
@@ -201,9 +243,9 @@ describe('G-SEC-ORACLE — deux causes d’un même état, la même réponse, ap
       const r = await verifierUneEntreprise(ports(f).p, DEMANDE);
       expect(r.ok).toBe(true);
       if (!r.ok) continue;
-      expect(Object.keys(r.dto)).toEqual(['etat']);
+      expect(Object.keys(r.dto)).toEqual(['etat', 'dejaDeclaree']);
       expect(ETATS_VERIFICATION).toContain(r.dto.etat);
-      expect(JSON.stringify(r.dto)).toMatch(/^\{"etat":"[a-z_]+"\}$/);
+      expect(JSON.stringify(r.dto)).toMatch(/^\{"etat":"[a-z_]+","dejaDeclaree":(true|false)\}$/);
     }
   });
 
@@ -227,7 +269,7 @@ describe('G-SEC-ORACLE — deux causes d’un même état, la même réponse, ap
     }
     expect([...parEtat.keys()].sort()).toEqual([...ETATS_VERIFICATION].sort());
     for (const [etat, rendus] of parEtat) {
-      expect([...rendus]).toEqual([`{"ok":true,"dto":{"etat":"${etat}"}}`]);
+      expect([...rendus]).toEqual([`{"ok":true,"dto":{"etat":"${etat}","dejaDeclaree":false}}`]);
     }
   });
 
@@ -423,6 +465,61 @@ describe('REQ-SEC-021 — sans plafonds lisibles, le compteur de production refu
   );
 });
 
+describe('REQ-SEC-021 — l’aiguillage du compteur de production, compteur par compteur (SEC-72)', () => {
+  /** Rejoue `compterAuRegistre` sur un `limiter` qui répond par nom ; rend le verdict et les appels. */
+  async function aiguiller(quoi: 'identite' | 'ip', verdicts: Record<string, boolean>) {
+    const appels: { nom: string; sujet: string; maintenant: number }[] = [];
+    substitut.limiter = async (nom, sujet, maintenant) => {
+      appels.push({ nom, sujet, maintenant });
+      return { autorise: verdicts[nom] ?? false };
+    };
+    try {
+      return { rendu: await compterAuRegistre(quoi, DEMANDE.sujetIdentite), appels };
+    } finally {
+      substitut.limiter = null;
+    }
+  }
+
+  it.each([true, false])(
+    'REQ-SEC-021 : l’adresse se compte sur `verif:ip-jour` SEUL, et son verdict est rendu tel quel (%s)',
+    async (admis) => {
+      const { rendu, appels } = await aiguiller('ip', {
+        'verif:ip-jour': admis,
+        'verif:identite-court': !admis,
+        'verif:identite-jour': !admis,
+      });
+      expect(rendu).toEqual({ autorise: admis });
+      expect(appels.map((a) => a.nom)).toEqual(['verif:ip-jour']);
+      expect(appels[0]!.sujet).toBe(DEMANDE.sujetIdentite);
+      expect(Number.isFinite(appels[0]!.maintenant)).toBe(true);
+    }
+  );
+
+  it('REQ-SEC-021 : TÉMOIN — l’identité, rafale refusée : refus, et la fenêtre longue n’est PAS usée', async () => {
+    const { rendu, appels } = await aiguiller('identite', {
+      'verif:identite-court': false,
+      'verif:identite-jour': true,
+      'verif:ip-jour': true,
+    });
+    expect(rendu).toEqual({ autorise: false });
+    expect(appels.map((a) => a.nom)).toEqual(['verif:identite-court']);
+  });
+
+  it.each([true, false])(
+    'REQ-SEC-021 : l’identité, rafale admise : la fenêtre longue décide (%s)',
+    async (admis) => {
+      const { rendu, appels } = await aiguiller('identite', {
+        'verif:identite-court': true,
+        'verif:identite-jour': admis,
+        'verif:ip-jour': !admis,
+      });
+      expect(rendu).toEqual({ autorise: admis });
+      expect(appels.map((a) => a.nom)).toEqual(['verif:identite-court', 'verif:identite-jour']);
+      expect(new Set(appels.map((a) => a.sujet))).toEqual(new Set([DEMANDE.sujetIdentite]));
+    }
+  );
+});
+
 describe('REQ-UX-007 — les ports de la base, jugés en processus sur un faux client', () => {
   type Appel = { quoi: string; args: unknown };
   function fauxClient(o: {
@@ -555,8 +652,175 @@ describe('REQ-SEC-022 — la catégorie de la liste ne se dit qu’au refus d’
       expect(surLaListe).toBe(true);
       const { p } = ports({ ...LIBRE, surLaListe });
       const rendu = JSON.stringify(await verifierUneEntreprise(p, DEMANDE));
-      expect(rendu).toBe(JSON.stringify({ ok: true, dto: { etat: 'non_disponible' } }));
+      expect(rendu).toBe(
+        JSON.stringify({ ok: true, dto: { etat: 'non_disponible', dejaDeclaree: false } })
+      );
       for (const c of CATEGORIES) expect(rendu).not.toContain(c);
     }
   );
+});
+
+/**
+ * EXT-T06 (REQ-EXT-006 ; juriste, #474, 6036611999 et #319, 6036622439 ; conditions de la sécurité) — le
+ * signal « Déjà déposée par le passé » : un BOOLÉEN seul, toujours présent, à la même place ; vrai
+ * seulement pour `libre`, pour un apporteur, et si la DERNIÈRE fin d'une attribution terminée date de
+ * PLUS de `SIGNAL_DEJA_DECLAREE_ANCIENNETE_JOURS` jours civils de Paris ; ni stocké, ni journalisé.
+ */
+describe('REQ-EXT-006 — « Déjà déposée par le passé » : un booléen, de même forme vrai ou faux', () => {
+  const dto = async (
+    o: Parameters<typeof ports>[1],
+    f: FaitsDeVerification = LIBRE,
+    d = DEMANDE
+  ) => {
+    const r = await verifierUneEntreprise(ports(f, o).p, d);
+    if (!r.ok) throw new Error('refus inattendu');
+    return r.dto;
+  };
+
+  it('REQ-EXT-006 : TÉMOIN — J-29 sans signal, J-31 avec ; le seuil est LU dans la SSOT', async () => {
+    expect(SIGNAL_DEJA_DECLAREE_ANCIENNETE_JOURS.valeur).toBe(30);
+    expect((await dto({ derniereFin: ilYA(29) })).dejaDeclaree).toBe(false);
+    expect((await dto({ derniereFin: ilYA(30) })).dejaDeclaree).toBe(false);
+    expect((await dto({ derniereFin: ilYA(31) })).dejaDeclaree).toBe(true);
+    expect((await dto({ derniereFin: null })).dejaDeclaree).toBe(false);
+  });
+
+  it('REQ-EXT-006 : TÉMOIN d’indistinction — vrai ou faux, la MÊME forme et le MÊME ordre de champs ; avant le seuil, l’état « disponible » octet pour octet', async () => {
+    const vrai = JSON.stringify(await dto({ derniereFin: ilYA(31) }));
+    const faux = JSON.stringify(await dto({ derniereFin: ilYA(29) }));
+    const jamais = JSON.stringify(await dto({ derniereFin: null }));
+    expect(vrai).toBe('{"etat":"libre","dejaDeclaree":true}');
+    expect(faux).toBe(jamais);
+    expect(Object.keys(JSON.parse(vrai))).toEqual(Object.keys(JSON.parse(faux)));
+  });
+
+  it('REQ-EXT-006 : TÉMOIN — jamais avec un occupant, une file, une antériorité ou un refus : le signal ne vaut que pour une entreprise disponible', async () => {
+    for (const f of [
+      { ...LIBRE, occupee: true },
+      { ...LIBRE, enFile: 1 },
+      { ...LIBRE, anteriorite: true },
+      { ...LIBRE, surLaListe: true },
+      { ...LIBRE, entreprise: 'fermee' as const },
+    ])
+      expect((await dto({ derniereFin: ilYA(400) }, f)).dejaDeclaree).toBe(false);
+  });
+
+  it('REQ-EXT-006 : TÉMOIN — la console ne reçoit jamais le signal', async () => {
+    const console = await dto({ derniereFin: ilYA(400) }, LIBRE, {
+      ...DEMANDE,
+      porteur: { utilisateurConsoleId: '0190a5c0-0000-7000-8000-00000000000b' },
+    });
+    expect(console.dejaDeclaree).toBe(false);
+  });
+
+  it('REQ-EXT-006 : TÉMOIN — une lecture de la dernière fin qui ÉCHOUE rend « jamais déposée », et la vérification se poursuit sans erreur', async () => {
+    const echec = await dto({ derniereFin: 'echec' });
+    expect(echec).toEqual(await dto({ derniereFin: null }));
+  });
+
+  it('REQ-EXT-006 : TÉMOIN — le signal n’est ni journalisé ni stocké : la ligne du journal des vérifications ne le porte pas', async () => {
+    const { p, journal } = ports(LIBRE, { derniereFin: ilYA(400) });
+    await verifierUneEntreprise(p, DEMANDE);
+    expect(JSON.stringify(journal)).not.toMatch(/deja|declaree|fin/i);
+  });
+});
+
+describe('REQ-EXT-006 — le lecteur RÉSERVÉ de la dernière fin, en échec fermé', () => {
+  const SIREN_LU = '552100554';
+  type Ev = { survenuAt: Date; charge: unknown } | null;
+  function client(
+    attributions: { id: string; statut: string }[],
+    evenements: Record<string, Ev>,
+    o: { panne?: boolean } = {}
+  ) {
+    const lectures: { sql: string; valeurs: unknown[] }[] = [];
+    return {
+      lectures,
+      c: {
+        // UNE requête agrégée : chaque attribution terminée vient avec son DERNIER événement (ou rien).
+        $queryRaw: async (sql: TemplateStringsArray, ...valeurs: unknown[]) => {
+          lectures.push({ sql: sql.join('?'), valeurs });
+          if (o.panne) throw new Error('base indisponible');
+          return attributions.map((a) => {
+            const e = evenements[a.id] ?? null;
+            return {
+              statut: a.statut,
+              survenu_at: e?.survenuAt ?? null,
+              charge: e?.charge ?? null,
+            };
+          });
+        },
+      } as unknown as PrismaClient,
+    };
+  }
+  const charge = (vers: string) => ({
+    de: 'active',
+    vers,
+    transition: 'perimee',
+    acteur: { par: 'systeme' },
+  });
+
+  it('REQ-EXT-006 : TÉMOIN — les attributions se lisent par le SIREN et la liste FERMÉE des états terminés ; seule la DERNIÈRE fin compte', async () => {
+    const { c, lectures } = client(
+      [
+        { id: 'a1', statut: 'perimee' },
+        { id: 'a2', statut: 'perimee' },
+      ],
+      {
+        a1: { survenuAt: ilYA(200), charge: charge('perimee') },
+        a2: { survenuAt: ilYA(20), charge: charge('perimee') },
+      }
+    );
+    expect(await derniereFinSurLeSiren(c, SIREN_LU)).toEqual(ilYA(20));
+    // Une SEULE lecture, par le SIREN et la liste FERMÉE des états terminés, quel que soit leur nombre.
+    expect(lectures).toHaveLength(1);
+    expect(lectures[0]!.valeurs).toEqual([SIREN_LU, [...ETATS_TERMINES]]);
+    expect(lectures[0]!.sql).toMatch(/LEFT JOIN LATERAL/);
+    expect(lectures[0]!.sql).toMatch(/agregat_id = a\.id/);
+    expect(lectures[0]!.sql).not.toMatch(/charge\s*->/);
+  });
+
+  it('REQ-EXT-006 : les ports de la base branchent CE lecteur, et l’heure du signal est celle du système', async () => {
+    const { c, lectures } = client([{ id: 'a1', statut: 'perimee' }], {
+      a1: { survenuAt: ilYA(20), charge: charge('perimee') },
+    });
+    const p = portsDeLaBase(c);
+    expect(await p.derniereFin(SIREN_LU)).toEqual(ilYA(20));
+    expect(lectures[0]!.valeurs).toEqual([SIREN_LU, [...ETATS_TERMINES]]);
+    const avant = Date.now();
+    const lue = p.maintenant();
+    expect(lue).toBeInstanceOf(Date);
+    expect(lue.getTime()).toBeGreaterThanOrEqual(avant);
+    expect(lue.getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
+  it('REQ-EXT-006 : TÉMOIN — une charge illisible, discordante ou absente, ou une panne, rendent null : aucun signal', async () => {
+    const att = [{ id: 'a1', statut: 'expiree' }];
+    expect(
+      await derniereFinSurLeSiren(
+        client(att, { a1: { survenuAt: ilYA(90), charge: { vers: 42 } } }).c,
+        SIREN_LU
+      )
+    ).toBeNull();
+    expect(
+      await derniereFinSurLeSiren(
+        client(att, { a1: { survenuAt: ilYA(90), charge: charge('annulee') } }).c,
+        SIREN_LU
+      )
+    ).toBeNull();
+    expect(await derniereFinSurLeSiren(client(att, {}).c, SIREN_LU)).toBeNull();
+    expect(await derniereFinSurLeSiren(client(att, {}, { panne: true }).c, SIREN_LU)).toBeNull();
+    expect(await derniereFinSurLeSiren(client([], {}).c, SIREN_LU)).toBeNull();
+  });
+
+  it('REQ-EXT-006 : TÉMOIN — chaque état d’attribution est d’UNE seule classe : occupant, en file ou terminé ; un état neuf non classé rougit', () => {
+    for (const e of ETATS_ATTRIBUTION) {
+      const classes = [
+        (ETATS_OCCUPANTS as readonly string[]).includes(e),
+        e === 'en_attente',
+        (ETATS_TERMINES as readonly string[]).includes(e),
+      ].filter(Boolean);
+      expect(classes, e).toHaveLength(1);
+    }
+  });
 });

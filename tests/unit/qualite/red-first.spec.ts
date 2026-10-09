@@ -166,6 +166,39 @@ describe('REQ-CPL-022 — la décision', () => {
     expect(texte).toContain('tests/a11y/axe.spec.ts');
   });
 
+  it('REQ-CPL-022 : GOV-160 — une PR de niveau NORMAL ou LÉGER n’est pas soumise au red-first : un test déjà vert passe, sans être exécuté', () => {
+    for (const niveau of ['normal', 'leger'] as const) {
+      const u: Univers = {
+        ...univers(
+          [{ chemin: 'tests/unit/a.spec.ts', texte: "it('a', () => {});", execution: vert }],
+          []
+        ),
+        niveau,
+        executer: () => {
+          throw new Error('une PR non critique ne doit pas être exécutée contre main');
+        },
+      };
+      const d = decider(u);
+      expect(d.code, niveau).toBe(0);
+      expect(d.fautes, niveau).toEqual([]);
+      const texte = d.lignes.join('\n');
+      expect(texte).toContain(niveau.toUpperCase());
+      expect(texte).toContain('tests/unit/a.spec.ts');
+    }
+  });
+
+  it('REQ-CPL-022 : GOV-160 témoin — une PR CRITIQUE reste soumise au red-first : le même test déjà vert est refusé', () => {
+    const d = decider({
+      ...univers(
+        [{ chemin: 'tests/unit/a.spec.ts', texte: "it('a', () => {});", execution: vert }],
+        []
+      ),
+      niveau: 'critique',
+    });
+    expect(d.code).toBe(1);
+    expect(d.fautes.map((f) => f.famille)).toEqual(['test_deja_vert_sur_main']);
+  });
+
   it('REQ-CPL-022 : chaque famille a son témoin, et chaque témoin fait rougir SA famille', () => {
     expect([...new Set(TEMOINS.map((t) => t.famille))].sort()).toEqual([...FAMILLES].sort());
     for (const t of TEMOINS) {
@@ -220,6 +253,8 @@ describe('REQ-CPL-022 — le binaire, sur un dépôt git jetable', () => {
 
   it('REQ-CPL-022 : une branche qui ajoute un test déjà vert contre main — sortie non nulle, le fichier nommé', () => {
     git('checkout', '-q', '-b', 'deja-vert', 'main');
+    // Un fichier sous `src/domain/` rend la PR CRITIQUE (gov-pr-niveaux) : le red-first s'y applique.
+    ecrire('src/domain/critique.mjs', 'export const critique = true;\n');
     ecrire(
       'tests/somme.spec.ts',
       "import { it, expect } from 'vitest';\nimport { somme } from '../src/somme.mjs';\n" +
@@ -236,10 +271,10 @@ describe('REQ-CPL-022 — le binaire, sur un dépôt git jetable', () => {
 
   it('REQ-CPL-022 : une branche dont le test nouveau rougit contre main — sortie 0, et l’arbre de main est retiré', () => {
     git('checkout', '-q', '-b', 'rouge-d-abord', 'main');
-    ecrire('src/produit.mjs', 'export const produit = (a, b) => a * b;\n');
+    ecrire('src/domain/produit.mjs', 'export const produit = (a, b) => a * b;\n');
     ecrire(
       'tests/produit.spec.ts',
-      "import { it, expect } from 'vitest';\nimport { produit } from '../src/produit.mjs';\n" +
+      "import { it, expect } from 'vitest';\nimport { produit } from '../src/domain/produit.mjs';\n" +
         "it('produit', () => expect(produit(2, 3)).toBe(6));\n"
     );
     git('add', '-A');
@@ -268,6 +303,7 @@ describe('REQ-CPL-022 — le binaire, sur un dépôt git jetable', () => {
     git('commit', '-q', '-m', 'un test sur main');
     git('checkout', '-q', '-b', 'deplace', 'main');
     git('mv', 'tests/ancien.spec.ts', 'tests/deplace.spec.ts');
+    ecrire('src/domain/critique.mjs', 'export const critique = true;\n');
     ecrire(
       'tests/deplace.spec.ts',
       "import { it, expect } from 'vitest';\nimport { somme } from '../src/somme.mjs';\n" +
@@ -276,12 +312,28 @@ describe('REQ-CPL-022 — le binaire, sur un dépôt git jetable', () => {
     git('add', '-A');
     git('commit', '-q', '-m', 'test deplace et reecrit');
     // Sans `--no-renames`, git le voit RENOMMÉ (statut R), et la garde ne le juge pas.
-    expect(git('diff', '--name-status', 'main...HEAD')).toMatch(/^R\d+/);
+    expect(git('diff', '--name-status', 'main...HEAD')).toMatch(/^R\d+/m);
     const s = lancer();
     console.log(s.sortie.trim().split('\n').slice(-4).join('\n'));
     expect(s.code).toBe(1);
     expect(s.sortie).toContain('test_deja_vert_sur_main');
     expect(s.sortie).toContain('tests/deplace.spec.ts');
+  }, 200_000);
+
+  it('REQ-CPL-022 : GOV-160 — une branche de niveau NORMAL qui ajoute un test déjà vert — sortie 0, le niveau dit', () => {
+    git('checkout', '-q', '-b', 'normal-deja-vert', 'main');
+    ecrire(
+      'tests/somme-normale.spec.ts',
+      "import { it, expect } from 'vitest';\nimport { somme } from '../src/somme.mjs';\n" +
+        "it('somme', () => expect(somme(1, 1)).toBe(2));\n"
+    );
+    git('add', '-A');
+    git('commit', '-q', '-m', 'test de non-regression');
+    const s = lancer();
+    console.log(s.sortie.trim().split('\n').slice(-4).join('\n'));
+    expect(s.code).toBe(0);
+    expect(s.sortie).toContain('NORMAL');
+    expect(s.sortie).toContain('tests/somme-normale.spec.ts');
   }, 200_000);
 });
 

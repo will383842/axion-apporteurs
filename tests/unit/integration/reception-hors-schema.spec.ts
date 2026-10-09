@@ -44,7 +44,8 @@ async function recevoir(
   type: string,
   sujet: unknown,
   payload: Record<string, unknown>,
-  version: number = SCHEMA_VERSION
+  version: number = SCHEMA_VERSION,
+  premiereV4: Date | null = null
 ): Promise<{ statut: number; corps: string; inscrites: EvenementAInscrire[]; alertes: string[] }> {
   const env: Record<string, string> = { NODE_ENV: 'test' };
   for (const nom of NOMS_DES_SECRETS) env[nom] = randomBytes(32).toString('hex');
@@ -84,6 +85,8 @@ async function recevoir(
           inscrites.push(e);
           return 'inscrit';
         },
+        // INT-T76-P : la réception du premier événement v4, départ de la fenêtre de bascule.
+        premiereReceptionDeLaVersionCourante: async () => premiereV4,
       },
       alerteur: creerAlerteurPlafonne((a) => void alertes.push(a.motif)),
       declencher: () => undefined,
@@ -148,9 +151,11 @@ describe('REQ-INT-003 REQ-QA-007 — la réception applique les `$defs` fermés 
  * La version d'un `held` qu'on rejoue : la version publiée ANTÉRIEURE à la courante. Depuis
  * INT-T46-P, un `held` se juge contre les `$defs` de SA version, et une version sans contrat publié
  * (la courante + 1) n'est jamais conforme : le témoin d'une charge conforme part donc d'une version
- * publiée.
+ * publiée. Depuis INT-T76-P, cette version est TRAITÉE tant que la fenêtre de bascule est ouverte :
+ * le témoin la reçoit donc après sa fermeture (première v4 reçue trente jours plus tôt).
  */
 const VERSION_DU_HELD = SCHEMA_VERSION - 1;
+const BASCULE_REFERMEE = new Date(MAINTENANT_MS - 30 * 86_400_000);
 
 describe('REQ-INT-003 — condition de la sécurité : le rejeu d’un `held` passe par la MÊME validation', () => {
   it('REQ-INT-003 : un `held` conforme, conservé sans `utm`, est jugé conforme à son rejeu', async () => {
@@ -158,7 +163,8 @@ describe('REQ-INT-003 — condition de la sécurité : le rejeu d’un `held` pa
       'candidature.recue',
       CANDIDATURE.evenement.subject_ref,
       CANDIDATURE.evenement.payload,
-      VERSION_DU_HELD
+      VERSION_DU_HELD,
+      BASCULE_REFERMEE
     );
     expect(r.inscrites.map((e) => e.statut)).toEqual(['held']);
     const charge = r.inscrites[0]!.charge;

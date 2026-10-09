@@ -12,8 +12,9 @@
  *   — aucune promotion depuis la file (REQ-DM-004) : `en_attente` ne mène qu'à `annulee` ou `expiree` ;
  *     la redéclaration au rang 1 fait NAÎTRE une autre attribution (`deposee`), dans la même
  *     transaction que le passage `redeclaree` ;
- *   — aucun devis signé pendant `provisoire` : la commande est gardée, et le module serveur enchaîne
- *     `confirmee` puis `devis_signe` à la confirmation (avis d'A07) ;
+ *   — aucun devis signé pendant `provisoire` : DM-73 (art. 3.2 du v2, juriste et A02, #824), la
+ *     commande ne se garde plus, elle CONFIRME. L'écrivain enchaîne `confirmee_par_la_commande`
+ *     (datée de la signature) puis `devis_signe`, dans la même transaction ;
  *   — aucune sortie `perdue` depuis `signee`, `convertie` ou `figee_resiliation` ;
  *   — SEC-19 (A02, #703 ; juriste, art. 12) : la fin du contrat de l'apporteur porteur a DEUX
  *     sorties exclusives — `figee` (vers `figee_resiliation`) depuis un état AVEC commande
@@ -47,6 +48,21 @@ export const ETATS_ATTRIBUTION = [
   'annulee',
 ] as const;
 export type EtatAttribution = (typeof ETATS_ATTRIBUTION)[number];
+
+/**
+ * EXT-T06 (conditions de la sécurité) — les états TERMINÉS : la liste FERMÉE, à côté de l'enum. Une
+ * attribution terminée n'occupe plus le SIREN et n'attend plus rien. Chaque état est d'une seule classe :
+ * occupant (`ETATS_OCCUPANTS`), en file (`en_attente`) ou terminé ; un témoin rougit sur un état neuf
+ * non classé.
+ */
+export const ETATS_TERMINES = [
+  'invalidee',
+  'perdue',
+  'perimee',
+  'expiree',
+  'annulee',
+] as const satisfies readonly EtatAttribution[];
+export type EtatTermine = (typeof ETATS_TERMINES)[number];
 
 /** Toutes les transitions : les naissances, puis les flèches. Égale à l'union des deux (test). */
 export const EVENEMENTS_ATTRIBUTION = [
@@ -85,6 +101,8 @@ export const EVENEMENTS_ATTRIBUTION = [
   // d'identification de l'entreprise ou pour fraude de l'apporteur (forme d'A02, #806 6039768837).
   'annulee_erreur_identification',
   'fraude_etablie',
+  // DM-73 (art. 3.2 du v2) : une commande signée est un échange avec la Société ; elle confirme.
+  'confirmee_par_la_commande',
 ] as const;
 export type TransitionAttribution = (typeof EVENEMENTS_ATTRIBUTION)[number];
 
@@ -123,6 +141,7 @@ export const TRANSITIONS_ATTRIBUTION: {
     confirmee: 'active',
     confirmee_par_courriel: 'active',
     confirmee_tacitement: 'active',
+    confirmee_par_la_commande: 'active',
     non_confirmee: 'invalidee',
     non_confirmee_par_courriel: 'invalidee',
     anomalie_confirmee: 'invalidee',
@@ -232,6 +251,8 @@ export const REFUSEES_AU_CONSEILLER = [
   // DM-71 : les deux exceptions de l'art. 3.3 visent l'attribution d'un APPORTEUR.
   'annulee_erreur_identification',
   'fraude_etablie',
+  // DM-73 (A02) : refusée au conseiller, comme les autres confirmations.
+  'confirmee_par_la_commande',
 ] as const satisfies readonly TransitionAttribution[];
 
 /** La prise en charge est la naissance du conseiller, et de lui seul. */
@@ -285,7 +306,9 @@ export type CodeTransitionAttribution =
   | 'porteur_refuse'
   | 'anomalie_refusee'
   | 'fait_posterieur_au_depot'
-  | 'reference_du_fait_invalide';
+  | 'reference_du_fait_invalide'
+  // DM-73 (art. 4.4) : une commande signée avant le dépôt ne profite pas à cette attribution.
+  | 'commande_anterieure_a_l_occupation';
 
 export class ErreurTransitionAttribution extends Error {
   readonly code: CodeTransitionAttribution;
@@ -363,6 +386,7 @@ const CONFIRMATIONS: readonly TransitionAttribution[] = [
   'confirmee',
   'confirmee_par_courriel',
   'confirmee_tacitement',
+  'confirmee_par_la_commande',
 ];
 
 /** Le calendrier, pas un délai : les mois d'une année civile. */
@@ -401,7 +425,8 @@ export interface TempsRecalcules {
  * Les colonnes de temps RECALCULÉES à chaque transition (REQ-DM-007), en instants (le domaine ne lit
  * pas l'heure : l'appelant la lui passe) :
  *   — une confirmation pose `confirmeeAt` et `fenetreFinAt` (+ `FENETRE_MOIS` mois) ; rien d'autre
- *     ne les touche, la caducité d'une commande comprise ;
+ *     ne les touche, la caducité d'une commande comprise. Elles courent de `confirmeeLe`, qui vaut
+ *     `maintenant` sauf pour la confirmation par la commande, datée de sa signature (DM-73) ;
  *   — `peremptionAt` n'existe qu'en `active`, à `premierContactAt` + `PEREMPTION_JOURS` ; nulle tant
  *     que ce contact n'a pas eu lieu, nulle sous le marqueur, nulle dès qu'une suite existe — et
  *     nulle après une caducité, puisqu'un devis a existé.
@@ -410,12 +435,13 @@ export function effetsDeTransition(
   avant: TempsDeLAttribution,
   transition: TransitionAttribution,
   vers: EtatAttribution,
-  maintenant: Instant
+  maintenant: Instant,
+  confirmeeLe: Instant = maintenant
 ): TempsRecalcules {
   const confirme = CONFIRMATIONS.includes(transition);
-  const confirmeeAt = confirme ? maintenant : avant.confirmeeAt;
+  const confirmeeAt = confirme ? confirmeeLe : avant.confirmeeAt;
   const fenetreFinAt = confirme
-    ? ajouterMoisParis(maintenant, SEUILS.FENETRE_MOIS.valeur)
+    ? ajouterMoisParis(confirmeeLe, SEUILS.FENETRE_MOIS.valeur)
     : avant.fenetreFinAt;
   const chrono =
     vers === 'active' &&

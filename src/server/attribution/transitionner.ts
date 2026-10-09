@@ -38,7 +38,13 @@ import {
   fondeeSurUneAnomalie,
   type ExceptionAnnulation,
 } from '../../domain/attribution/machine';
-import { ajouterEvenement } from '../evenement/journal';
+import {
+  attributionDeLaCommande,
+  finDuContratDeLaSortie,
+  type OccupationDeLEntreprise,
+} from '../../domain/apporteur/effets-de-la-fin';
+import { minuitDeParisDuJour } from '../../domain/apporteur/resiliation';
+import { ajouterEvenement, dernieresTransitionsSurLeSiren } from '../evenement/journal';
 import { annulerLaDemandeDe } from '../confirmation/demandes';
 import { ETATS_LIBERES, echeanceDePurge } from '../taches/purger-contacts';
 import { ETATS_OCCUPANTS } from '../../domain/attribution/etats';
@@ -121,6 +127,11 @@ export interface DemandeEcriture {
    * à la charge du journal (décision (d) de la juriste pour DM-12).
    */
   readonly anomalieId?: string;
+  /**
+   * DM-73 : l'instant de la SIGNATURE de la commande, exigé pour `confirmee_par_la_commande`, et pour
+   * elle seule. `confirmee_at` et la fenêtre courent de lui, jamais du passage.
+   */
+  readonly confirmeeLe?: Date;
 }
 
 /**
@@ -180,6 +191,12 @@ function jugerLeMotif(demande: DemandeEcriture): void {
     throw new ErreurTransitionAttribution(
       'motif_incoherent',
       `${transition} : le motif est exigé pour annulee_par_la_console seule, la catégorie pour l'article 3.3 bis seul`
+    );
+  }
+  if ((transition === 'confirmee_par_la_commande') !== (demande.confirmeeLe !== undefined)) {
+    throw new ErreurTransitionAttribution(
+      'motif_incoherent',
+      `${transition} : la date de signature est exigée pour confirmee_par_la_commande, et pour elle seule`
     );
   }
   if (fondeeSurUneAnomalie(transition) !== (anomalieId !== undefined)) {
@@ -302,7 +319,8 @@ export async function transitionnerUneAttribution(
     },
     transition,
     vers,
-    maintenant.getTime()
+    maintenant.getTime(),
+    (demande.confirmeeLe ?? maintenant).getTime()
   );
   await tx.attribution.update({
     where: { id: attributionId },
@@ -421,6 +439,111 @@ export async function confirmerUneAttribution(
   return {
     vers: (await transitionnerUneAttribution(tx, { ...demande, transition: 'devis_signe' })).vers,
   };
+}
+
+/**
+ * DM-73 (art. 3.2 et 12.3 du v2 ; juriste et A02, #824) : une commande SIGNÉE. Sur une `provisoire`,
+ * elle la confirme — `confirmee_par_la_commande`, datée de la signature — puis `devis_signe`, dans la
+ * MÊME transaction : deux faits, dans cet ordre, et aucune commande n'est refusée pour ce seul motif.
+ * Ailleurs, `devis_signe` seul, jugé par la matrice : une attribution terminée ne revient pas
+ * (voie (b) : le droit de la commande se désigne par `attributionDUneCommandeSignee`).
+ *
+ * Deux refus nommés, jugés sous le verrou, et rien n'est écrit : l'attribution n'est pas celle de
+ * l'apporteur annoncé (cloisonnement, `porteur_refuse`) ; la commande est signée AVANT le dépôt de
+ * l'attribution (`commande_anterieure_a_l_occupation`) — elle appartient à l'occupant d'alors, et
+ * l'occupant suivant ne la reçoit jamais : aucune double commission (art. 4.4, condition 3).
+ */
+export async function enregistrerLaCommandeSignee(
+  tx: Tx,
+  demande: Omit<DemandeEcriture, 'transition' | 'confirmeeLe'> & {
+    signeLe: Date;
+    /** L'apporteur pour qui la commande est enregistrée ; nul pour un conseiller. */
+    apporteurId: string | null;
+  }
+): Promise<{ de: EtatAttribution; vers: EtatAttribution }> {
+  const { signeLe, apporteurId, ...reste } = demande;
+  const l = await verrouiller(tx, demande.attributionId);
+  const de = l.statut;
+  if (l.apporteur_id !== apporteurId) {
+    throw new ErreurTransitionAttribution(
+      'porteur_refuse',
+      "commande signée : l'attribution n'est pas celle de cet apporteur"
+    );
+  }
+  const { deposeeAt } = await tx.attribution.findUniqueOrThrow({
+    where: { id: demande.attributionId },
+    select: { deposeeAt: true },
+  });
+  if (signeLe.getTime() < deposeeAt.getTime()) {
+    throw new ErreurTransitionAttribution(
+      'commande_anterieure_a_l_occupation',
+      "commande signée avant le dépôt : elle ne profite pas à l'occupant suivant"
+    );
+  }
+  if (de === 'provisoire') {
+    await transitionnerUneAttribution(tx, {
+      ...reste,
+      transition: 'confirmee_par_la_commande',
+      confirmeeLe: signeLe,
+    });
+  }
+  const { vers } = await transitionnerUneAttribution(tx, { ...reste, transition: 'devis_signe' });
+  return { de, vers };
+}
+
+/** DM-73 : le jour d'effet de la dernière résiliation de l'apporteur, à minuit de Paris, ou nul. */
+async function jourDEffetDeLaResiliation(tx: Tx, apporteurId: string): Promise<number | null> {
+  const decision = await tx.decisionDeContrat.findFirst({
+    where: { apporteurId, geste: 'resiliation' },
+    orderBy: { creeAt: 'desc' },
+    select: { dateEffet: true },
+  });
+  const jour = decision?.dateEffet;
+  return jour ? minuitDeParisDuJour(jour.toISOString().slice(0, 10)) : null;
+}
+
+/**
+ * DM-73, voie (b) (juriste, #824, 6043135877) : la chaîne des commissions DÉSIGNE l'attribution — et son
+ * apporteur — à qui revient une commande signée, d'après les occupations de l'entreprise lues en base :
+ * le dépôt, la dernière transition au journal, et la fin du contrat (`finDuContratDeLaSortie`). La règle
+ * est `attributionDeLaCommande` ; nul si aucune attribution n'y a droit. Rien n'est écrit.
+ */
+export async function attributionDUneCommandeSignee(
+  tx: Tx,
+  commande: { siren: string; signeLe: Date }
+): Promise<{ attributionId: string; apporteurId: string | null } | null> {
+  const lignes = await tx.attribution.findMany({
+    where: { siren: commande.siren, statut: { not: 'en_attente' } },
+    select: { id: true, apporteurId: true, statut: true, deposeeAt: true },
+  });
+  const dernieres = new Map(
+    (await dernieresTransitionsSurLeSiren(tx, commande.siren)).map((d) => [d.attributionId, d])
+  );
+  const occupations: OccupationDeLEntreprise[] = [];
+  for (const a of lignes) {
+    const dernier = dernieres.get(a.id);
+    const occupeeDepuis = a.deposeeAt.getTime();
+    if (occupe(a.statut) && dernier?.transition !== 'figee') {
+      occupations.push({ attributionId: a.id, occupeeDepuis, sortie: null });
+      continue;
+    }
+    // Une attribution finie sans fait au journal n'a droit à rien.
+    if (dernier === undefined) continue;
+    // `figee` et `fin_de_contrat` sont refusées au conseiller : l'attribution a un apporteur.
+    const deFin = dernier.transition === 'figee' || dernier.transition === 'fin_de_contrat';
+    const jourDEffet = deFin ? await jourDEffetDeLaResiliation(tx, a.apporteurId!) : null;
+    occupations.push({
+      attributionId: a.id,
+      occupeeDepuis,
+      sortie: {
+        transition: dernier.transition,
+        finDuContrat: finDuContratDeLaSortie({ sortieAt: dernier.survenuAt.getTime(), jourDEffet }),
+      },
+    });
+  }
+  const id = attributionDeLaCommande(commande.signeLe.getTime(), occupations);
+  if (id === null) return null;
+  return { attributionId: id, apporteurId: lignes.find((a) => a.id === id)!.apporteurId };
 }
 
 /**
