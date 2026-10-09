@@ -102,7 +102,7 @@ export function defautsDAllegement(postes: Poste[], suivis: Set<string>): string
 describe('GOV-159 — les fiches de rôle sont allégées', () => {
   const suivis = fichiersSuivis();
 
-  it('la source réelle ne porte aucun défaut', () => {
+  it('REQ-GOV-010 — la source réelle ne porte aucun défaut', () => {
     expect(defautsDAllegement(lirePostes(), suivis)).toEqual([]);
   });
 
@@ -119,43 +119,47 @@ describe('GOV-159 — les fiches de rôle sont allégées', () => {
     };
 
     for (const chemin of LECTURES_GEANTES) {
-      it(`une lecture entière de ${chemin}`, () => {
+      it(`REQ-GOV-010 — une lecture entière de ${chemin}`, () => {
         const d = avec((ps) => poste(ps, 'A12').documents.push({ chemin, pourquoi: 'témoin' }));
         expect(d).toContain(`A12 fait lire en entier \`${chemin}\` au démarrage`);
       });
     }
 
-    it('une vue générée que git ne suit pas', () => {
+    it('REQ-GOV-010 — une vue générée que git ne suit pas', () => {
       const d = avec((ps) =>
         poste(ps, 'A05').documents.push({ chemin: 'docs/PLAN-STATE.md', pourquoi: 'témoin' })
       );
       expect(d).toContain('A05 fait lire `docs/PLAN-STATE.md`, que git ne suit pas');
     });
 
-    it('un chemin cité deux fois', () => {
+    it('REQ-GOV-010 — un chemin cité deux fois', () => {
       const d = avec((ps) => {
         const p = poste(ps, 'A05');
-        p.documents.push({ ...p.documents[0] });
+        const premier = p.documents[0];
+        if (!premier) throw new Error(`A05 sans document dans ${SOURCE}`);
+        p.documents.push({ ...premier });
       });
       expect(d.some((x) => x.startsWith('A05 cite deux fois'))).toBe(true);
     });
 
-    it('une entrée répétée', () => {
+    it('REQ-GOV-010 — une entrée répétée', () => {
       const d = avec((ps) => {
         const p = poste(ps, 'A09');
-        p.entrees.push(p.entrees[0]);
+        const premiere = p.entrees[0];
+        if (premiere === undefined) throw new Error(`A09 sans entrée dans ${SOURCE}`);
+        p.entrees.push(premiere);
       });
       expect(d.some((x) => x.startsWith('A09 répète dans `entrees`'))).toBe(true);
     });
 
-    it('un poste qui quitte Opus', () => {
+    it('REQ-GOV-010 — un poste qui quitte Opus', () => {
       const d = avec((ps) => {
         poste(ps, 'A01').model = 'sonnet';
       });
       expect(d).toContain('A01 quitte Opus : `sonnet`');
     });
 
-    it('la mission d’A04 qui dit encore « une PR à la fois »', () => {
+    it('REQ-GOV-010 — la mission d’A04 qui dit encore « une PR à la fois »', () => {
       const d = avec((ps) => {
         poste(ps, 'A04').mission = 'Fusionner une PR à la fois sur `main`.';
       });
