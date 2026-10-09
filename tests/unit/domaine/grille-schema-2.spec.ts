@@ -83,7 +83,7 @@ describe('REQ-INT-017 â€” le domaine lit le schema 1 et le schema 2, et rien dâ€
       const p = enSchema2();
       p.contenu.schema = schema;
       expect(() => lirePublication(p)).toThrow(PublicationIllisible);
-      expect(() => lirePublication(p)).toThrow(`contenu.schema : schema ${String(schema)} inconnu`);
+      expect(() => lirePublication(p)).toThrow(`contenu.schema : schema ${JSON.stringify(schema)} inconnu`);
     }
   );
 

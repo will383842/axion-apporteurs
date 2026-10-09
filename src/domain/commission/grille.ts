@@ -133,7 +133,7 @@ export function lirePublication(brut: unknown): PublicationGrille {
   if (schema !== undefined && !lisibles.includes(schema)) {
     // INT-T47-P : une forme que Partners ne connaît pas est REFUSÉE, nommée — échec fermé.
     throw new PublicationIllisible([
-      `contenu.schema : schema ${String(schema)} inconnu — Partners lit ${SCHEMAS_LISIBLES.join(' et ')}`,
+      `contenu.schema : schema ${typeof schema === 'string' ? `"${schema}"` : String(schema)} inconnu — Partners lit ${SCHEMAS_LISIBLES.join(' et ')}`,
     ]);
   }
   const r = SCHEMA_PUBLICATION_GRILLE.safeParse(brut);
