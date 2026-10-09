@@ -779,6 +779,8 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/vocabulaire.ts › FORMULES › releveParCourrierElectronique : Chaque relevé vous est envoyé par courrier électronique ; il indique les mentions à reporter sur votre facture.
       espace/vocabulaire.ts › FORMULES › numeroDEntreprise : numéro d'entreprise
       espace/vocabulaire.ts › FORMULES › rienAFaire : Rien à faire de votre côté
+      espace/vocabulaire.ts › DEJA_DEPOSEE › titre : Déjà déposée par le passé
+      espace/vocabulaire.ts › DEJA_DEPOSEE › phrase : Cette entreprise a déjà fait l'objet d'un dépôt, aujourd'hui terminé. Elle est disponible : vous pouvez la déposer.
       espace/vocabulaire.ts › ACTIONS_COMMUNES › retourAccueil › libelle : Retour à l'accueil
       espace/vocabulaire.ts › ACTIONS_COMMUNES › retourAccueil › route : /
       espace/vocabulaire.ts › ACTIONS_COMMUNES › envoyerLeDepot › libelle : Envoyer le dépôt

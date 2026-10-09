@@ -1363,6 +1363,60 @@
             </section>
             <section
               class="ecran"
+              id="etat-libre-deja-deposee"
+              aria-label="État : Carte : libre, déjà déposée par le passé"
+            >
+              <p class="sans-js-titre">État : Carte : libre, déjà déposée par le passé</p>
+              <div class="app">
+                <div class="app-principal">
+                  <div class="barre-etat" aria-hidden="true">
+                    <span>10:42</span><span>4G ▮▮▮</span>
+                  </div>
+                  <header class="app-tete">
+                    <a class="retour" href="accueil.html#etat-nominal"
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M15 5l-7 7 7 7" /></svg
+                      ><span>Accueil</span></a
+                    >
+                  </header>
+                  <h2 class="app-titre">Vérifier une entreprise</h2>
+                  <div class="defile" tabindex="0" role="region" aria-label="Contenu de l’écran">
+                    <article class="carte" aria-label="Garage de la Démo">
+                      <div class="pile-serree">
+                        <h3>Garage de la Démo</h3>
+                        <p class="doux">Voiron (38) · réparation automobile</p>
+                      </div>
+                      <span class="pastille ok"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                        >Libre</span
+                      >
+                      <p>
+                        Cette entreprise est disponible aujourd’hui. Si vous la déposez, votre dépôt
+                        est enregistré à l’heure de votre envoi.
+                      </p>
+                    </article>
+                    <div class="encart neutre" role="note" aria-label="Déjà déposée par le passé">
+                      <p class="encart-titre"><span>Déjà déposée par le passé</span></p>
+                      <p>
+                        Cette entreprise a déjà fait l’objet d’un dépôt, aujourd’hui terminé. Elle
+                        est disponible : vous pouvez la déposer.
+                      </p>
+                    </div>
+                    <a class="bouton" href="deposer.html#etat-pre-rempli"
+                      ><span>Déposer cette entreprise</span></a
+                    >
+                    <p class="doux">
+                      Ce n’est pas la bonne entreprise ?
+                      <a href="#etat-resultats">Revenir à la liste</a>
+                    </p>
+                    <p class="doux petit">Vérifier ne réserve rien : seul le dépôt compte.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section
+              class="ecran"
               id="etat-suivie-place"
               aria-label="État : Carte : réservée, place en attente"
             >
@@ -1886,6 +1940,7 @@
         <p class="groupe">Les 4 états de la carte</p>
         <ul>
           <li><a href="#etat-libre">Carte : libre</a></li>
+          <li><a href="#etat-libre-deja-deposee">Carte : libre, déjà déposée par le passé</a></li>
           <li><a href="#etat-suivie-place">Carte : réservée, place en attente</a></li>
           <li><a href="#etat-suivie-complete">Carte : réservée, attente complète</a></li>
           <li><a href="#etat-non-disponible">Carte : non disponible</a></li>
@@ -1932,6 +1987,20 @@
             VALIDATION.md qui dit « Déclarer » est à corriger.
           </p>
           <p class="req">REQ-UX-007 : pas de date affichée pour une entreprise libre.</p>
+        </section>
+        <section class="note" data-pour="etat-libre-deja-deposee">
+          <h2>Carte : libre, déjà déposée par le passé</h2>
+          <p>
+            État <code>libre</code>, avec le signal <code>dejaDeclaree</code> vrai : la DERNIÈRE
+            attribution terminée sur ce SIREN, quel qu’en soit le porteur, l’est depuis plus de 30
+            jours civils. Le texte est FIXE (juriste) : ni porteur, ni date, ni durée, ni nombre, ni
+            issue, et rien ne dit « c’était vous ».
+          </p>
+          <p>
+            Le signal n’a AUCUN effet : le bouton « Déposer cette entreprise » reste le même, et le
+            dépôt n’est ni vérifié, ni suspendu, ni compté.
+          </p>
+          <p class="req">REQ-EXT-006, REQ-EXT-007.</p>
         </section>
         <section class="note" data-pour="etat-suivie-place">
           <h2>Carte : réservée, place en attente</h2>

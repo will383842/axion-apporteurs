@@ -240,6 +240,8 @@ describe('REQ-SEC-021 — les conditions de la juriste', () => {
       surLaListe: async () => (ecrits.push('lu'), false),
       entreprise: async () => (ecrits.push('lu'), 'active'),
       occupation: async () => (ecrits.push('lu'), { occupee: false, enFile: 0 }),
+      derniereFin: async () => (ecrits.push('lu'), null),
+      maintenant: () => new Date(0),
       journaliser: async () => void ecrits.push('journal'),
     };
     expect(await verifierUneEntreprise(ports, DEMANDE)).toEqual({ ok: false, refus: 'limite' });

@@ -97,6 +97,10 @@ export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction
   // de conservation interne ; ni l'apporteur ni aucune entreprise ne sont contactés.
   'action:ouvrir_litige_decision': 'sans_contact',
   'action:clore_litige_decision': 'sans_contact',
+  // UX-P1-56 : confirmer une anomalie de sincérité est un geste interne sur un dépôt, pas une prise de
+  // contact d'une entreprise.
+  'ecran:anomalies': 'sans_contact',
+  'action:confirmer_anomalie': 'sans_contact',
 };
 
 /** Les actions et tâches qui doivent appeler la garde de la réserve. */
