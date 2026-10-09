@@ -147,10 +147,8 @@ function composerUne(
  */
 export function jourDEmission(l: Base): DateCivile {
   const etabli = jourDEtablissement(l.encaissementIntegralLe, l.constateLe);
-  if (l.regulariseLe === null || joursDeLaDate(l.regulariseLe) <= joursDeLaDate(etabli)) {
-    return etabli;
-  }
-  return l.regulariseLe;
+  if (l.regulariseLe === null) return etabli;
+  return dateDepuisJours(Math.max(joursDeLaDate(etabli), joursDeLaDate(l.regulariseLe)));
 }
 
 /**
