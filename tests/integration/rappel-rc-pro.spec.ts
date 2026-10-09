@@ -17,10 +17,7 @@ import { demarrerBase, type Base } from './harnais';
 import { NOMS_DES_SECRETS } from '../../src/lib/env';
 import { clesPii, colonnesPii } from '../../src/server/securite/pii';
 import { MODELE_APPORTEUR } from '../../src/server/auth/lien-magique-depot';
-import {
-  demanderEnvoi,
-  depotDesCourriels,
-} from '../../src/server/integrations/zeptomail/emetteur';
+import { demanderEnvoi, depotDesCourriels } from '../../src/server/integrations/zeptomail/emetteur';
 import { SEUILS } from '../../src/domain/seuils/ssot';
 import { MS_PAR_JOUR } from '../../src/domain/temps/calendrier-civil';
 import { dateEnClair } from '../../src/server/attribution/notifications';
