@@ -306,7 +306,9 @@ export type CodeTransitionAttribution =
   | 'porteur_refuse'
   | 'anomalie_refusee'
   | 'fait_posterieur_au_depot'
-  | 'reference_du_fait_invalide';
+  | 'reference_du_fait_invalide'
+  // DM-73 (art. 4.4) : une commande signée avant le dépôt ne profite pas à cette attribution.
+  | 'commande_anterieure_a_l_occupation';
 
 export class ErreurTransitionAttribution extends Error {
   readonly code: CodeTransitionAttribution;

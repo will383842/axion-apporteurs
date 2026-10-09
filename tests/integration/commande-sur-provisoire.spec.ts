@@ -17,7 +17,10 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { demarrerBase, type Base } from './harnais';
-import { enregistrerLaCommandeSignee } from '../../src/server/attribution/transitionner';
+import {
+  attributionDUneCommandeSignee,
+  enregistrerLaCommandeSignee,
+} from '../../src/server/attribution/transitionner';
 import { resilierUnApporteur } from '../../src/server/apporteur/resiliation';
 import {
   ajouterMoisParis,
@@ -100,19 +103,41 @@ async function unApporteur(): Promise<string> {
   ).id;
 }
 
+/** Le dépôt des provisoires semées : AVANT la signature, l'entreprise est occupée à sa date. */
+const DEPOSEE_LE = new Date('2026-10-01T08:00:00.000Z');
+/** L'apporteur de chaque attribution semée : la commande est enregistrée pour LUI (cloisonnement). */
+const porteurs = new Map<string, string>();
+
 /** Une provisoire d'apporteur, par SQL brut. */
-async function uneProvisoire(apporteurId: string): Promise<string> {
+async function uneProvisoire(
+  apporteurId: string,
+  siren = unSiren(),
+  deposeeLe = DEPOSEE_LE
+): Promise<string> {
   const id = randomUUID();
-  await base.prisma.$executeRawUnsafe(
-    `INSERT INTO attributions (id, apporteur_id, statut, siren, canal, grille_commission_id,
-       date_contact, verification_prioritaire, entreprise_a_verifier, lien_interet_declare)
-     VALUES ($1::uuid, $2::uuid, 'provisoire'::etat_attribution, $3, 'espace', $4::uuid,
-       '2026-10-01', false, false, false)`,
-    id,
-    apporteurId,
-    unSiren(),
-    grilleId
-  );
+  // L'horloge du dépôt (REQ-DM-005) pose `deposee_at` à l'heure réelle : le témoin la suspend, dans la
+  // seule transaction de la semence, pour dater le dépôt sur la chronologie du contrat.
+  await base.prisma.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe(
+      'ALTER TABLE attributions DISABLE TRIGGER attributions_horloge_du_depot'
+    );
+    await tx.$executeRawUnsafe(
+      `INSERT INTO attributions (id, apporteur_id, statut, siren, canal, grille_commission_id,
+         date_contact, verification_prioritaire, entreprise_a_verifier, lien_interet_declare,
+         deposee_at)
+       VALUES ($1::uuid, $2::uuid, 'provisoire'::etat_attribution, $3, 'espace', $4::uuid,
+         '2026-10-01', false, false, false, $5)`,
+      id,
+      apporteurId,
+      siren,
+      grilleId,
+      deposeeLe
+    );
+    await tx.$executeRawUnsafe(
+      'ALTER TABLE attributions ENABLE TRIGGER attributions_horloge_du_depot'
+    );
+  });
+  porteurs.set(id, apporteurId);
   return id;
 }
 
@@ -124,10 +149,11 @@ async function faits(id: string) {
   );
 }
 
-const signer = (attributionId: string) =>
+const signer = (attributionId: string, apporteurId = porteurs.get(attributionId)!) =>
   base.prisma.$transaction((tx) =>
     enregistrerLaCommandeSignee(tx, {
       attributionId,
+      apporteurId,
       signeLe: SIGNEE_LE,
       acteur: SYSTEME,
       maintenant: MAINTENANT,
@@ -179,6 +205,7 @@ describe('REQ-DM-006 — une commande signée confirme la provisoire, puis la si
       .$transaction(async (tx) => {
         await enregistrerLaCommandeSignee(tx, {
           attributionId: id,
+          apporteurId: porteurs.get(id)!,
           signeLe: SIGNEE_LE,
           acteur: SYSTEME,
           maintenant: MAINTENANT,
@@ -250,8 +277,13 @@ describe('REQ-DM-006 — la commande signée avant la fin, reçue après l’ann
     expect(await faits(id)).toHaveLength(avant);
   });
 
+  const commande = {
+    commandeSigneeAt: SIGNEE_LE.getTime(),
+    finDuContrat: FIN.getTime(),
+    occupeeDepuis: DEPOSEE_LE.getTime(),
+  };
+
   it('REQ-DM-006 : TÉMOIN — le droit reste ouvert après une annulation de fin de contrat, signée avant la fin', () => {
-    const commande = { commandeSigneeAt: SIGNEE_LE.getTime(), finDuContrat: FIN.getTime() };
     expect(laCommandeTardiveOuvreDroit({ ...commande, sortie: 'fin_de_contrat' })).toBe(true);
     expect(
       laCommandeTardiveOuvreDroit({
@@ -262,8 +294,17 @@ describe('REQ-DM-006 — la commande signée avant la fin, reçue après l’ann
     ).toBe(false);
   });
 
+  it('REQ-DM-006 : TÉMOIN — condition 1 : une commande signée AVANT l’occupation de l’entreprise n’ouvre aucun droit', () => {
+    expect(
+      laCommandeTardiveOuvreDroit({
+        ...commande,
+        occupeeDepuis: SIGNEE_LE.getTime() + 1,
+        sortie: 'fin_de_contrat',
+      })
+    ).toBe(false);
+  });
+
   it('REQ-DM-006 : TÉMOIN — après l’antériorité ou la fraude (art. 3.3, 3.7), la même commande n’ouvre aucun droit', () => {
-    const commande = { commandeSigneeAt: SIGNEE_LE.getTime(), finDuContrat: FIN.getTime() };
     for (const sortie of [
       'anteriorite_etablie',
       'fraude_etablie',
@@ -271,5 +312,57 @@ describe('REQ-DM-006 — la commande signée avant la fin, reçue après l’ann
     ] as const) {
       expect(laCommandeTardiveOuvreDroit({ ...commande, sortie }), sortie).toBe(false);
     }
+  });
+
+  it('REQ-DM-006 : TÉMOIN — la chaîne attribue la commande tardive à l’apporteur RÉSILIÉ, et l’occupant suivant ne la reçoit pas', async () => {
+    const siren = unSiren();
+    const resilie = await unApporteur();
+    const a = await uneProvisoire(resilie, siren);
+    await resilier(resilie);
+    const suivant = await unApporteur();
+    const b = await uneProvisoire(suivant, siren, new Date(FIN.getTime() + 60_000));
+    const beneficiaire = await base.prisma.$transaction((tx) =>
+      attributionDUneCommandeSignee(tx, { siren, signeLe: SIGNEE_LE })
+    );
+    expect(beneficiaire).toStrictEqual({ attributionId: a, apporteurId: resilie });
+    expect(b).not.toBe(a);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — reçue sur l’attribution de l’occupant suivant, la commande antérieure est refusée, nommée : aucune double commission', async () => {
+    const siren = unSiren();
+    const resilie = await unApporteur();
+    await uneProvisoire(resilie, siren);
+    await resilier(resilie);
+    const b = await uneProvisoire(await unApporteur(), siren, new Date(FIN.getTime() + 60_000));
+    await expect(signer(b)).rejects.toThrow(/commande_anterieure_a_l_occupation/);
+    expect((await base.prisma.attribution.findUniqueOrThrow({ where: { id: b } })).statut).toBe(
+      'provisoire'
+    );
+    expect(await faits(b)).toHaveLength(0);
+  });
+
+  it('REQ-DM-006 : TÉMOIN — une commande signée APRÈS la fin revient à l’occupant suivant, pas au résilié', async () => {
+    const siren = unSiren();
+    const resilie = await unApporteur();
+    await uneProvisoire(resilie, siren);
+    await resilier(resilie);
+    const suivant = await unApporteur();
+    const b = await uneProvisoire(suivant, siren, new Date(FIN.getTime() + 60_000));
+    const beneficiaire = await base.prisma.$transaction((tx) =>
+      attributionDUneCommandeSignee(tx, { siren, signeLe: new Date(FIN.getTime() + 120_000) })
+    );
+    expect(beneficiaire).toStrictEqual({ attributionId: b, apporteurId: suivant });
+  });
+});
+
+describe('REQ-DM-006 — le cloisonnement : la commande est enregistrée pour l’apporteur de l’attribution', () => {
+  it('REQ-DM-006 : TÉMOIN — un autre apporteur est refusé, nommé, et rien n’est écrit', async () => {
+    const id = await uneProvisoire(await unApporteur());
+    const intrus = await unApporteur();
+    await expect(signer(id, intrus)).rejects.toThrow(/porteur_refuse/);
+    expect((await base.prisma.attribution.findUniqueOrThrow({ where: { id } })).statut).toBe(
+      'provisoire'
+    );
+    expect(await faits(id)).toHaveLength(0);
   });
 });
