@@ -53,6 +53,7 @@ limites que **nous** appliquons, et ce que le produit fait quand le tiers ne ré
 | [`telegram.md`](./telegram.md) | Porte les alertes de console et celle de l'exercice de sauvegarde | REQ-GOV-022, REQ-INT-024, REQ-INT-025, REQ-QA-023, REQ-SEC-033 | HYP-D12, HYP-E1-24 | **Aucun repli écrit à ce jour** : l'alerte est perdue sans trace — c'est le point ouvert de cette tâche |
 | [`push-web.md`](./push-web.md) | Remet les notifications de l'espace installable à l'appareil de l'apporteur | REQ-GOV-022, REQ-INT-025, REQ-SEC-033, REQ-UX-014 | HYP-D12, W13 | Aucun droit n'est suspendu : l'espace reste la source, la notification n'était qu'un raccourci |
 | [`axionia.md`](./axionia.md) | Rend sa file de sortie à la relecture et rejoue les événements perdus, à la demande de la réconciliation quotidienne | REQ-GOV-022, REQ-INT-012, REQ-INT-013, REQ-SEC-010 | — | Aucun rattrapage ; les envois du relais continuent d'arriver, le battement de la tâche dit l'échec chaque jour |
+| [`crm-pro.md`](./crm-pro.md) | Outil des conseillers salariés : demande à Partners, par l'API 3, de prendre en charge, de vérifier et de lister, et affiche ses réponses | REQ-GOV-022, REQ-INT-031, REQ-JUR-044, REQ-SEC-041, REQ-SEC-042 | HYP-W19-CSE, HYP-W19-IDENTITE-CRM, HYP-W19-LIMITES, HYP-W19-SOURCE, HYP-W19-VISIBILITE | Sans effet sur Partners ni sur les apporteurs ; l'admin prend en charge par la console |
 
 <!-- tableau-tiers:fin -->
 
@@ -162,6 +163,7 @@ compare à celle-ci : en retirer une sans avoir rempli sa rubrique 2 fait rougir
 banque.md
 cloudflare-r2.md
 coolify.md
+crm-pro.md
 dgfip-das2.md
 docuseal.md
 github.md
