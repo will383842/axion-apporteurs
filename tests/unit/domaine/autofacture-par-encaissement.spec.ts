@@ -189,13 +189,28 @@ describe('REQ-ARG-018 — une ligne n’appartient qu’à une seule autofacture
 
   it('REQ-ARG-018 : TÉMOIN DE CONCURRENCE — deux passages simultanés n’affectent chaque ligne qu’une fois', async () => {
     const m = depotEnMemoire([commande('a', 100), commande('b', 200)]);
-    await Promise.all([emettreAutofactures(m.depot), emettreAutofactures(m.depot)]);
+    const rendus = await Promise.all([emettreAutofactures(m.depot), emettreAutofactures(m.depot)]);
     const lignesFacturees = m.autofactures.flatMap((a) => a.ligneIds);
     expect(lignesFacturees.sort()).toEqual(['a', 'b']);
     expect(m.autofactures.reduce((s, a) => s + a.montantCents, 0)).toBe(300);
     for (const a of m.autofactures) {
       for (const id of a.ligneIds) expect(m.affectation.get(id)).toBe(a.id);
     }
+    expect(rendus.flat()).toEqual(m.autofactures);
+  });
+
+  it('REQ-ARG-018 : une ligne prise entre la lecture et l’affectation sort de l’autofacture recomposée', async () => {
+    const m = depotEnMemoire([commande('a', 100), commande('b', 200)]);
+    const lire = m.depot.lignesLibres;
+    m.depot.lignesLibres = async () => {
+      const lues = await lire();
+      m.affectation.set('b', 'af-concurrente');
+      return lues;
+    };
+    const [af] = await emettreAutofactures(m.depot);
+    expect(af?.ligneIds).toEqual(['a']);
+    expect(af?.montantCents).toBe(100);
+    expect(m.autofactures).toEqual([af]);
   });
 
   it('REQ-ARG-018 : une ligne régularisée plus tard a sa propre autofacture, même jour d’acquisition', async () => {
