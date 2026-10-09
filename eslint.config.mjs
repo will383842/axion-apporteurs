@@ -203,6 +203,8 @@ export default tseslint.config(
       // rendait ne se corrigent par aucun changement de code — les déclarer en globales serait
       // recopier ici l'interface d'un moteur tiers (RM-01), qui la changerait sans nous prévenir.
       'scripts/lot/lot.workflow.js',
+      // GOV-160 (#319, 6077512137) : les specs des gardes archivées, conservées hors de la suite.
+      'tests/archive/**',
     ],
   },
 

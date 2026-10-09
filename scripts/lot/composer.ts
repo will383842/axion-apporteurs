@@ -47,6 +47,7 @@ import {
   type Registre,
 } from './registre-decisions';
 import { prochainIdentifiantDeLot, lotsDuBacklog } from './identifiant-de-lot';
+import { livreesParLesPr, prFusionnees } from './avancement-par-les-pr';
 // Le lecteur UNIQUE de `docs/maquettes/VALIDATION.md` : celui de la garde, jamais une seconde copie.
 import { tachesAEcarterParLeComposeur } from '../gates/maquettes-validees';
 // LE lecteur unique des chemins d'une tache : `paths` ∪ `tests{}`, moins les registres
@@ -161,6 +162,8 @@ export type OptionsDeComposition = {
   registre: Pick<Registre, 'estBloquante' | 'estCodable' | 'canonique'>;
   /** Les tâches d'écran dont la ligne de `docs/maquettes/VALIDATION.md` n'est pas validée. */
   maquettesNonValidees?: ReadonlySet<string>;
+  /** GOV-160 : les identifiants livrés par des PR fusionnées (`scripts/lot/avancement-par-les-pr.ts`). */
+  livrees?: ReadonlySet<string>;
 };
 
 export function composerLeLot(
@@ -170,8 +173,17 @@ export function composerLeLot(
   const index = new Map(taches.map((t) => [t.id, t]));
   const maquettesNonValidees = o.maquettesNonValidees ?? new Set<string>();
   const ecartees: EcartDeLot[] = [];
+  const livrees = o.livrees ?? new Set<string>();
   const eligibles = taches.filter((t) => {
     if (t.phase !== o.phase || t.repo !== o.repo) return false;
+    // GOV-160 (#319, 6077512137) : plus aucune tâche de gouvernance n'est composée ; une garde
+    // nouvelle exige une décision de Williams citée, pas une tâche du registre.
+    if (/^GOV-/.test(t.id)) {
+      ecartees.push({ id: t.id, raison: 'tâche de gouvernance : plus composée (GOV-160)' });
+      return false;
+    }
+    // GOV-160 : l'avancement se DÉRIVE des PR fusionnées (`pnpm avancement`), pas du statut écrit.
+    if (livrees.has(t.id)) return false;
     // Les deux statuts d'attente sont imprimés AVEC leur raison : c'est la seule chose que la
     // session a à remonter à Will quand aucun lot n'est composable. Ils passent AVANT le filtre.
     if (t.statut === 'attente_externe') {
@@ -196,7 +208,7 @@ export function composerLeLot(
       return false;
     }
     const depsBloquantes = t.deps.filter(
-      (d) => !STATUTS_TERMINES.has(index.get(d)?.statut ?? 'inconnu')
+      (d) => !livrees.has(d) && !STATUTS_TERMINES.has(index.get(d)?.statut ?? 'inconnu')
     );
     if (depsBloquantes.length) {
       ecartees.push({ id: t.id, raison: `dépend de ${depsBloquantes.join(', ')}` });
@@ -359,6 +371,7 @@ function principal(): void {
     max,
     registre,
     maquettesNonValidees,
+    livrees: new Set(livreesParLesPr(prFusionnees()).keys()),
   });
 
   // --- écriture du lot ----------------------------------------------------------------------------

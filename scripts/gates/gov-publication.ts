@@ -26,6 +26,7 @@
  * fait désormais échouer `--prove`.
  */
 
+import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 
@@ -268,7 +269,37 @@ if (process.argv.includes('--prove')) {
 }
 
 // ── mode normal ───────────────────────────────────────────────────────────────
-const fautes = analyser(fichiersSuivis());
+/**
+ * GOV-160 (#319, 6077512137) : sur une PR, la garde ne juge que les fichiers AJOUTÉS ou MODIFIÉS
+ * par la PR — un défaut déjà sur main ne bloque pas une PR sans rapport. Sur main (push) ou en
+ * local, elle balaie tout le dépôt suivi. Un diff illisible retombe sur le balayage complet.
+ */
+function fichiersAJuger(): string[] {
+  const suivis = fichiersSuivis();
+  const base = process.env['GITHUB_BASE_REF'];
+  if (process.env['GITHUB_EVENT_NAME'] !== 'pull_request' || !base) return suivis;
+  try {
+    const diff = execFileSync(
+      'git',
+      [
+        '-c',
+        'core.quotePath=false',
+        'diff',
+        '--name-only',
+        '--diff-filter=AM',
+        `origin/${base}...HEAD`,
+      ],
+      { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }
+    )
+      .split('\n')
+      .filter(Boolean);
+    const ensemble = new Set(suivis);
+    return diff.filter((f) => ensemble.has(f));
+  } catch {
+    return suivis;
+  }
+}
+const fautes = analyser(fichiersAJuger());
 if (fautes.length === 0) {
   console.log('✅ gov:publication — aucun contenu non publiable dans les fichiers suivis.');
   process.exit(0);
