@@ -36,6 +36,26 @@ import {
   sujetDepuisEmpreinte,
 } from '../../../src/server/securite/rate-limit';
 
+/**
+ * Le compteur de PRODUCTION est jugé sur son AIGUILLAGE (quel compteur, dans quel ordre, quel verdict
+ * rendu), sans cache : un `limiter` de substitution, posé test par test. Hors de ces tests, la
+ * substitution est nulle et le vrai `limiter` sert — les autres témoins n'en voient rien.
+ */
+const substitut = vi.hoisted(() => ({
+  limiter: null as
+    null | ((nom: string, sujet: string, maintenant: number) => Promise<{ autorise: boolean }>),
+}));
+vi.mock('../../../src/server/securite/rate-limit', async (original) => {
+  const vrai = await original<typeof import('../../../src/server/securite/rate-limit')>();
+  return {
+    ...vrai,
+    limiter: ((...a: Parameters<typeof vrai.limiter>) =>
+      substitut.limiter === null
+        ? vrai.limiter(...a)
+        : substitut.limiter(a[0], a[1], a[2])) as typeof vrai.limiter,
+  };
+});
+
 /** La famille des compteurs de la vérification (REQ-SEC-016), lue au registre, jamais retapée. */
 const FAMILLE = PREFIXES_DE_FAMILLE[2];
 import {
@@ -445,6 +465,61 @@ describe('REQ-SEC-021 — sans plafonds lisibles, le compteur de production refu
   );
 });
 
+describe('REQ-SEC-021 — l’aiguillage du compteur de production, compteur par compteur (SEC-72)', () => {
+  /** Rejoue `compterAuRegistre` sur un `limiter` qui répond par nom ; rend le verdict et les appels. */
+  async function aiguiller(quoi: 'identite' | 'ip', verdicts: Record<string, boolean>) {
+    const appels: { nom: string; sujet: string; maintenant: number }[] = [];
+    substitut.limiter = async (nom, sujet, maintenant) => {
+      appels.push({ nom, sujet, maintenant });
+      return { autorise: verdicts[nom] ?? false };
+    };
+    try {
+      return { rendu: await compterAuRegistre(quoi, DEMANDE.sujetIdentite), appels };
+    } finally {
+      substitut.limiter = null;
+    }
+  }
+
+  it.each([true, false])(
+    'REQ-SEC-021 : l’adresse se compte sur `verif:ip-jour` SEUL, et son verdict est rendu tel quel (%s)',
+    async (admis) => {
+      const { rendu, appels } = await aiguiller('ip', {
+        'verif:ip-jour': admis,
+        'verif:identite-court': !admis,
+        'verif:identite-jour': !admis,
+      });
+      expect(rendu).toEqual({ autorise: admis });
+      expect(appels.map((a) => a.nom)).toEqual(['verif:ip-jour']);
+      expect(appels[0]!.sujet).toBe(DEMANDE.sujetIdentite);
+      expect(Number.isFinite(appels[0]!.maintenant)).toBe(true);
+    }
+  );
+
+  it('REQ-SEC-021 : TÉMOIN — l’identité, rafale refusée : refus, et la fenêtre longue n’est PAS usée', async () => {
+    const { rendu, appels } = await aiguiller('identite', {
+      'verif:identite-court': false,
+      'verif:identite-jour': true,
+      'verif:ip-jour': true,
+    });
+    expect(rendu).toEqual({ autorise: false });
+    expect(appels.map((a) => a.nom)).toEqual(['verif:identite-court']);
+  });
+
+  it.each([true, false])(
+    'REQ-SEC-021 : l’identité, rafale admise : la fenêtre longue décide (%s)',
+    async (admis) => {
+      const { rendu, appels } = await aiguiller('identite', {
+        'verif:identite-court': true,
+        'verif:identite-jour': admis,
+        'verif:ip-jour': !admis,
+      });
+      expect(rendu).toEqual({ autorise: admis });
+      expect(appels.map((a) => a.nom)).toEqual(['verif:identite-court', 'verif:identite-jour']);
+      expect(new Set(appels.map((a) => a.sujet))).toEqual(new Set([DEMANDE.sujetIdentite]));
+    }
+  );
+});
+
 describe('REQ-UX-007 — les ports de la base, jugés en processus sur un faux client', () => {
   type Appel = { quoi: string; args: unknown };
   function fauxClient(o: {
@@ -703,6 +778,20 @@ describe('REQ-EXT-006 — le lecteur RÉSERVÉ de la dernière fin, en échec fe
     expect(lectures[0]!.sql).toMatch(/LEFT JOIN LATERAL/);
     expect(lectures[0]!.sql).toMatch(/agregat_id = a\.id/);
     expect(lectures[0]!.sql).not.toMatch(/charge\s*->/);
+  });
+
+  it('REQ-EXT-006 : les ports de la base branchent CE lecteur, et l’heure du signal est celle du système', async () => {
+    const { c, lectures } = client([{ id: 'a1', statut: 'perimee' }], {
+      a1: { survenuAt: ilYA(20), charge: charge('perimee') },
+    });
+    const p = portsDeLaBase(c);
+    expect(await p.derniereFin(SIREN_LU)).toEqual(ilYA(20));
+    expect(lectures[0]!.valeurs).toEqual([SIREN_LU, [...ETATS_TERMINES]]);
+    const avant = Date.now();
+    const lue = p.maintenant();
+    expect(lue).toBeInstanceOf(Date);
+    expect(lue.getTime()).toBeGreaterThanOrEqual(avant);
+    expect(lue.getTime()).toBeLessThanOrEqual(Date.now());
   });
 
   it('REQ-EXT-006 : TÉMOIN — une charge illisible, discordante ou absente, ou une panne, rendent null : aucun signal', async () => {
