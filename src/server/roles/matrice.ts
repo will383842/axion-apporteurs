@@ -46,7 +46,9 @@ export const MATRICE_DES_ROLES = {
   'action:exporter_pain001': { roles: ['admin', 'comptable'], stepUp: true },
   // SEC-30 (texte de la sécurité, point 4) : la levée d'un gel est sous step-up dès maintenant.
   'action:lever_gel': { roles: ['admin'], stepUp: true },
-  'action:suspendre_apporteur': { roles: ['admin'], stepUp: false },
+  // SEC-15 : une décision défavorable notifiée avec ses faits (art. 3.7 al. 3), au rang de la mise en
+  // demeure : sous step-up (sécurité, #794 6039195762).
+  'action:suspendre_apporteur': { roles: ['admin'], stepUp: true },
   'action:resilier_apporteur': { roles: ['admin'], stepUp: false },
   'action:exporter_das2': { roles: ['admin'], stepUp: true },
   // DM-12 (REQ-DM-034, amendement A1-01) : le rattachement manuel motivé, au qualifieur (glossaire §7)
@@ -59,6 +61,10 @@ export const MATRICE_DES_ROLES = {
   // à l'admin SEUL, jamais en attente ; la lecture se journalise elle-même
   // (`src/server/console/journal-des-acces.ts`).
   'action:lire_journal_des_acces': { roles: ['admin'], stepUp: false },
+  // DM-65 (REQ-DM-028, art. 3.3 bis (b)) : ajouter un SIREN à la liste de la Société, ou l'en retirer —
+  // le retrait le rend déclarable, donc ouvert à une attribution : geste à effet d'argent, à l'administrateur
+  // validé seul, sous step-up (condition de la sécurité).
+  'action:tenir_liste_noire': { roles: ['admin'], stepUp: true },
   // SEC-29 : l'écran `/console` minimal (le repli de la redirection, avant l'accueil du rôle
   // d'UX-P1-16) et la déconnexion, ouverts aux quatre rôles : chacun doit pouvoir arriver et partir.
   'ecran:accueil': { roles: ['admin', 'qualifieur', 'comptable', 'lecteur'], stepUp: false },
@@ -88,10 +94,25 @@ export const MATRICE_DES_ROLES = {
   'action:verifier_piece': { roles: ['admin', 'qualifieur'], stepUp: false },
   'action:ouvrir_kyc': { roles: ['admin'], stepUp: false },
   'action:valider_kyc': { roles: ['admin'], stepUp: true },
+  // CPL-T24 (REQ-UX-027, REQ-DM-027) : vérifier puis confirmer un RIB, à quatre yeux, chacun par un
+  // administrateur VALIDÉ, sous step-up (condition de la sécurité).
+  'action:verifier_rib': { roles: ['admin'], stepUp: true },
   // SEC-61 (conditions de la sécurité) : poser et lever un gel du journal des accès, à un admin
   // VALIDÉ, sous step-up ; la levée par un AUTRE que l'auteur et que la personne visée (CHECK).
   'action:poser_gel_journal_acces': { roles: ['admin'], stepUp: true },
   'action:lever_gel_journal_acces': { roles: ['admin'], stepUp: true },
+  // UX-P1-53 (validé par la sécurité) : l'écran des gels, un seul droit pour l'onglet et la lecture,
+  // à admin seul et sans step-up (lire ne change rien, chaque page se trace) ; l'administrateur
+  // VALIDÉ est relu en base par la lecture elle-même.
+  'ecran:gels_journal_acces': { roles: ['admin'], stepUp: false },
+  // UX-P1-57 (conditions de la sécurité, #703) : la mise en demeure est un acte juridique qui ouvre la
+  // voie à la résiliation sans préavis ; à l'admin seul, sous step-up. Son écran, à l'admin seul : le
+  // relèvement est exigé par le geste, que l'action rejuge.
+  'ecran:mise_en_demeure': { roles: ['admin'], stepUp: false },
+  'action:mettre_en_demeure': { roles: ['admin'], stepUp: true },
+  // DM-71 (art. 3.3 du v2) : l'annulation après la confirmation, pour erreur d'identification ou pour
+  // fraude, est un geste humain de l'administrateur, sous step-up (sécurité, rattrapage 119).
+  'action:annuler_apres_confirmation': { roles: ['admin'], stepUp: true },
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, EntreeDeLaMatrice>>;
 
 /**

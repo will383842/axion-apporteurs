@@ -6,9 +6,10 @@
  *
  * CE QU'IL PROUVE (cadrage de la lentille sécurité, point 5, et sa note sur 4913c6a3) :
  *   1. nouvel appareil → refusé, même sur une session fraîche ; il se confirme à la CONSOMMATION
- *      d'un lien sur lui, dans la transaction de la connexion : l'avis part, puis l'appareil est
- *      connu, et passe ensuite sans avis ; un cookie de session volé, présenté depuis un autre
- *      appareil, ne fait connaître aucun appareil ;
+ *      d'un lien sur lui : la consommation se valide, l'avis part hors de toute transaction, puis
+ *      une transaction courte rejuge la session et le confirme ; il passe ensuite sans avis ; un
+ *      cookie de session volé, présenté depuis un autre appareil, ne fait connaître aucun appareil ;
+ *      en production (SEC-62), l'avis part par `notifier()`, et seul un courriel envoyé confirme ;
  *   2. aucune trace ailleurs : ni anomalie, ni statut, ni version de session, ni dépôt, ni événement ;
  *   3. un appareil est connu pour UN compte ;
  *   4. au-delà d'une durée de session sans être vu, il redevient inconnu ;
@@ -19,13 +20,14 @@
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, type StatutCourriel } from '@prisma/client';
 import { demarrerBase, type Base } from './harnais';
 import { NOMS_DES_SECRETS, kidDe } from '../../src/lib/env';
 import { clesPii, colonnesPii } from '../../src/server/securite/pii';
 import {
   MODELE_APPORTEUR,
   ecrituresDeLien,
+  transactionDeConfirmation,
   transactionDeConsommation,
 } from '../../src/server/auth/lien-magique-depot';
 import {
@@ -35,6 +37,12 @@ import {
   tirerJeton,
 } from '../../src/server/auth/lien-magique';
 import { DUREES_AUTH } from '../../src/server/auth/durees';
+import {
+  configurationDuLien,
+  portsDeConsommation,
+} from '../../src/server/auth/lien-magique-production';
+import { horlogeFigee } from '../../src/domain/temps/horloge';
+import type { DemandeDEnvoi } from '../../src/server/integrations/zeptomail/emetteur';
 import { depotDeSessions } from '../../src/server/auth/session';
 import {
   cleDesAppareils,
@@ -46,6 +54,7 @@ import {
 } from '../../src/server/auth/appareil';
 import { purgerLesAppareils } from '../../src/server/taches/purger-appareils';
 import { semerSession } from '../../prisma/seed/05-sessions';
+import { semerAttribution } from '../../prisma/seed/10-attributions';
 import {
   ROLE_D_EXECUTION,
   provisionnerRoleDExecution,
@@ -77,13 +86,15 @@ const CONFIGURATION = {
 };
 const CLE = cleDesAppareils(secretSession);
 const CLE_HEX = Array.from({ length: 32 }, (_, i) => i.toString(16).padStart(2, '0')).join('');
-const CLES = clesPii({
+/** L'environnement du processus : ses secrets factices, tirés pour ce fichier. */
+const ENV_DU_PROCESSUS: Record<string, string> = {
   NODE_ENV: 'test',
   ...Object.fromEntries(
     NOMS_DES_SECRETS.map((n) => [n, `temoin-sec55-base-${n.toLowerCase()}-`.padEnd(48, '0')])
   ),
   PII_ENCRYPTION_KEY: CLE_HEX,
-});
+};
+const CLES = clesPii(ENV_DU_PROCESSUS);
 
 const d = (iso: string) => new Date(iso);
 const MS = 1;
@@ -126,6 +137,38 @@ async function apporteur(): Promise<string> {
   return id;
 }
 
+/**
+ * Un RÉSILIÉ AUX DROITS EN COURS : une attribution `figee_resiliation`, qui le gardait en LECTURE sous
+ * SEC-19. SEC-70 (contrat v2, art. 12.3) : il n'ouvre plus rien. Sa grille est une version d'essai,
+ * propre au témoin.
+ */
+async function resilieAuxDroitsEnCours(): Promise<string> {
+  const a = await apporteur();
+  const grille = await base.prisma.grilleCommission.create({
+    data: {
+      version: 900 + sequence,
+      hash: randomBytes(32).toString('hex'),
+      contenuJson: { essai: true },
+      publieeAt: d('2026-10-01T08:00:00.000Z'),
+      importeeAt: d('2026-10-01T08:00:00.000Z'),
+    },
+  });
+  await semerAttribution(base.prisma, {
+    id: randomUUID(),
+    apporteurId: a,
+    grilleCommissionId: grille.id,
+    siren: `9${String(sequence).padStart(8, '0')}`,
+    statut: 'figee_resiliation',
+    dateContact: d('2026-10-01T00:00:00.000Z'),
+  });
+  // La base exige le motif d'une résiliation (`apporteurs_motif_si_resilie`).
+  await base.prisma.apporteur.update({
+    where: { id: a },
+    data: { statut: 'resilie', resiliationMotif: 'ordinaire_apporteur' },
+  });
+  return a;
+}
+
 /** Ouvre une session dont le lien a été consommé à `consommeAt` ; rend le jeton de session. */
 async function session(apporteurId: string, consommeAt: Date): Promise<string> {
   const jetonSession = tirerJeton();
@@ -162,9 +205,16 @@ const CONFIGURATION_DU_LIEN = {
 
 /**
  * La connexion RÉELLE : un lien émis, puis consommé sur l'appareil donné, à l'instant donné, par
- * `consommerLien` dans sa transaction en base. L'avis est un double.
+ * `consommerLien` dans sa transaction en base ; l'appareil se confirme ENSUITE, dans la transaction
+ * courte de confirmation, en base aussi (voie (b) de la lentille sécurité). L'avis est un double,
+ * que le témoin peut remplacer pour agir pendant qu'il est en vol.
  */
-async function connecter(apporteurId: string, identifiantAppareil: unknown, maintenant: Date) {
+async function connecter(
+  apporteurId: string,
+  identifiantAppareil: unknown,
+  maintenant: Date,
+  pendantLAvis?: (avis: { apporteurId: string; confirmeAt: Date }) => Promise<void>
+) {
   const jeton = tirerJeton();
   await ecrituresDeLien(app).insererLien({
     apporteurId,
@@ -174,17 +224,31 @@ async function connecter(apporteurId: string, identifiantAppareil: unknown, main
     creeAt: maintenant,
     expireAt: new Date(maintenant.getTime() + DUREES_AUTH.lienMagiqueMs.valeur),
   });
-  const aviser = vi.fn(async (_avis: { apporteurId: string; confirmeAt: Date }) => undefined);
+  const aviser = vi.fn(async (avis: { apporteurId: string; confirmeAt: Date }) => {
+    if (pendantLAvis) await pendantLAvis(avis);
+  });
   const resultat = await consommerLien(
     { jeton, ipHash: null, identifiantAppareil },
     {
       maintenant: () => maintenant,
       transaction: transactionDeConsommation(app),
       configuration: CONFIGURATION_DU_LIEN,
-      appareils: { aviser },
+      appareils: {
+        aviser,
+        maintenant: () => maintenant,
+        transaction: transactionDeConfirmation(app),
+      },
     }
   );
   return { resultat, aviser };
+}
+
+/** Les sessions de l'espace d'un apporteur, telles que la base les rend, vues d'une AUTRE connexion. */
+function sessionsDe(apporteurId: string) {
+  return base.prisma.sessionEspace.findMany({
+    where: { apporteurId },
+    select: { lienMagiqueId: true, revoqueAt: true },
+  });
 }
 
 /** Les appareils connus d'un apporteur, tels que la base les rend. */
@@ -380,6 +444,244 @@ describe('REQ-SEC-003 — SEC-55 : un nouvel appareil se confirme à la CONSOMMA
       ).toEqual({ ok: false, motif: 'appareil_inconnu' });
     }
     expect(await appareilsDe(a)).toEqual([]);
+  });
+});
+
+describe('REQ-SEC-003 — voie (b) de la lentille sécurité, en base réelle : la consommation se VALIDE, l’avis part hors de toute transaction, puis une transaction courte rejuge et confirme', () => {
+  it('REQ-SEC-003 : (1) pendant l’avis, la consommation est DÉJÀ validée — vue d’une autre connexion, la session existe — et l’appareil n’est PAS confirmé', async () => {
+    const a = await apporteur();
+    const vu: { sessions: number; appareils: number }[] = [];
+    const connexion = await connecter(
+      a,
+      tirerIdentifiantDAppareil(),
+      d('2026-10-03T13:00:00.000Z'),
+      async () => {
+        vu.push({
+          sessions: (await sessionsDe(a)).length,
+          appareils: (await appareilsDe(a)).length,
+        });
+      }
+    );
+    expect(vu).toEqual([{ sessions: 1, appareils: 0 }]);
+    expect(connexion.resultat).toMatchObject({ etat: 'ouverte', appareil: { issue: 'confirme' } });
+    expect(await appareilsDe(a)).toHaveLength(1);
+  });
+
+  it('REQ-SEC-003 : (3) TÉMOIN — un arrêt du processus entre la consommation et la confirmation (avis jamais rendu) laisse l’appareil NON confirmé ; la session est ouverte', async () => {
+    const a = await apporteur();
+    void connecter(
+      a,
+      tirerIdentifiantDAppareil(),
+      d('2026-10-03T13:10:00.000Z'),
+      () => new Promise<void>(() => undefined)
+    );
+    await vi.waitFor(async () => expect(await sessionsDe(a)).toHaveLength(1));
+    expect(await appareilsDe(a)).toEqual([]);
+  });
+
+  it('REQ-SEC-003 : (3) un avis refusé ou en échec ne confirme RIEN — `avis_echoue`, la session ouverte, aucune ligne d’appareil', async () => {
+    const a = await apporteur();
+    const connexion = await connecter(
+      a,
+      tirerIdentifiantDAppareil(),
+      d('2026-10-03T13:20:00.000Z'),
+      async () => {
+        throw new Error('avis_en_echec');
+      }
+    );
+    expect(connexion.resultat).toMatchObject({
+      etat: 'ouverte',
+      appareil: { issue: 'avis_echoue' },
+    });
+    expect(await sessionsDe(a)).toHaveLength(1);
+    expect(await appareilsDe(a)).toEqual([]);
+  });
+
+  it('REQ-SEC-003 : (2) la session révoquée pendant l’avis — la transaction de confirmation la rejuge : RIEN n’est confirmé', async () => {
+    const a = await apporteur();
+    const connexion = await connecter(
+      a,
+      tirerIdentifiantDAppareil(),
+      d('2026-10-03T13:30:00.000Z'),
+      async () => {
+        await base.prisma.sessionEspace.updateMany({
+          where: { apporteurId: a },
+          data: { revoqueAt: d('2026-10-03T13:30:00.000Z') },
+        });
+      }
+    );
+    expect(connexion.resultat).toMatchObject({
+      etat: 'ouverte',
+      appareil: { issue: 'non_confirme' },
+    });
+    expect(await appareilsDe(a)).toEqual([]);
+  });
+
+  it('REQ-SEC-003 : (2) l’apporteur qui n’est plus actif pendant l’avis — RIEN n’est confirmé', async () => {
+    const a = await apporteur();
+    const connexion = await connecter(
+      a,
+      tirerIdentifiantDAppareil(),
+      d('2026-10-03T13:40:00.000Z'),
+      async () => {
+        // La base exige le motif d'une résiliation (`apporteurs_motif_si_resilie`).
+        await base.prisma.apporteur.update({
+          where: { id: a },
+          data: { statut: 'resilie', resiliationMotif: 'ordinaire_apporteur' },
+        });
+      }
+    );
+    expect(connexion.resultat).toMatchObject({
+      etat: 'ouverte',
+      appareil: { issue: 'non_confirme' },
+    });
+    expect(await appareilsDe(a)).toEqual([]);
+  });
+
+  it('REQ-SEC-003 : (2) idempotente — un appareil devenu connu pendant l’avis n’est pas confirmé deux fois : RIEN n’est réécrit, l’issue dit `connu`', async () => {
+    const a = await apporteur();
+    const identifiant = tirerIdentifiantDAppareil();
+    const avant = d('2026-10-03T13:49:00.000Z');
+    const connexion = await connecter(a, identifiant, d('2026-10-03T13:50:00.000Z'), async () => {
+      await base.prisma.appareilConnu.create({
+        data: {
+          apporteurId: a,
+          empreinte: empreinteDAppareil(identifiant, CLE.secret) as string,
+          kid: CLE.kid,
+          confirmeAt: avant,
+          derniereVueAt: avant,
+        },
+      });
+    });
+    expect(connexion.resultat).toMatchObject({ etat: 'ouverte', appareil: { issue: 'connu' } });
+    expect(await appareilsDe(a)).toEqual([
+      {
+        empreinte: empreinteDAppareil(identifiant, CLE.secret),
+        kid: CLE.kid,
+        confirmeAt: avant,
+        derniereVueAt: avant,
+      },
+    ]);
+  });
+});
+
+describe('REQ-SEC-003 — SEC-62 sur SEC-70 : un résilié n’ouvre aucune session et ne fait connaître aucun appareil', () => {
+  it('REQ-SEC-032 : TÉMOIN à deux faces — un résilié aux droits en cours consomme un lien déjà émis : INVALIDE comme un lien inconnu, aucun avis, aucune session, aucune ligne d’appareil ; le même parcours pour un apporteur `signe` confirme l’appareil', async () => {
+    const maintenant = d('2026-10-03T14:00:00.000Z');
+
+    const resilie = await resilieAuxDroitsEnCours();
+    const ferme = await connecter(resilie, tirerIdentifiantDAppareil(), maintenant);
+    expect(ferme.resultat).toEqual({ etat: 'lien_invalide' });
+    expect(ferme.aviser).not.toHaveBeenCalled();
+    expect(await appareilsDe(resilie)).toEqual([]);
+    expect(await base.prisma.sessionEspace.count({ where: { apporteurId: resilie } })).toBe(0);
+
+    const signe = await apporteur();
+    const pleine = await connecter(signe, tirerIdentifiantDAppareil(), maintenant);
+    expect(pleine.resultat).toMatchObject({ etat: 'ouverte', appareil: { issue: 'confirme' } });
+    expect(pleine.aviser).toHaveBeenCalledTimes(1);
+    expect(await appareilsDe(signe)).toHaveLength(1);
+  });
+});
+
+// ── le BRANCHEMENT en production (SEC-62), en base réelle ───────────────────────────────────────
+
+/**
+ * La connexion RÉELLE par les ports de la PRODUCTION (`portsDeConsommation`) : le lien est émis sous
+ * la configuration du processus, consommé dans sa transaction en base, puis l'avis part par
+ * `notifier()` à un émetteur simulé, qui rend le statut donné.
+ */
+async function connecterEnProduction(
+  apporteurId: string,
+  identifiantAppareil: unknown,
+  maintenant: Date,
+  statut: StatutCourriel
+) {
+  const configuration = configurationDuLien(ENV_DU_PROCESSUS);
+  const jeton = tirerJeton();
+  await ecrituresDeLien(app).insererLien({
+    apporteurId,
+    tokenHash: empreinteDuJeton(jeton, configuration.secret),
+    codeHash: empreinteDuCode('042137', configuration.secret),
+    kid: configuration.kid,
+    creeAt: maintenant,
+    expireAt: new Date(maintenant.getTime() + DUREES_AUTH.lienMagiqueMs.valeur),
+  });
+  const envoyerCourriel = vi.fn(async (_demande: DemandeDEnvoi) => statut);
+  const resultat = await consommerLien(
+    { jeton, ipHash: null, identifiantAppareil },
+    portsDeConsommation({
+      env: ENV_DU_PROCESSUS,
+      prisma: app,
+      horloge: horlogeFigee(maintenant.getTime()),
+      envoyerCourriel,
+    })
+  );
+  return { resultat, envoyerCourriel, cle: cleDesAppareils(configuration.session.secret) };
+}
+
+describe('REQ-SEC-003 — le BRANCHEMENT en production (SEC-62), en base réelle : le clic avise par `notifier()`, et l’appareil n’est connu que si le courriel est envoyé', () => {
+  it('REQ-SEC-003 : courriel envoyé — l’avis part UNE fois, à l’adresse stockée, sous `nouvel_appareil` ; l’appareil est confirmé ; la connexion suivante le reconnaît, sans avis', async () => {
+    const a = await apporteur();
+    const identifiant = tirerIdentifiantDAppareil();
+    const t = d('2026-10-04T12:20:00.000Z');
+    const premiere = await connecterEnProduction(a, identifiant, t, 'envoye');
+    expect(premiere.resultat).toMatchObject({
+      etat: 'ouverte',
+      appareil: { identifiant, issue: 'confirme' },
+    });
+    expect(premiere.envoyerCourriel).toHaveBeenCalledTimes(1);
+    const demande = premiere.envoyerCourriel.mock.calls[0]?.[0];
+    expect(demande).toMatchObject({
+      gabarit: 'nouvel_appareil',
+      sujet: 'Connexion à votre espace depuis un nouvel appareil',
+      apporteurId: a,
+    });
+    expect(demande?.a).toMatch(/^appareil-\d+@example\.org$/);
+    expect(demande?.corps).toContain('le 4 octobre 2026 à 14 h 20 (heure de Paris)');
+    expect(JSON.stringify(demande)).not.toContain(identifiant);
+    expect(await appareilsDe(a)).toEqual([
+      {
+        empreinte: empreinteDAppareil(identifiant, premiere.cle.secret),
+        kid: premiere.cle.kid,
+        confirmeAt: t,
+        derniereVueAt: t,
+      },
+    ]);
+
+    const seconde = await connecterEnProduction(
+      a,
+      identifiant,
+      d('2026-10-04T12:30:00.000Z'),
+      'envoye'
+    );
+    expect(seconde.resultat).toMatchObject({
+      etat: 'ouverte',
+      appareil: { identifiant, issue: 'connu' },
+    });
+    expect(seconde.envoyerCourriel).not.toHaveBeenCalled();
+  });
+
+  it('REQ-SEC-003 : (3) échec fermé — un courriel en échec ou retenu : `avis_echoue`, la session ouverte, AUCUN appareil écrit', async () => {
+    for (const statut of [
+      'echec',
+      'retenu_dmarc_non_verifie',
+      'retenu_adresse_supprimee',
+    ] as const) {
+      const a = await apporteur();
+      const r = await connecterEnProduction(
+        a,
+        tirerIdentifiantDAppareil(),
+        d('2026-10-04T13:00:00.000Z'),
+        statut
+      );
+      expect(r.resultat, statut).toMatchObject({
+        etat: 'ouverte',
+        appareil: { issue: 'avis_echoue' },
+      });
+      expect(await appareilsDe(a)).toEqual([]);
+      expect(await sessionsDe(a)).toHaveLength(1);
+    }
   });
 });
 

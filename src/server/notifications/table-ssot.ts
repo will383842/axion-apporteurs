@@ -65,6 +65,11 @@ export type LigneDeNotification = {
   readonly route: string | null;
   /** Quand la route n'est pas encore déclarée : la tâche qui la posera. */
   readonly routeEnAttente: string | null;
+  /**
+   * SEC-70 : un appel qui ne mène PAS à l'espace. `contact_entite` : le mailto: de l'adresse de
+   * contact de l'entité, lue au registre ; sans elle, l'appel part seul.
+   */
+  readonly lien?: 'contact_entite';
 };
 
 const action = (cle: keyof typeof TEXTES_DES_NOTIFICATIONS) => [
@@ -319,6 +324,25 @@ export const GABARITS = {
     route: '/mes-entreprises',
     routeEnAttente: null,
   },
+  /**
+   * SEC-62 (texte du rattrapage 102) : l'avis de sécurité du COMPTE, à la consommation d'un lien ou
+   * d'un code sur un appareil que le compte ne connaît pas encore. Un avis de sécurité ne se désactive
+   * pas, et part par courriel seul, à l'adresse vérifiée, comme le lien qu'il signale.
+   */
+  nouvel_appareil: {
+    destinataire: 'apporteur',
+    req: 'REQ-SEC-003',
+    emetteur: 'SEC-62',
+    fondement: 'REQ-SEC-003 — avis de sécurité du compte, à la connexion depuis un nouvel appareil',
+    declencheur: LIEN_DE_L_ESPACE.declencheur,
+    notificationObligatoire: LIEN_DE_L_ESPACE.notificationObligatoire,
+    faitCourirUnDelai: LIEN_DE_L_ESPACE.faitCourirUnDelai,
+    canaux: LIEN_DE_L_ESPACE.canaux,
+    desactivable: LIEN_DE_L_ESPACE.desactivable,
+    actions: action('nouvel_appareil'),
+    route: '/connexion',
+    routeEnAttente: null,
+  },
   // SEC-19 (fiches de la juriste, #703, 5980966503 ; arrêt d'A02, 5980982895 §1) : la mise en demeure
   // fait courir son délai de l'envoi du courriel ; son texte vit dans `decisions_de_contrat`.
   mise_en_demeure: {
@@ -335,8 +359,9 @@ export const GABARITS = {
     route: '/mes-entreprises',
     routeEnAttente: null,
   },
-  // SEC-19 : la fin du contrat, dans l'espace en lecture seule ; elle fait courir le préavis d'une
-  // résiliation par la Société (art. 11.1 et 20).
+  // SEC-19 : la fin du contrat ; elle fait courir le préavis d'une résiliation par la Société (art. 11.1
+  // et 20). SEC-70 (art. 12.3) : l'espace est fermé au résilié — l'appel ne mène à aucune route, mais à la
+  // demande écrite (juriste, #824 6043086595).
   resiliation: {
     destinataire: 'apporteur',
     req: 'REQ-DM-011',
@@ -348,8 +373,9 @@ export const GABARITS = {
     canaux: ['email', 'espace'],
     desactivable: false,
     actions: action('resiliation'),
-    route: '/mes-commissions',
+    route: null,
     routeEnAttente: null,
+    lien: 'contact_entite',
   },
 } as const satisfies Readonly<Record<string, LigneDeNotification>>;
 
@@ -449,7 +475,8 @@ export function fautesDeLaTable(
       f.push(`action_non_unique : ${cle} doit porter UN appel, celui de la micro-copie`);
     if (l.route !== null && !routes.includes(l.route))
       f.push(`route_non_declaree : ${cle} mène à ${l.route}, absente de ${sourceDesRoutes}`);
-    if (l.route === null && l.routeEnAttente === null)
+    // SEC-70 : un appel vers le contact de l'entité ne mène à aucune route de l'espace.
+    if (l.route === null && l.routeEnAttente === null && l.lien === undefined)
       f.push(`route_absente_sans_tache : ${cle} n'a ni route ni tâche qui la posera`);
   }
   return f;

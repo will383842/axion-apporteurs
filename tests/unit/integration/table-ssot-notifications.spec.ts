@@ -1,6 +1,7 @@
 // @req REQ-UX-016
 // @req REQ-JUR-039
 // @req REQ-JUR-033
+// @req REQ-SEC-003
 /**
  * UX-P1-10 — la table SSOT des notifications (REQ-UX-016, REQ-JUR-039, REQ-JUR-033). Liste arrêtée par
  * A02 le 2026-10-02, textes d'A07.
@@ -70,8 +71,8 @@ const CONTEXTE = {
 const table = (): Record<string, LigneDeNotification> =>
   structuredClone(GABARITS) as Record<string, LigneDeNotification>;
 
-describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs règles', () => {
-  it('REQ-UX-016 : la table porte EXACTEMENT les quinze clés arrêtées — les onze de l’apporteur, dont la micro-copie porte les mêmes, et les quatre de la console', () => {
+describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles', () => {
+  it('REQ-UX-016 : la table porte EXACTEMENT les clés arrêtées — celles de l’apporteur, dont la micro-copie porte les mêmes, et celles de la console', () => {
     const attendues = [
       // DM-25 : l'annulation pour antériorité de la Société (art. 3.3), clé NEUVE (coordination).
       'attribution_annulee_anteriorite',
@@ -81,6 +82,8 @@ describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs rè
       'lien_magique',
       // SEC-19 (A02, #703) : la mise en demeure et la fin du contrat.
       'mise_en_demeure',
+      // SEC-62 (texte du rattrapage 102) : l'avis de sécurité du compte, texte de la juriste.
+      'nouvel_appareil',
       'premier_rang_libere',
       'rappel_rc_pro',
       'rattachement_decide',
@@ -88,7 +91,7 @@ describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs rè
       'resiliation',
       'suspension_declarations',
     ];
-    // SEC-29 : la dixième, destinée à la console ; ses textes vivent avec la console.
+    // SEC-29 et SEC-30 : les clés destinées à la console ; leurs textes vivent avec la console.
     expect(Object.keys(GABARITS).sort()).toEqual(
       [
         ...attendues,
@@ -147,6 +150,7 @@ describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs rè
       suspension_declarations: 'T/T',
       rappel_rc_pro: 'F/F',
       rattachement_decide: 'T/F',
+      nouvel_appareil: 'T/F',
       mise_en_demeure: 'T/T',
       resiliation: 'T/T',
     });
@@ -180,6 +184,10 @@ describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs rè
     expect(casse('rappel_rc_pro', { route: null, routeEnAttente: null })).toContain(
       'route_absente_sans_tache'
     );
+    // SEC-70 : un appel qui mène au contact de l'entité (la demande écrite) n'a pas de route, et c'est juste.
+    expect(
+      casse('rappel_rc_pro', { route: null, routeEnAttente: null, lien: 'contact_entite' })
+    ).not.toContain('route_absente_sans_tache');
   });
 });
 
@@ -517,6 +525,61 @@ describe('REQ-UX-016 — la fin d’une réservation se dit selon sa cause (A07,
         )
       )
     ).toBe('parametre_en_trop');
+  });
+});
+
+describe('REQ-SEC-003 — l’avis « nouvel appareil » (SEC-62, texte de la juriste du rattrapage 102)', () => {
+  it('REQ-SEC-003 : le sujet et le corps de la juriste, MOT POUR MOT, et UN appel vers la page de connexion, sans jeton ni paramètre', () => {
+    expect(TEXTES_DES_NOTIFICATIONS.nouvel_appareil).toEqual({
+      titre: 'Connexion à votre espace depuis un nouvel appareil',
+      appel: 'Demander un nouveau lien de connexion',
+      corps:
+        "Votre lien de connexion a été utilisé le {dateHeure} sur un appareil que nous ne connaissions pas encore pour votre compte. Si c'est bien vous, vous n'avez rien à faire. Sinon, ne cliquez sur aucun lien reçu que vous n'avez pas demandé, demandez un nouveau lien de connexion depuis la page de connexion, et écrivez à Axion-IA.",
+    });
+    expect(GABARITS.nouvel_appareil.route).toBe('/connexion');
+    expect(GABARITS.nouvel_appareil.actions).toEqual([
+      {
+        libelle: 'Demander un nouveau lien de connexion',
+        source: 'src/content/micro-copy/courriels/notifications.ts',
+      },
+    ]);
+    const r = rendreLaNotification('nouvel_appareil', { dateHeure: '4 octobre 2026 à 10 h 37' });
+    expect(r.titre).toBe('Connexion à votre espace depuis un nouvel appareil');
+    expect(r.corps).toContain(
+      'Votre lien de connexion a été utilisé le 4 octobre 2026 à 10 h 37 sur un appareil'
+    );
+    expect(r.appel).toBe('Demander un nouveau lien de connexion');
+  });
+
+  it('REQ-SEC-003 : un avis de sécurité du COMPTE — émis par SEC-62 sur un événement, obligatoire, par courriel seul, jamais désactivable, sans délai', () => {
+    expect(GABARITS.nouvel_appareil).toMatchObject({
+      destinataire: 'apporteur',
+      req: 'REQ-SEC-003',
+      emetteur: 'SEC-62',
+      declencheur: 'evenement',
+      notificationObligatoire: true,
+      faitCourirUnDelai: false,
+      canaux: ['email'],
+      desactivable: false,
+      routeEnAttente: null,
+    });
+    expect(schemaGabarit.safeParse('nouvel_appareil').success).toBe(true);
+    expect(
+      schemaPreferenceNotification.safeParse({ cle: 'nouvel_appareil', active: true }).success
+    ).toBe(true);
+    expect(
+      schemaPreferenceNotification.safeParse({ cle: 'nouvel_appareil', active: false }).success
+    ).toBe(false);
+  });
+
+  it('REQ-SEC-003 : TÉMOIN — rien sur l’appareil : la date et l’heure sont le SEUL paramètre, ni lieu, ni navigateur, ni adresse réseau', () => {
+    expect(parametresDe('nouvel_appareil')).toEqual(['dateHeure']);
+    const texte = Object.values(TEXTES_DES_NOTIFICATIONS.nouvel_appareil).join(' ');
+    expect(texte).not.toMatch(/navigateur|adresse IP|adresse réseau|\blieu\b|ville|pays/i);
+    expect(() => rendreLaNotification('nouvel_appareil', {})).toThrow();
+    expect(() =>
+      rendreLaNotification('nouvel_appareil', { dateHeure: '4 octobre 2026', navigateur: 'x' })
+    ).toThrow();
   });
 });
 

@@ -367,6 +367,8 @@ const NORMALISATIONS = {
   reference_gel: normaliserReferenceGel,
   // SEC-19 : un domaine dédié, `partners.empreinte.v1 ␟ faits_mise_en_demeure ␟ normalisé`.
   faits_mise_en_demeure: normaliserFaitsDeMiseEnDemeure,
+  // SEC-15 : les faits d'une suspension, dans leur PROPRE domaine (même normalisation, empreinte distincte).
+  faits_suspension: normaliserFaitsDeMiseEnDemeure,
 } satisfies Record<string, (valeur: string) => string>;
 
 export type TypeEmpreinte = keyof typeof NORMALISATIONS;

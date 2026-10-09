@@ -42,21 +42,23 @@
  *                                  ailleurs qu'en `tentatives` ou convertie, une fenêtre sans la
  *                                  constante que la table associe à son unité
  *   `compteur_sans_confrontation`  ni chiffre dans l'exigence, ni « lus en SSOT » dans la phrase de
- *                                  l'ancre, et le compteur déclare une limite ; ou la sentinelle hors
- *                                  dépôt qui LAISSE PASSER, ou portée par un compteur hors de
- *                                  `SENTINELLES_FERMEES`
- *   `sentinelle_appelee`           un appel `limiter(` à un compteur de `SENTINELLES_FERMEES`, sous
- *                                  les racines lues : la sentinelle n'est admise que MORTE
+ *                                  l'ancre : le compteur n'est confronté à rien
  *
- * TROIS VOIES, NOMMÉES dans le relevé : `chiffre`, `ssot`, et `hors-depot-ferme` — la sentinelle,
- * admise seulement pour les compteurs de la liste fermée `SENTINELLES_FERMEES`, en `refuser`, et
- * qu'aucun code n'appelle (arbitrage de la sécurité sur GOV-149) : le compteur refuse alors tout
- * (`limite_non_configuree`), et personne ne l'atteint. Un compteur mort, fermé.
+ * TROIS VOIES, NOMMÉES dans le relevé : `chiffre`, `ssot` et `configuration`. La troisième est
+ * SEC-72 (REQ-SEC-021 ; acceptée par la sécurité à sept conditions, #319) : une exigence qui dit
+ * « lues en configuration privée » dans la phrase de l'ancre, APRÈS elle, fait lire la limite et la
+ * fenêtre dans un SECRET, hors du dépôt public. Elle est FERMÉE : seuls les compteurs de
+ * `COMPTEURS_EN_CONFIGURATION` y ont droit, nommés dans le texte EN VIGUEUR de REQ-SEC-021, avec la
+ * sentinelle `LIMITE_HORS_DEPOT` pour limite ET fenêtre, `surPanne: refuser`, leurs deux clés dans
+ * `PLAFONDS_EN_CONFIGURATION`, et le secret `PARTNERS_VERIFICATION_PLAFONDS` déclaré dans
+ * `src/lib/env.ts`. Toute autre sentinelle, ou toute faute de cette déclaration, rougit :
+ *   `sentinelle_hors_liste`        la sentinelle hors dépôt sur un compteur hors de la liste fermée
+ *   `configuration_mal_declaree`   un compteur de la liste sans sentinelle, sans `refuser`, sans ses
+ *                                  clés fermées, ou un secret absent de `src/lib/env.ts`
  *
- * DETTE NOMMÉE. `depot:identite` est à supprimer par SEC-12 (REQ-DM-009 interdit tout compteur par
- * identité) ; la sentinelle disparaîtra avec lui. Après SEC-12, la garde ne lit JAMAIS une ancre
- * placée dans une note [REMPLACÉ …] : aujourd'hui, `depot:ip` et `depot:identite` trouvent la leur
- * dans la note entre crochets de REQ-SEC-016, qui cite le texte remplacé.
+ * LE TEXTE EN VIGUEUR, JAMAIS UNE NOTE. Une note entre crochets d'une exigence (« [Amendée … :
+ * remplace « … »] ») cite le texte REMPLACÉ : la garde la retire avant de chercher l'ancre, la
+ * conduite et les chiffres. Une ancre qui ne vit que dans une note n'est pas trouvée.
  *
  * L'analyse passe par le compilateur TypeScript, jamais par une recherche de chaîne : un appel
  * écrit sur deux lignes est un appel. Le périmètre se lit sur le DISQUE, sous toutes les
@@ -76,9 +78,12 @@
 import ts from 'typescript';
 import { readdirSync, readFileSync } from 'node:fs';
 import {
+  CLES_DES_PLAFONDS,
   COMPTEURS,
   CONDUITES_SUR_PANNE,
   LIMITE_HORS_DEPOT,
+  PLAFONDS_EN_CONFIGURATION,
+  VARIABLE_DES_PLAFONDS,
   PREFIXES_DE_FAMILLE,
   limiter,
   sujetDepuisEmpreinte,
@@ -87,6 +92,7 @@ import {
   type VerdictDeLimite,
 } from '../../src/server/securite/rate-limit';
 import { SEUILS } from '../../src/domain/seuils/ssot';
+import { NOMS_DES_SECRETS_CONDITIONNELS } from '../../src/lib/env';
 import { conversionDeLUnite } from '../../src/domain/seuils/conversions';
 
 export const CHEMIN_DU_REGISTRE = 'src/server/securite/rate-limit.ts';
@@ -176,7 +182,8 @@ export const FAMILLES = [
   'seuil_sans_source',
   'facteur_d_unite_faux',
   'compteur_sans_confrontation',
-  'sentinelle_appelee',
+  'sentinelle_hors_liste',
+  'configuration_mal_declaree',
 ] as const;
 export type Famille = (typeof FAMILLES)[number];
 
@@ -201,10 +208,28 @@ export interface Univers {
   readonly exigences: Readonly<Record<string, string>>;
   /** Les seuils de la SSOT, par nom (`src/domain/seuils/ssot.ts`). */
   readonly seuils: Readonly<Record<string, unknown>>;
+  /** SEC-72 : les clés de chaque compteur hors dépôt ; par défaut, `PLAFONDS_EN_CONFIGURATION`. */
+  readonly configuration?: Readonly<Record<string, unknown>>;
+  /** SEC-72 : le nom du secret des plafonds ; par défaut, `VARIABLE_DES_PLAFONDS`. */
+  readonly variableDesPlafonds?: string;
+  /** SEC-72 : les secrets conditionnels de `src/lib/env.ts` ; par défaut, ceux du schéma. */
+  readonly secretsConditionnels?: readonly string[];
 }
 
 /** La voie par laquelle un compteur a été confronté. Il n'y en a pas de quatrième. */
-export type Voie = 'chiffre' | 'ssot' | 'hors-depot-ferme';
+export type Voie = 'chiffre' | 'ssot' | 'configuration';
+
+/**
+ * SEC-72 (condition 1 de la sécurité) — la liste FERMÉE des compteurs admis à la configuration
+ * privée : les trois de REQ-SEC-021. La sentinelle sur tout autre compteur rougit.
+ */
+export const COMPTEURS_EN_CONFIGURATION = [
+  'verif:identite-jour',
+  'verif:identite-court',
+  'verif:ip-jour',
+] as const;
+const EXIGENCE_DE_LA_CONFIGURATION = 'REQ-SEC-021';
+const SECRET_DES_PLAFONDS = 'PARTNERS_VERIFICATION_PLAFONDS';
 
 export interface Releve {
   readonly fautes: readonly Faute[];
@@ -234,15 +259,14 @@ function estUnDe<T extends string>(liste: readonly T[], v: unknown): v is T {
  */
 export const LUE_EN_SSOT = 'lue-en-ssot' as const;
 
-/**
- * Les SEULS compteurs admis à la sentinelle hors dépôt : une liste FERMÉE, en `refuser`, que nul
- * code n'appelle. Un seul, et il est en sursis : SEC-12 le supprime (REQ-DM-009).
- */
-export const SENTINELLES_FERMEES = ['depot:identite'] as const;
+/** SEC-72 : la marque d'une limite et d'une fenêtre que l'exigence dit « lues en configuration privée ». */
+export const LUE_EN_CONFIGURATION = 'lue-en-configuration' as const;
+
+type MarqueExigee = typeof LIMITE_HORS_DEPOT | typeof LUE_EN_SSOT | typeof LUE_EN_CONFIGURATION;
 
 export interface ValeursExigees {
-  readonly limite: number | typeof LIMITE_HORS_DEPOT | typeof LUE_EN_SSOT;
-  readonly fenetreSecondes: number | typeof LIMITE_HORS_DEPOT | typeof LUE_EN_SSOT;
+  readonly limite: number | MarqueExigee;
+  readonly fenetreSecondes: number | MarqueExigee;
   readonly surPanne: ConduiteSurPanne;
 }
 
@@ -251,14 +275,24 @@ const SECONDES_PAR_UNITE: Readonly<Record<string, number>> = { s: 1, min: 60, h:
 /** La fin de la phrase : un point final suivi d'un blanc ou de la fin, ou une note entre crochets. */
 const FIN_DE_PHRASE = /[.!?](?=\s|$)|\[/;
 const LUS_EN_SSOT = /\blu(?:e)?s en SSOT\b/;
+const LUES_EN_CONFIGURATION = /\blues en configuration privée/;
+
+/** Une note entre crochets d'une exigence : elle cite le texte REMPLACÉ, jamais celui en vigueur. */
+const NOTE = /\[[^\]]*\]/g;
+
+/** Le texte EN VIGUEUR d'une exigence : chaque note entre crochets retirée. */
+export function texteEnVigueur(texte: string): string {
+  return texte.replace(NOTE, '');
+}
 
 /**
- * Ce que le texte de l'exigence dit du compteur que désigne `ancre` : la conduite est la première
- * `surPanne: …` qui SUIT l'ancre ; la limite et la fenêtre sont le « N / M min » qui la PRÉCÈDE
- * immédiatement. Sans chiffre, elles sont LUES EN SSOT si « lus en SSOT » suit l'ancre dans sa
- * phrase ; sinon, aucune exigence ne les chiffre (hors dépôt).
+ * Ce que le texte EN VIGUEUR de l'exigence dit du compteur que désigne `ancre` — les notes entre
+ * crochets retirées d'abord : la conduite est la première `surPanne: …` qui SUIT l'ancre ; la limite
+ * et la fenêtre sont le « N / M min » qui la PRÉCÈDE immédiatement. Sans chiffre, elles sont LUES EN
+ * SSOT si « lus en SSOT » suit l'ancre dans sa phrase ; sinon, aucune exigence ne les chiffre.
  */
-export function exigenceDuCompteur(texte: string, ancre: string): ValeursExigees | null {
+export function exigenceDuCompteur(texteBrut: string, ancre: string): ValeursExigees | null {
+  const texte = texteEnVigueur(texteBrut);
   const i = ancre === '' ? -1 : texte.indexOf(ancre);
   if (i < 0) return null;
   const apres = texte.slice(i + ancre.length);
@@ -267,9 +301,12 @@ export function exigenceDuCompteur(texte: string, ancre: string): ValeursExigees
   const valeurs = /(\d+)\s*\/\s*(\d+)\s*(s|min|h)\s*$/.exec(texte.slice(0, i));
   if (valeurs === null) {
     const fin = FIN_DE_PHRASE.exec(apres);
-    const marque = LUS_EN_SSOT.test(fin === null ? apres : apres.slice(0, fin.index))
+    const phrase = fin === null ? apres : apres.slice(0, fin.index);
+    const marque = LUS_EN_SSOT.test(phrase)
       ? LUE_EN_SSOT
-      : LIMITE_HORS_DEPOT;
+      : LUES_EN_CONFIGURATION.test(phrase)
+        ? LUE_EN_CONFIGURATION
+        : LIMITE_HORS_DEPOT;
     return { limite: marque, fenetreSecondes: marque, surPanne: conduite[1] };
   }
   return {
@@ -464,6 +501,65 @@ function confronterALaSsot(
   }
 }
 
+/**
+ * SEC-72 — la troisième voie, ses conditions (sécurité, #319) : la liste fermée, l'exigence
+ * REQ-SEC-021, la sentinelle pour limite ET fenêtre, `refuser`, deux clés fermées, le secret déclaré.
+ */
+function confronterALaConfiguration(
+  u: Univers,
+  nom: string,
+  d: Record<string, unknown>,
+  prefixe: string,
+  fautes: Faute[]
+): void {
+  const faute = (pourquoi: string): void => {
+    fautes.push({
+      famille: 'configuration_mal_declaree',
+      message: `préfixe \`${prefixe}\` — le compteur \`${nom}\` lu en configuration privée ${pourquoi}`,
+    });
+  };
+  if (!(COMPTEURS_EN_CONFIGURATION as readonly string[]).includes(nom)) {
+    fautes.push({
+      famille: 'sentinelle_hors_liste',
+      message:
+        `préfixe \`${prefixe}\` — le compteur \`${nom}\` n'est pas de la liste fermée de la ` +
+        `configuration privée (${COMPTEURS_EN_CONFIGURATION.join(', ')}).`,
+    });
+    return;
+  }
+  if (d.source !== EXIGENCE_DE_LA_CONFIGURATION) {
+    faute(
+      `déclare la source ${JSON.stringify(d.source)} au lieu de ${EXIGENCE_DE_LA_CONFIGURATION}.`
+    );
+  }
+  if (d.limite !== LIMITE_HORS_DEPOT || d.fenetreSecondes !== LIMITE_HORS_DEPOT) {
+    faute(`déclare une valeur au dépôt : sa limite et sa fenêtre sont la sentinelle hors dépôt.`);
+  }
+  if (d.surPanne !== 'refuser') {
+    faute(`déclare surPanne ${JSON.stringify(d.surPanne)} : seul \`refuser\` est admis.`);
+  }
+  // Un dictionnaire lu par un nom de compteur quelconque : la clé n'est pas typée, la valeur est inconnue.
+  const configuration: Readonly<Record<string, unknown>> =
+    u.configuration ?? PLAFONDS_EN_CONFIGURATION;
+  const cles = configuration[nom];
+  const fermees = CLES_DES_PLAFONDS as readonly string[];
+  if (
+    !estObjet(cles) ||
+    !fermees.includes(String(cles.limite)) ||
+    !fermees.includes(String(cles.fenetreMinutes))
+  ) {
+    faute(`n'a pas ses deux clés fermées dans \`PLAFONDS_EN_CONFIGURATION\`.`);
+  }
+  const variable = u.variableDesPlafonds ?? VARIABLE_DES_PLAFONDS;
+  const secrets = u.secretsConditionnels ?? NOMS_DES_SECRETS_CONDITIONNELS;
+  if (variable !== SECRET_DES_PLAFONDS || !secrets.includes(variable)) {
+    faute(
+      `lit \`${variable}\`, qui n'est pas le secret \`${SECRET_DES_PLAFONDS}\` déclaré dans ` +
+        `\`src/lib/env.ts\`.`
+    );
+  }
+}
+
 /** Confronte le compteur à son exigence, et rend la voie suivie ; `null` s'il n'en a aucune. */
 function confronterAlExigence(
   u: Univers,
@@ -501,31 +597,22 @@ function confronterAlExigence(
     conduite();
     return 'ssot';
   }
-  if (exigee.limite === LIMITE_HORS_DEPOT) {
-    const sentinelle = d.limite === LIMITE_HORS_DEPOT && d.fenetreSecondes === LIMITE_HORS_DEPOT;
-    const listee = (SENTINELLES_FERMEES as readonly string[]).includes(nom);
-    const fermee = exigee.surPanne === 'refuser' && d.surPanne === 'refuser';
-    if (!sentinelle || !listee || !fermee) {
-      const pourquoi = !sentinelle
-        ? ` ; il déclare pourtant limite ${JSON.stringify(d.limite)}, fenêtre ${JSON.stringify(d.fenetreSecondes)}`
-        : !listee
-          ? ` ; la sentinelle hors dépôt n'est admise que pour les compteurs de \`SENTINELLES_FERMEES\` ` +
-            `(${SENTINELLES_FERMEES.join(', ')}), et celui-ci n'en est pas`
-          : ` ; la sentinelle hors dépôt n'est admise que FERMÉE (\`surPanne: refuser\`), et ` +
-            `celle-ci déclare ${JSON.stringify(d.surPanne)}`;
-      fautes.push({
-        famille: 'compteur_sans_confrontation',
-        message:
-          `préfixe \`${prefixe}\` — le compteur \`${nom}\` n'est confronté à rien : ${source} ` +
-          `(« ${d.ancre} ») ne chiffre aucune limite et ne dit pas « lus en SSOT » dans la phrase ` +
-          `de l'ancre, après elle${pourquoi}.`,
-      });
-      if (sentinelle && listee) return null;
-      conduite();
-      return null;
-    }
+  if (exigee.limite === LUE_EN_CONFIGURATION) {
+    confronterALaConfiguration(u, nom, d, prefixe, fautes);
     conduite();
-    return 'hors-depot-ferme';
+    return 'configuration';
+  }
+  if (exigee.limite === LIMITE_HORS_DEPOT) {
+    fautes.push({
+      famille: 'compteur_sans_confrontation',
+      message:
+        `préfixe \`${prefixe}\` — le compteur \`${nom}\` n'est confronté à rien : ${source} ` +
+        `(« ${d.ancre} ») ne chiffre aucune limite et ne dit pas « lus en SSOT » dans la phrase ` +
+        `de l'ancre, après elle ; il déclare limite ${JSON.stringify(d.limite)}, fenêtre ` +
+        `${JSON.stringify(d.fenetreSecondes)}.`,
+    });
+    conduite();
+    return null;
   }
   const ecarts = (['limite', 'fenetreSecondes', 'surPanne'] as const)
     .filter((champ) => d[champ] !== exigee[champ])
@@ -578,6 +665,16 @@ async function confronterLeRegistre(
       });
     }
     if (!prefixeValide || !estUnDe(CONDUITES_SUR_PANNE, surPanne)) continue;
+    // SEC-72 (condition 1) : la sentinelle hors dépôt n'est admise QUE sur la liste fermée.
+    const sentinelle = d.limite === LIMITE_HORS_DEPOT || d.fenetreSecondes === LIMITE_HORS_DEPOT;
+    if (sentinelle && !(COMPTEURS_EN_CONFIGURATION as readonly string[]).includes(nom)) {
+      fautes.push({
+        famille: 'sentinelle_hors_liste',
+        message:
+          `préfixe \`${prefixe}\` — le compteur \`${nom}\` porte la sentinelle hors dépôt : elle ` +
+          `n'est admise que pour ${COMPTEURS_EN_CONFIGURATION.join(', ')} (REQ-SEC-021).`,
+      });
+    }
     const voie = confronterAlExigence(u, nom, d, prefixe, fautes);
     if (voie !== null) voies[nom] = voie;
 
@@ -790,14 +887,6 @@ function lireUnFichier(
         (ts.isStringLiteral(premier) || ts.isNoSubstitutionTemplateLiteral(premier))
           ? premier.text
           : null;
-      if (litteral !== null && (SENTINELLES_FERMEES as readonly string[]).includes(litteral)) {
-        refuser(
-          n,
-          'sentinelle_appelee',
-          `\`limiter(\` appelle \`${litteral}\`, un compteur de \`SENTINELLES_FERMEES\` : la ` +
-            `sentinelle hors dépôt refuse tout et n'est admise que MORTE, appelée par personne.`
-        );
-      }
       if (litteral !== null && noms.has(litteral)) admis.add(premier!);
       else {
         refuser(
@@ -1283,21 +1372,40 @@ export const TEMOINS: readonly Temoin[] = [
     nomme: ['depot:', NOM_DU_TEMOIN_SSOT],
   },
   {
-    famille: 'sentinelle_appelee',
-    libelle: "`limiter('depot:identite', …)` dans un fichier de `src/`",
+    famille: 'sentinelle_hors_liste',
+    libelle: 'la sentinelle hors dépôt sur un compteur « depot: » hors de la liste fermée',
     univers: (b) => ({
       ...b,
-      fichiers: [
-        ...b.fichiers,
-        {
-          chemin: 'src/server/temoin.ts',
-          texte:
-            "import { limiter } from './securite/rate-limit';\n" +
-            "export const f = (s: any) => limiter('depot:identite', s, 0);\n",
+      registre: {
+        ...b.registre,
+        'depot:temoin-hors-liste': {
+          prefixe: 'depot:',
+          limite: LIMITE_HORS_DEPOT,
+          fenetreSecondes: LIMITE_HORS_DEPOT,
+          surPanne: 'refuser',
+          source: 'REQ-SEC-021',
+          ancre: 'verif:identite-jour',
+          verifieLe: '2026-10-07',
         },
-      ],
+      },
+      executer: async (nom) =>
+        nom === 'depot:temoin-hors-liste'
+          ? {
+              autorise: false,
+              restant: 0,
+              repriseAt: null,
+              panne: true,
+              motif: 'limite_non_configuree',
+            }
+          : b.executer(nom),
     }),
-    nomme: ['src/server/temoin.ts:2', 'depot:identite'],
+    nomme: ['depot:temoin-hors-liste'],
+  },
+  {
+    famille: 'configuration_mal_declaree',
+    libelle: 'les plafonds lus dans un autre nom que le secret déclaré dans « src/lib/env.ts »',
+    univers: (b) => ({ ...b, variableDesPlafonds: 'PARTNERS_AUTRES_PLAFONDS' }),
+    nomme: ['verif:identite-jour', 'PARTNERS_AUTRES_PLAFONDS'],
   },
 ];
 
@@ -1392,7 +1500,7 @@ async function controler(): Promise<number> {
   const parVoie = (v: Voie) => Object.values(r.voies).filter((x) => x === v).length;
   console.log(
     `   Voies de confrontation : ${parVoie('chiffre')} au chiffre de l'exigence, ` +
-      `${parVoie('ssot')} à la SSOT, ${parVoie('hors-depot-ferme')} à la sentinelle fermée.`
+      `${parVoie('ssot')} à la SSOT, ${parVoie('configuration')} à la configuration privée.`
   );
   console.log(
     `   ${r.fichiersLus} fichiers de code lus sous ${RACINES.map((x) => `\`${x}/\``).join(' et ')} ; ` +

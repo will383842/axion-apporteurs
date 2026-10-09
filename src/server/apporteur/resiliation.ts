@@ -36,10 +36,9 @@ import {
 } from '../../domain/apporteur/resiliation';
 import { versParis } from '../../domain/temps/paris';
 import {
-  ETATS_ATTRIBUTION,
-  TRANSITIONS_ATTRIBUTION,
-  type EtatAttribution,
-} from '../../domain/attribution/machine';
+  ETATS_A_TRAITER_A_LA_FIN_DU_CONTRAT,
+  sortieDeFinDeContrat,
+} from '../../domain/apporteur/effets-de-la-fin';
 import { ajouterEvenement, lireLaChargeDUnFait } from '../evenement/journal';
 import { revoquerJetonsALaResiliation } from '../auth/jeton-depot';
 import { transitionnerUneAttribution } from '../attribution/transitionner';
@@ -65,6 +64,7 @@ import {
   type ClesPii,
 } from '../securite/pii';
 import { CHARGES_PAR_TYPE } from '../../domain/evenement/charges';
+import { echeanceDeLevee } from '../../domain/apporteur/suspension';
 
 type Tx = Prisma.TransactionClient;
 
@@ -296,19 +296,6 @@ export async function mettreEnDemeure(
 }
 
 /**
- * DÉRIVÉES DE LA MATRICE, jamais recopiées : un état est à traiter s'il admet l'une des deux sorties
- * de fin de contrat ; il garde le droit à commission (art. 12.3) s'il admet `figee` — ce sont les
- * états AVEC commande.
- */
-const sortieDeFinDeContrat = (e: EtatAttribution): 'figee' | 'fin_de_contrat' | null =>
-  TRANSITIONS_ATTRIBUTION[e].figee !== undefined
-    ? 'figee'
-    : TRANSITIONS_ATTRIBUTION[e].fin_de_contrat !== undefined
-      ? 'fin_de_contrat'
-      : null;
-const A_TRAITER = ETATS_ATTRIBUTION.filter((e) => sortieDeFinDeContrat(e) !== null);
-
-/**
  * Les `envoye_at` des mises en demeure de CET article : chaque notification `mise_en_demeure` de
  * l'apporteur mène à son fait (l'article, relu par le lecteur du journal) et à ses courriels envoyés.
  */
@@ -433,7 +420,7 @@ export async function resilierUnApporteur(
     cles
   );
   const attributions = await tx.attribution.findMany({
-    where: { apporteurId, statut: { in: [...A_TRAITER] } },
+    where: { apporteurId, statut: { in: [...ETATS_A_TRAITER_A_LA_FIN_DU_CONTRAT] } },
     select: { id: true, statut: true },
     orderBy: { id: 'asc' },
   });
@@ -452,6 +439,16 @@ export async function resilierUnApporteur(
 // ── le rendu par le passage ──────────────────────────────────────────────────────────────────────
 
 /** Ce que le rendu lit d'une notification du contrat. */
+/**
+ * SEC-15 : la clé d'une notification du contrat, et le geste de la décision qu'elle cite. Écrite UNE
+ * fois (RM-01) : le courriel et l'écran la lisent ici.
+ */
+export const GESTE_DE_LA_CLE_DU_CONTRAT: Readonly<Record<string, string>> = {
+  mise_en_demeure: 'mise_en_demeure',
+  resiliation: 'resiliation',
+  suspension_declarations: 'suspension',
+};
+
 export type NotificationDuContrat = {
   cle: string;
   apporteurId: string;
@@ -485,13 +482,14 @@ export async function rendreUneDecisionDeContrat(
       dateEffet: true,
       evenementId: true,
       textePurgeAt: true,
+      creeAt: true,
     },
   });
   if (d === null || n.evenementId === null || d.evenementId.toString() !== n.evenementId) {
     return nonRendue('fait_introuvable');
   }
   if (d.apporteurId !== n.apporteurId) return nonRendue('apporteur_different');
-  if (d.geste !== n.cle) return nonRendue('charge_illisible');
+  if (d.geste !== GESTE_DE_LA_CLE_DU_CONTRAT[n.cle]) return nonRendue('charge_illisible');
   if (d.textePurgeAt !== null) return nonRendue('faits_non_conserves');
   let texte: string | undefined;
   if (d.texteChiffre !== null) {
@@ -509,6 +507,17 @@ export async function rendreUneDecisionDeContrat(
     texte = propre;
   }
   try {
+    // SEC-15 : la suspension, notifiée avec ses faits ; levée au plus tard quinze jours civils après.
+    if (d.geste === 'suspension') {
+      if (texte === undefined) return nonRendue('faits_non_conserves');
+      return s.composer(
+        n.cle,
+        rendreLaNotification(n.cle, {
+          faits: texte,
+          dateLevee: dateEnClair(new Date(echeanceDeLevee(d.creeAt.getTime()))),
+        })
+      );
+    }
     if (d.geste === 'mise_en_demeure') {
       if (texte === undefined || d.article === null) return nonRendue('faits_non_conserves');
       return s.composer(n.cle, rendreLaNotification(n.cle, { article: d.article, faits: texte }));

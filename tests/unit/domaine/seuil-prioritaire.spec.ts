@@ -1,11 +1,14 @@
 // @req REQ-CPL-026
+// @req REQ-DM-010
+// @req REQ-JUR-032
 /**
- * CPL-T13 — la capacité réelle de qualification et le seuil de vérification prioritaire (règle HYP-D3,
- * `docs/DECISIONS.md` HYP-D3) : `src/domain/temps/capacite.ts` et
- * `src/domain/attribution/seuil-prioritaire.ts`.
+ * CPL-T13, corrigée par SEC-56 — la capacité réelle de qualification et le seuil de vérification
+ * prioritaire : `src/domain/temps/capacite.ts` et `src/domain/attribution/seuil-prioritaire.ts`.
  *
- * HYP-D3, mot à mot : « `seuilPrioritaire = min(palierConfiance, capaciteRestante)` ;
- * `surchargeManuelle > 0` remplace le min ; une seule fonction pure ; jamais un plafond ».
+ * SEC-56 (décision de Williams du 2026-10-03, REQ-DM-010, REQ-JUR-032) : le palier quitte le code.
+ * L'ordre des appels de la Société ne dépend que de sa CAPACITÉ restante et d'une SURCHARGE
+ * manuelle ; il ne compte rien par apporteur. `palierConfiance` n'existe plus : une entrée qui le
+ * porte encore est refusée, nommée. Une surcharge > 0 remplace la capacité, sans plafond.
  * La capacité (REQ-CPL-026) : « jours ouvrés × qualifieurs disponibles, calendrier d'absence ».
  * Les jours ouvrés viennent du calendrier des fériés du module `temps`, jugé par son propre spec
  * (`temps-horloge-et-feries.spec.ts`) : ici, on juge ce que la capacité et le seuil en FONT.
@@ -34,45 +37,42 @@ function levee<E extends Error>(classe: new (...a: never[]) => E, f: () => unkno
   throw new Error('aucune levée');
 }
 
-describe('REQ-CPL-026 — le seuil de vérification prioritaire (HYP-D3) se dérive de la capacité restante', () => {
-  it('REQ-CPL-026 — sans surcharge (absente ou nulle), le seuil est min(palierConfiance, capaciteRestante)', () => {
-    expect(
-      seuilPrioritaire({ palierConfiance: 5, capaciteRestante: 3, surchargeManuelle: null })
-    ).toBe(3);
-    expect(
-      seuilPrioritaire({ palierConfiance: 2, capaciteRestante: 9, surchargeManuelle: null })
-    ).toBe(2);
-    expect(
-      seuilPrioritaire({ palierConfiance: 5, capaciteRestante: 3, surchargeManuelle: 0 })
-    ).toBe(3);
-    expect(
-      seuilPrioritaire({ palierConfiance: 4, capaciteRestante: 0, surchargeManuelle: 0 })
-    ).toBe(0);
+describe('REQ-DM-010 — le seuil de vérification prioritaire ne dépend que de la capacité et de la surcharge', () => {
+  it('REQ-DM-010 — sans surcharge (absente ou nulle), le seuil est la capacité restante, quelle qu’elle soit', () => {
+    expect(seuilPrioritaire({ capaciteRestante: 3, surchargeManuelle: null })).toBe(3);
+    expect(seuilPrioritaire({ capaciteRestante: 9, surchargeManuelle: null })).toBe(9);
+    expect(seuilPrioritaire({ capaciteRestante: 3, surchargeManuelle: 0 })).toBe(3);
+    expect(seuilPrioritaire({ capaciteRestante: 0, surchargeManuelle: 0 })).toBe(0);
   });
 
-  it('REQ-CPL-026 — une surcharge manuelle > 0 remplace le min, même au-delà du palier : jamais un plafond', () => {
-    expect(
-      seuilPrioritaire({ palierConfiance: 5, capaciteRestante: 3, surchargeManuelle: 1 })
-    ).toBe(1);
-    expect(
-      seuilPrioritaire({ palierConfiance: 5, capaciteRestante: 3, surchargeManuelle: 12 })
-    ).toBe(12);
-    expect(
-      seuilPrioritaire({ palierConfiance: 5, capaciteRestante: 0, surchargeManuelle: 7 })
-    ).toBe(7);
+  it('REQ-DM-010 — une surcharge manuelle > 0 remplace la capacité, au-dessus comme au-dessous : jamais un plafond', () => {
+    expect(seuilPrioritaire({ capaciteRestante: 3, surchargeManuelle: 1 })).toBe(1);
+    expect(seuilPrioritaire({ capaciteRestante: 3, surchargeManuelle: 12 })).toBe(12);
+    expect(seuilPrioritaire({ capaciteRestante: 0, surchargeManuelle: 7 })).toBe(7);
   });
 
-  it('REQ-CPL-026 — une valeur négative ou non entière est refusée par une levée qui nomme le champ', () => {
+  it('REQ-JUR-032 — aucun palier par apporteur : une entrée qui porte encore `palierConfiance` est refusée, nommée', () => {
+    const avecPalier = { palierConfiance: 2, capaciteRestante: 9, surchargeManuelle: null };
+    const e = levee(ErreurSeuilPrioritaire, () =>
+      seuilPrioritaire(avecPalier as unknown as Parameters<typeof seuilPrioritaire>[0])
+    );
+    expect(e.champ).toBe('palierConfiance');
+    expect(e.message).toContain('palierConfiance');
+    // Les seuls champs de l'entrée : la capacité et la surcharge — rien par apporteur.
+    const entree: Required<Parameters<typeof seuilPrioritaire>[0]> = {
+      capaciteRestante: 1,
+      surchargeManuelle: null,
+    };
+    expect(Object.keys(entree).sort()).toEqual(['capaciteRestante', 'surchargeManuelle']);
+  });
+
+  it('REQ-DM-010 — une valeur négative ou non entière est refusée par une levée qui nomme le champ', () => {
     const cas: [Parameters<typeof seuilPrioritaire>[0], string][] = [
-      [{ palierConfiance: 5, capaciteRestante: 3, surchargeManuelle: -1 }, 'surchargeManuelle'],
-      [{ palierConfiance: 5, capaciteRestante: 3, surchargeManuelle: 2.5 }, 'surchargeManuelle'],
-      [{ palierConfiance: -1, capaciteRestante: 3, surchargeManuelle: null }, 'palierConfiance'],
-      [{ palierConfiance: 1.5, capaciteRestante: 3, surchargeManuelle: null }, 'palierConfiance'],
-      [{ palierConfiance: 5, capaciteRestante: -2, surchargeManuelle: null }, 'capaciteRestante'],
-      [
-        { palierConfiance: 5, capaciteRestante: Number.NaN, surchargeManuelle: 4 },
-        'capaciteRestante',
-      ],
+      [{ capaciteRestante: 3, surchargeManuelle: -1 }, 'surchargeManuelle'],
+      [{ capaciteRestante: 3, surchargeManuelle: 2.5 }, 'surchargeManuelle'],
+      [{ capaciteRestante: -2, surchargeManuelle: null }, 'capaciteRestante'],
+      [{ capaciteRestante: 1.5, surchargeManuelle: null }, 'capaciteRestante'],
+      [{ capaciteRestante: Number.NaN, surchargeManuelle: 4 }, 'capaciteRestante'],
     ];
     for (const [entree, champ] of cas) {
       const e = levee(ErreurSeuilPrioritaire, () => seuilPrioritaire(entree));
@@ -179,7 +179,6 @@ describe('REQ-CPL-026 — la capacité réelle : jours ouvrés × qualifieurs di
     const engages = 4;
     expect(
       seuilPrioritaire({
-        palierConfiance: 5,
         capaciteRestante: capacite - engages,
         surchargeManuelle: null,
       })

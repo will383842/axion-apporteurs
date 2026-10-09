@@ -113,11 +113,11 @@ describe('REQ-SEC-032 — un seul verdict à quatre niveaux, défaut fermé', ()
     expect(peutOuvrirLEspace('pret_a_signer')).toBe(true);
   });
 
-  it('REQ-SEC-032 : SEC-19 — la LECTURE est le niveau du seul résilié dont les droits courent ; aucun autre statut n’y entre', () => {
-    const lecture = STATUTS_APPORTEUR.filter((s) => niveauDAcces(s, true) === 'lecture');
-    expect(lecture).toEqual(['resilie']);
-    expect(peutOuvrirLEspace('resilie', true)).toBe(true);
-    expect(peutOuvrirLEspace('resilie', false)).toBe(false);
+  it('REQ-SEC-032 : SEC-70 — AUCUN statut n’est plus en LECTURE : le résilié est fermé, même avec des droits en cours', () => {
+    const avecDroits = niveauDAcces as (statut: string, droitsEnCours?: boolean) => string;
+    expect(STATUTS_APPORTEUR.filter((s) => avecDroits(s, true) === 'lecture')).toEqual([]);
+    expect(avecDroits('resilie', true)).toBe('ferme');
+    expect(peutOuvrirLEspace('resilie')).toBe(false);
   });
 });
 

@@ -150,6 +150,29 @@ const estEmpreinteProtegee = (nom: string): boolean =>
   dernier(nom) === 'hash' &&
   (estPersonnel(nom) || segmentsDuNom(nom).some((s) => SEGMENTS_TYPES.has(s)));
 
+/**
+ * Les EXEMPTIONS NOMINATIVES (CPL-T24 ; conditions de la sécurité, #753, 5987457545, et d'A02,
+ * 5987457586) : des colonnes dont le NOM porte un segment de personne (`rib`) sans en porter la
+ * donnée. Chacune est un couple EXACT (modèle Prisma, colonne SQL), avec son motif : jamais un motif de
+ * nom, un préfixe, ni la même colonne sur un autre modèle. Une colonne exemptée n'est pas jugée au
+ * schéma ; son champ Prisma n'est admis en écriture que si AUCUN autre modèle ne déclare ce même nom.
+ */
+export const EXEMPTIONS_NOMINATIVES: readonly {
+  readonly modele: string;
+  readonly colonne: string;
+  readonly motif: string;
+}[] = ['rib_verifie_par_id', 'rib_verifie_at', 'rib_confirme_par_id', 'rib_confirme_at'].map(
+  (colonne) => ({
+    modele: 'PieceKyc',
+    colonne,
+    motif:
+      'pieces_kyc : le RIB à quatre yeux (CPL-T24, forme d’A02 des rattrapages 105 et 106) — une clé étrangère vers utilisateurs_console et des dates, aucune donnée de personne',
+  })
+);
+
+const estExemptee = (modele: string, colonne: string): boolean =>
+  EXEMPTIONS_NOMINATIVES.some((e) => e.modele === modele && e.colonne === colonne);
+
 // ── le schéma ────────────────────────────────────────────────────────────────
 
 function fautesDeColonne(nom: string, type: string): Famille | null {
@@ -257,7 +280,11 @@ function nonJugeSousUneCle(noeud: ts.Node, racines: ReadonlySet<ts.Node>): boole
   return false;
 }
 
-function fautesDEcriture(chemin: string, contenu: string): { fautes: Faute[]; sites: number } {
+function fautesDEcriture(
+  chemin: string,
+  contenu: string,
+  champsExemptes: ReadonlySet<string> = new Set()
+): { fautes: Faute[]; sites: number } {
   const source = ts.createSourceFile(chemin, contenu, ts.ScriptTarget.Latest, true);
   const diagnostics: unknown = Reflect.get(source, 'parseDiagnostics');
   if (!Array.isArray(diagnostics) || diagnostics.length > 0) {
@@ -312,7 +339,7 @@ function fautesDEcriture(chemin: string, contenu: string): { fautes: Faute[]; si
               message: `${ici} est écrit sans ${[...PRODUCTEURS].join(' ni ')} : la valeur n’est pas prouvée empreinte.`,
             });
           }
-        } else if (ecriture && estPersonnel(nom)) {
+        } else if (ecriture && estPersonnel(nom) && !champsExemptes.has(nom)) {
           sites++;
           fautes.push({
             famille: 'champ_personnel_en_clair',
@@ -345,8 +372,16 @@ export function controler(vue: Vue): {
   const fautes: Faute[] = [];
   let champs = 0;
   let personnels = 0;
+  // Les champs Prisma des colonnes exemptées, admis en écriture si aucun autre modèle ne les déclare.
+  const champsExemptes = new Set<string>();
   try {
     const { modeles } = lireSchemaPrisma(vue.schema);
+    for (const m of modeles)
+      for (const c of m.champs) if (estExemptee(m.nom, c.colonne)) champsExemptes.add(c.nom);
+    for (const m of modeles)
+      for (const c of m.champs)
+        if (!estExemptee(m.nom, c.colonne) && champsExemptes.has(c.nom))
+          champsExemptes.delete(c.nom);
     if (modeles.length === 0) {
       fautes.push({
         famille: 'perimetre_vide',
@@ -358,6 +393,7 @@ export function controler(vue: Vue): {
       for (const c of m.champs) {
         if (noms.has(c.type)) continue;
         champs++;
+        if (estExemptee(m.nom, c.colonne)) continue;
         const verdicts = [...new Set([c.nom, c.colonne])].map((n) => fautesDeColonne(n, c.type));
         if ([c.nom, c.colonne].some((n) => estPersonnel(n) || estEmpreinteProtegee(n))) {
           personnels++;
@@ -392,7 +428,7 @@ export function controler(vue: Vue): {
   }
   let sites = 0;
   for (const f of code) {
-    const r = fautesDEcriture(f.chemin, f.contenu);
+    const r = fautesDEcriture(f.chemin, f.contenu, champsExemptes);
     fautes.push(...r.fautes);
     sites += r.sites;
   }
@@ -473,7 +509,35 @@ const vue = (schema: string, contenu: string, chemin = BAC): Vue => ({
 });
 const colonne = (ligne: string): string => MODELE_SAIN.replace('}\nmodel', `  ${ligne}\n}\nmodel`);
 
+/** CPL-T24 : la pièce et ses quatre colonnes exemptées, pour les témoins de l'exemption. */
+const MODELE_RIB = [
+  'model PieceKyc {',
+  '  id               String    @id @db.Uuid',
+  '  ribVerifieParId  String?   @map("rib_verifie_par_id") @db.Uuid',
+  '  ribVerifieAt     DateTime? @map("rib_verifie_at")',
+  '  ribConfirmeParId String?   @map("rib_confirme_par_id") @db.Uuid',
+  '  ribConfirmeAt    DateTime? @map("rib_confirme_at")',
+  '}',
+].join('\n');
+
 const TEMOINS: { famille: Famille; vue: () => Vue }[] = [
+  // CPL-T24 (sécurité) : une CINQUIÈME colonne `rib_*` de la pièce reste refusée.
+  {
+    famille: 'colonne_personnelle_en_clair',
+    vue: () =>
+      vue(MODELE_RIB.replace('}', '  ribTitulaire String? @map("rib_titulaire")\n}'), CODE_SAIN),
+  },
+  // CPL-T24 (sécurité) : les quatre MÊMES noms sur un AUTRE modèle restent refusés.
+  {
+    famille: 'colonne_personnelle_en_clair',
+    vue: () => vue(MODELE_RIB.replace('model PieceKyc', 'model AutrePiece'), CODE_SAIN),
+  },
+  // CPL-T24 : écrit, un champ `rib*` non exempté reste refusé.
+  {
+    famille: 'champ_personnel_en_clair',
+    vue: () =>
+      vue(MODELE_RIB, "tx.pieceKyc.updateMany({ where: { id }, data: { ribTitulaire: 'x' } });"),
+  },
   { famille: 'schema_illisible', vue: () => vue('model Contact {\n  id String @id\n', CODE_SAIN) },
   { famille: 'perimetre_vide', vue: () => vue('enum E {\n  a\n}\n', CODE_SAIN) },
   { famille: 'perimetre_vide', vue: () => ({ schema: MODELE_SAIN, code: [] }) },
@@ -568,6 +632,14 @@ const TEMOINS: { famille: Famille; vue: () => Vue }[] = [
 ];
 
 const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
+  {
+    quoi: 'CPL-T24 : les quatre colonnes exemptées de la pièce, et leur écriture par le RIB à quatre yeux',
+    vue: () =>
+      vue(
+        MODELE_RIB,
+        'tx.pieceKyc.updateMany({ where: { id }, data: { ribVerifieParId: a, ribVerifieAt: t, ribConfirmeParId: b, ribConfirmeAt: t } });'
+      ),
+  },
   { quoi: 'le modèle et le chemin d’écriture sains', vue: () => vue(MODELE_SAIN, CODE_SAIN) },
   {
     quoi: 'des noms qui contiennent un segment sans le porter (nombreDeDepots, hotel, siren)',

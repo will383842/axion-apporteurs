@@ -84,3 +84,79 @@ export const ISSUES_DE_REFUS = [
 export function estUnRefus(issue: IssueDepot): boolean {
   return (ISSUES_DE_REFUS as readonly IssueDepot[]).includes(issue);
 }
+
+// ── la décision d'un dépôt d'apporteur (SEC-12) ─────────────────────────────────────────────────
+
+/**
+ * Les places de la file derrière un occupant : deux déclarations au plus (contrat art. 3.3 bis c).
+ * La base tient la même borne (CHECK `attributions_rang_attente`, rang 1 ou 2).
+ */
+export const PLACES_EN_ATTENTE = 2;
+
+/**
+ * Les faits d'un dépôt, lus par le serveur SOUS les verrous de la transaction. Aucun ne dit QUI
+ * occupe l'entreprise : un apporteur et une prise en charge par la Société ou ses préposés donnent
+ * les mêmes faits, donc le même refus. La réserve de l'art. 3.5 al. 4 n'y figure pas : elle n'est
+ * pas une occupation et ne fait jamais refuser une déclaration.
+ */
+export interface FaitsDuDepot {
+  readonly apporteurGele: boolean;
+  /** Art. 3.3 bis a. */
+  readonly etablissementCesse: boolean;
+  /** Art. 3.3 (`client`, `devis`) et art. 3.3 bis b (`financeur`, la liste tenue par la Société). */
+  readonly anteriorite: 'aucune' | 'client' | 'devis' | 'financeur';
+  /** Art. 3.3 bis d. */
+  readonly oppositionDemarchage: boolean;
+  /** Une attribution dans un état occupant existe pour ce SIREN. */
+  readonly occupee: boolean;
+  /** Le nombre de déclarations déjà en attente pour ce SIREN, de 0 à `PLACES_EN_ATTENTE`. */
+  readonly enAttente: number;
+  readonly verificationPrioritaire: boolean;
+}
+
+export type DecisionDeDepot =
+  | {
+      readonly issue: 'enregistree' | 'prioritaire';
+      readonly statut: 'provisoire';
+      readonly rangAttente: null;
+    }
+  | { readonly issue: 'en_attente'; readonly statut: 'en_attente'; readonly rangAttente: 1 | 2 }
+  | {
+      readonly issue: (typeof ISSUES_DE_REFUS)[number] | 'gele';
+      readonly statut: null;
+      readonly rangAttente: null;
+    };
+
+const REFUS = (issue: (typeof ISSUES_DE_REFUS)[number] | 'gele'): DecisionDeDepot => ({
+  issue,
+  statut: null,
+  rangAttente: null,
+});
+
+const ANTERIORITES = {
+  financeur: 'entreprise_hors_perimetre',
+  client: 'anteriorite_client',
+  devis: 'anteriorite_devis',
+} as const;
+
+/** L'issue d'un dépôt d'apporteur, dans l'ordre du contrat ; rien n'est deviné. */
+export function deciderDuDepot(f: FaitsDuDepot): DecisionDeDepot {
+  if (!Number.isInteger(f.enAttente) || f.enAttente < 0 || f.enAttente > PLACES_EN_ATTENTE) {
+    throw new RangeError(
+      `enAttente : un entier de 0 à ${PLACES_EN_ATTENTE} attendu, ${f.enAttente} reçu`
+    );
+  }
+  if (f.apporteurGele) return REFUS('gele');
+  if (f.etablissementCesse) return REFUS('etablissement_cesse');
+  if (f.anteriorite !== 'aucune') return REFUS(ANTERIORITES[f.anteriorite]);
+  if (f.oppositionDemarchage) return REFUS('opposition_demarchage');
+  if (f.occupee) {
+    if (f.enAttente === PLACES_EN_ATTENTE) return REFUS('file_complete');
+    return { issue: 'en_attente', statut: 'en_attente', rangAttente: f.enAttente === 0 ? 1 : 2 };
+  }
+  return {
+    issue: f.verificationPrioritaire ? 'prioritaire' : 'enregistree',
+    statut: 'provisoire',
+    rangAttente: null,
+  };
+}

@@ -17,7 +17,7 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import { CHAMPS_PII, decryptPii, type ClesPii } from '../securite/pii';
 import { ajouterEvenement } from '../evenement/journal';
 import { invitationOuverte } from '../console/utilisateurs/regles';
-import { depotDAppareils } from './appareil';
+import { depotDAppareils, type PortsDesAppareils } from './appareil';
 import {
   ESSAIS_DU_CODE_MAX,
   type PortsDEmission,
@@ -35,29 +35,8 @@ import {
 /** Le nom du modèle dans la donnée authentifiée des blocs chiffrés d'un apporteur. */
 export const MODELE_APPORTEUR = 'Apporteur';
 
-/** Le client d'une transaction, en alias : la forme que la règle semgrep du SQL brut admet. */
-type Tx = Prisma.TransactionClient;
-
-/**
- * SEC-19 : les droits d'un résilié courent tant qu'au moins une attribution reste `figee_resiliation`
- * (A02, #703) ; une lecture, jamais mise en cache.
- */
-async function droitsEnCoursDans(
-  client: Pick<Tx, 'attribution'>,
-  apporteurId: string
-): Promise<boolean> {
-  const figee = await client.attribution.findFirst({
-    where: { apporteurId, statut: 'figee_resiliation' },
-    select: { id: true },
-  });
-  return figee !== null;
-}
-
 /** La lecture du compte : par empreinte de courriel, puis l'adresse stockée, déchiffrée. */
-export type LectureDuCompte = Pick<
-  PortsDEmission,
-  'trouverApporteur' | 'adresseStockee' | 'droitsEnCours'
->;
+export type LectureDuCompte = Pick<PortsDEmission, 'trouverApporteur' | 'adresseStockee'>;
 
 export function lectureDuCompte(prisma: PrismaClient, cles: ClesPii): LectureDuCompte {
   return {
@@ -67,7 +46,6 @@ export function lectureDuCompte(prisma: PrismaClient, cles: ClesPii): LectureDuC
         select: { id: true, statut: true },
       });
     },
-    droitsEnCours: (apporteurId) => droitsEnCoursDans(prisma, apporteurId),
     async adresseStockee(apporteurId) {
       const ligne = await prisma.apporteur.findUnique({
         where: { id: apporteurId },
@@ -102,7 +80,7 @@ export function ecrituresDeLien(prisma: PrismaClient): EcrituresDeLien {
 
 function consommationSur(tx: Prisma.TransactionClient): TransactionDeConsommation {
   return {
-    // SEC-55 : l'appareil qui consomme se confirme dans CETTE transaction.
+    // SEC-55 : l'appareil qui consomme est RECONNU dans cette transaction ; il n'y est jamais confirmé.
     appareils: depotDAppareils(tx),
     async consommer(condition, donnees) {
       const { count } = await tx.lienMagique.updateMany({ where: condition, data: donnees });
@@ -128,7 +106,6 @@ function consommationSur(tx: Prisma.TransactionClient): TransactionDeConsommatio
       });
       return a?.statut ?? null;
     },
-    droitsEnCours: (apporteurId) => droitsEnCoursDans(tx, apporteurId),
     async ouvrirSession(session) {
       await tx.sessionEspace.create({ data: session });
     },
@@ -143,15 +120,47 @@ export function transactionDeConsommation(
 }
 
 /**
+ * SEC-55 — la transaction COURTE de la confirmation, ouverte APRÈS l'avis accepté (voie (b) de la
+ * lentille sécurité) : elle relit la session que la consommation a ouverte, avec le lien qui l'a
+ * ouverte, et confirme l'appareil par le même dépôt. Aucun appel réseau n'y a lieu.
+ */
+export function transactionDeConfirmation(prisma: PrismaClient): PortsDesAppareils['transaction'] {
+  return (travail) =>
+    prisma.$transaction((tx) =>
+      travail({
+        async lireSession(tokenHash) {
+          const ligne = await tx.sessionEspace.findUnique({
+            where: { tokenHash },
+            select: {
+              id: true,
+              apporteurId: true,
+              kid: true,
+              expireAt: true,
+              revoqueAt: true,
+              sessionVersion: true,
+              lienMagiqueId: true,
+              apporteur: { select: { statut: true, sessionVersion: true } },
+              lienMagique: { select: { consommeAt: true } },
+            },
+          });
+          if (ligne === null) return null;
+          const { lienMagiqueId, ...session } = ligne;
+          return { ligne: session, lienMagiqueId };
+        },
+        appareils: depotDAppareils(tx),
+      })
+    );
+}
+
+/**
  * SEC-54 — la vérification du code, dans UNE transaction. L'essai est compté par UNE instruction
  * conditionnelle (`UPDATE … WHERE tentatives_code < 5 … RETURNING`) : des essais concurrents ne
  * dépassent jamais cinq, et la base le double (CHECK et déclencheur `liens_magiques_code_fige`).
  */
 function codeSur(tx: Prisma.TransactionClient): TransactionDuCode {
-  const { statutApporteur, droitsEnCours, ouvrirSession, appareils } = consommationSur(tx);
+  const { statutApporteur, ouvrirSession, appareils } = consommationSur(tx);
   return {
     statutApporteur,
-    droitsEnCours,
     ouvrirSession,
     appareils,
     async lienActifDe(emailHash, maintenant) {

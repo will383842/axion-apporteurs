@@ -36,7 +36,7 @@
  * Aucun client Prisma n'est créé ici : ce module reçoit celui de l'appelant.
  */
 import type { Prisma, PrismaClient, TypeEvenementJournal, AgregatJournal } from '@prisma/client';
-import { CHARGES_PAR_TYPE } from '../../domain/evenement/charges';
+import { CHARGES_PAR_TYPE, TRANSITIONS_DU_JOURNAL_APPORTEUR } from '../../domain/evenement/charges';
 import { calculerSelfHash, type LigneJournal } from '../../domain/evenement/journal';
 
 /**
@@ -189,4 +189,85 @@ export async function lireLaChargeDUnFait(
     select: { type: true, charge: true },
   });
   return l === null ? null : { type: l.type, charge: l.charge };
+}
+
+/**
+ * SEC-15 — la FIN d'une suspension, lue au journal par son écrivain unique (A02, #794, 6036174464,
+ * d'après la juriste, 6036161128) : la PREMIÈRE levée du gel postérieure au fait de la pose ; à défaut,
+ * le premier passage de l'apporteur à `resilie` (la fin du contrat). La garde du gel interdit un gel
+ * vers un autre gel : pose et levée alternent, et chaque suspension a SA levée. Le premier fait du gel
+ * qui suit la pose EST sa levée ; illisible, ou qui ne lève pas, il rend null — jamais sauté — et le
+ * texte de la décision est gardé (échec fermé). Seuls l'instant et sa source sortent.
+ */
+export async function finDUneSuspension(
+  client: PrismaClient | Prisma.TransactionClient,
+  agregatId: string,
+  poseEvenementId: bigint
+): Promise<{ fin: Date; par: 'levee' | 'fin_du_contrat' } | null> {
+  if (!UUID_CANONIQUE.test(agregatId)) {
+    throw new Error('lecture_du_journal_refusee : agrégat hors forme');
+  }
+  const apres = { agregat: 'apporteur' as const, agregatId, id: { gt: poseEvenementId } };
+  const gel = await client.evenement.findFirst({
+    where: { ...apres, type: 'apporteur_gel_modifie' },
+    orderBy: { id: 'asc' },
+    select: { survenuAt: true, charge: true },
+  });
+  if (gel !== null) {
+    const lu = CHARGES_PAR_TYPE.apporteur_gel_modifie.safeParse(gel.charge);
+    if (!lu.success || lu.data.vers !== 'libre') return null;
+    return { fin: gel.survenuAt, par: 'levee' };
+  }
+  const resiliation = await client.evenement.findFirst({
+    where: {
+      ...apres,
+      type: 'apporteur_statut_modifie',
+      charge: { path: ['vers'], equals: 'resilie' },
+    },
+    orderBy: { id: 'asc' },
+    select: { survenuAt: true, charge: true },
+  });
+  if (resiliation === null) return null;
+  const lue = CHARGES_PAR_TYPE.apporteur_statut_modifie.safeParse(resiliation.charge);
+  if (!lue.success || lue.data.vers !== 'resilie') return null;
+  return { fin: resiliation.survenuAt, par: 'fin_du_contrat' };
+}
+
+/** Une transition de l'apporteur, telle que le journal la nomme : la liste FERMÉE de sa charge. */
+export type TransitionDeLApporteur = (typeof TRANSITIONS_DU_JOURNAL_APPORTEUR)[number];
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * CPL-T24 — les ACTEURS d'une transition de l'apporteur, relus au journal (conditions d'A02 et de la
+ * sécurité sur #753). Une lecture seule, par l'écrivain unique du journal (garde `journal:sans-pii`),
+ * paramétrée, par l'agrégat et le TYPE (`apporteur_statut_modifie`), sur une transition de la liste
+ * fermée. Chaque charge est jugée par SON schéma Zod ; seul l'identifiant de l'acteur sort, `null`
+ * pour le système, jamais la charge, le type ni une date. Une entrée hors forme, ou une charge qui
+ * ne se lit pas, lève : un échec fermé. Le RIB à quatre yeux y lit qui a ouvert le dossier.
+ */
+export async function acteursDUneTransition(
+  client: PrismaClient | Prisma.TransactionClient,
+  agregatId: string,
+  transition: TransitionDeLApporteur
+): Promise<(string | null)[]> {
+  if (
+    !UUID.test(agregatId) ||
+    !(TRANSITIONS_DU_JOURNAL_APPORTEUR as readonly string[]).includes(transition)
+  )
+    throw new Error('lecture_du_journal_refusee : agrégat ou transition hors forme');
+  const faits = await client.evenement.findMany({
+    where: {
+      agregat: 'apporteur',
+      agregatId,
+      type: 'apporteur_statut_modifie',
+      charge: { path: ['transition'], equals: transition },
+    },
+    select: { charge: true },
+  });
+  return faits.map((f) => {
+    const lu = CHARGES_PAR_TYPE.apporteur_statut_modifie.safeParse(f.charge);
+    if (!lu.success) throw new Error('lecture_du_journal_refusee : charge hors schéma');
+    return lu.data.acteur.id ?? null;
+  });
 }

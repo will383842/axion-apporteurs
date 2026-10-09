@@ -124,7 +124,7 @@
 | `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | `gardien-spec`, lot dédié du gardien-spec (procédure ci-dessous) |
 | `docs/requirements.json`                     | `gardien-spec` — la **source** ; `docs/REQUIREMENTS.md` en est la VUE |
 | `docs/gates.json`                            | `gardien-spec` — la **source** ; `docs/GATES.md` en est la VUE        |
-| `docs/tasks.json`                            | `gardien-spec` / A01 (composition), jamais un développeur             |
+| `docs/tasks.json`                            | `gardien-spec` / A01 (composition) ; un développeur seulement pour ajouter à ses propres `paths` un fichier que sa PR touche (GOV-145) |
 | `prisma/**`, `packages/contracts/**`         | PR `schema`, approbation `architecte` bloquante                       |
 | `docs/adr/**`                                | `architecte` accepte ; `documentaliste` indexe                        |
 | `.claude/settings.json`, `.claude/agents/**` | lot dédié GOV-000 / GOV-023 (`pnpm gov:agents`)                       |
