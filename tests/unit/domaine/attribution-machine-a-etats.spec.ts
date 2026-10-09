@@ -57,6 +57,7 @@ const ATTENDUE: Record<string, Record<string, string>> = {
     confirmee: 'active',
     confirmee_par_courriel: 'active',
     confirmee_tacitement: 'active',
+    confirmee_par_la_commande: 'active',
     non_confirmee: 'invalidee',
     non_confirmee_par_courriel: 'invalidee',
     anomalie_confirmee: 'invalidee',
@@ -140,6 +141,8 @@ const REFUS_CONSEILLER = [
   'retiree',
   'file_expiree',
   'redeclaree',
+  // DM-73
+  'confirmee_par_la_commande',
 ];
 const REFUS_APPORTEUR = ['prise_en_charge'];
 
@@ -532,7 +535,7 @@ async function chargesRechargees(): Promise<ModuleCharges> {
 }
 
 describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
-  it('REQ-QA-004 : les treize états, les vingt-neuf transitions et les naissances, dans cet ordre', async () => {
+  it('REQ-QA-004 : les treize états, les trente transitions et les naissances, dans cet ordre', async () => {
     const m = await machineRechargee();
     expect(m.ETATS_ATTRIBUTION).toEqual([
       'en_attente',
@@ -579,6 +582,7 @@ describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
       'fin_de_contrat',
       'annulee_erreur_identification',
       'fraude_etablie',
+      'confirmee_par_la_commande',
     ]);
     expect(m.NAISSANCES_ATTRIBUTION).toEqual(NAISSANCES);
   });
@@ -604,6 +608,7 @@ describe('REQ-QA-004 — la matrice rechargée, à la valeur près', () => {
       'fin_de_contrat',
       'annulee_erreur_identification',
       'fraude_etablie',
+      'confirmee_par_la_commande',
     ]);
   });
 
