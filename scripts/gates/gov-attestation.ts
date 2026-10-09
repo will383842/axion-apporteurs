@@ -54,6 +54,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import {
+  numeroDuSujet,
   resoudreAttestations,
   versUtcSeconde,
   type ReponseForge,
@@ -111,6 +112,24 @@ const statutGit = (args: string[]): number => {
 
 const brancheLisible = statutGit(['rev-parse', '--verify', '--quiet', BRANCHE]) === 0;
 
+/**
+ * GOV-154 — LE SQUASH SE LIT, IL NE S'ÉCRIT PAS. Les sujets de la branche par défaut, lus UNE fois :
+ * « (#n) » en fin de sujet désigne le commit squashé de la PR n (le plus récent l'emporte). Une
+ * branche illisible laisse la table vide : la pendante est alors SAUTÉE et nommée, jamais résolue.
+ */
+const squashs = new Map<number, string>();
+if (brancheLisible) {
+  const brut = execFileSync('git', ['log', '--format=%H%x1f%s', BRANCHE], {
+    encoding: 'utf8',
+    maxBuffer: 256e6,
+  });
+  for (const ligne of brut.split(/\r?\n/)) {
+    const [sha = '', sujet = ''] = ligne.split('\x1f');
+    const n = numeroDuSujet(sujet);
+    if (n !== null && !squashs.has(n)) squashs.set(n, sha);
+  }
+}
+const fusionDeLaPr = (pr: number): string | null => squashs.get(pr) ?? null;
 const situer = (sha: string): SituationGit => {
   if (!brancheLisible) return 'illisible';
   if (statutGit(['cat-file', '-e', `${sha}^{commit}`]) !== 0) return 'absent';
@@ -130,7 +149,7 @@ const dateDuCommit = (sha: string): string | null => {
 
 const r = resoudreAttestations(
   doc.taches,
-  { brancheParDefaut: BRANCHE, forge, situer, dateDuCommit },
+  { brancheParDefaut: BRANCHE, forge, situer, dateDuCommit, fusionDeLaPr },
   (t) => LIVREE.has(t.statut)
 );
 

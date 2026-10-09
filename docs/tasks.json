@@ -27310,7 +27310,13 @@
         "package.json",
         ".github/workflows/ci.yml",
         "docs/gates.json",
-        "tests/unit/gouvernance/registre-fusions.spec.ts"
+        "tests/unit/gouvernance/registre-fusions.spec.ts",
+        "scripts/gates/gov-pr.ts",
+        "scripts/lot/revues.ts",
+        "scripts/gates/gov-conventions.ts",
+        "scripts/gates/ci-etapes-identiques.ts",
+        "scripts/gates/gov-inventaire.ts",
+        "tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts"
       ],
       "hyp": [],
       "externe": null,

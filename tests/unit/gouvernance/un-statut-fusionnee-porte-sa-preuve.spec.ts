@@ -387,6 +387,7 @@ describe('REQ-GOV-026 — en ligne : chaque attestation, locale ou non, RÉSOUT'
         },
         situer: (sha: string): SituationGit => o.situation?.[sha] ?? 'absent',
         dateDuCommit: (sha: string) => o.dates?.[sha] ?? null,
+        fusionDeLaPr: (): string | null => null,
       },
     };
   };

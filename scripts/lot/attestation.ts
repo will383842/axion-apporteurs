@@ -70,6 +70,15 @@ export type Attestation = {
 };
 
 /**
+ * GOV-154 — le numéro « (#n) » qui termine le sujet d'un commit squashé, ou `null`. LA lecture du
+ * squash, unique : `gov:attestation` et `gov:registre-fusions` la partagent.
+ */
+export function numeroDuSujet(sujet: string): number | null {
+  const m = /\(#(\d+)\)\s*$/.exec(sujet);
+  return m ? Number(m[1]) : null;
+}
+
+/**
  * GOV-154 — l'attestation PENDANTE : sha ET date à `null`, ensemble. Admise pour une tâche de CE
  * dépôt seulement ; ailleurs, la forme est refusée comme un sha non conforme.
  */
@@ -447,6 +456,11 @@ export type VuesEnLigne = {
   situer: (sha: string) => SituationGit;
   /** Instant du commit dans CE dépôt, UTC à la seconde, ou `null` s'il est illisible. */
   dateDuCommit: (sha: string) => string | null;
+  /**
+   * GOV-154 — le SHA du commit de la branche par défaut dont le sujet finit par « (#n) » (le squash de
+   * la PR n), ou `null`. C'est ainsi qu'une attestation PENDANTE se LIT, sans jamais s'écrire.
+   */
+  fusionDeLaPr: (pr: number) => string | null;
 };
 export type Resolution = {
   /** Le nombre d'attestations CONFRONTÉES — le témoin positif du contrôle. */
@@ -465,7 +479,7 @@ export function resoudreAttestations(
   const motifPassif = new Map(PASSIF_SANS_ATTESTATION.map((p) => [p.id, p.motif]));
 
   for (const t of taches) {
-    const a = t.attestation ?? null;
+    let a = t.attestation ?? null;
     if (!a) {
       if (estLivree(t) && depotDeLaTache(t) !== null) {
         r.sautees.push({
@@ -485,9 +499,21 @@ export function resoudreAttestations(
       );
       continue;
     }
-    // GOV-154 : une attestation PENDANTE ne se résout pas ici, par la forge : son commit squashé se lit
-    // sur main par `gov:registre-fusions`.
-    if (t.repo === DEPOT_LOCAL && estPendante(a)) continue;
+    // GOV-154 : une attestation PENDANTE de CE dépôt se LIT dans l'historique — le commit squashé
+    // « (#n) » et son instant — puis se confronte à la forge comme toute autre. Rien ne s'écrit.
+    if (t.repo === DEPOT_LOCAL && estPendante(a)) {
+      const lu = vues.fusionDeLaPr(a.pr);
+      if (lu === null) {
+        r.sautees.push({
+          id: t.id,
+          motif:
+            `attestation PENDANTE : aucun commit « (#${a.pr}) » sur ${vues.brancheParDefaut} — la PR ` +
+            "n'a pas encore fusionné ; `pnpm gov:registre-fusions` juge cet écart.",
+        });
+        continue;
+      }
+      a = { pr: a.pr, sha: lu, fusionneeAt: vues.dateDuCommit(lu) };
+    }
     if (a.sha === null || !MOTIF_SHA.test(a.sha)) {
       r.fautes.push(
         `${t.id} — « ${a.sha} » n'a pas la forme d'un SHA ; \`pnpm gov:tasks\` le dit déjà.`

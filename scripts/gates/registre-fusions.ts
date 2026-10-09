@@ -29,7 +29,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { LIVREE } from '../lot/avancement';
-import { DEPOT_LOCAL, depotDeLaTache } from '../lot/attestation';
+import { DEPOT_LOCAL, depotDeLaTache, numeroDuSujet } from '../lot/attestation';
 import { lireLeLot } from '../lot/revues';
 
 /** Le dépôt de forge de ce registre : une référence de PR se compose QUALIFIÉE (GOV-038). */
@@ -64,10 +64,17 @@ export type Ecart = { famille: string; message: string };
 
 const SUJET = /^\w+(?:\(([^)]+)\))?!?:.*\(#(\d+)\)$/;
 
-/** Le numéro « (#n) » qui termine le sujet d'un commit squashé, ou `null`. */
-export function numeroDuSujet(sujet: string): number | null {
-  const m = /\(#(\d+)\)\s*$/.exec(sujet);
-  return m ? Number(m[1]) : null;
+/**
+ * La PR en cours : `--pr <n>`, sinon `PR_COURANTE` (posée par la CI sur une PR, vide sur main). Ce
+ * qui n'est pas un entier positif ne vaut rien — jamais un numéro deviné.
+ */
+export function prCourante(
+  argv: readonly string[],
+  env: Readonly<Record<string, string | undefined>>
+): number | null {
+  const i = argv.indexOf('--pr');
+  const brute = i >= 0 ? argv[i + 1] : env['PR_COURANTE'];
+  return brute && /^\d+$/.test(brute) && Number(brute) > 0 ? Number(brute) : null;
 }
 
 /** Les identifiants que nomme le sujet (`type(A, B): … (#n)`) et le champ `Lot:` du message. */
@@ -288,9 +295,7 @@ function prouver(): number {
 
 function principal(): number {
   if (process.argv.includes('--prove')) return prouver();
-  const i = process.argv.indexOf('--pr');
-  const brute = i >= 0 ? process.argv[i + 1] : process.env['PR_COURANTE'];
-  const prCourante = brute && /^d+$/.test(brute) ? Number(brute) : null;
+  const enCours = prCourante(process.argv, process.env);
   let taches: TacheDuRegistre[];
   let commits: CommitDeMain[];
   try {
@@ -306,7 +311,7 @@ function principal(): number {
   const ecarts = ecartsDuRegistreEtDesFusions({
     taches,
     commits,
-    prCourante,
+    prCourante: enCours,
     debut: lireLeDebut(),
   });
   if (ecarts.length === 0) {

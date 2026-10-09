@@ -13,7 +13,7 @@ import { join, resolve } from 'node:path';
 import * as GARDE from '../../../scripts/gates/registre-fusions';
 import * as PR from '../../../scripts/gates/gov-pr';
 import { cloturerDansLaPr, ErreurDeCloture } from '../../../scripts/lot/cloture';
-import { controlerAttestation } from '../../../scripts/lot/attestation';
+import { controlerAttestation, resoudreAttestations } from '../../../scripts/lot/attestation';
 import { risqueDeLaPr, tachesDeLaPr } from '../../../scripts/lot/revues';
 
 type TacheBrute = NonNullable<Parameters<typeof PR.projeter>[0]>[number] & Record<string, unknown>;
@@ -176,5 +176,59 @@ describe('REQ-GOV-021 — GOV-154 : gov:registre-fusions juge l’écart prouvé
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('REQ-GOV-021 — GOV-154 : le sha d’une attestation pendante se LIT dans l’historique (gov:attestation)', () => {
+  const SHA = 'b'.repeat(40);
+  const QUAND = '2026-10-09T10:00:00Z';
+  const PULL = 'repos/will383842/axion-apporteurs/pulls/901';
+  const pendante = {
+    id: 'UX-P1-01',
+    repo: 'partners',
+    statut: 'fusionnee',
+    pr: 901,
+    branch: 't/ux-p1-01',
+    attestation: { pr: 901, sha: null, fusionneeAt: null },
+  };
+  const vues = (o: { squash: string | null; mergeCommit: string }) => ({
+    brancheParDefaut: 'origin/main',
+    forge: (chemin: string) =>
+      chemin === PULL
+        ? { ok: true as const, corps: { merged_at: QUAND, merge_commit_sha: o.mergeCommit } }
+        : { ok: false as const, erreur: 'HTTP 404' },
+    situer: (sha: string) => (sha === SHA ? ('ancetre' as const) : ('absent' as const)),
+    dateDuCommit: (sha: string) => (sha === SHA ? QUAND : null),
+    fusionDeLaPr: (n: number) => (n === 901 ? o.squash : null),
+  });
+  const livree = () => true;
+
+  it('REQ-GOV-021 — le commit squashé « (#901) » de main résout l’attestation pendante, confronté à la forge', () => {
+    const r = resoudreAttestations([pendante], vues({ squash: SHA, mergeCommit: SHA }), livree);
+    expect(r.fautes).toEqual([]);
+    expect(r.resolues.join(' ')).toContain(SHA.slice(0, 7));
+  });
+
+  it('REQ-GOV-021 — un squash que la forge dément est une faute, nommée', () => {
+    const r = resoudreAttestations(
+      [pendante],
+      vues({ squash: SHA, mergeCommit: 'c'.repeat(40) }),
+      livree
+    );
+    expect(r.fautes.join(' ')).toContain('UX-P1-01');
+  });
+
+  it('REQ-GOV-021 — sans commit squashé, la pendante est SAUTÉE et nommée, jamais résolue en silence', () => {
+    const r = resoudreAttestations([pendante], vues({ squash: null, mergeCommit: SHA }), livree);
+    expect(r.resolues).toEqual([]);
+    expect(r.sautees.map((s) => s.id)).toEqual(['UX-P1-01']);
+  });
+});
+
+describe('REQ-GOV-021 — GOV-154 : la PR en cours se lit par --pr ou PR_COURANTE', () => {
+  it('REQ-GOV-021 — le numéro de la PR courante est lu, une valeur vide ne vaut rien', () => {
+    expect(GARDE.prCourante(['--pr', '901'], {})).toBe(901);
+    expect(GARDE.prCourante([], { PR_COURANTE: '902' })).toBe(902);
+    expect(GARDE.prCourante([], { PR_COURANTE: '' })).toBeNull();
   });
 });

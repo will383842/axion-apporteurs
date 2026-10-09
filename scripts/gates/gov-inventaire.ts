@@ -217,7 +217,10 @@ function preuvesDeLaTache(t: Tache, e: Etat): string[] {
   );
   const shas = (e.shasParTache[t.id] ?? []).filter(shaResout);
   const attestations =
-    t.repo !== DEPOT_LOCAL && t.attestation && MOTIF_SHA.test(t.attestation.sha)
+    t.repo !== DEPOT_LOCAL &&
+    t.attestation &&
+    t.attestation.sha !== null &&
+    MOTIF_SHA.test(t.attestation.sha)
       ? [
           `attestation:${depotDeLaTache(t) ?? t.repo}#${t.attestation.pr}@${t.attestation.sha.slice(0, 8)}`,
         ]
