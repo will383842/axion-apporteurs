@@ -15,9 +15,11 @@
  *     pas prouvé l'exclusion, elle l'a évitée ;
  *   — la durée sous un plafond : « léger » est une mesure, pas une épithète.
  *
- * LE NOMBRE DE PLACES N'EST PAS RECOPIÉ : le banc le passe, tiré de `PLACES_DE_LA_FILE` (RM-01). Le juge
- * n'importe rien de `src/` : un import ferait entrer ce module dans la couverture du domaine.
+ * LE NOMBRE DE PLACES N'EST PAS RECOPIÉ : le banc le passe, tiré de `PLACES_DE_LA_FILE` (RM-01). L'état
+ * de la file ne l'est pas non plus : il est lu dans la machine d'états, à la naissance `deposee_en_file`.
  */
+import { NAISSANCES_ATTRIBUTION } from '../../../src/domain/attribution/machine';
+
 /** Le nombre de dépôts simultanés de la tâche. */
 export const DEPOTS_SIMULTANES = 50;
 
@@ -27,8 +29,8 @@ export const DEPOTS_SIMULTANES = 50;
  */
 export const DUREE_MAX_MS = 30_000;
 
-/** Les états occupants lus par le banc sur la base, hors file d'attente. */
-const STATUTS_DE_LA_FILE = 'en_attente';
+/** L'état d'une ligne de la file, tiré de sa source unique (RM-01). */
+const STATUTS_DE_LA_FILE: string = NAISSANCES_ATTRIBUTION.deposee_en_file;
 
 export type LigneMesuree = {
   statut: string;

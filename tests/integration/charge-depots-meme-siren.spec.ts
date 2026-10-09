@@ -7,8 +7,9 @@
  * CE QU'IL PROUVE (REQ-QA-005) : sous la course, UN seul occupant (l'index partiel sur les états
  * occupants tient), la file pleine derrière lui, tous les autres refusés et tracés, une demande de
  * confirmation, aucun dépôt en échec, sous le plafond de durée. Le second membre de REQ-QA-005 (« un
- * SIREN périmé peut être redéposé ») n'est PAS rejoué ici : la tâche ne porte que la course de
- * cinquante dépôts, et la transition vers `perimee` d'un occupant passe par la machine d'états.
+ * SIREN périmé peut être redéposé et un second dépôt actif est refusé ») est le second cas : une
+ * ligne `perimee` posée en base, hors des états occupants, ne bloque pas le dépôt suivant, qui
+ * occupe ; le dépôt d'après, lui, n'occupe pas.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -16,6 +17,7 @@ import { demarrerBase, type Base } from './harnais';
 import { clesPii } from '../../src/server/securite/pii';
 import { NOMS_DES_SECRETS } from '../../src/lib/env';
 import { PLACES_DE_LA_FILE } from '../../src/domain/verification/etats';
+import { ETATS_OCCUPANTS } from '../../src/domain/attribution/etats';
 import { deposer, type DemandeDeDepot, type PortsDuDepot } from '../../src/server/depot/deposer';
 import {
   DEPOTS_SIMULTANES,
@@ -25,6 +27,7 @@ import {
 
 let base: Base;
 let codes = 0;
+let grilleId = '';
 
 const T0 = new Date('2026-10-03T12:00:00.000Z');
 const SIREN = '510000001';
@@ -48,7 +51,7 @@ const PORTS: PortsDuDepot = {
 
 beforeAll(async () => {
   base = await demarrerBase();
-  await base.prisma.grilleCommission.create({
+  const grille = await base.prisma.grilleCommission.create({
     data: {
       version: 1,
       hash: randomBytes(32).toString('hex'),
@@ -57,6 +60,7 @@ beforeAll(async () => {
       importeeAt: T0,
     },
   });
+  grilleId = grille.id;
 }, 180_000);
 
 afterAll(async () => {
@@ -95,7 +99,7 @@ function demande(apporteurId: string, siren: string): DemandeDeDepot {
         nom: 'Témoin',
         prenom: 'Camille',
         fonction: 'Gérante',
-        email: 'camille.temoin@gmail.com',
+        email: 'camille.temoin@example.org',
         telephone: '06 12 34 56 78',
       },
       contexte: null,
@@ -155,4 +159,30 @@ describe('REQ-QA-005 — cinquante dépôts simultanés sur un même SIREN', () 
     };
     expect(jugerLaCharge(mesure)).toEqual([]);
   }, 120_000);
+
+  it('REQ-QA-005 : un SIREN périmé est redéposé, et un second dépôt actif sur ce SIREN est refusé', async () => {
+    const siren = '510000019';
+    const [ancien, nouveau, second] = await Promise.all([apporteur(), apporteur(), apporteur()]);
+    await base.prisma.$executeRawUnsafe(
+      `INSERT INTO attributions (id, apporteur_id, statut, siren, canal, grille_commission_id,
+         date_contact, verification_prioritaire, entreprise_a_verifier, lien_interet_declare)
+       VALUES ($1::uuid, $2::uuid, 'perimee'::etat_attribution, $3, 'espace'::canal_depot, $4::uuid,
+         '2026-09-01', false, false, false)`,
+      randomUUID(),
+      ancien,
+      siren,
+      grilleId
+    );
+
+    const redepot = await deposer(base.prisma, demande(nouveau, siren), PORTS);
+    expect('issue' in redepot && redepot.issue).toBe('enregistree');
+
+    const apres = await deposer(base.prisma, demande(second, siren), PORTS);
+    expect('issue' in apres && apres.issue).not.toBe('enregistree');
+
+    const occupants = await base.prisma.attribution.findMany({
+      where: { siren, statut: { in: [...ETATS_OCCUPANTS] } },
+    });
+    expect(occupants.map((l) => l.apporteurId)).toEqual([nouveau]);
+  }, 60_000);
 });
