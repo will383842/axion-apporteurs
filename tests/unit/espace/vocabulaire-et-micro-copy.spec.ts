@@ -945,8 +945,8 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › refus_declaration › appel : Contester ce refus par écrit
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › refus_declaration › corps : {categorie} : {motif}. Ce refus n'a aucune autre conséquence pour vous et n'est pas un manquement.
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › suspension_declarations › titre : Vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA
-      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › suspension_declarations › appel : Lire le courrier et répondre
-      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › suspension_declarations › corps : {faits}. Cette suspension prend fin au plus tard le {dateLevee}. Rien ne change pour vos entreprises en cours, ni pour vos commissions, ni pour l'accès à votre espace.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › suspension_declarations › appel : Contester cette suspension par écrit
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › suspension_declarations › corps : {faits}. Cette suspension prend fin au plus tard le {dateLevee}. Rien ne change pour vos entreprises en cours, ni pour vos commissions, ni pour l'accès à votre espace. Vous pouvez contester cette suspension par écrit, en écrivant à Axion-IA depuis votre espace.
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rappel_rc_pro › titre : Votre attestation d'assurance arrive à échéance le {dateEcheance}
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rappel_rc_pro › appel : Déposer la nouvelle attestation
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › titre : {entreprise} : décision de rattachement

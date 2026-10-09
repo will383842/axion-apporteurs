@@ -12,7 +12,7 @@
 ## Reprendre en trente secondes
 
 ```bash
-cd C:\Users\willi\Documents\Projets\axion-apporteurs   # ⚠️ DEPUIS le dépôt, sinon les 15 fiches
+cd ~/Documents/Projets/axion-apporteurs               # ⚠️ DEPUIS le dépôt, sinon les 15 fiches
 claude                                                  #    de rôle ne résolvent pas
 ```
 
@@ -42,7 +42,7 @@ s'arrêter là. La 3ᵉ case de la définition de « terminé » est laissée **
 `pnpm gov:pr --pr 30` est ROUGE tant que les revues manquent — c'est l'état voulu, pas un oubli.
 
 ```bash
-cd C:\Users\willi\Documents\Projets\axion-apporteurs
+cd ~/Documents/Projets/axion-apporteurs
 git checkout lot/L-1-03-cloture && git pull
 pnpm gov:pr --pr 30            # lit ce qui manque : lentilles_manquantes + la 3e case
 # → 4 lentilles : exactitude · securite · simplicite · mutation, chacune en commentaire

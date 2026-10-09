@@ -47,7 +47,7 @@ const GARDES = [
     nom: 'gov:publication',
     exigences: 'REQ-GOV-031 — ',
     script: 'scripts/gates/gov-publication.ts',
-    familles: 7,
+    familles: 8, // SEC-48 : donnee_du_poste
   },
   // Les familles de `gov:tasks`, y compris celles de l'attestation inter-dépôt (GOV-038) et du
   // couple état/opération (GOV-086). Le compte ENTIER est DÉRIVÉ de `FAMILLES` : la liste est
@@ -101,7 +101,7 @@ describe('la preuve n’est pas un décompte', () => {
     // prouvées sans l'avoir jamais été. La sortie doit énumérer les familles, une par une.
     const { sortie } = lancer('scripts/gates/gov-publication.ts', '--prove');
     const lignes = sortie.split('\n').filter((l) => l.trim().startsWith('•'));
-    expect(lignes.length).toBe(7);
+    expect(lignes.length).toBe(8);
   });
 });
 

@@ -13,7 +13,7 @@ import { portsDeLaGarde as portsDeLAcceptation } from '../../../server/auth/gard
 import { dependancesDuProcessus } from '../../../server/auth/lien-magique-production';
 import { COOKIE_DE_SESSION, pageEspace, type PortsDeSession } from '../../../server/auth/session';
 import { notificationsDeLEspace } from '../../../server/notifications/notifications-de-l-espace';
-import { lireLaChargeDUnFait } from '../../../server/evenement/journal';
+import { finDUneSuspension, lireLaChargeDUnFait } from '../../../server/evenement/journal';
 import { clesPii } from '../../../server/securite/pii';
 import {
   ROUTE_CONFIDENTIALITE,
@@ -58,6 +58,10 @@ export default async function PageNotifications() {
   const notifications = await notificationsDeLEspace(prisma, verdict.session.apporteurId, {
     cles: clesPii(process.env),
     lireUnFait: (id) => lireLaChargeDUnFait(prisma, id),
+    // JUR-T58 : la fin d'une suspension aux faits purgés, lue au journal depuis le fait de sa pose ;
+    // sans elle, la suspension purgée ne s'affiche pas (échec fermé).
+    finDUneSuspension: async (id) =>
+      (await finDUneSuspension(prisma, verdict.session.apporteurId, BigInt(id)))?.fin ?? null,
   });
   return <EcranNotifications notifications={notifications} />;
 }

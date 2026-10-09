@@ -86,6 +86,12 @@ export const VALEURS_DE_L_ENTITE = [
   'mentionTransfert',
   'dureeSansSuite',
   'dureeApresDernierContact',
+  // JUR-T51 : la durée de prospection, rendue en toutes lettres depuis
+  // `CONTACT_DEMARCHE_CONSERVE_APRES_DERNIER_CONTACT_ANS` (retention.ts).
+  'dureeProspection',
+  // JUR-T51 : la durée de conservation du démenti, rendue en toutes lettres depuis
+  // `DEMENTI_CONTACT_VIDE_APRES_ANS` (retention.ts) ; sans elle, l'e-mail n'est pas rendu.
+  'dureeDementi',
   'prenomSignataire',
   'nomSignataire',
 ] as const;
