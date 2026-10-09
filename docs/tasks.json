@@ -25667,7 +25667,6 @@
         "tests/integration/gel-litige-decisions-de-contrat.spec.ts",
         "src/server/taches/purger-textes-des-decisions.ts",
         "src/domain/seuils/ssot.ts",
-        "src/server/taches/purger-decisions-de-contrat.ts",
         "src/domain/evenement/charges.ts",
         "src/server/console/litiges-des-decisions.ts",
         "src/server/roles/matrice.ts",
