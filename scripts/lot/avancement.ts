@@ -45,6 +45,8 @@ export type Avancement = (typeof AVANCEMENT)[number];
  */
 export const PLANCHER: Record<string, Avancement | null> = {
   proposee: null,
+  // GOV-160 : une tâche annulée n est plus au plan.
+  annulee: null,
   a_faire: 'specifie',
   en_cours: 'specifie',
   bloquee: 'specifie',

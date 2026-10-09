@@ -1,5 +1,9 @@
 # Protocole de fusion — Axion Partners
 
+> **GOV-160 (décision de Williams du 2026-10-09, #319, commentaire 6077512137).** Les gardes de gouvernance sont archivées : là où ce document cite
+> `gov:etat`, `gov:trace`, `vues:rendre`, `plan-state`, le journal par PR ou une PR de clôture,
+> le pas est sans objet. Le Pas 2 ci-dessous est réécrit ; les autres pas restent.
+
 > Livré par **GOV-012** (REQ-GOV-014). Ce fichier ne décide rien : il **dérive**. La décision est
 > dans `partners/ADR-0006` (file sérialisée, atterrissage vérifié) et `partners/ADR-0007` (la branche
 > porte le lot) ; la règle est `RM-09` de `docs/REGLES-MAISON.md` ; la forme des branches, des titres
@@ -99,21 +103,25 @@ file se lit dans la liste des PR ouvertes et dans le créneau annoncé, jamais d
 précède le pas 4 — réserver après avoir remis la branche à jour, c'est réserver un état qui a déjà
 changé.
 
-### Pas 2 — La définition de « terminé », revues comprises
+### Pas 2 — Les relectures, selon le niveau de la PR (GOV-160)
 
 **Commande.** `pnpm gov:pr --pr <numéro>`
 
-**Ce qu'on lit.** Vert. C'est le seul moment où les revues existent : l'événement `pull_request` de la
-CI n'en porte aucune, donc `gate-a` ne peut pas les juger (`docs/CHARTE-AGENTS.md` §8). Sont vérifiés
-ici : les lentilles exigées — **deux partout**, `exactitude` et `securite`, plus l'avis `schema`
-de l'architecte quand la PR touche au schéma (décision de Will du 2026-09-26, `W16`,
-`partners/ADR-0024`, `docs/CHARTE-AGENTS.md` §6) ; la mutation n'est plus un avis d'agent, elle
-est mesurée par Stryker en porte A (`pnpm mutation:pr`) —, l'auteur qui ne s'auto-approuve pas, les
-sept premières cases de la DoD, le bloc ROUGE/VERT, et la section « Attaque » si la tâche est
-`sensible`. Sur toute PR, le refus de la lentille `securite` vaut **veto**, à lui seul — et un
-`Verdict: refuse` n'est rendu, par cette lentille comme par l'autre, que sur un écart démontré et
-ouvert ; tout autre motif est une dette nommée dans l'avis, et ne bloque pas (règle d'arrêt du
-2026-09-15, `partners/ADR-0025`).
+**Ce qu'on lit.** Vert. La garde (`scripts/gates/gov-pr-niveaux.ts`, décision de Williams du 2026-10-09, #319, commentaire 6077512137) imprime le NIVEAU
+de la PR, calculé sur ses fichiers et sa tâche, et exige :
+
+| Niveau | Quand | Lentilles | Corps |
+| --- | --- | --- | --- |
+| critique | argent, commissions, RIB, journal immuable, authentification, cloisonnement, données personnelles ; CI, gardes, dépendances, configuration | `exactitude` **et** `securite`, sur la tête | bloc ROUGE/VERT verbatim et section Attaque |
+| normal | le reste du code | une parmi `exactitude`, `securite` | — |
+| léger | écrans, textes, documents, outillage | aucune | — |
+
+Sur tout niveau, un `Verdict: refuse` de `securite` sur la tête vaut **veto**. L'avis `schema` de
+l'architecte n'est exigé que si une migration de la PR n'est pas purement additive. Une migration
+ajoutée porte un horodatage postérieur à la dernière de `main` : aucune réservation de préfixe.
+Plus de journal par PR, plus de définition de « terminé » à cocher, plus de PR de clôture : aucune
+PR n'écrit de statut dans `docs/tasks.json`, l'avancement se dérive des PR fusionnées
+(`pnpm avancement`).
 
 ### Pas 3 — Les gates, sur le commit qui sera fusionné
 
@@ -233,7 +241,7 @@ si la tête a bougé depuis le pas 5.
 
 **`--body` recopie la ligne `Lot:` dans le message du commit d'écrasement (GOV-104).** Le corps de
 la PR reste modifiable après la fusion ; le message du commit, non. C'est ce message, et lui seul,
-que `lot:cloture --tache` lit pour savoir quelles tâches la PR a livrées : une ligne `Lot:` ajoutée
+que l'historique de main garde pour dire quelles tâches la PR a livrées : une ligne `Lot:` ajoutée
 au corps après coup ne fait rien clore, et la clôture ne lit `Lot:` que s'il est la SEULE ligne du
 corps de ce message : une ligne `Lot:` écrite dans un commit, que la forge recopierait sans
 `--body`, ne déclare rien. Une PR à une seule tâche porte `Lot:` vide, et son titre suffit.
@@ -266,31 +274,19 @@ donc l'ancien sha — et c'est précisément ce que ce pas détecte.
 > run `Gate A` déclenché par le `push` sur `main` doit être vert. Ce repli tombe au premier
 > déploiement réel ; ce paragraphe est alors retiré.
 
-### Pas 8 — Attester, puis rendre le créneau
+### Pas 8 — Rendre le créneau
 
-**Commande.** `pnpm gov:pr --apres-fusion <numéro>` puis `pnpm lot:cloture --lot <id-de-lot>`
+**Commande.** Aucune. Depuis GOV-160 (décision de Williams, #319, commentaire 6077512137), aucune PR
+n'écrit de statut dans `docs/tasks.json` et aucune clôture de lot n'est commise : l'avancement se
+**dérive** des PR fusionnées, en lecture seule, par `pnpm avancement`. `gov:pr --apres-fusion` et
+`lot:cloture` ne font plus partie du protocole.
 
-**Ce qu'on lit.** La huitième case de la DoD cochée — « fusionnée **et** atterrissage vérifié » : les
-deux sont indissociables, une PR fusionnée dont personne ne sait si elle est en ligne n'est pas
-terminée. Puis les lignes `statut`, `pr`, `branch`, `owner` écrites dans `docs/tasks.json` par le
-seul outil qui a le droit de les écrire, et `docs/PLAN-STATE.md` régénéré. Le créneau est libre : la
-PR suivante peut prendre le pas 1.
+**Ce qu'on lit.** L'atterrissage vérifié au pas 7 : une PR fusionnée dont personne ne sait si elle est
+en ligne n'est pas terminée. Puis `pnpm avancement`, qui range la tâche du titre de la PR (et celles
+de sa ligne `Lot:`) parmi les livrées. Le créneau est libre : la PR suivante peut prendre le pas 1.
 
-**Cas de la tâche seule, livrée hors de tout lot (GOV-057).** La commande devient
-`pnpm lot:cloture -- --tache <id> --pr <numéro> [--owner <Axx>]`. On ne tape que le numéro : le SHA
-du commit de fusion, l'instant et la branche fusionnée sont lus sur la forge, dans le dépôt de la
-tâche, et l'atterrissage est l'ascendance de ce SHA sur la branche **par défaut** de ce dépôt
-(GOV-104), jamais sur la base que la PR a choisie. **La PR doit DÉCLARER la tâche** : son titre la
-nomme, ou la ligne `Lot:` que le pas 6 a recopiée dans le message du commit d'écrasement. Sinon la
-clôture refuse (`tache_etrangere_a_la_pr`) : l'attestation serait vraie et la livraison fausse. Une
-tâche d'un autre dépôt suit la même règle — une PR d'`axionia` dont le titre ne suit pas la forme
-`type(ID): …` et qui ne porte pas `Lot:` ne clôt rien, et c'est voulu. La tâche ressort
-`fusionnee` avec ses trois preuves — `pr`, `branch`, attestation au SHA entier — et **aucun lot
-n'est inventé**. Une tâche rangée dans un lot est refusée (`tache_d_un_lot`) : elle se clôt par son
-lot, sinon ce chemin contournerait le contrôle de périmètre. Écrire `docs/tasks.json` à la main
-reste hors protocole. La garde `gov:tasks` en rattrape la forme la plus probable, une tâche
-`fusionnee` sans `branch`, mais pas toutes : une main qui recopie les trois preuves passerait. Ce
-chemin est donc le seul qui PRODUIT ces preuves depuis la forge, et non la seule écriture possible.
+**Ce qui le garde.** La famille `statut_ecrit` de `gov:pr` refuse une PR qui modifie le champ
+`statut` d'une tâche existante de `docs/tasks.json` ; la PR de GOV-160 en est l'exception unique.
 
 ---
 

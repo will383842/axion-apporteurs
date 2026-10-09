@@ -28,6 +28,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
+import { restreindreALaPr } from './fichiers-de-la-pr';
 
 export type Fichier = { chemin: string; texte: string };
 export type Faute = { famille: string; chemin: string; ligne: number; extrait: string };
@@ -240,21 +241,32 @@ function prouver(): string[] {
   return echecs;
 }
 
-function lireLeDepot(): Fichier[] {
-  return fichiersSuivisOuRefus('jur:copy-indicative-partners')
-    .filter(
-      (c) =>
-        (c.startsWith('src/content/') && /\.(ts|json|md)$/.test(c)) ||
-        (c.startsWith('docs/maquettes/') && /\.(html|md)$/.test(c))
-    )
-    .map((chemin) => ({ chemin, texte: readFileSync(chemin, 'utf8') }));
+function cheminsDuPerimetre(): string[] {
+  return fichiersSuivisOuRefus('jur:copy-indicative-partners').filter(
+    (c) =>
+      (c.startsWith('src/content/') && /\.(ts|json|md)$/.test(c)) ||
+      (c.startsWith('docs/maquettes/') && /\.(html|md)$/.test(c))
+  );
+}
+
+/** GOV-160 : sur une PR, seuls les fichiers de la PR sont jugés. */
+function lireLeDepot(chemins: string[]): Fichier[] {
+  return chemins.map((chemin) => ({ chemin, texte: readFileSync(chemin, 'utf8') }));
 }
 
 const APPELE_DIRECTEMENT = /jur-copy-indicative\.ts$/.test(process.argv[1] ?? '');
 
 if (APPELE_DIRECTEMENT) {
   const prouve = process.argv.includes('--prove');
-  const fichiers = prouve ? [] : lireLeDepot();
+  const perimetre = prouve ? [] : cheminsDuPerimetre();
+  const dePr = restreindreALaPr(perimetre);
+  if (!prouve && dePr.length === 0 && perimetre.length > 0) {
+    console.log(
+      '✅ jur:copy-indicative-partners — la PR ne modifie aucun fichier de src/content/ ni de docs/maquettes/ : rien de la PR à juger.'
+    );
+    process.exit(0);
+  }
+  const fichiers = prouve ? [] : lireLeDepot(dePr);
   const echecs = prouve
     ? prouver()
     : fautesDeRemuneration(fichiers).map(

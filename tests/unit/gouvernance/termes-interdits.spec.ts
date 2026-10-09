@@ -77,13 +77,27 @@ const TSX = resolve('node_modules/tsx/dist/cli.mjs');
 const RACINE_CONTRATS = 'packages/contracts/';
 
 function lancer(...args: string[]): { code: number; sortie: string } {
-  const r = spawnSync('npx', ['tsx', SCRIPT, ...args], { encoding: 'utf8', shell: true });
+  const r = spawnSync('npx', ['tsx', SCRIPT, ...args], {
+    encoding: 'utf8',
+    shell: true,
+    env: {
+      ...process.env,
+      GITHUB_EVENT_NAME: '',
+    } /* GOV-160 : balayage complet, même lancé dans une PR */,
+  });
   return { code: r.status ?? 1, sortie: (r.stdout ?? '') + (r.stderr ?? '') };
 }
 
 /** Une garde lancée par son chemin dans un dépôt donné. */
 function lancerDans(depot: string, script: string): { code: number | null; sortie: string } {
-  const r = spawnSync(process.execPath, [TSX, script], { cwd: depot, encoding: 'utf8' });
+  const r = spawnSync(process.execPath, [TSX, script], {
+    cwd: depot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      GITHUB_EVENT_NAME: '',
+    } /* GOV-160 : balayage complet, même lancé dans une PR */,
+  });
   return { code: r.status, sortie: `${r.stdout ?? ''}${r.stderr ?? ''}` };
 }
 

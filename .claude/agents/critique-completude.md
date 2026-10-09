@@ -60,6 +60,7 @@ n'aurait jamais existé dans l'outil).
 
 - les tâches du lot, leurs REQ, leurs résultats, et les tâches écartées par le composeur
 - le registre des exigences et, s'il existe, la traçabilité générée
+- les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier
 
 ### Sorties
 
@@ -74,11 +75,7 @@ n'aurait jamais existé dans l'outil).
 
 ### Documents à lire
 
-- `docs/REQUIREMENTS.md` — les orphelins se cherchent dans les deux sens, depuis ce registre
-- `docs/requirements.json` — la même chose, exploitable par script : REQ → tâches
-- `docs/tasks.json` — les tâches du lot et celles que le composeur a écartées
 - `docs/tiers/README.md` — un tiers sans plan de repli écrit est un manque
-- `docs/PLAN-STATE.md` — les bloquées, les questions ouvertes, la dette déclarée
 
 ### Outils et droit d’écriture
 
