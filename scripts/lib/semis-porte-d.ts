@@ -74,6 +74,8 @@ const ECHEANCE = '2026-01-02 00:00:00+00';
 const NOM_D_ECHEANCE = /expire|fin|echeance|jusqu/;
 /** Borne des candidats d'une table : au-delà, la table se déclare non semée plutôt que d'exploser. */
 const CANDIDATS_MAX = 400;
+/** Au-delà, la variante de base n'essaie pas ses unions en priorité (voir `candidatsDe`). */
+const FERMETURES_MAX_UNIONS = 8;
 
 const ident = (n: string): string => `"${n.replace(/"/g, '""')}"`;
 const litteral = (v: string): string => `'${v.replace(/'/g, "''")}'`;
@@ -157,10 +159,18 @@ function caracteresDeClasse(corps: string): string[] {
 function motifsDesChecks(contraintes: ContrainteVue[]): Map<string, string> {
   const motifs = new Map<string, string>();
   const forme = /\(?"?([A-Za-z_][A-Za-z0-9_]*)"?\)?(?:::[\w ]+?)?\s+~\s+'((?:[^']|'')*)'/g;
+  const liste =
+    /\(?"?([A-Za-z_][A-Za-z0-9_]*)"?\)?(?:::[\w ]+?)?\s+=\s+ANY\s+\(+ARRAY\['((?:[^']|'')*)'/g;
   for (const k of contraintes) {
     if (k.genre !== 'c') continue;
     for (const m of k.definition.matchAll(forme)) {
       if (!motifs.has(m[1]!)) motifs.set(m[1]!, m[2]!.replace(/''/g, "'"));
+    }
+    // Une liste fermée, `(colonne)::text = ANY ((ARRAY['3.7'::…, …])…)` : sa première valeur, en
+    // motif littéral (T-ARG-045 : l'article d'une mise en demeure).
+    for (const m of k.definition.matchAll(liste)) {
+      const v = m[2]!.replace(/''/g, "'").replace(/[\\^$.*+?()[\]{}|]/g, (x) => `\\${x}`);
+      if (!motifs.has(m[1]!)) motifs.set(m[1]!, `^${v}$`);
     }
   }
   return motifs;
@@ -363,29 +373,55 @@ function candidatsDe(table: string, schema: SchemaVu): string[] {
     if (!sortie.includes(sql)) sortie.push(sql);
     return sortie.length >= CANDIDATS_MAX;
   };
-  for (const v of variantesEnum) {
+  // L'union de groupes de nullables : deux fermetures qu'une exclusion CONNUE sépare ne sont jamais unies.
+  const separees = (g: readonly ColonneVue[], h: readonly ColonneVue[]): boolean => {
+    const x = new Set(g.flatMap((c) => [...(liens.exclusives.get(c.colonne) ?? [])]));
+    return h.some((c) => x.has(c.colonne));
+  };
+  const unir = (...gs: (readonly ColonneVue[])[]): ColonneVue[] => [
+    ...new Map(gs.flat().map((c) => [c.colonne, c])).values(),
+  ];
+  const parDeux = (v: Map<string, string>): boolean => {
+    for (let a = 0; a < fermees.length; a++) {
+      for (let b = a + 1; b < fermees.length; b++) {
+        if (separees(fermees[a]!, fermees[b]!)) continue;
+        if (candidat(v, unir(fermees[a]!, fermees[b]!))) return true;
+      }
+    }
+    return false;
+  };
+  const parTrois = (v: Map<string, string>): boolean => {
+    for (let a = 0; a < fermees.length; a++) {
+      for (let b = a + 1; b < fermees.length; b++) {
+        if (separees(fermees[a]!, fermees[b]!)) continue;
+        for (let c = b + 1; c < fermees.length; c++) {
+          if (separees(fermees[a]!, fermees[c]!) || separees(fermees[b]!, fermees[c]!)) continue;
+          if (candidat(v, unir(fermees[a]!, fermees[b]!, fermees[c]!))) return true;
+        }
+      }
+    }
+    return false;
+  };
+  for (const [n, v] of variantesEnum.entries()) {
     for (const r of remplissages) if (candidat(v, r)) return sortie;
+    // LA VARIANTE DE BASE ÉPUISE SES UNIONS AVANT QU'UNE AUTRE VALEUR D'ENUM NE SOIT ESSAYÉE (T-ARG-045,
+    // CI de 5813f318). Une mise en demeure (`decisions_de_contrat`) exige son article, sa clé
+    // d'idempotence ET son texte avec son empreinte, trois fermetures : sans cela la table se semait
+    // d'une résiliation SANS texte, et le litige qui vise la décision (garde de naissance) ne se semait
+    // jamais. Bornée aux tables d'au plus `FERMETURES_MAX_UNIONS` fermetures, pour que les unions de la
+    // base ne consomment pas `CANDIDATS_MAX` au détriment des autres variantes.
+    if (n === 0 && fermees.length <= FERMETURES_MAX_UNIONS) {
+      if (parDeux(v) || parTrois(v)) return sortie;
+    }
   }
   // SECONDE PASSE, APRÈS toutes les autres (tables de #556) : DEUX groupes de nullables remplis ENSEMBLE,
   // l'union de deux fermetures. Un CHECK comme « exactement un porteur » (lu sous une forme que
   // `liensDesChecks` ne reconnaît pas, `num_nonnulls(…) = CASE … END`) et un autre comme « l'empreinte
   // ou sa purge » exigent un membre de CHACUN : aucun candidat d'une seule fermeture ne les tient.
-  // Venue après, elle ne change pas le candidat qui sème déjà une table. Deux fermetures qu'une
-  // exclusion CONNUE sépare ne sont jamais unies.
-  for (const v of variantesEnum) {
-    for (let a = 0; a < fermees.length; a++) {
-      const interdites = new Set(
-        fermees[a]!.flatMap((c) => [...(liens.exclusives.get(c.colonne) ?? [])])
-      );
-      for (let b = a + 1; b < fermees.length; b++) {
-        if (fermees[b]!.some((c) => interdites.has(c.colonne))) continue;
-        const union = [
-          ...new Map([...fermees[a]!, ...fermees[b]!].map((c) => [c.colonne, c])).values(),
-        ];
-        if (candidat(v, union)) return sortie;
-      }
-    }
-  }
+  // Venue après, elle ne change pas le candidat qui sème déjà une table.
+  for (const v of variantesEnum) if (parDeux(v)) return sortie;
+  // TROISIÈME PASSE, la même à trois groupes, après tout le reste.
+  for (const v of variantesEnum) if (parTrois(v)) return sortie;
   return sortie;
 }
 

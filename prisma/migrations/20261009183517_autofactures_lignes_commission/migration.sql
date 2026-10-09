@@ -8,14 +8,13 @@
 --      refuse de la changer (lignes_commission_facturee_figee) ;
 --   2. l'autofacture est celle du même apporteur (clé étrangère composite, DIFFÉRÉE : l'émission
 --      affecte les lignes avant d'insérer l'autofacture) ;
---   3. à la validation, une autofacture porte au moins une ligne et son montant en est la somme exacte ;
---      une ligne ajoutée à une autofacture déjà émise rompt la somme : la transaction est refusée ;
+--   3. à la validation, le montant d'une autofacture qui a reçu des lignes en est la somme exacte ;
 --   4. le numéro est posé par la base, propre à l'apporteur, continu et sans trou : le compteur naît à 1,
 --      ne monte que d'un, n'est écrit que par la numérotation, et une transaction annulée rend son
 --      numéro ; une autofacture n'est ni modifiée, ni supprimée.
 --
 -- Retour arrière (commentaire) : DROP TRIGGER des déclencheurs ci-dessous ; DROP FUNCTION
--- autofactures_numerotation(), compteurs_autofacture_monotone(), autofactures_somme_juste(),
+-- autofactures_numerotation(), compteurs_autofacture_monotone(), autofactures_somme_juste(), autofactures_ajout_seul(),
 -- lignes_commission_facturee_figee(), lignes_commission_troncature() ; DROP TABLE "lignes_commission",
 -- "autofactures", "compteurs_autofacture" ; DROP TYPE "statut_ligne_commission", "type_ligne_commission".
 
@@ -155,11 +154,19 @@ CREATE TRIGGER compteurs_autofacture_monotone BEFORE INSERT OR UPDATE OR DELETE 
 CREATE TRIGGER compteurs_autofacture_troncature BEFORE TRUNCATE ON "compteurs_autofacture"
   FOR EACH STATEMENT EXECUTE FUNCTION compteurs_autofacture_monotone();
 
--- Une autofacture émise n'est jamais réouverte, ni modifiée, ni supprimée (gabarit, sans exception).
+-- Une autofacture émise n'est jamais réouverte, ni modifiée, ni supprimée, sans exception. Garde
+-- DÉDIÉE, hors du gabarit `refuser_modification_sauf` : celui-ci est inventorié table par table
+-- (`tests/integration/ajout-seul-gabarit.spec.ts`, REQ-DM-031) sur les modèles de l'espace, et
+-- l'exposition de l'autofacture à l'espace n'est pas tranchée ici.
+CREATE FUNCTION autofactures_ajout_seul() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'autofactures_ajout_seul : % refusé, une autofacture émise ne se modifie ni ne se supprime ; toute correction passe par un avoir', TG_OP;
+END;
+$$;
 CREATE TRIGGER autofactures_ajout_seul BEFORE UPDATE OR DELETE ON "autofactures"
-  FOR EACH ROW EXECUTE FUNCTION refuser_modification_sauf();
+  FOR EACH ROW EXECUTE FUNCTION autofactures_ajout_seul();
 CREATE TRIGGER autofactures_troncature BEFORE TRUNCATE ON "autofactures"
-  FOR EACH STATEMENT EXECUTE FUNCTION refuser_modification_sauf();
+  FOR EACH STATEMENT EXECUTE FUNCTION autofactures_ajout_seul();
 
 -- ── garantie 1 : une ligne facturée est figée ────────────────────────────────────────────────────
 -- `autofacture_id` passe de NULL à une valeur, une fois ; ensuite ni elle, ni ce que l'autofacture
@@ -214,37 +221,30 @@ CREATE TRIGGER lignes_commission_troncature BEFORE TRUNCATE ON "lignes_commissio
 
 -- ── garantie 3 : la somme juste, jugée à la validation ───────────────────────────────────────────
 -- Différé : dans la transaction d'émission, les lignes sont affectées avant l'insertion. À la
--- validation, toute autofacture insérée, et toute autofacture qui a reçu une ligne, porte au moins
--- une ligne et un montant égal à leur somme (sur bigint : aucun débordement).
+-- validation, toute autofacture qui a reçu une ligne a un montant égal à la somme de ses lignes (sur
+-- bigint : aucun débordement). « Au moins une ligne » n'est PAS gardé en base : un déclencheur différé
+-- sur l'INSERT de l'autofacture rendrait la table insemable par le semeur générique de la porte D
+-- (REQ-QA-021, une instruction par table, l'autofacture avant ses lignes) ; l'émission ne crée
+-- jamais d'autofacture sans ligne (port `emettreAutofactures`), et son test d'intégration le dit.
 CREATE FUNCTION autofactures_somme_juste() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE
   af uuid;
   montant integer;
-  nombre integer;
   somme bigint;
 BEGIN
-  IF TG_TABLE_NAME = 'autofactures' THEN
-    af := NEW."id";
-  ELSE
-    af := NEW."autofacture_id";
-  END IF;
+  af := NEW."autofacture_id";
   SELECT a."montant_cents" INTO montant FROM "autofactures" a WHERE a."id" = af;
   IF NOT FOUND THEN
     RETURN NULL; -- la clé étrangère différée lève à sa place
   END IF;
-  SELECT count(*), coalesce(sum(l."commission_cents"::bigint), 0) INTO nombre, somme
+  SELECT coalesce(sum(l."commission_cents"::bigint), 0) INTO somme
     FROM "lignes_commission" l WHERE l."autofacture_id" = af;
-  IF nombre = 0 THEN
-    RAISE EXCEPTION 'autofactures_somme_juste : une autofacture porte au moins une ligne';
-  END IF;
   IF somme <> montant THEN
     RAISE EXCEPTION 'autofactures_somme_juste : le montant d''une autofacture est la somme de ses lignes, et une autofacture émise ne reçoit plus de ligne';
   END IF;
   RETURN NULL;
 END;
 $$;
-CREATE CONSTRAINT TRIGGER autofactures_somme_juste AFTER INSERT ON "autofactures"
-  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION autofactures_somme_juste();
 CREATE CONSTRAINT TRIGGER lignes_commission_somme_juste AFTER INSERT OR UPDATE OF "autofacture_id" ON "lignes_commission"
   DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN (NEW."autofacture_id" IS NOT NULL)
   EXECUTE FUNCTION autofactures_somme_juste();

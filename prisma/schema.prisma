@@ -1779,11 +1779,11 @@ model LigneCommission {
 }
 
 /// T-ARG-045 — une autofacture émise (REQ-ARG-018). Ajout seul : jamais réouverte, jamais modifiée,
-/// jamais supprimée (gabarit `refuser_modification_sauf`). `numero` est posé par la BASE à
+/// jamais supprimée (déclencheur dédié `autofactures_ajout_seul`). `numero` est posé par la BASE à
 /// l'insertion (déclencheur `autofactures_numerotation`) depuis `CompteurAutofacture` : séquence
 /// propre à l'apporteur, continue et sans trou ; une transaction annulée ne consomme aucun numéro.
-/// À la validation, la base vérifie qu'elle porte au moins une ligne et que `montantCents` en est la
-/// somme exacte (déclencheurs de contrainte différés) : une ligne ajoutée à une autofacture déjà
+/// À la validation, la base vérifie que `montantCents` est la somme exacte des lignes reçues
+/// (déclencheur de contrainte différé) : une ligne ajoutée à une autofacture déjà
 /// émise rompt cette somme, et la transaction est refusée.
 model Autofacture {
   id           String    @id @db.Uuid
