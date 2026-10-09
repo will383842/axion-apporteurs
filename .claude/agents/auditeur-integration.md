@@ -60,6 +60,7 @@ Rejouer la séquence complète d'un cycle de vente en la dégradant — même id
 
 - le contrat d'événements et son hash, dans les deux dépôts
 - une séquence complète d'un cycle de vente, à dégrader
+- les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier
 
 ### Sorties
 
@@ -75,7 +76,6 @@ Rejouer la séquence complète d'un cycle de vente en la dégradant — même id
 
 - `docs/REGLES-MAISON.md` — RM-03 fixtures du producteur réel, RM-08 valeur confrontée à la doc du tiers
 - `docs/AFFIRMATIONS-AXIONIA.md` — ce que l'autre dépôt fait vraiment, et depuis quand
-- `docs/REQUIREMENTS.md` — les REQ-INT, qui fixent le comportement exigé sous dégradation
 - `docs/runbooks/fusion-axionia.md` — travailler dans l'autre dépôt sans prendre sa file de fusion
 
 ### Outils et droit d’écriture

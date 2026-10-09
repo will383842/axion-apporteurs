@@ -73,10 +73,8 @@ Tenir `prisma/schema.prisma`, les migrations et `packages/contracts/` — les on
 
 ### Documents à lire
 
-- `docs/PLAN-STATE.md` — où en est le projet, ce qui est bloqué
 - `docs/REGLES-MAISON.md` — RM-01 dérivation, RM-04 enums, RM-06 index partiel
 - `docs/CONVENTIONS.md` — §5, la PR `schema` et son approbation bloquante
-- `docs/adr/INDEX.md` — les décisions déjà prises — index dérivé, jamais tenu à la main
 - `docs/GLOSSAIRE.md` — toute valeur d'enum doit y être
 - `docs/AFFIRMATIONS-AXIONIA.md` — ce que le code d'axionia fait vraiment, et à quelle date c'est vérifié
 

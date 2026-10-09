@@ -65,9 +65,7 @@ Tenir `docs/adr/` et son index dérivé, `docs/runbooks/` (une procédure exerc�
 
 ### Documents à lire
 
-- `docs/PLAN-STATE.md` — la vue dont il garde la lisibilité, sans jamais l'éditer
 - `docs/REGLES-MAISON.md` — la section « Leçons » lui confie `docs/LECONS.md`
-- `docs/adr/INDEX.md` — l'index qu'il régénère, dérivé du système de fichiers
 - `docs/tiers/README.md` — la forme imposée d'une fiche de tiers
 - `docs/runbooks/fusion-axionia.md` — le modèle d'un runbook déjà exercé
 

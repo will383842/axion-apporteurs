@@ -59,6 +59,7 @@ Tenir le registre des exigences, celui des décisions, le glossaire et la prés�
 - une exigence à écrire, à corriger ou à arbitrer
 - les manques rendus par `critique-completude` (A11) à chaque fin de lot
 - une clôture de phase à prononcer
+- les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier
 
 ### Sorties
 
@@ -73,11 +74,8 @@ Tenir le registre des exigences, celui des décisions, le glossaire et la prés�
 
 ### Documents à lire
 
-- `docs/PLAN-STATE.md` — où en est le projet, ce qui est bloqué — fichier dérivé
 - `docs/REGLES-MAISON.md` — les douze règles RM-nn qui ont coûté cher
 - `docs/CONVENTIONS.md` — §8, les fichiers réservés qu'il est seul à écrire
-- `docs/REQUIREMENTS.md` — le registre qu'il tient : texte testable, phase, module, étape
-- `docs/DECISIONS.md` — hypothèses datées, réversibilité, propriétaire
 - `docs/PRESEANCE.md` — l'ordre qui tranche deux REQ contradictoires
 - `docs/GLOSSAIRE.md` — le vocabulaire fermé des enums
 

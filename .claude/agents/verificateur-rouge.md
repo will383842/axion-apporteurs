@@ -67,6 +67,7 @@ Sur demande, et toujours quand l'auteur est A07, pour une garde introduite par l
 
 - une PR et les gardes qu'elle introduit
 - le message ROUGE que son auteur affirme avoir constaté
+- les seules gates que la PR touche, extraites de `docs/gates.json` par identifiant — jamais le registre entier
 
 ### Sorties
 
@@ -81,8 +82,6 @@ Sur demande, et toujours quand l'auteur est A07, pour une garde introduite par l
 ### Documents à lire
 
 - `docs/REGLES-MAISON.md` — RM-02, une garde ne vaut que si on l'a vue rougir ; RM-11, aucun défaut sur ce que le test fait varier
-- `docs/GATES.md` — la vue des gates et de leur preuve rouge
-- `docs/gates.json` — la `fixtureRouge` et la `preuveRouge` déclarées par chaque gate
 - `docs/CHARTE-AGENTS.md` — §6, sa suppléance de A07, qui n'a pas Bash et ne peut produire aucun rouge
 
 ### Outils et droit d’écriture

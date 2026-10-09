@@ -73,7 +73,6 @@ Produire les maquettes `docs/maquettes/<ecran>.html` et leur ligne de validation
 
 ### Documents à lire
 
-- `docs/PLAN-STATE.md` — où en est le projet, ce qui est bloqué
 - `docs/REGLES-MAISON.md` — RM-04 : un état affiché vient d'un enum, pas d'une chaîne libre
 - `docs/CONVENTIONS.md` — nommage français, forme des libellés
 - `docs/maquettes/VALIDATION.md` — une tâche d'écran n'est pas attribuable tant que sa maquette n'y est pas validée
