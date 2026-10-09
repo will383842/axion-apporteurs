@@ -27,6 +27,15 @@ import {
   ouvreDroitALaCommission,
   sortieDeFinDeContrat,
 } from '../../../src/domain/apporteur/effets-de-la-fin';
+import { dateEffetAtteinte, minuitDeParisDuJour } from '../../../src/domain/apporteur/resiliation';
+
+// Un espion TRANSPARENT sur la source unique de l'instant de fin (RM-01) : il rend ce que rend
+// l'original, et dit seulement qui l'appelle.
+vi.mock('../../../src/domain/apporteur/effets-de-la-fin', async (importOriginal) => {
+  const orig =
+    await importOriginal<typeof import('../../../src/domain/apporteur/effets-de-la-fin')>();
+  return { ...orig, finDuContratAvecPreavis: vi.fn(orig.finDuContratAvecPreavis) };
+});
 
 const A_ANNULER: readonly EtatAttribution[] = ['en_attente', 'provisoire'];
 const A_FAIRE_EXPIRER: readonly EtatAttribution[] = ['active', 'rdv_pris', 'proposition'];
@@ -248,5 +257,18 @@ describe('REQ-DM-011 — le geste de résiliation en console est réservé à un
     expect(j.r).toStrictEqual({ ok: false, motif: 'releve_requis' });
     expect(j.transaction).not.toHaveBeenCalled();
     expect(j.resilierUnApporteur).not.toHaveBeenCalled();
+  });
+});
+
+// @req REQ-JUR-015
+describe('SEC-66 — la FIN du contrat vaut `dateEffetAtteinte` (rattrapage 122, #319, 6038679021)', () => {
+  it('REQ-JUR-015 : TÉMOIN — `dateEffetAtteinte` bascule EXACTEMENT à `finDuContratAvecPreavis`, qu’elle appelle (source unique, RM-01), en hiver, en été et aux jours de changement d’heure', () => {
+    for (const jour of ['2026-11-03', '2026-07-03', '2026-03-29', '2026-10-25']) {
+      const fin = finDuContratAvecPreavis(minuitDeParisDuJour(jour));
+      vi.mocked(finDuContratAvecPreavis).mockClear();
+      expect(dateEffetAtteinte(jour, fin - 1)).toBe(false);
+      expect(dateEffetAtteinte(jour, fin)).toBe(true);
+      expect(vi.mocked(finDuContratAvecPreavis)).toHaveBeenCalled();
+    }
   });
 });
