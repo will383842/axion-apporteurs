@@ -10,8 +10,13 @@
 > appliquée : RM-nn ») y renvoient par numéro, jamais par paraphrase. Test : `tests/unit/gouvernance/regles-maison.spec.ts`
 > (chaque RM a une section ; les neuf règles que REQ-GOV-024 énumère sont chacune couvertes).
 >
-> Ordre de lecture d'une session d'agent (REQ-GOV-023) : `docs/PLAN-STATE.md` → **ce fichier** → la fiche de rôle →
-> la tâche → ses REQ. Un agent qui n'a pas lu ce fichier ne prend pas de tâche.
+> Ordre de lecture d'une session d'agent (REQ-GOV-023) : **ce fichier** → la fiche de rôle → la tâche → ses REQ
+> (`docs/PLAN-STATE.md` n'est plus tenu à jour par les PR depuis GOV-160 ; il se génère à la demande). Un agent qui n'a pas lu ce fichier ne prend pas de tâche.
+
+> **GOV-160 — décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160).** Les gardes de gouvernance sont archivées : RM-12, RM-13 et RM-15 sont
+> **ARCHIVÉES** (marquées comme telles ci-dessous, gardées pour l'historique, plus appliquées).
+> Dans le tableau, une garde archivée se lit dans `docs/gates.json` (`"statut": "archivee"`) :
+> elle ne tourne plus, la règle reste une bonne pratique. Les règles RM-01 à RM-11 et RM-14 restent.
 
 | RM    | Règle                                                   | Gate qui la vérifie                                    |
 | ----- | ------------------------------------------------------- | ------------------------------------------------------ |
@@ -26,10 +31,10 @@
 | RM-09 | Une fusion à la fois, l'atterrissage vérifié            | `deploy:verify`, `aucun-workflow-ne-pousse-sur-main`    |
 | RM-10 | Un seuil, une source, une date — aucun littéral         | `ssot:seuils` (JUR-T02)                                 |
 | RM-11 | Aucun défaut sur ce que le test fait varier             | revue lentille « exactitude », `verificateur-rouge`     |
-| RM-12 | Un identifiant nu n'est pas une référence               | `gov:identifiants`                                      |
-| RM-13 | Aucun lot composé tant qu'une PR de clôture est ouverte | `gov:etat` (`deux_pr_meme_tache`), Pas 7 du protocole de fusion |
+| RM-12 | **ARCHIVÉE** — Un identifiant nu n'est pas une référence | `gov:identifiants` (archivée)                           |
+| RM-13 | **ARCHIVÉE** — Aucun lot composé tant qu'une PR de clôture est ouverte | sans objet : plus de PR de clôture ni de rattrapage |
 | RM-14 | Un fichier neuf est invisible tant qu'il n'est pas à l'index | aucune — `git status --short` avant les gardes, rattrapé par la Gate A de la PR |
-| RM-15 | Une PR porte son entrée de journal avant d'être fusionnée | `gov:pr --pr <n>` (`pr_sans_entree_de_journal`, `journal_cite_une_pr_non_fusionnee`) ; après coup, `gov:etat` (`pr_fusionnee_sans_journal`) |
+| RM-15 | **ARCHIVÉE** — Une PR porte son entrée de journal avant d'être fusionnée | sans objet : plus de journal par PR |
 
 ---
 
@@ -177,6 +182,8 @@ ne lit jamais le champ.
 
 ## RM-12 — Un identifiant nu n'est pas une référence
 
+> **ARCHIVÉE par GOV-160** (décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160)) : `gov:identifiants` ne tourne plus ; citer sous la forme qualifiée reste une bonne pratique.
+
 **Énoncé.** Toute décision, constat ou exigence cités le sont par identifiant **qualifié** (`DEC-BEB-D03`,
 `REQ-DM-003`, `F-SEC-04`, `HYP-E1-9`), jamais « conforme à D3 » ; toute décision citée existe dans
 `docs/DECISIONS.md` (REQ-GOV-003, REQ-GOV-015).
@@ -188,6 +195,8 @@ selon le document lu.
 marqueur `// HYP-` sans entrée dans `DECISIONS.md` → rouge.
 
 ## RM-13 — Aucun lot composé tant qu'une PR de clôture est ouverte
+
+> **ARCHIVÉE par GOV-160** (décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160)) : aucune PR n’écrit plus de statut dans `docs/tasks.json` ; l’avancement se dérive des PR fusionnées (`pnpm avancement`). Il n’y a plus de PR de clôture.
 
 **Énoncé.** `pnpm lot:composer` ne se lance qu'une fois la PR de clôture du lot précédent **fusionnée**, son
 atterrissage vérifié (Pas 7 de `docs/PROTOCOLE-FUSION.md`) et `pnpm lot:cloture` passé. Une session qui trouve une PR
@@ -262,6 +271,8 @@ Le contrôle est procédural et tient en un geste — `git status --short` avant
 est poussé**, donc indexé : elle rattrape après coup, au prix d'un aller-retour, ce que la session n'a pas vu.
 
 ## RM-15 — Une PR porte son entrée de journal avant d'être fusionnée
+
+> **ARCHIVÉE par GOV-160** (décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160)) : plus d’entrée de journal par PR ; l’historique est celui des PR fusionnées.
 
 _Posée par **GOV-052**, qui livre dans la même PR la garde qui la tient. Cette section est la **seule** rédaction de
 l'obligation : la garde la cite par son numéro, et la leçon qui l'a fait naître (LEC-15, `docs/LECONS.md`) aussi. La

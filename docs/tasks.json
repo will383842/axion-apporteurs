@@ -7273,14 +7273,14 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "annulee",
       "owner": null,
       "lot": null,
       "branch": null,
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null,
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance.",
       "tests": {
         "REQ-GOV-011": [
           "revue-adversariale-exigee.spec.ts",
@@ -9354,14 +9354,14 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "annulee",
       "owner": null,
       "lot": null,
       "branch": null,
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "EXT-T08",
@@ -11840,7 +11840,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "annulee",
       "acceptance": "UNE MEME GARDE PORTE TROIS NOMS : la chaine declaree dans `package.json`, le script qui l'execute reellement, et l'usage ecrit en tete du fichier. C'est le defaut que GOV-030 a ferme UNE FOIS et qui repousse par un autre bout. Faits mesures : l'entree du registre n'a pas d'alias, si bien que la reconnaissance de l'appel tient au litteral d'un COMMENTAIRE — un faux rouge deja rencontre ; et sa preuve rouge vaut vide. AGGRAVANT HORS DEPOT : aucun outil n'ecrit le champ d'alias, ni ne pose une PREMIERE valeur sur un champ vide du registre ; ces deux verbes sont a ecrire avant que la tache puisse se fermer, et c'est ecrit ici pour qu'on ne le decouvre pas au dernier moment. A livrer : (1) un ADR qui tranche entre renommer la chaine et renommer l'entree — l'identifiant est cite par six documents, il ne se change pas dans une demande de fusion ; (2) l'alias pose, la preuve rouge posee ; (3) la reconnaissance de l'appel ne lit plus un commentaire. TEMOIN A DEUX FACES : le nom retire du workflow fait sortir la garde en code non nul et le NOMME ; le meme nom present seulement dans un commentaire la fait AUSSI sortir en code non nul — c'est la face qui manque aujourd'hui ; le workflow du depot la fait sortir en zero. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-008": [
@@ -11852,7 +11852,8 @@
         "REQ-QA-013": [
           "tests/unit/gouvernance/un-nom-une-garde.spec.ts"
         ]
-      }
+      },
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "GOV-064",
@@ -11919,13 +11920,14 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
+      "statut": "annulee",
       "acceptance": "LA FORME NE RECONNAIT QU'UNE ECRITURE CANONIQUE. Des familles entieres de representation sont declarees NON reconnues, et la liste de ce qui n'est pas reconnu N'EST PAS CLOSE — ce qui veut dire qu'un vert de cette garde ne dit pas ce qu'on croit qu'il dit sur un depot PUBLIC. ⚠️ AUCUNE DE CES REPRESENTATIONS N'EST DECRITE ICI : elles vivent hors depot, et l'acceptance publique ne les nomme ni ne les compte. A livrer : (1) la liste CLOSE des representations ADMISES, ecrite a UN SEUL endroit du code, citee sans recopie par `docs/gates.json` et imprimee a chaque vert ; (2) un refus NOMME pour tout ce qui sort de cette liste — la garde refuse ce qu'elle ne sait pas juger, elle ne le laisse pas passer ; (3) la limite de la forme imprimee avec chaque vert : « aucune coordonnee » sans ses limites se lit comme une absence prouvee, et c'est le defaut que GOV-036 a deja corrige une fois. TEMOIN A DEUX FACES : des temoins couvrant CHAQUE famille admise font sortir la garde en code non nul, un par un, et NOMMENT la famille ; le depot reel la fait sortir en zero, avec le compte des fichiers et des familles reellement confrontes. Les temoins vivent dans le depot sous une forme qui n'est pas une donnee reelle. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-031": [
           "tests/unit/gouvernance/limite-de-la-forme-close.spec.ts"
         ]
-      }
+      },
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "GOV-066",
@@ -11995,7 +11997,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "annulee",
       "acceptance": "MESURE PAR MUTATION : sous quatorze mutants de la couche de LECTURE, le mode de preuve de la garde reste a ZERO mutant tue — seule la suite de tests les tue, et deux d'entre eux seulement sous Linux. Autrement dit, le mode de preuve, qui est ce qu'on regarde pour croire la garde armee, ne voit rien de la couche qui lui donne ses octets. Faits joints : un temoin est saute sous Windows sans controle positif, donc il ne prouve rien la ou il tourne ; un sous-module leve une erreur SANS famille de refus, donc hors du canal de refus ; les sources du registre sont lues sur le disque et non dans le contenu juge ; et deux echecs fermes de configuration d'arbre ne sont pas mesures. A livrer : un temoin PUR du decoupage de la lecture et un de l'etage superieur, tous deux dans le mode de preuve ; chaque erreur de lecture rattachee a une famille de refus nommee ; le temoin saute sous Windows double d'un controle positif qui, lui, tourne partout. TEMOIN A DEUX FACES : le mode de preuve lance sur la garde du depot tue les quatorze mutants et sort en zero ; le meme lance sur une copie dont la couche de lecture est amputee sort en code non nul et NOMME les mutants survivants. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-012": [
@@ -12004,7 +12006,8 @@
         "REQ-GOV-031": [
           "tests/unit/gouvernance/lecture-par-empreinte-eprouvee.spec.ts"
         ]
-      }
+      },
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "GOV-068",
@@ -12035,7 +12038,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
+      "statut": "annulee",
       "acceptance": "TROIS GARDES, TROIS REPONSES A LA MEME QUESTION. La garde des termes interdits REFUSE ce qu'elle ne sait pas lire. La garde d'entite le CLASSE par les octets du contenu indexe, avec un refus nomme. La garde de schema et d'enums lit TOUT comme de l'UTF-8 : un fichier encode autrement, portant une liste d'etats, sort en ZERO — et un repertoire lui fait remonter une erreur systeme brute, hors de tout canal de refus. La convergence avait ete renvoyee « a la seconde demande de fusion » et n'a pas ete faite. Trois politiques pour un meme fait, c'est deux de trop, et celle qui rend zero est celle qui garde les etats occupants. A livrer : UNE primitive unique d'illisibilite, dans `fichiers-suivis.ts`, importee par les trois gardes ; aucune des trois ne garde sa propre reponse. TEMOIN A DEUX FACES : un fichier encode autrement qu'en UTF-8 et portant une liste d'etats, puis un repertoire passe la ou un fichier est attendu, font sortir CHACUNE des trois gardes en code non nul avec le MEME nom de refus ; les fichiers du depot les font sortir en zero, chacune imprimant le compte des fichiers reellement lus. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-024": [
@@ -12047,7 +12050,8 @@
         "REQ-DM-003": [
           "tests/unit/gouvernance/une-seule-politique-d-illisibilite.spec.ts"
         ]
-      }
+      },
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "GOV-069",
@@ -12120,7 +12124,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "annulee",
       "acceptance": "L'ADR qui fixe le perimetre de la garde des listes d'etats est reste au statut PROPOSE. Or `gov:adr` ne juge le texte et les assertions qu'a partir du statut ACCEPTE : l'ADR existe, personne ne le verifie, et une de ses assertions — une portee amputee — survit a la mutation. Des arbitrages qui m'ont ete renvoyes restent ouverts et doivent etre tranches ICI, pas laisses au lecteur suivant : les racines hors de la famille des listes d'etats (`messages/`, `docs/adr/`, le paquet de contrats), la casse des identifiants, et le sort des fichiers Markdown places sous `src/`. Fait joint : un compte ecrit dans l'ADR sur les commentaires du schema est FAUX, et c'est la quatrieme fois qu'un compte tape ne tient pas dans ce depot. A livrer : les trois arbitrages tranches et ecrits ; le compte faux corrige ou derive ; l'ADR passe au statut accepte, donc soumis a sa garde. TEMOIN A DEUX FACES : une assertion de l'ADR rendue fausse par une modification du code fait sortir `gov:adr` en code non nul et NOMME l'assertion ; l'ADR et le code du depot la font sortir en zero, avec le compte des assertions reellement confrontees — un ADR propose ne comptait pour aucune. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-009": [
@@ -12132,7 +12136,8 @@
         "REQ-DM-003": [
           "tests/unit/gouvernance/adr-0011-perimetre.spec.ts"
         ]
-      }
+      },
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "GOV-071",
@@ -12558,7 +12563,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "annulee",
       "acceptance": "LA TRENTE-CINQUIEME ATTRIBUTION ROMPUE, ET ELLE EST LATENTE — elle n'existera qu'au jour ou UX-P2-05 quittera son chemin gabarit. FAIT MESURE le 2026-09-16 : `partners:grille:check` nomme UX-P2-05 dans sa prose (« etendue par UX-P2-05 »), et le `script` de cette gate vit chez axionia depuis le lot preparatoire. UX-P2-05 est une tache PARTNERS, de phase 2, sans acceptance et dont les chemins sont encore un gabarit. La mention est donc CROSS-DEPOT : aucun chemin ne pourra JAMAIS la refermer, puisque la refermer reviendrait a donner a une tache de Partners un fichier d'axionia. Elle est aujourd'hui masquee par l'exemption « chemins pas encore resolus », et ce masque tombera avec le gabarit. POURQUOI ON NE LA RETIRE PAS AUJOURD'HUI, ET C'EST LE POINT : retirer « etendue par UX-P2-05 » supprimerait le SEUL lien ecrit entre cette tache et la grille de commission. UX-P2-05 n'a aucune acceptance ou le reloger — on effacerait l'information au lieu de la deplacer, et le lecteur suivant ne saurait plus pourquoi cet ecran touche la grille. L'ORDRE COMPTE, et il est l'objet de cette tache. A livrer, DANS CET ORDRE : (1) l'acceptance d'UX-P2-05 est ecrite et dit ce que cet ecran fait de la grille versionnee — ou elle la lit, ce qu'elle en affiche, ce qu'elle n'a pas le droit de recalculer (REQ-DM-014 : le contrat reference une version, l'ecran l'affiche sans la modifier) ; (2) SEULEMENT ENSUITE, la mention est retiree du champ de prose de `partners:grille:check`. (3) La regle qui gouverne les deux gestes est ecrite une fois pour toutes : une entree de `docs/gates.json` ne nomme que des taches du depot de son `script`. TEMOIN A DEUX FACES : une entree de gate qui nomme une tache de l'autre depot fait sortir la garde en code non nul et NOMME la gate, la tache et les deux depots ; le registre du depot, une fois UX-P2-05 relogee, la fait sortir en zero, avec le compte des mentions reellement confrontees. ⚠️ CE QUE CETTE TACHE NE FAIT PAS : elle ne touche a aucune des neuf autres mentions encore masquees par un gabarit (SEC-19, UX-P2-06, SEC-26, QA-T21, JUR-T13, QA-T28, QA-T19 deux fois, QA-T27). Celles-la sont du MEME depot que le script de leur gate : elles se referment par un chemin de plus le jour de leur lot, et ce sont des exemptions legitimes, pas des dettes.",
       "tests": {
         "REQ-GOV-021": [
@@ -12567,7 +12572,8 @@
         "REQ-DM-014": [
           "tests/unit/gouvernance/mention-de-gate-resolue.spec.ts"
         ]
-      }
+      },
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "GOV-081",
@@ -12851,7 +12857,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "annulee",
       "acceptance": "EPROUVE SUR BAC DEDIE LE 2026-09-17, ET C'EST UNE MESURE, PAS UNE CRAINTE. Une sequence d'ecritures sur les chemins d'une tache — ajouter l'un, retirer l'autre — peut s'interrompre entre les deux. L'etat qui reste porte alors un CHEMIN FANTOME : un chemin qui ne correspond a AUCUN fichier suivi. Mesure : ni `lot:paths`, ni `lot:paths:check`, ni `gov:tasks`, ni `gov:attributions` ne rougissent dessus. Les quatre sortent en zero. Le registre decrit un monde qui n'existe pas, et quatre gardes le certifient. POURQUOI CE TROU EST PLUS LARGE QUE SA CAUSE : il ne demande PAS qu'une ecriture s'interrompe. Un chemin tape a la main, un fichier renomme sans que le registre suive, une garde deplacee d'un repertoire a l'autre produisent le meme etat — et c'est exactement ce qu'on a trouve sur GOV-044, dont le registre nommait `scripts/gates/gov-gates.ts` depuis sa creation, un fichier qui n'a JAMAIS existe. La cause n'etait pas une ecriture interrompue ; le symptome, si. LA NUANCE QUI DECIDE DE LA FORME DE LA GARDE, et il faut la tenir : un chemin qui n'existe pas encore est LEGITIME — c'est le cas de la quasi-totalite des chemins de la phase 0, que leurs taches vont CREER. Une garde qui refuserait tout chemin absent du disque bloquerait le backlog entier des demain. A LIVRER. (1) Le refus porte sur ce qu'on peut trancher sans deviner : un chemin d'une tache LIVREE qui ne correspond a aucun fichier suivi est un refus NOMME — la tache est finie, ses fichiers devraient etre la. Pour une tache non livree, l'absence est normale et la garde le DIT au lieu de se taire. (2) Le compte des chemins encore inexistants est IMPRIME a chaque vert, par phase : « aucun chemin fantome » sans ce compte se lirait comme une absence prouvee, et c'est la cinquieme fois que ce depot rencontre cette forme. (3) TEMOIN A DEUX FACES : une tache livree a qui l'on donne un chemin qui ne correspond a aucun fichier suivi fait sortir la garde en code non nul et NOMME la tache et le chemin ; le registre du depot la fait sortir en zero. CONTRE-TEMOIN OBLIGATOIRE : les chemins des taches `a_faire`, qui n'existent legitimement pas, restent VERTS — un refus qui les condamnerait arreterait la phase 0 le jour de sa livraison. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-021": [
@@ -12860,7 +12866,8 @@
         "REQ-GOV-032": [
           "tests/unit/gouvernance/un-chemin-fantome-est-un-refus.spec.ts"
         ]
-      }
+      },
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "UX-P0-01b",
@@ -14390,13 +14397,14 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "annulee",
       "acceptance": "Releve par la lentille exactitude sur la PR #195 : l'acceptance de GOV-064 demandait (3) de mesurer si la forge accepte au depot une entree d'index au nom non UTF-8, et de l'ecrire. Ce n'est pas fait : la source unique la refuse desormais cote poste, mais ce que la forge accepte ou refuse n'est pas connu. A livrer : la mesure, faite dans un depot JETABLE et prive, jamais dans ce depot public ; son resultat ecrit dans le commentaire de la source unique, sans la forme exacte de l'entree ; et, si la forge l'accepte, un temoin qui prouve que la porte A la refuse quand meme. La forme precise reste hors depot. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-031": [
           "tests/unit/gouvernance/deux-chemins-ne-se-confondent-pas.spec.ts"
         ]
-      }
+      },
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "GOV-106",
@@ -14973,7 +14981,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "annulee",
       "acceptance": "Releve par la lentille exactitude sur la PR #209, mesure le 2026-09-29 sur la PR axion-ia #998 (commit de fusion 41d71a7, attestation d'INT-T01b) : la PR a modifie vingt fichiers, dont src/server/partners/contrat.ts, commission.ts, config.ts, enveloppe.ts, frontiere.ts, ht.ts, payloads.ts et package.json ; les paths d'INT-T01b en declarent huit. Et INT-T01b porte schema: true alors qu'aucun de ces vingt fichiers n'est un chemin de schema au sens de ce depot : a verifier avant de le changer. A livrer : (1) les paths d'INT-T01b recoivent les fichiers reellement modifies, confrontes a la liste de la forge, par les outils de registre ; (2) le drapeau schema est tranche, avec sa source ; (3) une garde confronte, pour toute tache livree ailleurs et attestee, ses paths aux fichiers de la PR attestee, et nomme l'ecart. TEMOIN rouge d'abord : une attestation dont la PR a touche un fichier que la tache ne declare pas. REPORTÉE APRÈS LANCEMENT — gel de la gouvernance, décision de Williams du 2026-09-29 : dette non bloquante, reclassée en phase 3.",
       "tests": {
         "REQ-GOV-021": [
@@ -14985,7 +14993,7 @@
       "branch": null,
       "pr": null,
       "attestation": null,
-      "motif": null
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "GOV-121",
@@ -17294,8 +17302,9 @@
       ],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
-      "acceptance": "(1) `gov:lexique` voit les formes d'identifiants de `prisma/**` et `src/**` que la note confidentielle hors dépôt décrit, en réutilisant `segments()`. Les témoins sont des formes CONFIDENTIELLES tenues hors dépôt, comme GOV-109 : ni l'acceptance, ni les commits, ni le journal ne les énumèrent ni n'en décrivent le mécanisme. Une seule exception déclarée, datée et justifiée : l'identifiant importé de la grille axion-ia, sur son fichier d'import. (2) Famille `population_interne`, portée apporteur, sur les seules formes COMPOSÉES du nom du rôle, jamais sur « conseiller » seul (`docs/tiers/banque.md`). Le cliquet de longueur passe sciemment à 11. Témoin dans la micro-copy de l'espace ; témoin vert : « former ses salariés » (`etats-vides.ts`) passe. (3) `import_console` : aucun fichier de l'espace, des e-mails apporteur ni de `src/server/pdf/**` n'importe `src/server/console/**`, `src/server/prise-en-charge/**`, `src/server/integrations/crm-pro/**`, `src/domain/part-variable/**`, `src/domain/statistiques/**` ni `src/domain/pilotage/**`. Un témoin par chemin. (4) `revues.ts` : segments sensibles `paie`, `part-variable`, `conseiller`, `prise-en-charge`, `crm-pro`. (5) Aucune portée réduite. Réduite par la question 22 : il n'existe plus de micro-copy de conseiller dans la console à couvrir."
+      "statut": "annulee",
+      "acceptance": "(1) `gov:lexique` voit les formes d'identifiants de `prisma/**` et `src/**` que la note confidentielle hors dépôt décrit, en réutilisant `segments()`. Les témoins sont des formes CONFIDENTIELLES tenues hors dépôt, comme GOV-109 : ni l'acceptance, ni les commits, ni le journal ne les énumèrent ni n'en décrivent le mécanisme. Une seule exception déclarée, datée et justifiée : l'identifiant importé de la grille axion-ia, sur son fichier d'import. (2) Famille `population_interne`, portée apporteur, sur les seules formes COMPOSÉES du nom du rôle, jamais sur « conseiller » seul (`docs/tiers/banque.md`). Le cliquet de longueur passe sciemment à 11. Témoin dans la micro-copy de l'espace ; témoin vert : « former ses salariés » (`etats-vides.ts`) passe. (3) `import_console` : aucun fichier de l'espace, des e-mails apporteur ni de `src/server/pdf/**` n'importe `src/server/console/**`, `src/server/prise-en-charge/**`, `src/server/integrations/crm-pro/**`, `src/domain/part-variable/**`, `src/domain/statistiques/**` ni `src/domain/pilotage/**`. Un témoin par chemin. (4) `revues.ts` : segments sensibles `paie`, `part-variable`, `conseiller`, `prise-en-charge`, `crm-pro`. (5) Aucune portée réduite. Réduite par la question 22 : il n'existe plus de micro-copy de conseiller dans la console à couvrir.",
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "SEC-31",
@@ -19713,8 +19722,9 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "acceptance": "Écart C16 de la vérification de bout en bout, porté par l'audit indépendant du plan de la Phase 1 (2026-10-01). (1) TÉMOINS rouges avec les deux phrases réelles relevées par la vérification (dans `docs/REQUIREMENTS.md` et dans le texte d'une exigence de parrainage). (2) Les valeurs des exigences absorbées sont purgées. (3) Les témoins `--prove` de `gov-publication.ts` sont rendus fictifs. Aucun montant n'est recopié dans ce dépôt public. ORDRE (rattrapage 64, décision de la coordination) : SEC-48 porte aussi `scripts/gates/gov-publication.ts` ; SEC-48 fusionne D'ABORD, puis GOV-134 s'y rebase.\n\nREPORTÉE le 2026-10-07 en phase 2, « après la mise en service » (décision de Williams du 2026-10-05, #319, commentaire 5988252245, gel de la phase 1 ; tri validé par Williams le 2026-10-07, #319, commentaire 6032205185, sa réponse MOT POUR MOT : « ok applique la version de la coordination » ; liste corrigée par la coordination sous délégation, #319, commentaires 6032408699 et 6032997495). Règle du tri : ni `sensible`, ni zone juridique ou sécurité, ni schéma, ni dépendance d'une tâche de phase 1 retenue."
+      "statut": "annulee",
+      "acceptance": "Écart C16 de la vérification de bout en bout, porté par l'audit indépendant du plan de la Phase 1 (2026-10-01). (1) TÉMOINS rouges avec les deux phrases réelles relevées par la vérification (dans `docs/REQUIREMENTS.md` et dans le texte d'une exigence de parrainage). (2) Les valeurs des exigences absorbées sont purgées. (3) Les témoins `--prove` de `gov-publication.ts` sont rendus fictifs. Aucun montant n'est recopié dans ce dépôt public. ORDRE (rattrapage 64, décision de la coordination) : SEC-48 porte aussi `scripts/gates/gov-publication.ts` ; SEC-48 fusionne D'ABORD, puis GOV-134 s'y rebase.\n\nREPORTÉE le 2026-10-07 en phase 2, « après la mise en service » (décision de Williams du 2026-10-05, #319, commentaire 5988252245, gel de la phase 1 ; tri validé par Williams le 2026-10-07, #319, commentaire 6032205185, sa réponse MOT POUR MOT : « ok applique la version de la coordination » ; liste corrigée par la coordination sous délégation, #319, commentaires 6032408699 et 6032997495). Règle du tri : ni `sensible`, ni zone juridique ou sécurité, ni schéma, ni dépendance d'une tâche de phase 1 retenue.",
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "INT-T51",
@@ -20395,13 +20405,14 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
+      "statut": "annulee",
       "acceptance": "Passe du lot dédié de GOV-116, lancée par Williams en un geste (raccourci du Bureau LANCER-LOT-DEDIE-2026-10-02.bat), APRÈS sa séance de décisions du 2026-10-02 (`_REPRISE-AXION-APPORTEURS/SEANCE-WILLIAMS-2026-10-02.md`). `docs/DECISIONS.md` reçoit : HYP-W19-OBJECTIFS tranchée en B (pilotage réel des commerciaux, 2026-10-01) ; HYP-W20-BADGE amendée en A (libellé choisi par Williams, « En attente · confirmée automatiquement le <date> », 2026-10-01 ; phrase d'aide à valider en séance, point 7) ; W6 et W11 amendées pour la conférence commissionnée au forfait (2026-10-01) : 31 paliers, la conférence rangée dans les formations collectives, quatre familles non commissionnées ; puis les réponses de la séance du 2026-10-02 (art. 3.5, HYP-W19-NON-EXPLOITATION, HYP-W19-CARENCE, « ni annulé » de JUR-T42, JUR-T43, Indeed, JUR-T09), chacune avec sa citation mot pour mot renvoyée à sa séquence hors dépôt et sa date en colonne « Tranchée ». ATOMICITÉ : le test W6 de `tests/unit/contrat/contract-template-complete.spec.ts` lit la ligne W6 ; la PR de ce lot porte donc aussi, sur la même branche, la mise à jour de ce test (poste dev), le palier de la conférence dans l'annexe 1 du contrat (A07) et l'entrée `partners:grille:complete` de `docs/gates.json` (A01), pour que `main` ne rougisse jamais ; ces chemins entrent aux paths de la tâche de suite de JUR-T43 qui les porte. LOT CRM PRO (rattrapage 57) : la décision de Williams du 2026-10-02, option B (« il faut que toutes les données que l'on récupère aille dans le crm pro soit pour nouveau prospect ou cleitn saist par approteurs ou commercial ou nous ou soit tout ce qui est l'enrichissment de chaaque fiche », verbatim) remet en cause HYP-W19-NON-EXPLOITATION, dont cette tâche tire une partie de son acceptance ; la manière de procéder attend Williams, et rien de ce qui en dépend ne se code avant. `RESERVE_APRES_ACTE_APPORTEUR_JOURS` (30 jours) est gardé (coordination). LEVÉE (rattrapage 61) : Williams a autorisé l'écriture du nouvel art. 3.5 al. 4 (option B, avec les deux protections de l'apporteur), écrit par A07 sur #433 ; ce que cette tâche tirait de la non-exploitation se relit sur ce nouvel al. 4 (usage commercial des données ; commission due pendant l'attribution quel que soit celui qui conclut ; aucun démarchage pendant le délai de confirmation ; réserve de `RESERVE_APRES_ACTE_APPORTEUR_JOURS` jours après une vérification ou une déclaration refusée ou en attente). Texte final à valider par Williams.\n\nREPORTÉE le 2026-10-07 en phase 2, « après la mise en service » (décision de Williams du 2026-10-05, #319, commentaire 5988252245, gel de la phase 1 ; tri validé par Williams le 2026-10-07, #319, commentaire 6032205185, sa réponse MOT POUR MOT : « ok applique la version de la coordination » ; liste corrigée par la coordination sous délégation, #319, commentaires 6032408699 et 6032997495). Règle du tri : ni `sensible`, ni zone juridique ou sécurité, ni schéma, ni dépendance d'une tâche de phase 1 retenue.",
       "tests": {
         "REQ-GOV-015": [
           "tests/unit/gouvernance/gardes.spec.ts"
         ]
-      }
+      },
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "JUR-T46",
@@ -25108,13 +25119,14 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.1,
-      "statut": "a_faire",
+      "statut": "annulee",
       "acceptance": "Versée au rattrapage 108 (coordination, par délégation de Williams ; A01, sans code). La mise en production n'a lieu que si toutes ses dépendances sont fusionnées. DÉPENDANCES : les tâches marquées « BLOQUANTE AVANT LA MISE EN SERVICE » (relevé du 2026-10-04 : QA-T16, SEC-56, DM-48, DM-68) ; CPL-T24, qui ne bloque que le premier versement (dépendance de T-ARG-018), listée pour qu'on la voie ; GOV-147, la garde qui fait respecter cette liste. NOTES : JUR-T52 (phase 2) bloque l'émission vers le CRM Pro (INT-T68-P), elle n'est pas en dépendance faute de phase commune ; QA-T28 (audit de sécurité pré-lancement, phase 3) reste à part. DÉPENDANCES AJOUTÉES (rattrapage 109, coordination) : UX-P1-56 (la borne de 1 000 caractères à la saisie), JUR-T62 (« Vos données dans la console »). QA-T28 (décision de Williams du 04/10 : elle entre dans la porte) suit au rattrapage 110 : son passage en phase 1 touche une exemption figée de gov:attributions.\n\nCRITÈRE D'ORDRE (rattrapage 114 ; sécurité, #695, commentaire 5983261288), MOT POUR MOT : « INT-T72-A est DÉPLOYÉE côté axion-ia, et sa chaîne canonique est vérifiée de bout en bout sur la recette (une relecture signée acceptée par Partners), avant ou en même temps que la mise en service de Partners ; d'ici là, une relecture refusée en recette est un échec fermé attendu, jamais un repli vers la forme courte. » DÉPENDANCE AJOUTÉE (rattrapage 114, gouvernance) : INT-T72-A.\n\nCRITÈRE D'EXPLOITATION (rattrapage 114 ; A02, #724, commentaire 5983323564 ; extraits : le paragraphe « Ce qui se passe tant que Partners reste sur la v1 » et le point 3 de « Ce qu'il faut synchroniser »), TELS QUELS :\n\n**Ce qui se passe tant que Partners reste sur la v1 :** la conférence y est un barème indéfini. Une commission de conférence née d'une attribution liée à la v1 reste BLOQUÉE, en échec fermé, et n'est jamais payée à une valeur inventée. Elle ne passera pas au forfait par l'import de la v2 : une attribution garde SA version. Pour que les conférences des nouvelles attributions soient commissionnées, il faut importer la v2 avant qu'elles naissent. Ce n'est pas une casse, c'est une décision de calendrier. En phase 1, aucun calcul de commission ne tourne encore (T-ARG), et aucun droit n'est donc perdu.\n\n3. **L'ordre des numéros** : la v2 doit être importée AVANT la v3. Un import ne réécrit jamais une version et refuse un numéro connu sous une autre empreinte, mais rien n'interdit d'importer la v3 en sautant la v2. Il faut l'éviter, pour que l'historique des versions reflète les publications.\n\nDÉCISION (rattrapage 114, gouvernance, A01, sur la proposition de la coordination) : A02 décrit un choix de calendrier ; la gouvernance en fait un critère de la porte. Avant toute attribution de conférence, la grille de commissions v2 (la conférence au forfait) est importée dans Partners par la commande de DM-03-P ; la v2 l'est avant la v3. DÉPENDANCE AJOUTÉE (rattrapage 115, gouvernance) : QA-T28, l'audit de sécurité avant lancement (sécurité, #619, commentaire 5985287771).",
       "tests": {
         "REQ-GOV-034": [
           "tests/unit/gouvernance/porte-de-mise-en-service.spec.ts"
         ]
-      }
+      },
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "SEC-62",
@@ -27315,13 +27327,14 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "annulee",
       "acceptance": "Versée au rattrapage 126, PRIORITAIRE, sur la décision de Williams du 2026-10-07 ; EXCEPTION AU GEL de la phase 1 (GOV-150), inscrite dans `config/gel-phase-1.json`. Trois morceaux livrés ensemble. (1) `lot:cloture` gagne un mode « dans la PR » qui pose `fusionnee`, `pr` et le lot, avec une attestation PENDANTE (sans sha ni date, inconnus avant le squash), que le schéma admet. (2) Le sha et la date se LISENT dans l'historique de main (le commit squashé « (#N) ») par `gov:attestation` et `gov:tasks`, et ne s'écrivent jamais : aucun workflow ne pousse sur main. (3) Une garde, `gov:registre-fusions`, sur les PR et sur main : toute PR fusionnée qui nomme une tâche exige cette tâche `fusionnee` avec `pr` = N, et toute attestation pendante exige son commit squashé ; elle rougit en nommant l'écart. Conditions de la sécurité, en témoins : la mise à jour ne fait JAMAIS baisser le risque calculé ; un registre illisible ARRÊTE la garde (échec fermé).\n\nDÉCISION DE WILLIAMS (#319, commentaire 6043631639, relayée par la coordination), MOT POUR MOT :\nCoordination : **décision de Williams du 07/10, vers 19h55** (relayée par sa session d'interlocution : « fais tout selon tes recommandations », en réponse à « ça doit aller beaucoup, beaucoup plus vite »).\n\n**Constat du jour :** environ 12 jours de travail livrés, contre 20 à 30 les 2 et 3/10 ; 2 auteurs locaux sur 8 sessions ; 6 des 25 fusions de main étaient des rattrapages du registre ; environ 8 PR bloquées des heures sur des gestes ; une CI de 16 à 25 minutes ; 19 heures en moyenne de l'ouverture à la fusion.\n\n**Le plan, par ordre de gain :**\n\n1. **Auteurs cloud : de 3 à 8**, par paliers de deux. Après chaque palier, on observe la limite d'usage pendant 15 minutes, et au premier refus de quota on réduit. Chaque auteur reçoit des lots de 4 à 6 tâches indépendantes.\n2. **Fin des PR de rattrapage :** une tâche GOV prioritaire. Le registre (les statuts de `tasks.json` et les vues dérivées) se met à jour automatiquement à chaque fusion, dans la PR elle-même ou par un passage après fusion, avec une garde qui rougit si le registre diverge. Relecture : sécurité et exactitude.\n3. **Glossaire et registre des décisions :** la juriste et la gouvernance les modifient dans la PR qui en a besoin, avec un essai à blanc d'A02. Williams reçoit chaque jour une liste récapitulative, à laquelle il répond « ok » ou « annule tel point » ; un point refusé est retiré par une PR de retour. Une tâche GOV adapte la section 7 de la charte et gov:pr, avec la relecture de la sécurité. **Le changement des règles de protection de ces deux fichiers reste un geste de Williams** (un fichier à double-cliquer), puisqu'il touche des fichiers protégés. Les actes qui engagent la Société (le contrat, l'envoi DocuSeal, les valeurs à risque) restent à Williams.\n4. **Une CI plus courte sur les PR :** seuls les tests touchés par les fichiers de la PR, plus les gardes ; la suite complète tourne sur main après la fusion, et la nuit ; si main rougit, on revient en arrière aussitôt. Une tâche GOV ou QA, avec la relecture de la sécurité. Objectif : moins de 10 minutes.\n5. **La phase 2 en parallèle :** les auteurs cloud prennent aussi des tâches de phase 2 libres de toute décision et sans conflit de chemins, si aucune garde de phase ne l'interdit (sinon, une tâche GOV).\n\nLe gel des têtes et les lots restent en vigueur. Chaque soir, Williams reçoit les jours livrés, le nombre d'auteurs actifs, la durée moyenne de la CI et le nombre de rattrapages.\n\nDÉCOUPAGE ARBITRÉ PAR LA COORDINATION (#319, commentaire 6043741780), MOT POUR MOT :\nCoordination : **arbitrage du découpage du plan de vitesse** (décision de Williams, 6043631639), sur la proposition de la gouvernance.\n\n**GOV-154 : la fin des PR de rattrapage**, en trois morceaux livrés ensemble.\n1. La PR clôt sa propre tâche : `lot:cloture` gagne un mode « dans la PR », avec une attestation pendante, sans sha ni date.\n2. Le sha se lit au lieu de s'écrire : `gov:attestation` et `gov:tasks` résolvent la forme pendante par le commit squashé « (#N) » de main. Aucun workflow n'écrit sur main.\n3. Une garde de divergence, `gov:registre-fusions`, sur les PR et sur main.\n\nConditions de la sécurité, à poser en témoins :\n- la mise à jour ne fait **jamais** baisser le risque calculé ;\n- un registre illisible **arrête** tout (échec fermé).\n\nLes amendements d'acceptance et les tâches neuves s'écrivent dans la PR concernée, ou dans une petite PR de registre seule, sans clôture.\n\n**GOV-155 : une CI courte sur les PR.** Sur une PR tournent les gardes et `vitest --changed` ; la suite complète tourne sur un push vers main, et la nuit. Le retour en arrière passe par une **PR de revert ouverte par un workflow**, étiquetée et prioritaire, que la coordination fusionne. La garde « aucun workflow ne pousse sur main » reste intacte, ce qui ne demande aucune décision de Williams.\n\n**GOV-156 : le glossaire et le registre des décisions modifiés dans la PR qui en a besoin.** Cela passe par le label `role:juriste` ou `role:gouvernance`, plus un essai à blanc d'A02, et un récapitulatif quotidien à Williams. GOV-156 porte aussi **l'amendement de REQ-GOV-027**, qui admet la phase 2 en parallèle (point 5 de la décision). Le changement des protections (le deny de `.claude/settings.json` et CODEOWNERS) reste un geste de Williams, en un double-clic.\n\n**Ordre :** GOV-154, puis GOV-155, puis GOV-156. Les trois entrent au 126, avec leurs exceptions au gel.\n\nCHEMINS ET TÉMOIN (gouvernance) : proposés, ajustés dans la PR (GOV-145). Témoin : `tests/unit/gouvernance/registre-fusions.spec.ts`.",
       "tests": {
         "REQ-GOV-021": [
           "tests/unit/gouvernance/registre-fusions.spec.ts"
         ]
-      }
+      },
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "GOV-155",
@@ -27348,13 +27361,14 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "annulee",
       "acceptance": "Versée au rattrapage 126, PRIORITAIRE, sur la décision de Williams du 2026-10-07 ; EXCEPTION AU GEL de la phase 1 (GOV-150), inscrite dans `config/gel-phase-1.json`. Sur une PR : les gardes, plus les seuls tests liés aux fichiers touchés ; la suite complète tourne sur chaque push de main et la nuit ; objectif : moins de dix minutes sur une PR. Si main rougit, un workflow OUVRE une PR de revert, étiquetée et prioritaire, fusionnée par la coordination : la garde « aucun workflow ne pousse sur main » reste intacte.\n\nDÉCISION DE WILLIAMS (#319, commentaire 6043631639, relayée par la coordination), MOT POUR MOT :\nCoordination : **décision de Williams du 07/10, vers 19h55** (relayée par sa session d'interlocution : « fais tout selon tes recommandations », en réponse à « ça doit aller beaucoup, beaucoup plus vite »).\n\n**Constat du jour :** environ 12 jours de travail livrés, contre 20 à 30 les 2 et 3/10 ; 2 auteurs locaux sur 8 sessions ; 6 des 25 fusions de main étaient des rattrapages du registre ; environ 8 PR bloquées des heures sur des gestes ; une CI de 16 à 25 minutes ; 19 heures en moyenne de l'ouverture à la fusion.\n\n**Le plan, par ordre de gain :**\n\n1. **Auteurs cloud : de 3 à 8**, par paliers de deux. Après chaque palier, on observe la limite d'usage pendant 15 minutes, et au premier refus de quota on réduit. Chaque auteur reçoit des lots de 4 à 6 tâches indépendantes.\n2. **Fin des PR de rattrapage :** une tâche GOV prioritaire. Le registre (les statuts de `tasks.json` et les vues dérivées) se met à jour automatiquement à chaque fusion, dans la PR elle-même ou par un passage après fusion, avec une garde qui rougit si le registre diverge. Relecture : sécurité et exactitude.\n3. **Glossaire et registre des décisions :** la juriste et la gouvernance les modifient dans la PR qui en a besoin, avec un essai à blanc d'A02. Williams reçoit chaque jour une liste récapitulative, à laquelle il répond « ok » ou « annule tel point » ; un point refusé est retiré par une PR de retour. Une tâche GOV adapte la section 7 de la charte et gov:pr, avec la relecture de la sécurité. **Le changement des règles de protection de ces deux fichiers reste un geste de Williams** (un fichier à double-cliquer), puisqu'il touche des fichiers protégés. Les actes qui engagent la Société (le contrat, l'envoi DocuSeal, les valeurs à risque) restent à Williams.\n4. **Une CI plus courte sur les PR :** seuls les tests touchés par les fichiers de la PR, plus les gardes ; la suite complète tourne sur main après la fusion, et la nuit ; si main rougit, on revient en arrière aussitôt. Une tâche GOV ou QA, avec la relecture de la sécurité. Objectif : moins de 10 minutes.\n5. **La phase 2 en parallèle :** les auteurs cloud prennent aussi des tâches de phase 2 libres de toute décision et sans conflit de chemins, si aucune garde de phase ne l'interdit (sinon, une tâche GOV).\n\nLe gel des têtes et les lots restent en vigueur. Chaque soir, Williams reçoit les jours livrés, le nombre d'auteurs actifs, la durée moyenne de la CI et le nombre de rattrapages.\n\nDÉCOUPAGE ARBITRÉ PAR LA COORDINATION (#319, commentaire 6043741780), MOT POUR MOT :\nCoordination : **arbitrage du découpage du plan de vitesse** (décision de Williams, 6043631639), sur la proposition de la gouvernance.\n\n**GOV-154 : la fin des PR de rattrapage**, en trois morceaux livrés ensemble.\n1. La PR clôt sa propre tâche : `lot:cloture` gagne un mode « dans la PR », avec une attestation pendante, sans sha ni date.\n2. Le sha se lit au lieu de s'écrire : `gov:attestation` et `gov:tasks` résolvent la forme pendante par le commit squashé « (#N) » de main. Aucun workflow n'écrit sur main.\n3. Une garde de divergence, `gov:registre-fusions`, sur les PR et sur main.\n\nConditions de la sécurité, à poser en témoins :\n- la mise à jour ne fait **jamais** baisser le risque calculé ;\n- un registre illisible **arrête** tout (échec fermé).\n\nLes amendements d'acceptance et les tâches neuves s'écrivent dans la PR concernée, ou dans une petite PR de registre seule, sans clôture.\n\n**GOV-155 : une CI courte sur les PR.** Sur une PR tournent les gardes et `vitest --changed` ; la suite complète tourne sur un push vers main, et la nuit. Le retour en arrière passe par une **PR de revert ouverte par un workflow**, étiquetée et prioritaire, que la coordination fusionne. La garde « aucun workflow ne pousse sur main » reste intacte, ce qui ne demande aucune décision de Williams.\n\n**GOV-156 : le glossaire et le registre des décisions modifiés dans la PR qui en a besoin.** Cela passe par le label `role:juriste` ou `role:gouvernance`, plus un essai à blanc d'A02, et un récapitulatif quotidien à Williams. GOV-156 porte aussi **l'amendement de REQ-GOV-027**, qui admet la phase 2 en parallèle (point 5 de la décision). Le changement des protections (le deny de `.claude/settings.json` et CODEOWNERS) reste un geste de Williams, en un double-clic.\n\n**Ordre :** GOV-154, puis GOV-155, puis GOV-156. Les trois entrent au 126, avec leurs exceptions au gel.\n\nCHEMINS ET TÉMOIN (gouvernance) : proposés, ajustés dans la PR (GOV-145). Témoin : `tests/unit/qualite/ci-courte.spec.ts`.\n\nCONDITIONS DE LA SÉCURITÉ (#843, commentaire 6045048702), MOT POUR MOT :\n**A09 · securite — conditions de la sécurité pour GOV-155 (la CI courte sur les PR), à verser à son acceptance.** Sans verdict. La fiche du 126 ne porte que les conditions de GOV-154 ; celles-ci tiennent la CI courte sans qu'elle ouvre une porte aux régressions de sécurité.\n\n1. **Toujours, sur chaque PR**, quels que soient les fichiers touchés : TOUTES les gardes (dont `securite:*`, `idor`, `schema-pii`, `rate-famille`, `gov:pr`), et la suite `tests/unit/securite/**`. Une régression de sécurité ne doit jamais attendre la nuit.\n2. **La sélection échoue FERMÉ** : la suite COMPLÈTE tourne sur la PR dès qu'elle touche ce que le graphe des imports de `vitest --changed` ne voit pas, ou voit mal :\n   - `prisma/migrations/**` ou `prisma/schema.prisma` (les déclencheurs et les CHECK de la base ne sont importés par aucun test) ;\n   - `package.json`, le lock, `vitest*.config.*`, `tsconfig*.json` ;\n   - `src/lib/env.ts`, `.github/workflows/**`, `docker-entrypoint.sh`, `Dockerfile` ;\n   - une zone sensible : `src/server/auth/`, `src/server/roles/`, `src/server/securite/`, `src/server/acces/`, la monnaie (`commission`, `paiement`, `rib`) ;\n   - ou une PR dont la tâche porte un champ `sensible` non vide.\n   \n   Si la sélection ne sait pas calculer les tests touchés (une erreur, ou une base illisible), elle lance la suite complète, et ne lance jamais RIEN.\n3. **Aucun déploiement de production sans la suite complète verte** sur le commit de `main` déployé. Le déploiement attend la fin de la suite complète du push, et ne part pas à la fusion seule. Sinon, du code jugé sur une CI courte irait en production avant d'être jugé en entier.\n4. **Le workflow de revert** : il est déclenché par l'échec de la suite complète sur `main`. Il a des permissions MINIMALES : `contents: write` sur une branche de revert seulement, et `pull-requests: write`. Il ne pousse jamais sur `main`, ce que la protection de la branche garantit, et il n'a accès à aucun secret de l'environnement `production`. Il OUVRE une PR que la coordination fusionne, et ne fusionne rien lui-même.\n5. **La couverture et la mutation** du domaine (dont le 100 % de `src/domain/**`) restent jugées : sur la PR pour les fichiers touchés, ou sur `main` avec le même revert si elles baissent.\n\nTémoins attendus dans `tests/unit/qualite/ci-courte.spec.ts` : la liste des déclencheurs de suite complète, avec un témoin par famille ; la sélection en échec qui lance tout ; et un témoin statique qui vérifie que le job de déploiement dépend de la suite complète.",
       "tests": {
         "REQ-QA-013": [
           "tests/unit/qualite/ci-courte.spec.ts"
         ]
-      }
+      },
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "GOV-156",
@@ -27382,7 +27396,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "annulee",
       "acceptance": "Versée au rattrapage 126, PRIORITAIRE, sur la décision de Williams du 2026-10-07 ; EXCEPTION AU GEL de la phase 1 (GOV-150), inscrite dans `config/gel-phase-1.json`. La §7 de la charte et `gov:pr` (`fichier_reserve_sans_label`) admettent `docs/GLOSSAIRE.md` et `docs/DECISIONS.md` dans la PR qui en a besoin, écrits par la juriste ou la gouvernance, avec un essai à blanc d'A02 ; un récapitulatif quotidien part à Williams, qui répond « ok » ou « annule tel point », un point refusé étant retiré par une PR de retour. REQ-GOV-027 est amendée : la phase 2 est admise en parallèle (point 5 de la décision). Le changement des règles de protection de ces fichiers (`.claude/settings.json`, CODEOWNERS) reste un geste de Williams ; les actes qui engagent la Société restent à Williams.\n\nDÉCISION DE WILLIAMS (#319, commentaire 6043631639, relayée par la coordination), MOT POUR MOT :\nCoordination : **décision de Williams du 07/10, vers 19h55** (relayée par sa session d'interlocution : « fais tout selon tes recommandations », en réponse à « ça doit aller beaucoup, beaucoup plus vite »).\n\n**Constat du jour :** environ 12 jours de travail livrés, contre 20 à 30 les 2 et 3/10 ; 2 auteurs locaux sur 8 sessions ; 6 des 25 fusions de main étaient des rattrapages du registre ; environ 8 PR bloquées des heures sur des gestes ; une CI de 16 à 25 minutes ; 19 heures en moyenne de l'ouverture à la fusion.\n\n**Le plan, par ordre de gain :**\n\n1. **Auteurs cloud : de 3 à 8**, par paliers de deux. Après chaque palier, on observe la limite d'usage pendant 15 minutes, et au premier refus de quota on réduit. Chaque auteur reçoit des lots de 4 à 6 tâches indépendantes.\n2. **Fin des PR de rattrapage :** une tâche GOV prioritaire. Le registre (les statuts de `tasks.json` et les vues dérivées) se met à jour automatiquement à chaque fusion, dans la PR elle-même ou par un passage après fusion, avec une garde qui rougit si le registre diverge. Relecture : sécurité et exactitude.\n3. **Glossaire et registre des décisions :** la juriste et la gouvernance les modifient dans la PR qui en a besoin, avec un essai à blanc d'A02. Williams reçoit chaque jour une liste récapitulative, à laquelle il répond « ok » ou « annule tel point » ; un point refusé est retiré par une PR de retour. Une tâche GOV adapte la section 7 de la charte et gov:pr, avec la relecture de la sécurité. **Le changement des règles de protection de ces deux fichiers reste un geste de Williams** (un fichier à double-cliquer), puisqu'il touche des fichiers protégés. Les actes qui engagent la Société (le contrat, l'envoi DocuSeal, les valeurs à risque) restent à Williams.\n4. **Une CI plus courte sur les PR :** seuls les tests touchés par les fichiers de la PR, plus les gardes ; la suite complète tourne sur main après la fusion, et la nuit ; si main rougit, on revient en arrière aussitôt. Une tâche GOV ou QA, avec la relecture de la sécurité. Objectif : moins de 10 minutes.\n5. **La phase 2 en parallèle :** les auteurs cloud prennent aussi des tâches de phase 2 libres de toute décision et sans conflit de chemins, si aucune garde de phase ne l'interdit (sinon, une tâche GOV).\n\nLe gel des têtes et les lots restent en vigueur. Chaque soir, Williams reçoit les jours livrés, le nombre d'auteurs actifs, la durée moyenne de la CI et le nombre de rattrapages.\n\nDÉCOUPAGE ARBITRÉ PAR LA COORDINATION (#319, commentaire 6043741780), MOT POUR MOT :\nCoordination : **arbitrage du découpage du plan de vitesse** (décision de Williams, 6043631639), sur la proposition de la gouvernance.\n\n**GOV-154 : la fin des PR de rattrapage**, en trois morceaux livrés ensemble.\n1. La PR clôt sa propre tâche : `lot:cloture` gagne un mode « dans la PR », avec une attestation pendante, sans sha ni date.\n2. Le sha se lit au lieu de s'écrire : `gov:attestation` et `gov:tasks` résolvent la forme pendante par le commit squashé « (#N) » de main. Aucun workflow n'écrit sur main.\n3. Une garde de divergence, `gov:registre-fusions`, sur les PR et sur main.\n\nConditions de la sécurité, à poser en témoins :\n- la mise à jour ne fait **jamais** baisser le risque calculé ;\n- un registre illisible **arrête** tout (échec fermé).\n\nLes amendements d'acceptance et les tâches neuves s'écrivent dans la PR concernée, ou dans une petite PR de registre seule, sans clôture.\n\n**GOV-155 : une CI courte sur les PR.** Sur une PR tournent les gardes et `vitest --changed` ; la suite complète tourne sur un push vers main, et la nuit. Le retour en arrière passe par une **PR de revert ouverte par un workflow**, étiquetée et prioritaire, que la coordination fusionne. La garde « aucun workflow ne pousse sur main » reste intacte, ce qui ne demande aucune décision de Williams.\n\n**GOV-156 : le glossaire et le registre des décisions modifiés dans la PR qui en a besoin.** Cela passe par le label `role:juriste` ou `role:gouvernance`, plus un essai à blanc d'A02, et un récapitulatif quotidien à Williams. GOV-156 porte aussi **l'amendement de REQ-GOV-027**, qui admet la phase 2 en parallèle (point 5 de la décision). Le changement des protections (le deny de `.claude/settings.json` et CODEOWNERS) reste un geste de Williams, en un double-clic.\n\n**Ordre :** GOV-154, puis GOV-155, puis GOV-156. Les trois entrent au 126, avec leurs exceptions au gel.\n\nCHEMINS ET TÉMOIN (gouvernance) : proposés, ajustés dans la PR (GOV-145). Témoin : `tests/unit/gouvernance/fichiers-reserves-dans-la-pr.spec.ts`.",
       "tests": {
         "REQ-GOV-010": [
@@ -27391,7 +27405,8 @@
         "REQ-GOV-027": [
           "tests/unit/gouvernance/fichiers-reserves-dans-la-pr.spec.ts"
         ]
-      }
+      },
+      "motif": "Annulée par la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : plus de tâche de gouvernance."
     },
     {
       "id": "JUR-T67",
@@ -27628,6 +27643,62 @@
           "tests/unit/gouvernance/fiches-agents-allegees.spec.ts"
         ]
       }
+    },
+    {
+      "id": "GOV-160",
+      "titre": "Le grand ménage : environ quinze gardes, trois niveaux de relecture, plus de registre tenu par les PR",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        ".github/workflows/ci.yml",
+        ".github/workflows/deploy.yml",
+        ".github/workflows/nightly.yml",
+        ".github/workflows/part-gouvernance.yml",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        "scripts/gates/gov-pr-niveaux.ts",
+        "scripts/gates/gov-publication.ts",
+        "scripts/gates/schema-enums.ts",
+        "scripts/gates/gov-tasks.ts",
+        "scripts/lot/avancement-par-les-pr.ts",
+        "scripts/lot/composer.ts",
+        "scripts/lot/tasks.schema.json",
+        "scripts/rapports/part-gouvernance.ts",
+        "config/gel-phase-1.json",
+        "docs/gates.json",
+        "docs/tasks.json",
+        "docs/PRIORITES.md",
+        "docs/REGLES-MAISON.md",
+        "docs/PROTOCOLE-FUSION.md",
+        "docs/CHARTE-AGENTS.md",
+        "CLAUDE.md",
+        "package.json",
+        "vitest.config.ts",
+        "tests/archive/",
+        "tests/unit/qualite/gouvernance-allegee.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-011",
+        "REQ-GOV-012"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "acceptance": "Sur la décision de Williams du 2026-10-09, #319, commentaire 6077512137 (GOV-160) : les gardes d'argent, de données personnelles, de sécurité, de publication, de migrations, de typage, de lint et de tests restent en porte A ; les autres sont archivées (retirées de la CI, marquées `archivee` dans docs/gates.json, code conservé, specs sous tests/archive/ hors de la suite). `gov:pr` juge trois niveaux (critique : deux lentilles, rouge vu, veto sécurité ; normal : une ; léger : aucune). Aucune PR n'écrit plus de statut dans docs/tasks.json ; l'avancement se dérive des PR fusionnées (`pnpm avancement`). Les tâches GOV restantes sont annulées. Le gel est supprimé.",
+      "tests": {
+        "REQ-GOV-011": [
+          "tests/unit/qualite/gouvernance-allegee.spec.ts"
+        ],
+        "REQ-GOV-012": [
+          "tests/unit/qualite/gouvernance-allegee.spec.ts"
+        ]
+      },
+      "statut": "en_revue",
+      "owner": "A05",
+      "branch": "t/gov-160"
     }
   ]
 }

@@ -260,6 +260,11 @@ export type Vue = {
   etatsSource: string;
   /** Les fichiers de code où une liste littérale ou un repli muet se cachent. */
   code: FichierCode[];
+  /**
+   * GOV-160 (#319, 6077512137) : les enums dont les valeurs se lisent dans l espace des apporteurs
+   * ou dans leurs courriels. Seuls ceux-là sont confrontés au glossaire. Absent : tous (la preuve).
+   */
+  visibles?: ReadonlySet<string>;
 };
 
 export type Faute = { famille: string; message: string };
@@ -1025,6 +1030,7 @@ export function controler(vue: Vue): Faute[] {
 
   const auGlossaire = enumsDuGlossaire(vue.glossaire);
   for (const { nom, valeurs } of schema.enums) {
+    if (vue.visibles && !vue.visibles.has(nom)) continue;
     for (const v of valeurs) {
       if (!vue.glossaire.includes('`' + v + '`')) {
         fautes.push({
@@ -1118,8 +1124,32 @@ export function vueDuDepot(): Vue {
       chemin,
       contenu: readFileSync(chemin, 'utf8'),
     })),
+    visibles: ENUMS_VISIBLES_DES_APPORTEURS,
   };
 }
+
+/**
+ * GOV-160 — « glossaire réduit aux mots des apporteurs » (décision de Williams du 2026-10-09, #319,
+ * 6077512137). Les enums qu UN APPORTEUR lit — dans son espace, ses courriels, son contrat ou ses
+ * relevés. Un enum interne (journal, console, intégration) n a plus à figurer au glossaire. Liste
+ * FERMÉE : un enum neuf visible des apporteurs s y ajoute dans la PR qui l affiche.
+ */
+export const ENUMS_VISIBLES_DES_APPORTEURS: ReadonlySet<string> = new Set([
+  'EtatAttribution',
+  'StatutApporteur',
+  'MotifResiliation',
+  'TypePieceKyc',
+  'StatutPieceKyc',
+  'DroitContact',
+  'DonneeContact',
+  'IssueDemandeDroit',
+  'RegimeTva',
+  'MotifRefusDepot',
+  'EtatDemandeConfirmation',
+  'ObjetContestation',
+  'MotifListeNoire',
+  'GesteDecisionContrat',
+]);
 
 // ── la fixture de la preuve (RM-11 : elle ne lit rien du dépôt) ───────────────
 
