@@ -93,10 +93,10 @@ la produire, et elle ne doit pas revenir au glossaire, sans quoi la gate `partne
 
 | Valeur      | Sens                                                                                       |
 | ----------- | ------------------------------------------------------------------------------------------ |
-| `prevue`    | Créée par `devis.signe` ; attendu, jamais dans un relevé (CHECK)                            |
+| `prevue`    | Créée par `devis.signe` ; attendu, jamais dans une autofacture (CHECK, REQ-DM-020)          |
 | `acquise`   | Née **uniquement** d'un `paiement.recu` (REQ-DM-016) ; unicité `(paymentId, lignePrevueId)` |
 | `bloquee`   | Acquise mais retenue ; `motifBlocage` non null ssi `bloquee` (CHECK)                        |
-| `a_payer`   | Relevée dans un relevé gelé, contrôles de versement passés                                  |
+| `a_payer`   | Facturée par une autofacture émise, conditions du versement remplies (REQ-ARG-016)          |
 | `payee`     | Dans un lot exporté et rapproché                                                            |
 | `annulee`   | Devis annulé avant tout encaissement                                                        |
 | `contestee` | Contestation ouverte (REQ-CPL-012) ; sortie `maintenue \| ajustee` → `LigneAjustement`      |
@@ -342,10 +342,11 @@ de fusion — corrigé par B-REQ-6), `reviewer`, `reader`, `viewer`.
 | vérification prioritaire | Seuil `seuilPrioritaire = min(palierConfiance, capaciteRestante)` au-delà duquel les dépôts sont qualifiés d'abord ; jamais un plafond | quota, limite, plafond de dépôts |
 | palier                  | Capital de confiance (5 → 15 → 25 contacts confirmés), formulé sans objectif ni classement    | niveau de vente, rang, objectif            |
 | déclaration non confirmée | Une entreprise déclare ne pas connaître l'apporteur (`Qualification.resultatContact = non_confirme`) ; déclenche la suspension de vérification | **synonymes interdits** : strike, sanction, avertissement, pénalité, faute |
-| relevé                  | Gel mensuel des lignes `acquise/reprise/bonus_filleul` (`statement-AAAA-MM`)                | statement (hors jobId), facture            |
+| relevé                  | **Retiré** (contrat v2 : une autofacture par encaissement intégral, REQ-ARG-014, REQ-ARG-018) : il n'existe ni gel mensuel ni relevé ; dire autofacture et son décompte. Survit seulement comme valeur `releve` de `AgregatJournal`, déjà migrée | statement (hors jobId), facture            |
+| décompte                | Pièce jointe à chaque autofacture : par commande, prix facturé, prix public, commission, date de l'encaissement intégral, avoir imputé et somme virée (REQ-ARG-018) | —                                          |
 | gel du journal des accès | Protection, pendant un incident ou un litige, des lignes du journal des accès à la console d'UNE portée (un utilisateur de la console, ou une cible), survenues depuis une date et jusqu'à une date de fin incluse quand elle est fixée, futures comprises sinon : tant que le gel est ouvert, la purge les épargne ; après sa levée par un autre administrateur, la purge ordinaire reprend (SEC-61) ; ni le gel d'un apporteur, ni le gel pour litige d'une anomalie | — |
 | autofacture             | Facture émise par Axion-IA au nom et pour le compte de l'apporteur (mandat)                  | facture apporteur, note d'honoraires       |
-| lot                     | `LotPaiement` : ensemble de relevés `a_payer` approuvé et exporté en pain.001                | batch, virement groupé                     |
+| lot                     | `LotPaiement` : ensemble d'autofactures à verser, approuvé et exporté en pain.001 (REQ-ARG-019, REQ-ARG-021) | batch, virement groupé                     |
 | grille                  | `COMMERCIAL_COMMISSIONS` de `pricing.ts` publiée par axionia, versionnée par hash, snapshotée au contrat | barème maison, grille Partners   |
 | entreprise connue       | SIREN présent chez axionia (client, devis, financeur) — antériorité ; `EntrepriseConnue`, origine client, devis ou financeur, aucune demande entrante (REQ-DM-029) | déjà cliente (côté apporteur : « non disponible ») |
 | lien de dépôt privé     | Jeton de dépôt (patron `EmargementToken`) permettant un dépôt sans session ; ≠ code de parrainage public | lien magique (réservé à la connexion) |
