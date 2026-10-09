@@ -463,6 +463,15 @@ export const SEUILS = {
     renvois: [],
     verifieLe: '2026-10-03',
   },
+  // DM-51 : le rappel d'échéance de l'attestation `rc_pro`, un service (art. 6.4 : aucune n'est
+  // exigée) ; la fenêtre court de `expire_at - délai` (incluse) à `expire_at` (exclue).
+  RC_PRO_RAPPEL_AVANT_ECHEANCE_JOURS: {
+    valeur: 30,
+    unite: 'jours',
+    source: 'REQ-DM-027 (rappel J-30)',
+    renvois: [],
+    verifieLe: '2026-10-09',
+  },
   // INT-T76-P (forme d'A02, #737) : la fenêtre où la réception TRAITE encore la v3 du contrat, en
   // jours civils de Paris, comptée du `received_at` du premier événement v4 reçu et accepté ; borne
   // EXCLUSIVE au minuit de Paris qui suit le dernier jour. Au-delà, une v3 est inscrite `held`.
