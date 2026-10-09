@@ -154,8 +154,9 @@ const POSTE: RegExp[] = [
   new RegExp(`(?:^|[^\\w.])/(?:mnt/)?[a-z]/Users/(?!<nom>)${SEGMENT}`, 'i'),
   // Le poste macOS (`/Users/…`) et le poste Linux (`/home/…`, celui de la CI et des sessions cloud),
   // en casse exacte : une route `/users/me` ou une URL `…/home/accueil` ne nomme aucun poste.
-  // `/home/runner` est le compte public des exécuteurs GitHub Actions, un rôle et non une personne :
-  // une spec de la CI le cite (`tests/archive/unit/qualite/navigateurs-bornes.spec.ts`).
+  // `/home/runner/…` est le dossier du compte public des exécuteurs GitHub Actions, un rôle et non une
+  // personne : une spec de la CI le cite (`tests/archive/unit/qualite/navigateurs-bornes.spec.ts`).
+  // L'exemption exige la barre finale : `/home/runner` seul, ou `/home/runner2/…`, rougit.
   new RegExp(`(?:^|[^\\w.:/])/(?:Users/(?!<nom>)|home/(?!<nom>|runner/))${SEGMENT}`),
   // Le même dossier ENCODÉ, tel que l'outil de session nomme ses projets (`C--Users-<nom>-Documents`).
   /\b[A-Za-z]--Users-(?!<nom>)[^-\s`'"/\\]+/i,
@@ -280,6 +281,7 @@ if (process.argv.includes('--prove')) {
     { ligne: `git -C /c/Users/poste/Documents/Projets worktree add`, famille: DONNEE_DU_POSTE },
     { ligne: `cd /home/poste/work/axion-apporteurs`, famille: DONNEE_DU_POSTE },
     { ligne: `cd /Users/poste/Documents/Projets`, famille: DONNEE_DU_POSTE },
+    { ligne: `cd /home/runner2/cache`, famille: DONNEE_DU_POSTE },
     { ligne: `"C:\\\\\\\\Users\\\\\\\\poste\\\\\\\\Documents"`, famille: DONNEE_DU_POSTE },
   ];
 

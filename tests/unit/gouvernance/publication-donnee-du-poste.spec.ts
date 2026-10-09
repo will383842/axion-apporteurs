@@ -38,10 +38,15 @@ function envHorsPr(): NodeJS.ProcessEnv {
 let n = 0;
 /** La garde sur un dépôt neuf dont `fichier` (suivi, `note.md` par défaut) porte la ligne en ligne 3. */
 function juger(ligne: string, fichier = 'note.md'): { code: number; sortie: string } {
+  return jugerContenu(fichier, `# Note\n\n${ligne}\n`);
+}
+
+/** La garde sur un dépôt neuf dont `fichier` (suivi) a exactement le contenu donné. */
+function jugerContenu(fichier: string, contenu: string | Buffer): { code: number; sortie: string } {
   const depot = join(DOSSIER, `depot-${n++}`);
   execFileSync('git', ['init', '-q', depot]);
   mkdirSync(dirname(join(depot, fichier)), { recursive: true });
-  writeFileSync(join(depot, fichier), `# Note\n\n${ligne}\n`);
+  writeFileSync(join(depot, fichier), contenu);
   execFileSync('git', ['add', fichier], { cwd: depot });
   const r = spawnSync(process.execPath, [TSX, GARDE], {
     cwd: depot,
@@ -96,6 +101,38 @@ describe(
       const { code, sortie } = juger(LIGNE_480, fichier);
       expect(code).not.toBe(0);
       expect(sortie).toContain(`${fichier}:3 — donnee_du_poste`);
+    });
+
+    // Tout autre fichier texte suivi est lu pour la seule donnée du poste : une sortie de commande se
+    // verse dans n'importe quel fichier, pas seulement dans le code.
+    const AUTRES_TEXTES: string[] = ['Dockerfile', 'docs/notes.txt', 'maquettes/accueil.html'];
+
+    it.each(AUTRES_TEXTES)(
+      'REQ-GOV-031 : TÉMOIN — la ligne de #480 dans %s (autre fichier texte) rougit',
+      (fichier) => {
+        const { code, sortie } = juger(LIGNE_480, fichier);
+        expect(code).not.toBe(0);
+        expect(sortie).toContain(`${fichier}:3 — donnee_du_poste`);
+      }
+    );
+
+    it('REQ-GOV-031 : CONTRE-TÉMOIN — dans un .html, la doctrine et l’argent ne sont pas jugés', () => {
+      const doctrine = '<!-- évite la requalifi' + 'cation en ag' + 'ent comm' + 'ercial -->';
+      const argent = '<script>const flat' + 'Eur = 250;</script>';
+      // Les mêmes lignes rougissent dans un fichier jugé par toutes les familles : le témoin est vrai.
+      expect(juger(doctrine + '\n' + argent, 'note.md').code).not.toBe(0);
+      const { code, sortie } = juger(doctrine + '\n' + argent, 'maquettes/accueil.html');
+      expect([code, sortie]).toEqual([0, expect.stringContaining('✅')]);
+    });
+
+    it('REQ-GOV-031 : CONTRE-TÉMOIN — un binaire (octets nuls) est sauté, même porteur de la ligne', () => {
+      const binaire = Buffer.concat([
+        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x00, 0x00, 0x0d]),
+        Buffer.from(`\n${LIGNE_480}\n`, 'utf8'),
+        Buffer.from([0x00, 0x01, 0x02]),
+      ]);
+      const { code, sortie } = jugerContenu('docs/donnee.bin', binaire);
+      expect([code, sortie]).toEqual([0, expect.stringContaining('✅')]);
     });
 
     it('REQ-GOV-031 : CONTRE-TÉMOIN — le marqueur, une variable, un uuid : verts', () => {
