@@ -150,8 +150,23 @@ const SANS_FIXTURE_V3 = {
   ligne: { type: 'devis.signe', liste: 'lignes', nom: 'prixReferenceHtCents' },
 } as const;
 
-/** Les types confrontés à la fixture : tous, sauf le type exempté. */
-const TYPES_CONFRONTES = TYPES_EVENEMENT.filter((t) => t !== SANS_FIXTURE_V3.type);
+/**
+ * L'EXEMPTION NOMMÉE DE LA VERSION 4 (INT-T76-P, lot OPCO ; forme d'A02, #656 et #737) — deux noms,
+ * et rien d'autre : le TYPE `financement.etape` et le CHAMP `opco` de la fiche du client
+ * (`client.cree` et `client.mis_a_jour`, qui la partagent), entrés au contrat en v4 avant que le
+ * producteur d'axion-ia (INT-T76-A) ne les émette. Même règle que la v3 : exemptés de la
+ * confrontation à la fixture du producteur, et de nulle autre ; le contrat PUBLIÉ les exige (témoin
+ * ci-dessous), et un TÉMOIN DE LEVÉE rougit dès que la fixture porte l'un d'eux.
+ */
+const SANS_FIXTURE_V4 = {
+  type: 'financement.etape',
+  fiche: { types: ['client.cree', 'client.mis_a_jour'], nom: 'opco' },
+} as const;
+
+/** Les types confrontés à la fixture : tous, sauf les types exemptés. */
+const TYPES_CONFRONTES = TYPES_EVENEMENT.filter(
+  (t) => t !== SANS_FIXTURE_V3.type && t !== SANS_FIXTURE_V4.type
+);
 
 /**
  * Le contrat contre lequel la charge PRODUITE se juge : le contrat publié, privé du seul champ
@@ -174,6 +189,13 @@ function contratConfronte(): Schema {
   )[liste]!['items'] as Schema;
   delete (ligne['properties'] as Record<string, unknown>)[nom];
   ligne['required'] = (ligne['required'] as string[]).filter((c) => c !== nom);
+  for (const t of SANS_FIXTURE_V4.fiche.types) {
+    const fiche = (contrat['$defs'] as Record<string, Schema>)[nomDefPayload(t)]!;
+    delete (fiche['properties'] as Record<string, unknown>)[SANS_FIXTURE_V4.fiche.nom];
+    fiche['required'] = (fiche['required'] as string[]).filter(
+      (c) => c !== SANS_FIXTURE_V4.fiche.nom
+    );
+  }
   return contrat;
 }
 
@@ -280,9 +302,10 @@ function clesProduites(valeur: unknown, schema: Schema, chemin: string, acc: Set
 describe("le contrat d'événements est fermé, dérivé, et son empreinte le tient", () => {
   it('REQ-INT-004 — la liste des types est FERMÉE sur les onze que le registre énumère, dans son ordre', () => {
     // Le TITRE est celui que promet INT-T01a (`tests{}` de `docs/tasks.json`) : il dit encore
-    // « onze », la liste en compte douze depuis la v3. Le renommer est un geste du gardien.
+    // « onze », la liste en compte douze depuis la v3 et treize depuis la v4. Le renommer est un geste
+    // du gardien.
     const selonLExigence = typesSelonLExigence();
-    expect(selonLExigence).toHaveLength(12);
+    expect(selonLExigence).toHaveLength(13);
     expect([...TYPES_EVENEMENT]).toEqual(selonLExigence);
   });
 
@@ -353,7 +376,10 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
     );
     // Un jeu incomplet laisserait un type sans aucun exemple produit : son `$defs` serait deviné.
     const produits = new Set(CHARGES_PRODUITES.map((c) => c.event_type));
-    expect([...TYPES_EVENEMENT].filter((t) => !produits.has(t))).toEqual([SANS_FIXTURE_V3.type]);
+    expect([...TYPES_EVENEMENT].filter((t) => !produits.has(t))).toEqual([
+      SANS_FIXTURE_V3.type,
+      SANS_FIXTURE_V4.type,
+    ]);
     expect(
       [...produits].filter((t) => !(TYPES_EVENEMENT as readonly string[]).includes(t))
     ).toEqual([]);
@@ -457,6 +483,46 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
           Object.hasOwn(c.payload, SANS_FIXTURE_V3.champ.nom)
       ),
       'la fixture porte `devisId` : retirer le champ de SANS_FIXTURE_V3'
+    ).toEqual([]);
+  });
+
+  it('REQ-QA-007 — l’exemption de la v4 ne masque rien : le contrat PUBLIÉ ferme `financement.etape` et EXIGE `opco` sur la fiche du client, par la SEULE définition des OPCO', () => {
+    const defs = contratJsonSchema()['$defs'] as Record<string, Schema>;
+    const financement = defs[nomDefPayload(SANS_FIXTURE_V4.type)]!;
+    expect(financement['additionalProperties']).toBe(false);
+    expect(financement['required']).toEqual(Object.keys(financement['properties'] as object));
+    for (const t of SANS_FIXTURE_V4.fiche.types) {
+      const fiche = defs[nomDefPayload(t)]!;
+      expect(fiche['required'], t).toContain(SANS_FIXTURE_V4.fiche.nom);
+      const opco = (fiche['properties'] as Record<string, Schema>)[SANS_FIXTURE_V4.fiche.nom]!;
+      expect(opco, t).toEqual({ anyOf: [{ $ref: '#/$defs/opco_id' }, { type: 'null' }] });
+      // Et la confrontation n'en retire QUE ce champ-là.
+      const confronte = (contratConfronte()['$defs'] as Record<string, Schema>)[nomDefPayload(t)]!;
+      expect(
+        Object.keys(fiche['properties'] as object).filter(
+          (c) => !Object.keys(confronte['properties'] as object).includes(c)
+        ),
+        t
+      ).toEqual([SANS_FIXTURE_V4.fiche.nom]);
+    }
+    expect((financement['properties'] as Record<string, Schema>)['opco']).toEqual({
+      $ref: '#/$defs/opco_id',
+    });
+  });
+
+  it('REQ-QA-007 — TÉMOIN DE LEVÉE : dès que la fixture du producteur porte `financement.etape` ou `opco`, l’exemption de la v4 doit tomber', () => {
+    const toutes = [...PRODUCTEUR.evenements, ...PRODUCTEUR.horsContratV1];
+    expect(
+      toutes.filter((c) => c.event_type === SANS_FIXTURE_V4.type),
+      'la fixture porte `financement.etape` : retirer le type de SANS_FIXTURE_V4'
+    ).toEqual([]);
+    expect(
+      toutes.filter(
+        (c) =>
+          (SANS_FIXTURE_V4.fiche.types as readonly string[]).includes(c.event_type) &&
+          Object.hasOwn(c.payload, SANS_FIXTURE_V4.fiche.nom)
+      ),
+      'la fixture porte `opco` : retirer le champ de SANS_FIXTURE_V4'
     ).toEqual([]);
   });
 

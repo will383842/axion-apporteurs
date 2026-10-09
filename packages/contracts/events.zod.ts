@@ -11,7 +11,7 @@
 
 import { z } from 'zod';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const TYPES_EVENEMENT = [
   'client.cree',
@@ -26,13 +26,14 @@ export const TYPES_EVENEMENT = [
   'facture.annulee',
   'client.fusionne',
   'devis.emis',
+  'financement.etape',
 ] as const;
 
 export const enveloppeEvenement = z
   .object({
     event_id: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/),
     event_type: z.enum(TYPES_EVENEMENT),
-    schema_version: z.literal(3),
+    schema_version: z.literal(4),
     occurred_at: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/),
     emitted_at: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/),
     producer: z.string().min(1),

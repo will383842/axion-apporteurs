@@ -106,16 +106,16 @@ describe('REQ-INT-012 — la route de relecture est déclarée au contrat', () =
   });
 });
 
-describe('REQ-INT-012 — un amendement de la version 3, sous la même empreinte', () => {
-  it('REQ-INT-012 : la version reste 3, et l’artefact publié porte la route', () => {
-    expect(SCHEMA_VERSION).toBe(3);
-    const publie = JSON.parse(readFileSync('packages/contracts/contracts.v3.json', 'utf8')) as {
-      $defs: Record<string, unknown>;
-    };
-    for (const nom of NOMS) expect(Object.keys(publie.$defs), nom).toContain(nom);
-    expect(canoniser(contratJsonSchema())).toBe(
-      readFileSync('packages/contracts/contracts.v3.json', 'utf8')
-    );
+describe('REQ-INT-012 — la route de relecture, dans chaque contrat publié depuis la version 3', () => {
+  it('REQ-INT-012 : l’artefact publié de la version courante porte la route, et la v3 la garde', () => {
+    // La route est entrée en v3, amendée sous la même empreinte ; la v4 (INT-T76-P) la reprend.
+    const courant = `packages/contracts/contracts.v${SCHEMA_VERSION}.json`;
+    for (const chemin of ['packages/contracts/contracts.v3.json', courant]) {
+      const publie = JSON.parse(readFileSync(chemin, 'utf8')) as { $defs: Record<string, unknown> };
+      for (const nom of NOMS)
+        expect(Object.keys(publie.$defs), `${chemin} : ${nom}`).toContain(nom);
+    }
+    expect(canoniser(contratJsonSchema())).toBe(readFileSync(courant, 'utf8'));
   });
 
   it('REQ-INT-012 : TÉMOIN — l’empreinte change quand un champ de la route change', () => {

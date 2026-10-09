@@ -69,6 +69,10 @@ const PRODUCTEUR = JSON.parse(
 function chargeDuProducteur(type: string): Record<string, unknown> {
   const e = PRODUCTEUR.evenements.find((x) => x.event_type === type);
   if (e === undefined) throw new Error(`fixture du producteur : aucun ${type}`);
+  // INT-T76-P : la v4 exige `opco` (nullable) sur la fiche du client, que la fixture du producteur ne
+  // porte qu'à l'arrivée d'INT-T76-A (exemption nommée `SANS_FIXTURE_V4` de `contrat-hash.spec.ts`) :
+  // un OPCO inconnu, forme v4 permise ; une valeur de la fixture, dès qu'elle existe, l'emporte.
+  if (type === 'client.cree' || type === 'client.mis_a_jour') return { opco: null, ...e.payload };
   if (type !== 'paiement.recu') return { ...e.payload };
   const { amountHtCents, ...reste } = e.payload;
   return { ...reste, montantHtCents: amountHtCents };

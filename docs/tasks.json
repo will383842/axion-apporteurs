@@ -26210,7 +26210,10 @@
       "zone": "securite",
       "paths": [
         "src/domain/evenement/charges.ts",
-        "tests/unit/domaine/evenement-verification-rib.spec.ts"
+        "tests/unit/domaine/evenement-verification-rib.spec.ts",
+        "src/server/conformite/rib.ts",
+        "tests/unit/domaine/journal-charges.spec.ts",
+        "tests/unit/securite/rib-quatre-yeux.spec.ts"
       ],
       "schema": false,
       "sensible": [],

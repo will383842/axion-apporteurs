@@ -436,6 +436,23 @@ function tacheDeLaBase(base: string, titre: string): TacheLue | null {
 const contenuALaTete = (f: string): string | null =>
   existsSync(f) ? readFileSync(f, 'utf8') : null;
 
+/**
+ * Le niveau d'une PR lu dans le dépôt : ses fichiers entre `base` et `tete`, sa tâche nommée par le
+ * titre. SOURCE UNIQUE du classement, que `red-first` relit (GOV-160 : le test vu rouge d'abord
+ * n'est exigé qu'au niveau critique).
+ */
+export function niveauDuDepot(
+  base: string,
+  tete: string,
+  titre: string
+): { niveau: Niveau; raisons: string[] } {
+  return niveauDeLaPr({
+    fichiers: fichiersEntre(base, tete),
+    tache: tacheDeLaBase(base, titre),
+    contenu: contenuALaTete,
+  });
+}
+
 type PrLue = {
   numero: number | null;
   titre: string;

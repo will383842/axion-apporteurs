@@ -4,6 +4,7 @@
 // @req REQ-DM-043
 // @req REQ-QA-012 → REQ-SEC-022
 // @req REQ-DM-031
+// @req REQ-DM-064
 /**
  * `acces-scope.spec.ts` — la couche d'accès cloisonnée de l'espace apporteur (SEC-05), SANS base :
  * `forApporteur` est jugée sur un faux client qui ENREGISTRE chaque appel et ses arguments. Ce que
@@ -910,6 +911,21 @@ describe('REQ-DM-031 — DM-07 : le vocabulaire et les colonnes du dépôt, conf
         expect(Object.hasOwn(select, c), `${a.methode}.${c}`).toBe(false);
     }
     expect(await refusDe(vue.lister(brut({ where: { latitudeMicrodeg: 0 } })))).toBe(REFUS.forme);
+  });
+
+  it('REQ-DM-064 : l’IDCC saisi est la saisie de l’apporteur — rendu, en clair, dans chaque sélection de sa vue, et jamais un secret', async () => {
+    expect(CHAMPS_RENDUS.attribution as readonly string[]).toContain('idccSaisi');
+    expect(CHAMPS_TUS.attribution as readonly string[]).not.toContain('idccSaisi');
+    expect(SECRETS as readonly string[]).not.toContain('idccSaisi');
+    const { client, appels } = fauxClient();
+    const vue = forApporteur(client, A).attribution;
+    await vue.trouver(randomUUID());
+    await vue.lister();
+    expect(appels.length).toBeGreaterThan(0);
+    for (const a of appels) {
+      const select = (a.args as { select: Record<string, unknown> }).select;
+      expect(select['idccSaisi'], `${a.methode}.idccSaisi`).toBe(true);
+    }
   });
 
   it('REQ-DM-031 : chaque colonne chiffrée de l’attribution est écrite par colonnesPii — un champ de CHAMPS_PII, sans empreinte de nom', () => {

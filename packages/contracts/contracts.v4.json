@@ -1,0 +1,1836 @@
+{
+  "$comment": "schema_version 4. La version lisible par une machine est le `const` du champ `schema_version` ; le nom du fichier la répète pour un lecteur, il ne la définit pas.",
+  "$defs": {
+    "api_attributions_parametres": {
+      "$comment": "Le paramètre de requête : le SIREN, neuf chiffres. Mal formé : 400 sans corps.",
+      "additionalProperties": false,
+      "properties": {
+        "siren": {
+          "pattern": "^[0-9]{9}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "siren"
+      ],
+      "type": "object"
+    },
+    "api_attributions_reponse": {
+      "$comment": "Réponse 200, fermée. `libre` : `until`, `apporteurRef` et `nomAffichable` nuls (`allOf`), la même réponse pour un SIREN inconnu, au même instant ; `attribuee` : `apporteurRef` posé, et `until` nul signifie « attribuée, fin pas encore fixée (attribution non confirmée) » — jamais `libre` ; `cliente` : `apporteurRef` posé, `until` nul. `nomAffichable` est nul quand le porteur n’a pas de nom lisible. `apporteurRef` est opaque, de même forme pour un apporteur et pour un conseiller salarié (W19) ; `nomAffichable` est le prénom et l’initiale du nom du porteur, sans mention de rôle (décisions de Williams du 2026-10-01) — jamais e-mail, téléphone, identifiant ni adresse. Côté axion-ia, le nom ne s’affiche qu’à qui crée ou lit un devis, n’entre dans aucun journal ni rapport d’erreur, ni dans aucun document ou message au client, et n’est conservé que le temps du cache (5 minutes).",
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "statut": {
+                "const": "libre"
+              }
+            },
+            "required": [
+              "statut"
+            ]
+          },
+          "then": {
+            "properties": {
+              "apporteurRef": {
+                "type": "null"
+              },
+              "nomAffichable": {
+                "type": "null"
+              },
+              "until": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "statut": {
+                "const": "attribuee"
+              }
+            },
+            "required": [
+              "statut"
+            ]
+          },
+          "then": {
+            "properties": {
+              "apporteurRef": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "statut": {
+                "const": "cliente"
+              }
+            },
+            "required": [
+              "statut"
+            ]
+          },
+          "then": {
+            "properties": {
+              "apporteurRef": {
+                "type": "string"
+              },
+              "until": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "apporteurRef": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nomAffichable": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "pattern": "^[\\p{L}][\\p{L}'’-]*( [\\p{L}][\\p{L}'’-]*)* \\p{L}\\.$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "statut": {
+          "enum": [
+            "libre",
+            "attribuee",
+            "cliente"
+          ],
+          "type": "string"
+        },
+        "until": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "statut",
+        "until",
+        "apporteurRef",
+        "nomAffichable"
+      ],
+      "type": "object"
+    },
+    "api_attributions_requete_entetes": {
+      "$comment": "Requête axion-ia → Partners : le jeton porteur dédié à l’API 1, comparé à temps constant à la clé que désigne `x-axionia-kid`, EXIGÉ et dérivé par kidDe(AXIONIA_API_TOKEN) (avenant A01 du 2026-09-30, QA-T52) ; liste d’autorisation d’adresses réseau ; 60 appels par minute et par adresse. Un kid absent ou inconnu, un jeton faux ou échu, une adresse hors liste : 404 sans corps, identique à une route inexistante (REQ-SEC-012).",
+      "properties": {
+        "authorization": {
+          "pattern": "^Bearer \\S+$",
+          "type": "string"
+        },
+        "x-axionia-kid": {
+          "pattern": "^[0-9a-f]{8}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authorization",
+        "x-axionia-kid"
+      ],
+      "type": "object"
+    },
+    "api_coordonnees_candidature_parametres": {
+      "$comment": "Le paramètre de chemin : l'identifiant de candidature que porte la charge de la candidature reçue (`candidatureId`).",
+      "additionalProperties": false,
+      "properties": {
+        "candidatureId": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidatureId"
+      ],
+      "type": "object"
+    },
+    "api_coordonnees_candidature_reponse": {
+      "$comment": "Réponse 200, fermée. Toute autre situation rend 404, identique pour un identifiant inexistant et pour une candidature non émise vers Partners. Rien n'est mis en cache ; chaque appel est journalisé côté axionia sans aucune coordonnée ; au plus cinq lectures réussies par candidature sur vingt-quatre heures glissantes (partners/ADR-0023). Côté Partners, les valeurs ne vivent que le temps du traitement : jamais dans les charges reçues, jamais au journal, jamais dans un message.",
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nom": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "prenom": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "telephone": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "nom",
+        "prenom",
+        "email",
+        "telephone"
+      ],
+      "type": "object"
+    },
+    "api_coordonnees_candidature_reponse_entetes": {
+      "$comment": "Réponse axionia → Partners, signée comme un envoi : HMAC-SHA-256, sous le secret d'émission, de `<horodatage>.<corps exact>`. `x-axionia-kid`, facultatif, désigne le secret employé.",
+      "properties": {
+        "x-axionia-kid": {
+          "pattern": "^[0-9a-f]{8}$",
+          "type": "string"
+        },
+        "x-axionia-signature": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "x-axionia-timestamp": {
+          "pattern": "^[0-9]{1,20}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "x-axionia-timestamp",
+        "x-axionia-signature"
+      ],
+      "type": "object"
+    },
+    "api_coordonnees_candidature_requete_entetes": {
+      "$comment": "Requête Partners → axionia, même authentification que la relecture : HMAC-SHA-256, sous le secret dédié à la relecture, de `<horodatage>.<chemin exact>` ; tolérance de 300 s, comparaison à temps constant, liste d'autorisation d'adresses réseau (partners/ADR-0023, décision 3).",
+      "properties": {
+        "x-partners-signature": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "x-partners-timestamp": {
+          "pattern": "^[0-9]{1,20}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "x-partners-timestamp",
+        "x-partners-signature"
+      ],
+      "type": "object"
+    },
+    "api_relecture_parametres": {
+      "$comment": "Les paramètres de requête, en chiffres sur le fil : `after_sequence`, la dernière séquence déjà lue (0 au départ) ; `limit`, le nombre de lignes au plus, sous la borne nommée du serveur. Au-delà de la borne, ou un paramètre illisible : refus, jamais une page tronquée.",
+      "additionalProperties": false,
+      "properties": {
+        "after_sequence": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "limit": {
+          "maximum": 500,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "after_sequence",
+        "limit"
+      ],
+      "type": "object"
+    },
+    "api_relecture_reponse": {
+      "$comment": "Réponse 200 : une enveloppe du contrat par ligne (NDJSON), le corps stocké octet pour octet, séquences strictement croissantes au-delà de `after_sequence` ; `x-axionia-derniere-sequence` est celle de la dernière ligne rendue, ou `after_sequence` si rien n'est rendu ; `x-axionia-suite` vaut `1` s'il en reste. Rien n'est mis en cache. Chaque appel est journalisé côté axionia sans aucune donnée de personne : l'adresse appelante en empreinte, les deux paramètres, le nombre de lignes rendues.",
+      "items": {
+        "$ref": "#"
+      },
+      "maxItems": 500,
+      "type": "array"
+    },
+    "api_relecture_reponse_entetes": {
+      "$comment": "Réponse axionia → Partners, signée sous le secret d'émission ; `x-axionia-kid`, facultatif, désigne le secret employé. La signature couvre, dans cet ordre CANONIQUE, joints par un point : `<horodatage>.<after_sequence>.<limit>.<x-axionia-derniere-sequence>.<x-axionia-suite>.<corps exact>` — le corps, les deux en-têtes de la page, et les deux paramètres demandés, qui lient la réponse à SA requête : une page authentique d'une autre lecture ne se rejoue pas sur celle-ci. Les paramètres y sont écrits en chiffres, sans zéro de tête.",
+      "properties": {
+        "x-axionia-derniere-sequence": {
+          "pattern": "^[0-9]{1,18}$",
+          "type": "string"
+        },
+        "x-axionia-kid": {
+          "pattern": "^[0-9a-f]{8}$",
+          "type": "string"
+        },
+        "x-axionia-signature": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "x-axionia-suite": {
+          "enum": [
+            "0",
+            "1"
+          ],
+          "type": "string"
+        },
+        "x-axionia-timestamp": {
+          "pattern": "^[0-9]{1,20}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "x-axionia-timestamp",
+        "x-axionia-signature",
+        "x-axionia-derniere-sequence",
+        "x-axionia-suite"
+      ],
+      "type": "object"
+    },
+    "api_relecture_requete_entetes": {
+      "$comment": "Requête Partners → axionia, même authentification que la route des coordonnées : HMAC-SHA-256, sous le secret dédié à la relecture, de `<horodatage>.<cible exacte>`, la cible comprenant la requête (`after_sequence` et `limit`) ; tolérance de 300 s, comparaison à temps constant, liste d'autorisation d'adresses réseau.",
+      "properties": {
+        "x-partners-signature": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "x-partners-timestamp": {
+          "pattern": "^[0-9]{1,20}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "x-partners-timestamp",
+        "x-partners-signature"
+      ],
+      "type": "object"
+    },
+    "opco_id": {
+      "$comment": "Version 4 : les onze OPCO agréés, énumération fermée de l’enum `Opco` d’axion-ia, dans son ordre. Ajouter un OPCO, c’est une version.",
+      "enum": [
+        "atlas",
+        "opco_ep",
+        "akto",
+        "opco2i",
+        "mobilites",
+        "afdas",
+        "uniformation",
+        "ocapiat",
+        "constructys",
+        "opcommerce",
+        "opco_sante"
+      ],
+      "type": "string"
+    },
+    "payload_avoir_emis": {
+      "$comment": "FERMÉ en schema_version 4 — la charge de `avoir.emis`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "avoirDeFactureId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "avoirId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "clientId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "emisLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "montantHtCents": {
+          "type": "integer"
+        },
+        "montantTtcCents": {
+          "type": "integer"
+        },
+        "montantTvaCents": {
+          "type": "integer"
+        },
+        "numero": {
+          "type": "string"
+        },
+        "regimeTva": {
+          "type": "string"
+        },
+        "siren": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "avoirId",
+        "numero",
+        "avoirDeFactureId",
+        "clientId",
+        "siren",
+        "montantHtCents",
+        "montantTvaCents",
+        "montantTtcCents",
+        "regimeTva",
+        "emisLe"
+      ],
+      "type": "object"
+    },
+    "payload_candidature_recue": {
+      "$comment": "FERMÉ en schema_version 4 — la charge de `candidature.recue`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "campagneId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "candidatureId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "parrainCodeCapture": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reponsesJson": {
+          "type": "object"
+        },
+        "scoreBaremeVersion": {
+          "type": "string"
+        },
+        "scoreInitial": {
+          "type": "number"
+        },
+        "scorePartsJson": {
+          "type": "object"
+        },
+        "sourceCanal": {
+          "type": "string"
+        },
+        "utm": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "candidatureId",
+        "reponsesJson",
+        "scoreInitial",
+        "scorePartsJson",
+        "scoreBaremeVersion",
+        "sourceCanal",
+        "utm",
+        "campagneId",
+        "parrainCodeCapture"
+      ],
+      "type": "object"
+    },
+    "payload_client_cree": {
+      "$comment": "FERMÉ en schema_version 4 — la charge de `client.cree`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "clientId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "creeLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "misAJourLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "nafCode": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "numero": {
+          "type": "string"
+        },
+        "opco": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/opco_id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "raisonSociale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "secteur": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "siren": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "taille": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "clientId",
+        "numero",
+        "type",
+        "raisonSociale",
+        "siren",
+        "nafCode",
+        "secteur",
+        "taille",
+        "creeLe",
+        "misAJourLe",
+        "opco"
+      ],
+      "type": "object"
+    },
+    "payload_client_fusionne": {
+      "$comment": "FERMÉ en schema_version 4 — la charge de `client.fusionne`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "absorbedId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "survivorId": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "survivorId",
+        "absorbedId"
+      ],
+      "type": "object"
+    },
+    "payload_client_mis_a_jour": {
+      "$comment": "FERMÉ en schema_version 4 — la charge de `client.mis_a_jour`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "clientId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "creeLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "misAJourLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "nafCode": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "numero": {
+          "type": "string"
+        },
+        "opco": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/opco_id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "raisonSociale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "secteur": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "siren": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "taille": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "clientId",
+        "numero",
+        "type",
+        "raisonSociale",
+        "siren",
+        "nafCode",
+        "secteur",
+        "taille",
+        "creeLe",
+        "misAJourLe",
+        "opco"
+      ],
+      "type": "object"
+    },
+    "payload_devis_emis": {
+      "$comment": "FERMÉ en schema_version 4 — la charge de `devis.emis`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "clientId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "devisId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "emisLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "numero": {
+          "type": "string"
+        },
+        "siren": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "devisId",
+        "numero",
+        "clientId",
+        "siren",
+        "emisLe"
+      ],
+      "type": "object"
+    },
+    "payload_devis_signe": {
+      "$comment": "FERMÉ en schema_version 4 — la charge de `devis.signe`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "activite": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "clientId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "devisId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "lignes": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "activite": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "commission": {
+                "additionalProperties": false,
+                "properties": {
+                  "commissionId": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "grilleVersion": {
+                    "type": "string"
+                  },
+                  "libelleCommission": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "montantCents": {
+                    "anyOf": [
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "motifBlocage": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "statut": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "statut",
+                  "commissionId",
+                  "montantCents",
+                  "motifBlocage",
+                  "libelleCommission",
+                  "grilleVersion"
+                ],
+                "type": "object"
+              },
+              "commissionId": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "designation": {
+                "type": "string"
+              },
+              "jours": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "montantHtCents": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "offreCode": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "prixReferenceHtCents": {
+                "$comment": "Prix public HT de la LIGNE, en centimes : le prix public unitaire ferme en vigueur à la date de signature, multiplié par la quantité de la ligne, arrondi comme `montantHtCents`, auquel il se compare directement. `null` si l'offre n'a pas de prix public ferme (sur devis, fourchette, « à partir de », paliers, offre disparue) ou si la ligne n'a pas d'`offreCode` ; jamais un prix nul.",
+                "anyOf": [
+                  {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "designation",
+              "activite",
+              "jours",
+              "montantHtCents",
+              "offreCode",
+              "commissionId",
+              "commission",
+              "prixReferenceHtCents"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "montantTotalHtCents": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "numero": {
+          "type": "string"
+        },
+        "signeLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "devisId",
+        "numero",
+        "clientId",
+        "activite",
+        "montantTotalHtCents",
+        "signeLe",
+        "lignes"
+      ],
+      "type": "object"
+    },
+    "payload_facture_annulee": {
+      "$comment": "FERMÉ en schema_version 4 — la charge de `facture.annulee`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "clientId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "factureId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "motif": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "factureId",
+        "motif",
+        "clientId"
+      ],
+      "type": "object"
+    },
+    "payload_facture_emise": {
+      "$comment": "FERMÉ en schema_version 4 — la charge de `facture.emise`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "activite": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "clientId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "destinataire": {
+          "type": "string"
+        },
+        "devisId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "echeanceFinanceurAt": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "echeanceLe": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "emiseLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "factureId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "montantHtCents": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "montantTtcCents": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "montantTvaCents": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "numero": {
+          "type": "string"
+        },
+        "origineClient": {
+          "type": "string"
+        },
+        "payers": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "montantAttenduCents": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "payeurType": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "payeurType",
+              "montantAttenduCents"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "regimeTva": {
+          "type": "string"
+        },
+        "siren": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "subrogation": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "factureId",
+        "numero",
+        "activite",
+        "clientId",
+        "origineClient",
+        "siren",
+        "destinataire",
+        "subrogation",
+        "montantHtCents",
+        "montantTvaCents",
+        "montantTtcCents",
+        "regimeTva",
+        "emiseLe",
+        "echeanceLe",
+        "echeanceFinanceurAt",
+        "payers",
+        "devisId"
+      ],
+      "type": "object"
+    },
+    "payload_financement_etape": {
+      "$comment": "FERMÉ en schema_version 4 — la charge de `financement.etape`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "etape": {
+                "const": "depot"
+              }
+            },
+            "required": [
+              "etape"
+            ]
+          },
+          "then": {
+            "properties": {
+              "depotFaitLe": {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "etape": {
+                "const": "accord"
+              }
+            },
+            "required": [
+              "etape"
+            ]
+          },
+          "then": {
+            "properties": {
+              "accordEcritLe": {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "etape": {
+                "const": "accord"
+              }
+            },
+            "required": [
+              "etape"
+            ]
+          },
+          "then": {
+            "properties": {
+              "montantAccordeCents": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "etape": {
+                "const": "refus"
+              }
+            },
+            "required": [
+              "etape"
+            ]
+          },
+          "then": {
+            "properties": {
+              "montantAccordeCents": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "accordEcritLe": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "clientId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "depotFaitLe": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dossierId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "etape": {
+          "enum": [
+            "depot",
+            "accord",
+            "refus"
+          ],
+          "type": "string"
+        },
+        "montantAccordeCents": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "opco": {
+          "$ref": "#/$defs/opco_id"
+        },
+        "regime": {
+          "enum": [
+            "subrogation_possible",
+            "remboursement_entreprise",
+            "inconnu"
+          ],
+          "type": "string"
+        },
+        "siren": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "dossierId",
+        "clientId",
+        "siren",
+        "etape",
+        "opco",
+        "regime",
+        "depotFaitLe",
+        "accordEcritLe",
+        "montantAccordeCents"
+      ],
+      "type": "object"
+    },
+    "payload_financement_mis_a_jour": {
+      "$comment": "FERMÉ en schema_version 4 — la charge de `financement.mis_a_jour`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "echeanceFinanceurAt": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "factureId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "payers": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "montantAttenduCents": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "payeurType": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "payeurType",
+              "montantAttenduCents"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "factureId",
+        "payers",
+        "echeanceFinanceurAt"
+      ],
+      "type": "object"
+    },
+    "payload_paiement_recu": {
+      "$comment": "FERMÉ en schema_version 4 — la charge de `paiement.recu`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "clientId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "factureId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "factureMontantHtCents": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "factureMontantTtcCents": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "montantEncaisseTtcCents": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "montantHtCents": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "origineClient": {
+          "type": "string"
+        },
+        "paidAt": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "paymentId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "regimeTva": {
+          "type": "string"
+        },
+        "siren": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "soldeLaFacture": {
+          "type": "boolean"
+        },
+        "totalEncaisseTtcCents": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "paymentId",
+        "factureId",
+        "clientId",
+        "origineClient",
+        "siren",
+        "montantEncaisseTtcCents",
+        "factureMontantHtCents",
+        "factureMontantTtcCents",
+        "regimeTva",
+        "totalEncaisseTtcCents",
+        "paidAt",
+        "provider",
+        "montantHtCents",
+        "soldeLaFacture"
+      ],
+      "type": "object"
+    },
+    "payload_paiement_rembourse": {
+      "$comment": "FERMÉ en schema_version 4 — la charge de `paiement.rembourse`, champ pour champ celle du producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "additionalProperties": false,
+      "properties": {
+        "clientId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "factureId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "forme": {
+          "type": "string"
+        },
+        "montantEncaisseTtcCents": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "montantHtCents": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "motif": {
+          "type": "string"
+        },
+        "paymentId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "rembourseLe": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "siren": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "paymentId",
+        "factureId",
+        "clientId",
+        "siren",
+        "montantHtCents",
+        "montantEncaisseTtcCents",
+        "motif",
+        "forme",
+        "rembourseLe",
+        "provider"
+      ],
+      "type": "object"
+    },
+    "webhook_entetes": {
+      "$comment": "Webhook axionia → Partners : HMAC-SHA-256, sous le secret d'émission, de `<horodatage>.<corps exact>` ; tolérance de 300 s. `x-axionia-kid`, facultatif, désigne le secret employé (kidDe, partners/ADR-0013 d.8).",
+      "properties": {
+        "x-axionia-kid": {
+          "pattern": "^[0-9a-f]{8}$",
+          "type": "string"
+        },
+        "x-axionia-signature": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "x-axionia-timestamp": {
+          "pattern": "^[0-9]{1,20}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "x-axionia-timestamp",
+        "x-axionia-signature"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://axion-ia.com/contrats/partners/evenements/v4",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "client.cree"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_client_cree"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "client.mis_a_jour"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_client_mis_a_jour"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "devis.signe"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_devis_signe"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "facture.emise"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_facture_emise"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "avoir.emis"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_avoir_emis"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "paiement.recu"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_paiement_recu"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "paiement.rembourse"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_paiement_rembourse"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "candidature.recue"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_candidature_recue"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "financement.mis_a_jour"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_financement_mis_a_jour"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "facture.annulee"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_facture_annulee"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "client.fusionne"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_client_fusionne"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "devis.emis"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_devis_emis"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "financement.etape"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_financement_etape"
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "emitted_at": {
+      "$comment": "L'instant de l'ÉMISSION. Distinct du précédent : l'outbox peut rejouer (REQ-INT-001).",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "type": "string"
+    },
+    "event_id": {
+      "$comment": "REQ-INT-003 : uuid v4. C'est la clé d'idempotence du récepteur — celle de `EvenementRecu` (REQ-DM-036, `docs/GLOSSAIRE.md` §5), table portée par SEC-06 dans ce dépôt et non par le contrat : le contrat est un format de fil, il n'impose aucune table.",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "event_type": {
+      "$comment": "REQ-INT-004 : liste fermée, injectée depuis `events.ts`.",
+      "enum": [
+        "client.cree",
+        "client.mis_a_jour",
+        "devis.signe",
+        "facture.emise",
+        "avoir.emis",
+        "paiement.recu",
+        "paiement.rembourse",
+        "candidature.recue",
+        "financement.mis_a_jour",
+        "facture.annulee",
+        "client.fusionne",
+        "devis.emis",
+        "financement.etape"
+      ],
+      "type": "string"
+    },
+    "occurred_at": {
+      "$comment": "L'instant du FAIT métier, côté axionia.",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "type": "string"
+    },
+    "payload": {
+      "$comment": "Fermé par type dans `$defs`, champ pour champ, depuis le producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007).",
+      "type": "object"
+    },
+    "producer": {
+      "$comment": "OUVERT — aucune exigence du registre n'énumère les producteurs. La liste fermée est à trancher par INT-T01b ; en attendant, une chaîne non vide, jamais une valeur devinée.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "schema_version": {
+      "$comment": "La version du contrat. Une enveloppe qui en porte une autre est refusée, pas devinée.",
+      "const": 4,
+      "type": "integer"
+    },
+    "sequence": {
+      "$comment": "OUVERT sur sa PORTÉE — le registre nomme le champ sans dire si la monotonie est globale ou par sujet. C'est l'outbox (INT-T02) qui la tranche ; aucune borne n'est inventée ici.",
+      "type": "integer"
+    },
+    "subject_ref": {
+      "$comment": "OUVERT — la forme de la référence de sujet n'est écrite dans aucune exigence. Le champ est EXIGÉ (sa présence est un invariant) et sa forme reste libre jusqu'à INT-T01b."
+    }
+  },
+  "required": [
+    "event_id",
+    "event_type",
+    "schema_version",
+    "occurred_at",
+    "emitted_at",
+    "producer",
+    "subject_ref",
+    "sequence",
+    "payload"
+  ],
+  "title": "Contrat d'événements axionia → Axion Partners",
+  "type": "object"
+}
