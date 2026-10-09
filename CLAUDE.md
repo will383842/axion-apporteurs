@@ -47,8 +47,9 @@ déjà divergé de sa source : il omettait deux des chemins réservés et affirm
 éditer. Un résumé faux est plus cher qu'un renvoi : il se lit, et on le croit.
 
 **Le tableau des chemins réservés.** Sa source est la section 7 de `docs/CHARTE-AGENTS.md`, et ce
-tableau-là est lu ligne à ligne par la garde : en écrire une seconde version, ce serait décider
-autrement que la garde qui bloque.
+tableau-là n'a pas de copie : en écrire une seconde version, ce serait créer deux sources qui
+divergeront sans que rien ne l'annonce. Aucune garde ne le lit plus : le niveau de relecture d'une
+PR se calcule sur ses fichiers (`scripts/gates/gov-pr-niveaux.ts`).
 
 ## Le registre ne s'écrit plus dans les PR
 

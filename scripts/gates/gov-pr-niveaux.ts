@@ -26,6 +26,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
+import { cheminsTouches, diffEntre } from './fichiers-de-la-pr';
 import {
   ASSOCIATIONS_HABILITEES,
   codesDePoste,
@@ -48,6 +49,7 @@ export const FAMILLES = [
   'lentille_manquante',
   'veto_securite',
   'gabarit_incomplet',
+  'statut_ecrit',
 ] as const;
 
 export const CHEMIN_GABARIT = '.github/PULL_REQUEST_TEMPLATE.md';
@@ -72,6 +74,15 @@ export const RACINES_CRITIQUES: readonly string[] = [
   'config/',
   'patches/',
   'scripts/gates/',
+  // L'outillage qui juge ne s'allège pas lui-même (refus des lentilles sur #859) : le lot lit
+  // les verdicts (`scripts/lot/revues.ts`), `scripts/lib/` sert les gardes.
+  'scripts/lot/',
+  'scripts/lib/',
+  'src/config/',
+  'next.config.js',
+  'next.config.mjs',
+  'next.config.cjs',
+  'next.config.ts',
   'tests/integration/',
   'tests/unit/domaine/',
   'tests/unit/securite/',
@@ -87,7 +98,7 @@ export const RACINES_CRITIQUES: readonly string[] = [
 
 /** Un mot de l'argent, des données personnelles ou de la sécurité dans le CHEMIN : critique. */
 export const MOTIF_CHEMIN_CRITIQUE =
-  /(commission|argent|releve|versement|autofactur|rib|iban|sepa|paiement|grille|tva|das2|journal|auth|session|role|cloison|idor|rgpd|purge|chiffr|secret|webhook|kyc|donnees|pii)/i;
+  /(commission|argent|releve|versement|autofactur|rib|iban|sepa|paiement|grille|tva|das2|journal|auth|session|role|cloison|idor|rgpd|purge|chiffr|secret|securite|webhook|kyc|donnees|pii)/i;
 
 /** Les racines LÉGÈRES : écrans, textes, documents, outillage. */
 export const RACINES_LEGERES: readonly string[] = [
@@ -312,6 +323,55 @@ export function fautesDesRevues(
   return fautes;
 }
 
+// ── le statut des tâches ─────────────────────────────────────────────────────
+
+/** L'exception unique : la PR qui a retiré l'écriture des statuts (décision #319, 6077512137). */
+export const PR_EXCEPTEE_DU_STATUT = 'GOV-160';
+
+function statutsDe(texte: string | null): Map<string, unknown> {
+  if (texte === null) return new Map();
+  const doc = JSON.parse(texte) as { taches?: { id: string; statut?: unknown }[] };
+  return new Map((doc.taches ?? []).map((t) => [t.id, t.statut]));
+}
+
+/**
+ * PURE. Aucune PR d'auteur n'écrit de statut dans `docs/tasks.json` : l'avancement se dérive des
+ * PR fusionnées (`pnpm avancement`). Une tâche AJOUTÉE ou RETIRÉE n'est pas un statut écrit ; un
+ * statut changé sur une tâche existante l'est.
+ */
+export function fautesDeStatut(base: string | null, tete: string | null, titre: string): Faute[] {
+  if (MOTIF_TITRE.exec(titre)?.[2] === PR_EXCEPTEE_DU_STATUT) return [];
+  let avant: Map<string, unknown>;
+  let apres: Map<string, unknown>;
+  try {
+    avant = statutsDe(base);
+    apres = statutsDe(tete);
+  } catch {
+    return [
+      { famille: 'statut_ecrit', message: 'docs/tasks.json illisible : statuts non vérifiables.' },
+    ];
+  }
+  const changes = [...apres]
+    .filter(([id, st]) => avant.has(id) && avant.get(id) !== st)
+    .map(([id]) => id);
+  return changes.length === 0
+    ? []
+    : [
+        {
+          famille: 'statut_ecrit',
+          message: `docs/tasks.json : statut modifié pour ${changes.slice(0, 8).join(', ')} — aucune PR n'écrit de statut ; l'avancement se lit par « pnpm avancement ».`,
+        },
+      ];
+}
+
+function tasksA(ref: string): string | null {
+  try {
+    return git(['show', `${ref}:docs/tasks.json`]);
+  } catch {
+    return null;
+  }
+}
+
 // ── le gabarit ────────────────────────────────────────────────────────────────
 
 export function fautesDuGabarit(gabarit: string): Faute[] {
@@ -330,10 +390,9 @@ function git(args: string[]): string {
   });
 }
 
+/** Les deux côtés d'un renommage : un fichier critique déplacé (vers `tests/archive/`, `docs/`) reste critique. */
 function fichiersEntre(base: string, tete: string): string[] {
-  return git(['diff', '--name-only', `${base}...${tete}`])
-    .split('\n')
-    .filter(Boolean);
+  return cheminsTouches(diffEntre(base, tete));
 }
 
 function migrationsAjoutees(base: string, tete: string): string[] {
@@ -392,6 +451,9 @@ function juger(pr: PrLue, revues: RevueLue[] | null): { niveau: Niveau; fautes: 
     ...fauteDuTitre(pr.titre),
     ...fautesDuCorps(pr.corps, niveau, code),
     ...fautesDOrdre(migrationsDeLaBase(pr.base), migrationsAjoutees(pr.base, pr.tete)),
+    ...(pr.fichiers.includes('docs/tasks.json')
+      ? fautesDeStatut(tasksA(pr.base), tasksA(pr.tete), pr.titre)
+      : []),
   ];
   if (revues !== null) fautes.push(...fautesDesRevues(revues, pr.tete, exigees, codesDePoste()));
   return { niveau, fautes };
@@ -509,6 +571,15 @@ export const TEMOINS: { famille: (typeof FAMILLES)[number]; fautes: () => Faute[
       ),
   },
   { famille: 'gabarit_incomplet', fautes: () => fautesDuGabarit('<!-- rouge-vert:debut -->') },
+  {
+    famille: 'statut_ecrit',
+    fautes: () =>
+      fautesDeStatut(
+        JSON.stringify({ taches: [{ id: 'DM-01', statut: 'a_faire' }] }),
+        JSON.stringify({ taches: [{ id: 'DM-01', statut: 'fusionnee' }] }),
+        'feat(DM-01): x'
+      ),
+  },
 ];
 
 /** Les contre-témoins : chacun doit rester VERT, sans quoi la garde refuserait le cas légitime. */
@@ -519,6 +590,15 @@ export const CONTRE_TEMOINS: { nom: string; fautes: () => Faute[] }[] = [
     fautes: () => fautesDuCorps(CORPS_CRITIQUE_REMPLI, 'critique', true),
   },
   { nom: 'PR légère sans bloc', fautes: () => fautesDuCorps('', 'leger', false) },
+  {
+    nom: 'définition modifiée, statut intact',
+    fautes: () =>
+      fautesDeStatut(
+        JSON.stringify({ taches: [{ id: 'DM-01', statut: 'a_faire', titre: 'a' }] }),
+        JSON.stringify({ taches: [{ id: 'DM-01', statut: 'a_faire', titre: 'b' }] }),
+        'feat(DM-01): x'
+      ),
+  },
   {
     nom: 'migration postérieure',
     fautes: () => fautesDOrdre(['20261003005025_b'], ['20261009120000_c']),
@@ -564,6 +644,8 @@ function prouver(): number {
     ['docs/PRIORITES.md', 'leger'],
     ['src/app/(espace)/accueil/page.tsx', 'leger'],
     ['tests/unit/espace/accueil.spec.ts', 'normal'],
+    ['scripts/lot/revues.ts', 'critique'],
+    ['next.config.mjs', 'critique'],
   ];
   for (const [f, attendu] of niveaux) {
     const lu = niveauDuFichier(f, () => null);
