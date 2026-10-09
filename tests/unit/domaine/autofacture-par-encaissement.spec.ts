@@ -42,6 +42,7 @@ const commande = (id: string, commissionCents: number, le = MERCREDI): LigneAcqu
   commissionCents,
   encaissementIntegralLe: le,
   constateLe: le,
+  regulariseLe: null,
 });
 
 describe('REQ-ARG-015 — aucun montant minimum, aucun relevé', () => {
@@ -140,6 +141,7 @@ describe('REQ-ARG-018 — une autofacture par encaissement intégral', () => {
       commissionCents: c,
       encaissementIntegralLe: MERCREDI,
       constateLe: MERCREDI,
+      regulariseLe: null,
     });
     const [p1, p2] = [53, 71];
     const [af] = composerAutofactures([commande('a', 1_000), p('p1', p1), p('p2', p2)]);
@@ -224,9 +226,82 @@ describe('REQ-ARG-018 — une ligne n’appartient qu’à une seule autofacture
     const lignes = [commande('a', 100)];
     const m = depotEnMemoire(lignes);
     await emettreAutofactures(m.depot, HORLOGE);
-    lignes.push({ ...commande('b', 200), constateLe: D(2027, 3, 17) });
+    lignes.push({ ...commande('b', 200), regulariseLe: D(2027, 3, 17) });
     await emettreAutofactures(m.depot, HORLOGE);
     expect(m.autofactures.map((a) => a.ligneIds)).toEqual([['a'], ['b']]);
+  });
+
+  it('REQ-ARG-018 : TÉMOIN — l’émission suit l’ordre des dates d’émission, pas l’ordre de lecture', async () => {
+    // La ligne du 16/03 est lue (créée) AVANT celle du 15/03 : la séquence reste chronologique.
+    const m = depotEnMemoire([
+      commande('tard', 200, D(2027, 3, 16)),
+      commande('tot', 100, D(2027, 3, 15)),
+    ]);
+    const rendues = await emettreAutofactures(m.depot, HORLOGE);
+    expect(rendues.map((a) => a.emiseLe)).toEqual([D(2027, 3, 15), D(2027, 3, 16)]);
+    expect(m.autofactures.map((a) => a.ligneIds)).toEqual([['tot'], ['tard']]);
+  });
+});
+
+describe('REQ-ARG-018 (art. 5.4) — une ligne régularisée est datée de sa régularisation', () => {
+  // Acquise et constatée le lundi 2027-03-01, bloquée, puis régularisée le lundi 2027-03-22.
+  const LUNDI_1 = D(2027, 3, 1);
+  const REGULARISEE = D(2027, 3, 22);
+  const regularisee = (id: string, c: number): LigneAcquise => ({
+    ...commande(id, c, LUNDI_1),
+    regulariseLe: REGULARISEE,
+  });
+
+  it('REQ-ARG-018 : TÉMOIN — émise le jour de la régularisation, prestation au jour d’acquisition', () => {
+    const [af] = composerAutofactures([regularisee('a', 100)]);
+    expect(af?.emiseLe).toEqual(REGULARISEE);
+    expect(af?.acquiseLe).toEqual(LUNDI_1);
+    expect(af?.decompte).toMatchObject([{ encaissementIntegralLe: LUNDI_1 }]);
+  });
+
+  it('REQ-ARG-018 : TÉMOIN — l’échéance court de la régularisation, non du constat', () => {
+    const [af] = composerAutofactures([regularisee('a', 100)]);
+    expect(af?.echeanceLe).toEqual(echeanceAutofacture(REGULARISEE));
+    expect(af?.echeanceLe).toEqual(D(2027, 4, 21));
+  });
+
+  it('REQ-ARG-018 : une ligne régularisée ne rejoint pas l’autofacture de son jour d’acquisition', () => {
+    const afs = composerAutofactures([regularisee('b', 200), commande('a', 100, LUNDI_1)]);
+    expect(afs.map((a) => [a.ligneIds, a.emiseLe])).toEqual([
+      [['a'], LUNDI_1],
+      [['b'], REGULARISEE],
+    ]);
+  });
+
+  it('REQ-ARG-018 : une régularisation antérieure au jour d’établissement ne l’avance pas', () => {
+    const [af] = composerAutofactures([{ ...commande('a', 100, SAMEDI), regulariseLe: SAMEDI }]);
+    expect(af?.emiseLe).toEqual(D(2027, 3, 15));
+  });
+
+  it('REQ-ARG-018 : le passage n’émet pas avant le jour de la régularisation', async () => {
+    const m = depotEnMemoire([regularisee('a', 100)]);
+    const veille = horlogeFigee(Date.UTC(2027, 2, 21, 12));
+    expect(await emettreAutofactures(m.depot, veille)).toEqual([]);
+    const [af] = await emettreAutofactures(m.depot, horlogeFigee(Date.UTC(2027, 2, 22, 12)));
+    expect(af?.emiseLe).toEqual(REGULARISEE);
+  });
+});
+
+describe('REQ-ARG-018 — la séquence est chronologique', () => {
+  it('REQ-ARG-018 : TÉMOIN — une ligne du 16/03 lue avant une ligne du 15/03 : le 15 sort d’abord', () => {
+    const afs = composerAutofactures([
+      commande('tard', 200, D(2027, 3, 16)),
+      commande('tot', 100, D(2027, 3, 15)),
+    ]);
+    expect(afs.map((a) => a.emiseLe)).toEqual([D(2027, 3, 15), D(2027, 3, 16)]);
+  });
+
+  it('REQ-ARG-018 : même jour d’émission → l’ordre des jours d’acquisition, quel que soit l’ordre lu', () => {
+    const afs = composerAutofactures([
+      commande('dimanche', 200, D(2027, 3, 14)),
+      commande('samedi', 100, SAMEDI),
+    ]);
+    expect(afs.map((a) => a.ligneIds)).toEqual([['samedi'], ['dimanche']]);
   });
 });
 

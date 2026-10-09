@@ -176,6 +176,41 @@ describe('REQ-ARG-018 — la numérotation, posée par la base, sans trou', () =
     expect(afs.map((a) => a.montantCents)).toEqual([11, 22]);
   });
 
+  it('REQ-ARG-018 : TÉMOIN — une ligne du 16/03 créée avant une ligne du 15/03 : le n° 1 est le 15', async () => {
+    const app = await unApporteur();
+    await uneLigne(app, 16, '2027-03-16');
+    await uneLigne(app, 15, '2027-03-15');
+    await emettreAutofactures(depotAutofacturesPrisma(base.prisma), HORLOGE);
+    const afs = await autofacturesDe(app);
+    expect(afs.map((a) => [a.numero, a.emiseLe.toISOString().slice(0, 10)])).toEqual([
+      [1, '2027-03-15'],
+      [2, '2027-03-16'],
+    ]);
+  });
+
+  it('REQ-ARG-018 : TÉMOIN — une ligne régularisée est émise le jour de sa régularisation (art. 5.4)', async () => {
+    const app = await unApporteur();
+    const acquise = new Date('2027-03-01T00:00:00.000Z');
+    await base.prisma.ligneCommission.create({
+      data: {
+        apporteurId: app,
+        type: 'commission',
+        statut: 'acquise',
+        commissionCents: 9,
+        encaissementIntegralLe: acquise,
+        constateLe: acquise,
+        regulariseLe: new Date('2027-03-22T00:00:00.000Z'),
+        commandeRef: `CMD-${randomUUID().slice(0, 8)}`,
+        prixFactureCents: 63,
+        prixPublicCents: 81,
+      },
+    });
+    await emettreAutofactures(depotAutofacturesPrisma(base.prisma), HORLOGE);
+    const [af] = await autofacturesDe(app);
+    expect(af!.emiseLe.toISOString().slice(0, 10)).toBe('2027-03-22');
+    expect(af!.echeanceLe.toISOString().slice(0, 10)).toBe('2027-04-21');
+  });
+
   it('REQ-ARG-018 : l’émission rend des dates d’émission et d’échéance justes, en jours civils', async () => {
     const app = await unApporteur();
     await uneLigne(app, 5, '2027-03-13'); // samedi → émise le lundi 15

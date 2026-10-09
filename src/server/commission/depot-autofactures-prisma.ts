@@ -1,7 +1,7 @@
 /**
  * T-ARG-045 — l'adaptateur Prisma du port d'émission des autofactures (REQ-ARG-014, REQ-ARG-018).
  *
- * LE CONTRAT, tenu ici et par la base (migration 20261009183517, A02) :
+ * LE CONTRAT, tenu ici et par la base (migrations 20261009183517 et 20261009195233, A02) :
  *   — une ligne entre dans au plus UNE autofacture : l'affectation est l'`UPDATE … WHERE
  *     autofacture_id IS NULL RETURNING id` de la transaction d'émission. Sous READ COMMITTED, un
  *     passage concurrent attend le verrou de la ligne, réévalue la condition après la validation de
@@ -40,6 +40,7 @@ function versLigneAcquise(l: LigneCommission): LigneAcquise {
     commissionCents: l.commissionCents,
     encaissementIntegralLe: versDateCivile(l.encaissementIntegralLe),
     constateLe: versDateCivile(l.constateLe),
+    regulariseLe: l.regulariseLe === null ? null : versDateCivile(l.regulariseLe),
   };
   if (l.type === 'parrainage') return { ...base, nature: 'parrainage' };
   if (l.commandeRef === null || l.prixFactureCents === null || l.prixPublicCents === null) {

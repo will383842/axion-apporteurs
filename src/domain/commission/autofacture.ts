@@ -5,8 +5,11 @@
  * — Établie le jour de l'encaissement intégral qui rend la commission acquise, ou, s'il tombe un jour
  *   non ouvré ou n'est constaté que plus tard, le premier jour ouvré du constat.
  * — Les commissions d'un même apporteur établies le même jour, sommes de parrainage comprises, sont
- *   regroupées en UNE autofacture ; jamais une unicité par jour : une ligne régularisée ou constatée
- *   tard a sa propre autofacture, datée de son constat.
+ *   regroupées en UNE autofacture ; jamais une unicité par jour : une ligne constatée tard a sa
+ *   propre autofacture, datée de son constat ; une ligne régularisée (art. 5.4), la sienne, datée de
+ *   sa régularisation — l'échéance court alors de la régularisation.
+ * — Les autofactures sont rendues dans l'ordre chronologique de leur émission : la base les numérote
+ *   dans l'ordre où elles sont créées, et la séquence doit être chronologique.
  * — Aucun montant minimum : un centime est facturé.
  * — L'échéance tombe `VERSEMENT_PLAFOND_JOURS` jours civils (Paris) après l'émission.
  * — Une reprise ne diminue jamais l'autofacture : l'avoir s'impute sur la somme virée.
@@ -25,6 +28,11 @@ type Base = {
   readonly encaissementIntegralLe: DateCivile;
   /** Le jour où la Société constate l'encaissement intégral. */
   readonly constateLe: DateCivile;
+  /**
+   * Art. 5.4 : le jour où la dernière pièce ou information manquante est reçue, pour une ligne dont
+   * le versement a été différé ; nul pour une ligne jamais bloquée. L'autofacture en est datée.
+   */
+  readonly regulariseLe: DateCivile | null;
 };
 
 export type LigneAcquise =
@@ -134,9 +142,24 @@ function composerUne(
 }
 
 /**
+ * La date d'émission d'une ligne : son jour d'établissement (art. 5.1) ou, si elle a été régularisée
+ * plus tard (art. 5.4, REQ-ARG-016), le jour de sa régularisation — jamais antidatée.
+ */
+export function jourDEmission(l: Base): DateCivile {
+  const etabli = jourDEtablissement(l.encaissementIntegralLe, l.constateLe);
+  if (l.regulariseLe === null || joursDeLaDate(l.regulariseLe) <= joursDeLaDate(etabli)) {
+    return etabli;
+  }
+  return l.regulariseLe;
+}
+
+/**
  * Regroupe les lignes acquises en autofactures : une par apporteur, par jour d'ACQUISITION et par
- * jour d'établissement (REQ-ARG-014). Deux jours d'acquisition ne fusionnent jamais, même établis le
- * même jour ouvré ; une ligne constatée plus tard a sa propre autofacture, datée de son constat.
+ * jour d'émission (REQ-ARG-014). Deux jours d'acquisition ne fusionnent jamais, même établis le
+ * même jour ouvré ; une ligne constatée plus tard a sa propre autofacture, datée de son constat, et
+ * une ligne régularisée, la sienne, datée de sa régularisation. Le résultat est trié par date
+ * d'émission, puis par jour d'acquisition : l'émission les crée dans cet ordre, et la base les
+ * numérote dans l'ordre de création (séquence chronologique, REQ-ARG-018).
  */
 export function composerAutofactures(lignes: readonly LigneAcquise[]): AutofactureComposee[] {
   const groupes = new Map<
@@ -145,12 +168,18 @@ export function composerAutofactures(lignes: readonly LigneAcquise[]): Autofactu
   >();
   for (const l of lignes) {
     centimes(l.commissionCents, 'la commission');
-    const emiseLe = jourDEtablissement(l.encaissementIntegralLe, l.constateLe);
+    const emiseLe = jourDEmission(l);
     const acquiseLe = l.encaissementIntegralLe;
     const cle = JSON.stringify([l.apporteurId, joursDeLaDate(acquiseLe), joursDeLaDate(emiseLe)]);
     const g = groupes.get(cle) ?? { acquiseLe, emiseLe, lignes: [] };
     g.lignes.push(l);
     groupes.set(cle, g);
   }
-  return [...groupes.values()].map((g) => composerUne(g.acquiseLe, g.emiseLe, g.lignes));
+  return [...groupes.values()]
+    .sort(
+      (a, b) =>
+        joursDeLaDate(a.emiseLe) - joursDeLaDate(b.emiseLe) ||
+        joursDeLaDate(a.acquiseLe) - joursDeLaDate(b.acquiseLe)
+    )
+    .map((g) => composerUne(g.acquiseLe, g.emiseLe, g.lignes));
 }

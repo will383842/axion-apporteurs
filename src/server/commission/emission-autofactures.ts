@@ -9,8 +9,10 @@
  * aucune ne l'est, rien n'est créé. Un passage rejoué ou concurrent ne crée donc pas de seconde
  * autofacture pour une même ligne.
  *
- * Le registre des lignes de commission et la table des autofactures n'existent pas encore (tâches
- * `schema` à venir) : ce module ne porte que le PORT, que leur adaptateur Prisma devra honorer.
+ * Ce module porte le PORT ; son adaptateur Prisma est `depot-autofactures-prisma.ts`, sur les tables
+ * `lignes_commission`, `autofactures` et `compteurs_autofacture`. Les autofactures sont créées dans
+ * l'ordre chronologique de leur émission, que `composerAutofactures` rend : la base les numérote dans
+ * l'ordre de création, et la séquence doit être chronologique (REQ-ARG-018).
  * Rien du contenu d'une autofacture n'est journalisé ici (conditions de la sécurité, point 4).
  */
 import {
@@ -44,9 +46,9 @@ export interface DepotAutofactures {
 
 /**
  * Le passage « tout ce qui est dû à l'instant t » (REQ-ARG-014), horloge injectée : il émet les
- * autofactures des lignes libres dont le jour d'établissement est atteint À PARIS, et rend celles
- * effectivement créées. Aucune autofacture n'est datée dans le futur : une ligne dont le jour
- * d'établissement n'est pas encore venu reste libre pour un passage ultérieur.
+ * autofactures des lignes libres dont le jour d'émission (établissement ou régularisation) est
+ * atteint À PARIS, et rend celles effectivement créées. Aucune autofacture n'est datée dans le futur : une ligne dont le jour
+ * d'émission n'est pas encore venu reste libre pour un passage ultérieur.
  */
 export async function emettreAutofactures(
   depot: DepotAutofactures,

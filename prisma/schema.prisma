@@ -1765,6 +1765,11 @@ model LigneCommission {
   encaissementIntegralLe DateTime              @map("encaissement_integral_le") @db.Date
   /// Le jour (Paris) où la Société constate l'encaissement intégral.
   constateLe             DateTime              @map("constate_le") @db.Date
+  /// Art. 5.4 (REQ-ARG-016, REQ-ARG-018) : le jour (Paris) de la régularisation d'une ligne dont le
+  /// versement a été différé (réception de la dernière pièce ou information manquante). L'autofacture
+  /// en est datée, et son échéance en court. Nul pour une ligne jamais bloquée ; jamais avant le
+  /// constat (CHECK).
+  regulariseLe           DateTime?             @map("regularise_le") @db.Date
   /// Le décompte d'une ligne `commission` : sa commande et ses prix ; nuls pour les autres types (CHECK).
   commandeRef            String?               @map("commande_ref") @db.VarChar(64)
   prixFactureCents       Int?                  @map("prix_facture_cents")
