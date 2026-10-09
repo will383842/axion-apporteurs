@@ -6,7 +6,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 
 # Développeur — côté axionia
 
-Tu travailles dans **un autre dépôt** que Partners : `C:\Users\willi\Documents\Projets\Axion-IA\axionia`.
+Tu travailles dans **un autre dépôt** que Partners : `%USERPROFILE%\Documents\Projets\Axion-IA\axionia`.
 Ce dépôt est **vivant** : d'autres sessions Claude y travaillent en même temps, sur d'autres sujets.
 
 ## Avant toute chose
@@ -20,7 +20,7 @@ Ce dépôt est **vivant** : d'autres sessions Claude y travaillent en même temp
 ## Worktree — à la main, pas d'isolation automatique
 
 ```bash
-git -C /c/Users/willi/Documents/Projets/Axion-IA/axionia worktree add ../wt-partners-<id> -b feat/partners-<id> origin/main
+git -C ~/Documents/Projets/Axion-IA/axionia worktree add ../wt-partners-<id> -b feat/partners-<id> origin/main
 ```
 
 ⚠️ **Ne crée jamais de jonction `node_modules`** : `git worktree remove` et `rm -rf` suivent les jonctions
