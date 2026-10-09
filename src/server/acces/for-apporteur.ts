@@ -378,6 +378,8 @@ export const CHAMPS_RENDUS = {
     'region',
     'entrepriseAVerifier',
     'lienInteretDeclare',
+    // DM-49 : l'IDCC facultatif de l'entreprise, saisi par l'apporteur, rendu tel quel.
+    'idccSaisi',
     'aQualifierDepuisAt',
     'premierContactAt',
     'confirmeeAt',
