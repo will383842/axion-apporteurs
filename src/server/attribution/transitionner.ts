@@ -44,7 +44,7 @@ import {
   type OccupationDeLEntreprise,
 } from '../../domain/apporteur/effets-de-la-fin';
 import { minuitDeParisDuJour } from '../../domain/apporteur/resiliation';
-import { ajouterEvenement } from '../evenement/journal';
+import { ajouterEvenement, dernieresTransitionsSurLeSiren } from '../evenement/journal';
 import { annulerLaDemandeDe } from '../confirmation/demandes';
 import { ETATS_LIBERES, echeanceDePurge } from '../taches/purger-contacts';
 import { ETATS_OCCUPANTS } from '../../domain/attribution/etats';
@@ -505,21 +505,23 @@ export async function attributionDUneCommandeSignee(
     where: { siren: commande.siren, statut: { not: 'en_attente' } },
     select: { id: true, apporteurId: true, statut: true, deposeeAt: true },
   });
+  const dernieres = new Map(
+    (await dernieresTransitionsSurLeSiren(tx, commande.siren)).map((d) => [d.attributionId, d])
+  );
   const occupations: OccupationDeLEntreprise[] = [];
   for (const a of lignes) {
-    const dernier = await tx.evenement.findFirst({
-      where: { agregat: 'attribution', agregatId: a.id, type: 'attribution_etat_modifie' },
-      orderBy: { id: 'desc' },
-      select: { charge: true, survenuAt: true },
-    });
-    const transition = (dernier?.charge as { transition?: TransitionAttribution } | null)
-      ?.transition;
+    const dernier = dernieres.get(a.id);
+    const transition = (dernier?.transition ?? undefined) as TransitionAttribution | undefined;
     const finie = !occupe(a.statut) || transition === 'figee';
     // Une attribution finie sans transition au journal n'a droit à rien.
-    if (finie && transition === undefined) continue;
+    if (finie && (transition === undefined || !dernier?.survenuAt)) continue;
     const sortie = finie ? transition! : null;
     let finDuContrat: number | null = null;
-    if (dernier && a.apporteurId !== null && (sortie === 'figee' || sortie === 'fin_de_contrat')) {
+    if (
+      dernier?.survenuAt &&
+      a.apporteurId !== null &&
+      (sortie === 'figee' || sortie === 'fin_de_contrat')
+    ) {
       const decision = await tx.decisionDeContrat.findFirst({
         where: { apporteurId: a.apporteurId, geste: 'resiliation' },
         orderBy: { creeAt: 'desc' },
