@@ -88,6 +88,7 @@ Prendre une tâche, créer lui-même son worktree et sa branche, écrire le test
 - une tâche de `docs/tasks.json` : id, titre, reqs, paths, acceptance, tests, sensible
 - le texte mot à mot de chaque REQ citée
 - l'horodatage de référence du lot, fourni par le workflow
+- les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier
 
 ### Sorties
 
@@ -103,11 +104,8 @@ Prendre une tâche, créer lui-même son worktree et sa branche, écrire le test
 
 ### Documents à lire
 
-- `docs/PLAN-STATE.md` — où en est le projet, ce qui est bloqué
 - `docs/REGLES-MAISON.md` — les règles qui ont coûté cher, à ne pas réapprendre
 - `docs/CONVENTIONS.md` — nommage, argent en centimes, branches, worktrees, pré-vol
-- `docs/REQUIREMENTS.md` — le texte mot à mot des REQ citées par sa tâche
-- `docs/DECISIONS.md` — l'hypothèse par défaut qui rend sa tâche codable — ou son absence, qui la stoppe
 - `docs/GLOSSAIRE.md` — le vocabulaire fermé : une valeur d'enum s'y déclare
 
 ### Outils et droit d’écriture

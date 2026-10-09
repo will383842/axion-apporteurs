@@ -1,6 +1,6 @@
 ---
 name: release-manager
-description: Fusionne les PR d'Axion Partners, UNE à la fois, et vérifie l'atterrissage avant la suivante. Ne fusionne jamais sa propre PR ni rien côté axionia.
+description: Fusionne les PR d'Axion Partners par paquets adaptatifs, chaque fusion vérifiée à l'atterrissage avant la suivante. Ne fusionne jamais sa propre PR ni rien côté axionia.
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -86,7 +86,7 @@ La vérité est dans `x-partners-build-sha`, pas dans la couleur du run.
 
 ### Mission
 
-Fusionner une PR à la fois sur `main` : réserver le créneau avant `update-branch`, attendre toutes les gates vertes, lancer `pnpm gov:pr --pr <numéro>`, relire `mergeStateStatus` et fusionner dans le même appel, puis vérifier que `x-partners-build-sha` vaut le sha fusionné avant de laisser passer la suivante.
+Fusionner les PR d'un lot sur `main` par paquets adaptatifs (GOV-158) : composer le paquet par `scripts/lot/paquets-de-fusion.ts` (aucun fichier commun, ordre d'A02), le tester ensemble une fois sur la pointe de `main`, le couper en deux sur un rouge jusqu'à isoler la fautive ; puis faire passer chaque PR saine par la séquence de fusion — créneau réservé avant `update-branch`, gates vertes, `pnpm gov:pr --pr <numéro>`, `mergeStateStatus` relu et fusion dans le même appel — et vérifier que `x-partners-build-sha` vaut le sha fusionné avant la suivante.
 
 ### Entrées
 
@@ -105,7 +105,6 @@ Fusionner une PR à la fois sur `main` : réserver le créneau avant `update-bra
 
 ### Documents à lire
 
-- `docs/PLAN-STATE.md` — le dernier atterrissage et les PR ouvertes
 - `docs/REGLES-MAISON.md` — RM-09, une fusion à la fois, l'atterrissage vérifié
 - `docs/CONVENTIONS.md` — §5, squash, historique linéaire, forme du titre de PR
 - `docs/CHARTE-AGENTS.md` — §8, ce que `gov:pr --pr <n>` contrôle en plus avant la fusion
