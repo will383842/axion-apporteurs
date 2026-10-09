@@ -13,7 +13,8 @@
  *   2. la finalité nomme la conservation dans l'outil de relation client, pour la relation d'affaires ;
  *   3. la base nomme l'intérêt légitime commercial, au titre de la fonction, et l'opposition ;
  *   4. les destinataires comptent la présentation des prestations et le suivi des clients ;
- *   5. la durée ne porte plus de paramètre de durée de prospection, et la phrase du démenti la suit ;
+ *   5. la durée de prospection est comptée depuis le dernier contact, en paramètre lu à la source
+ *      (décision de Williams du 2026-10-09), et la phrase du démenti la suit ;
  *   6. aucune clé ne dit « relance » à tort : la seule relance niée est celle de la confirmation ;
  *   7. l'opposition vaut pour TOUT message et tout appel d'Axion-IA, et son lien le dit.
  */
@@ -47,13 +48,17 @@ describe('REQ-JUR-060 — le bloc de l’article 14 en version 6 (le CRM d’Axi
     );
   });
 
-  it('REQ-JUR-062 : TÉMOIN — la durée dit la prospection sans durée fixée, sans paramètre de durée de prospection, puis le démenti et sa durée en paramètre', () => {
+  it('REQ-JUR-062 : TÉMOIN — la durée de prospection est comptée depuis le dernier contact, en paramètre (décision de Williams du 2026-10-09), puis le démenti et sa durée en paramètre', () => {
     expect(INFORMATION_ARTICLE_14.duree).toBe(
-      "Axion-IA conserve les coordonnées de votre entreprise, ainsi que vos nom et coordonnées professionnelles, pour vous présenter ses prestations, aussi longtemps qu'elle poursuit cette activité, sans durée fixée à l'avance. Vous pouvez à tout moment vous opposer à nos messages et appels, ou demander l'effacement de vos données ; nous les mettons à jour ou les effaçons dès que nous apprenons qu'elles ne sont plus exactes, par exemple si vous changez de fonction. Si vous indiquez n'avoir eu aucun échange avec {prenomApporteur} {nomApporteur}, votre réponse et votre nom sont conservés {dureeDementi}, pour pouvoir l'établir en cas de contestation."
+      "Axion-IA conserve les coordonnées de votre entreprise, ainsi que vos nom et coordonnées professionnelles, pour vous présenter ses prestations, pendant {dureeApresDernierContact} après le dernier contact. Vous pouvez à tout moment vous opposer à nos messages et appels, ou demander l'effacement de vos données ; nous les mettons à jour ou les effaçons dès que nous apprenons qu'elles ne sont plus exactes, par exemple si vous changez de fonction. Si vous indiquez n'avoir eu aucun échange avec {prenomApporteur} {nomApporteur}, votre réponse et votre nom sont conservés {dureeDementi}, pour pouvoir l'établir en cas de contestation."
     );
-    // Aucun paramètre de durée de PROSPECTION ; la seule durée est celle du démenti, en paramètre
-    // (repli de la juriste : jamais « cinq ans » en clair, `ssot:seuils`).
-    expect(INFORMATION_ARTICLE_14.duree.match(/\{duree\w*\}/g)).toEqual(['{dureeDementi}']);
+    // Deux durées, toutes deux en paramètre, jamais en clair (`ssot:seuils`, RM-10) : la prospection,
+    // comptée depuis le dernier contact (`CONTACT_PURGE_CONVERTIE_APRES_DERNIER_CONTACT_JOURS`), et
+    // le démenti (`DEMENTI_CONTACT_VIDE_APRES_ANS`).
+    expect(INFORMATION_ARTICLE_14.duree.match(/\{duree\w*\}/g)).toEqual([
+      '{dureeApresDernierContact}',
+      '{dureeDementi}',
+    ]);
   });
 
   it('REQ-JUR-060 : TÉMOIN — aucune clé ne dit « relance » à tort : seule la relance de la confirmation est niée', () => {

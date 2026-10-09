@@ -11,8 +11,9 @@
  *   `{entreprise}`                    — la dénomination de l'entreprise déclarée ;
  *   `{dureeSansSuite}`, `{dureeApresDernierContact}` — les durées de purge du tiers (REQ-SEC-030,
  *                                       HYP-RGPD-RETENTION), rendues en toutes lettres à l'envoi ;
- *                                       la v6 n'en emploie plus aucune (décision de Williams du
- *                                       2026-10-03 : sans durée fixée à l'avance) ;
+ *                                       la v6 emploie `{dureeApresDernierContact}` pour la
+ *                                       prospection (décision de Williams du 2026-10-09 : la
+ *                                       durée est comptée depuis le dernier contact) ;
  *   `{prestataireEnvoi}`, `{mentionTransfert}` — la fiche `docs/tiers/zeptomail.md` ;
  *   `{baseLegale}`                    — la base légale de TRT-TIERS, lue au registre des décisions. PROPOSITION
  *                                       A07, À TRANCHER par Williams : « l'intérêt légitime d'Axion-IA à donner
@@ -68,7 +69,7 @@ export const INFORMATION_ARTICLE_14 = {
   destinataires:
     "Vos coordonnées ne sont accessibles qu'aux personnes d'Axion-IA chargées de ce suivi, de la présentation de ses prestations et du suivi de ses clients, ainsi qu'à {prestataireEnvoi}, notre prestataire d'envoi de courriels, et aux prestataires techniques qui hébergent nos outils. {prenomApporteur} {nomApporteur} est informé de la suite donnée à sa présentation. Vos données ne sont ni vendues ni cédées. {mentionTransfert}",
   duree:
-    "Axion-IA conserve les coordonnées de votre entreprise, ainsi que vos nom et coordonnées professionnelles, pour vous présenter ses prestations, aussi longtemps qu'elle poursuit cette activité, sans durée fixée à l'avance. Vous pouvez à tout moment vous opposer à nos messages et appels, ou demander l'effacement de vos données ; nous les mettons à jour ou les effaçons dès que nous apprenons qu'elles ne sont plus exactes, par exemple si vous changez de fonction. Si vous indiquez n'avoir eu aucun échange avec {prenomApporteur} {nomApporteur}, votre réponse et votre nom sont conservés {dureeDementi}, pour pouvoir l'établir en cas de contestation.",
+    "Axion-IA conserve les coordonnées de votre entreprise, ainsi que vos nom et coordonnées professionnelles, pour vous présenter ses prestations, pendant {dureeApresDernierContact} après le dernier contact. Vous pouvez à tout moment vous opposer à nos messages et appels, ou demander l'effacement de vos données ; nous les mettons à jour ou les effaçons dès que nous apprenons qu'elles ne sont plus exactes, par exemple si vous changez de fonction. Si vous indiquez n'avoir eu aucun échange avec {prenomApporteur} {nomApporteur}, votre réponse et votre nom sont conservés {dureeDementi}, pour pouvoir l'établir en cas de contestation.",
   relance: "Ce message ne sera suivi d'aucune relance au sujet de cette demande de confirmation.",
   droits:
     'Vous pouvez accéder à vos données, les faire rectifier ou effacer, en demander la limitation, et vous opposer à leur traitement, en écrivant à {adresseDroits}, ou en ligne depuis la page ouverte par le lien ci-dessous. Vous pouvez aussi introduire une réclamation auprès de la CNIL.',
