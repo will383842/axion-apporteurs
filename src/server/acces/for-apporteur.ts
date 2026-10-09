@@ -97,11 +97,18 @@ export type ModeleCloisonne = (typeof MODELES_CLOISONNES)[number];
  *
  * SEC-19 (forme d'A02, #703) : la décision de contrat non plus. Son texte chiffré et ses dates ne se
  * lisent qu'au rendu de la notification, par le passage ; l'espace lit le texte rendu.
+ *
+ * T-ARG-045 : la ligne de commission, l'autofacture et le compteur de leur séquence non plus, tant
+ * qu'aucune vue de l'espace ne les rend : seule l'émission (`src/server/commission/`) les écrit.
+ * Fermés par défaut ; la vue qui les affichera les fera passer dans `MODELES_CLOISONNES`.
  */
 export const MODELES_SANS_VUE_APPORTEUR = [
   'anomalie',
   'appareilConnu',
+  'autofacture',
+  'compteurAutofacture',
   'decisionDeContrat',
+  'ligneCommission',
 ] as const;
 
 /**

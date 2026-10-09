@@ -50,6 +50,8 @@ export type LigneDeDecompte =
 
 export type AutofactureComposee = {
   readonly apporteurId: string;
+  /** Le jour d'acquisition commun à ses lignes : la date de la prestation (REQ-ARG-018). */
+  readonly acquiseLe: DateCivile;
   readonly emiseLe: DateCivile;
   readonly echeanceLe: DateCivile;
   readonly montantCents: number;
@@ -94,7 +96,11 @@ export function imputerAvoirs(
   };
 }
 
-function composerUne(emiseLe: DateCivile, ls: readonly LigneAcquise[]): AutofactureComposee {
+function composerUne(
+  acquiseLe: DateCivile,
+  emiseLe: DateCivile,
+  ls: readonly LigneAcquise[]
+): AutofactureComposee {
   let total = 0n;
   let parrainage: bigint | null = null;
   const decompte: LigneDeDecompte[] = [];
@@ -118,6 +124,7 @@ function composerUne(emiseLe: DateCivile, ls: readonly LigneAcquise[]): Autofact
   }
   return {
     apporteurId: ls[0]!.apporteurId,
+    acquiseLe,
     emiseLe,
     echeanceLe: echeanceAutofacture(emiseLe),
     montantCents: centimes(Number(total), 'le total'),
@@ -126,16 +133,24 @@ function composerUne(emiseLe: DateCivile, ls: readonly LigneAcquise[]): Autofact
   };
 }
 
-/** Regroupe les lignes acquises en autofactures : une par apporteur et par jour d'établissement. */
+/**
+ * Regroupe les lignes acquises en autofactures : une par apporteur, par jour d'ACQUISITION et par
+ * jour d'établissement (REQ-ARG-014). Deux jours d'acquisition ne fusionnent jamais, même établis le
+ * même jour ouvré ; une ligne constatée plus tard a sa propre autofacture, datée de son constat.
+ */
 export function composerAutofactures(lignes: readonly LigneAcquise[]): AutofactureComposee[] {
-  const groupes = new Map<string, { emiseLe: DateCivile; lignes: LigneAcquise[] }>();
+  const groupes = new Map<
+    string,
+    { acquiseLe: DateCivile; emiseLe: DateCivile; lignes: LigneAcquise[] }
+  >();
   for (const l of lignes) {
     centimes(l.commissionCents, 'la commission');
     const emiseLe = jourDEtablissement(l.encaissementIntegralLe, l.constateLe);
-    const cle = JSON.stringify([l.apporteurId, joursDeLaDate(emiseLe)]);
-    const g = groupes.get(cle) ?? { emiseLe, lignes: [] };
+    const acquiseLe = l.encaissementIntegralLe;
+    const cle = JSON.stringify([l.apporteurId, joursDeLaDate(acquiseLe), joursDeLaDate(emiseLe)]);
+    const g = groupes.get(cle) ?? { acquiseLe, emiseLe, lignes: [] };
     g.lignes.push(l);
     groupes.set(cle, g);
   }
-  return [...groupes.values()].map((g) => composerUne(g.emiseLe, g.lignes));
+  return [...groupes.values()].map((g) => composerUne(g.acquiseLe, g.emiseLe, g.lignes));
 }

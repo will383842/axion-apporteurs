@@ -7,6 +7,8 @@
  *     passage concurrent attend le verrou de la ligne, réévalue la condition après la validation de
  *     l'autre, et n'affecte plus rien ; le déclencheur `lignes_commission_facturee_figee` refuse, de
  *     toute façon, de changer une affectation posée ;
+ *   — la même condition REVÉRIFIE, sous le verrou de la ligne, qu'elle est toujours `acquise` et
+ *     facturable : une ligne bloquée ou annulée entre la lecture et la transaction n'est pas prise ;
  *   — l'émission affecte PUIS insère : la clé étrangère composite est différée à la validation ;
  *   — le NUMÉRO n'est jamais fourni par l'application : le déclencheur `autofactures_numerotation`
  *     le pose depuis `compteurs_autofacture`, sous le verrou du compteur, sans trou ; une transaction
@@ -76,6 +78,8 @@ export function depotAutofacturesPrisma(prisma: PrismaClient): DepotAutofactures
                  SET "autofacture_id" = ${autofactureId}::uuid
                WHERE "id" = ANY(${[...ids]}::uuid[])
                  AND "autofacture_id" IS NULL
+                 AND "statut" = 'acquise'
+                 AND "type" IN ('commission', 'parrainage')
               RETURNING "id"::text AS "id"`;
             return rendues.map((r) => r.id);
           },
