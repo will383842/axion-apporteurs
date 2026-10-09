@@ -1,96 +1,29 @@
-# CI minimale. Le compte des gardes armées n'est PAS recopié ici : il se lit dans
-# `docs/GATES.md`, vue dérivée de `docs/gates.json` par `pnpm gov:gates-derivees --render`.
-# Une garde entre dans ce fichier par sa tâche, chacune APRÈS avoir été vue rougir.
-#
-# ⚠️ `pnpm gates:prouvees --phase -1` n'est PAS ici, et ce n'est pas un oubli : la plupart des
-# gates du socle n'ont ni script ni preuve, la commande est donc ROUGE aujourd'hui et rendrait
-# la CI définitivement rouge — une CI toujours rouge ne garde plus rien. Elle tourne en nightly,
-# où son rouge est le décompte de ce qui reste à armer, pas le refus d'une PR. Ce qui entre ici,
-# c'est `gates:prouvees:prove` : la preuve ne dépend d'aucun état du dépôt, elle doit rester verte.
-# La plupart des gardes sont suivies de SA PREUVE (`:prove`) : une garde dont on ne vérifie pas
-# qu'elle sait rougir cesse un jour de garder sans que rien ne le signale. Toutes ne l'ont pas encore,
-# et ce commentaire ne le cache plus. Chaque etape de ce job est confrontee a son CONSTAT par
-# `gov:conventions` (`PORTE_A_FIGEE`, scripts/gates/gov-conventions.ts) : presente, active,
-# effective. Ajouter, retirer, conditionner ou repointer une etape se fige LA-BAS, dans le meme diff.
+# Porte A — GOV-160, décision de Williams du 2026-10-09 (#319, commentaire 6077512137) :
+# « environ 15 gardes », tenues sur l'ARGENT, les DONNÉES PERSONNELLES et la SÉCURITÉ.
+# Les autres gardes sont ARCHIVÉES : retirées d'ici, marquées `archivee` dans `docs/gates.json`,
+# leur code et leurs specs conservés (specs sous `tests/archive/`, hors de la suite).
+# Ajouter une garde ici, c'est l'inscrire `gardee` dans `docs/gates.json` dans le même diff.
+# Aucune étape ne porte `continue-on-error` : une garde qui ne bloque rien ne garde rien.
 name: Gate A
 on:
   push: { branches: [main] }
-  # `gov:pr` juge le TITRE et les LABELS de la PR. Sans `types`, GitHub ne declenche que sur
-  # opened/synchronize/reopened : corriger un titre refuse par la garde ne relancait donc RIEN,
-  # et un `gh run rerun` rejoue l'evenement d'ORIGINE, donc l'ancien titre. Constate sur la PR 26.
+  # `gov:pr` juge le titre et le corps : corriger un titre doit relancer la mesure.
   pull_request:
     types: [opened, synchronize, reopened, edited, labeled, unlabeled]
-# GOV-142 : le jeton n a par defaut que la lecture du contenu ; chaque job nomme ses droits.
 permissions:
   contents: read
-# GOV-142 : une PR n a qu UN run de la porte A a la fois. Un evenement neuf (push, edited, labeled,
-# unlabeled) annule le run en cours de la MEME PR, cle par son NUMERO ; le dernier run fait foi.
-# Main n est JAMAIS annule : sur `push`, la cle porte le sha (un groupe par commit) et l annulation
-# est fausse. Temoin : `gov:ci-etapes`, famille `concurrence_non_conforme`.
+# Un run à la fois par PR ; main n'est jamais annulé.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  forge:
-    # GOV-142 : la forge lue UNE fois pour toute la porte A, dans un job COURT : les gardes et les
-    # eclats n attendent que lui (decision de la coordination, sur la mesure du premier run).
-    runs-on: ubuntu-latest
-    if: ${{ github.event.pull_request.merged != true }}
-    permissions:
-      contents: read
-      pull-requests: read
-    outputs:
-      empreinte_forge: ${{ steps.forge.outputs.empreinte }}
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      # La version de pnpm vient de `packageManager` dans package.json — une seule source.
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
-      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
-      # la cle du verrou ; une action, donc avant toute commande.
-      - name: Cache des moteurs de Prisma
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/prisma
-          key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm install --frozen-lockfile
-      # QA-T64, REQ-GOV-006, REQ-QA-013. La forge lue UNE fois par porte A : les lectures de
-      # `gov:etat` et `gov:trace` (que `pnpm test` faisait aussi) sont figees dans un instantane
-      # sous RUNNER_TEMP ; chaque etape qui lit la forge recoit `GOV_FORGE` dans son env:. Une lecture qui
-      # echoue fait echouer l etape ; un instantane illisible fait echouer la garde qui le lit.
-      # GOV-142 : dans son propre job, apres l installation ; elle ne lit aucune vue.
-      - name: La forge est lue une fois pour toute la porte A
-        run: pnpm forge:instantane
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # GOV-142 : l instantane de la forge passe aux autres jobs par un artefact du run courant, a nom
-      # fixe et sans remplacement ; son empreinte SHA-256 sort du job par `outputs`, et chaque
-      # consommateur la compare AVANT usage.
-      - name: Empreinte de l instantane de la forge
-        id: forge
-        run: pnpm ci:artefact:publier
-        env:
-          ARTEFACT: ${{ runner.temp }}/forge-instantane.json
-      # GOV-142 : le depot, en fin de job : aucune commande ne suit une action.
-      - name: Depot de l instantane de la forge
-        uses: actions/upload-artifact@v4
-        with:
-          name: forge-instantane
-          path: ${{ runner.temp }}/forge-instantane.json
-          overwrite: false
-          if-no-files-found: error
-          retention-days: 1
   gardes:
-    # GOV-142 : toutes les gardes qui ne lisent ni les tests ni l historique, en parallele des
-    # eclats. Il recoit l instantane de la forge du job `forge`, comme les eclats.
+    # Les gardes statiques : rapides, sans base ni navigateur.
     runs-on: ubuntu-latest
     if: ${{ github.event.pull_request.merged != true }}
     permissions:
       contents: read
       pull-requests: read
-    needs: [forge]
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
@@ -98,105 +31,29 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
-      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
-      # la cle du verrou ; une action, donc avant toute commande.
       - name: Cache des moteurs de Prisma
         uses: actions/cache@v4
         with:
           path: ~/.cache/prisma
           key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # GOV-142 : l instantane de la forge, lu UNE fois par le job `forge`, recu du run courant (ni
-      # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
-      - name: Reception de l instantane de la forge
-        uses: actions/download-artifact@v4
-        with:
-          name: forge-instantane
-          path: ${{ runner.temp }}
       - run: pnpm install --frozen-lockfile
-      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
-      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
-      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
-      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
-      - name: Les vues derivees sont rendues, et le rendu est reproductible
-        run: pnpm vues:rendre
-      - name: Aucune vue derivee sous git — une PR qui en rajoute une est refusee, le fichier nomme
-        run: pnpm vues:hors-git
-      - name: L instantane de la forge est celui que le job forge a publie
-        run: pnpm ci:artefact:verifier
-        env:
-          ARTEFACT: ${{ runner.temp }}/forge-instantane.json
-          EMPREINTE_ATTENDUE: ${{ needs.forge.outputs.empreinte_forge }}
+      # 1-2. Typage, lint, format.
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Format
+        run: pnpm format:check
+      # 6. La garde de PR à trois niveaux (critique, normal, léger).
+      - name: gov:pr — titre, niveau de la PR, bloc ROUGE/VERT si critique
+        run: pnpm gov:pr
+      - name: La garde de PR sait rougir
+        run: pnpm gov:pr:prove
+      # 7. Le dépôt est public.
       - name: Regle de publication (depot public)
         run: pnpm gov:publication
       - name: La garde de publication sait rougir
         run: pnpm gov:publication:prove
-      - name: Identifiants qualifies
-        run: pnpm gov:identifiants
-      - name: La garde des identifiants sait rougir
-        run: pnpm gov:identifiants:prove
-      - name: Coherence du backlog
-        run: pnpm gov:tasks
-      - name: La garde du backlog sait rougir
-        run: pnpm gov:tasks:prove
-      # GOV-024, REQ-GOV-032. La vue n'est pas seulement REGENERABLE, elle est COMPAREE.
-      # `docs/TASKS.md` avait un generateur et aucun verificateur : la derive etait silencieuse.
-      # Le mode n'ecrit rien — une garde qui repare ce qu'elle controle est toujours verte.
-      - name: La vue du backlog est egale a sa source
-        run: pnpm gov:tasks:verifie-rendu
-      - name: Registre des exigences
-        run: pnpm gov:requirements
-      - name: La garde du registre sait rougir
-        run: pnpm gov:requirements:prove
-      # GOV-024, REQ-GOV-032. `docs/REQUIREMENTS.md` n'avait AUCUN generateur, alors que son
-      # bandeau affirmait le contraire — et il avait derive : 353 exigences annoncees pour 354.
-      - name: La vue des exigences est egale a sa source
-        run: pnpm gov:requirements:verifie-rendu
-      - name: Registre des decisions
-        run: pnpm gov:hypotheses
-      - name: La garde des decisions sait rougir
-        run: pnpm gov:hypotheses:prove
-      - name: Table de preseance
-        run: pnpm gov:preseance
-      - name: La garde de preseance sait rougir
-        run: pnpm gov:preseance:prove
-      - name: Affirmations verifiees sur axionia
-        run: pnpm gov:sonde
-      - name: La sonde sait rougir
-        run: pnpm gov:sonde:prove
-      - name: ADR — index derive et gabarit
-        run: pnpm gov:adr
-      - name: La garde des ADR sait rougir
-        run: pnpm gov:adr:prove
-      - name: Matrice d autonomie des agents et garde des pushes
-        run: pnpm gov:autonomie
-      - name: La garde d autonomie sait rougir
-        run: pnpm gov:autonomie:prove
-      - name: Gabarit de PR, CODEOWNERS et charte des agents
-        run: pnpm gov:pr
-      - name: Inventaire prouve — tout etat >= code porte une preuve
-        run: pnpm gov:inventaire
-      - name: La garde de l inventaire sait rougir
-        run: pnpm gov:inventaire:prove
-      - name: Fiches de role derivees de docs/agents.json
-        run: pnpm gov:agents
-      - name: La garde des fiches sait rougir
-        run: pnpm gov:agents:prove
-      - name: Les fiches sur le disque sont egales a leur source
-        run: pnpm gov:agents:verifier
-      # Registre d entite : deux sens en une garde. Elle refuse la mise en service tant qu un
-      # champ vaut la sentinelle, et elle refuse tout autant qu une coordonnee bancaire reelle
-      # soit commitee — le depot est PUBLIC, ce qui y entre reste lisible pour toujours. Elle
-      # n empeche ni le build ni les tests : les phases 0 a 3 se codent contre la sentinelle.
-      - name: Registre d entite — sentinelle tenue dans les deux sens
-        run: pnpm gov:entite
-      - name: La garde du registre d entite sait rougir
-        run: pnpm gov:entite:prove
-      # BLOQUANTE, et le 2 fait ECHOUER. Un vert produit par une lecture qui n'a pas eu lieu est
-      # le defaut meme que cette garde empeche ; « laisser passer en signalant » n'a aucun
-      # mecanisme et redevient continue-on-error. `lireCorpsPublie` reessaie 3 fois : une
-      # intermittence devient de la latence, jamais une couleur. Le numero de PR est LU dans
-      # l'evenement, il ne se recopie pas. Les revisions irreparables sont DECLAREES dans
-      # config/exemptions-corps-publie.json, et le vert les affiche une par une.
       - name: Le corps PUBLIE de la PR ne porte aucune coordonnee
         if: github.event_name == 'pull_request'
         run: pnpm gov:entite:corps
@@ -204,287 +61,96 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: La garde du corps publie sait rougir
         run: pnpm gov:entite:corps:prove
-      # Seule la PREUVE entre ici : le mode en ligne rend 2 sous le jeton d Actions, qui ne
-      # lit pas la protection de branche. Le mode en ligne tourne en nightly.
-      - name: La garde du depot sait rougir
-        run: pnpm gov:depot-visibilite:prove
-      # Les 16 ruptures que cette garde a trouvees le 2026-09-04 sont CORRIGEES : elle est verte,
-      # donc bloquante. La cause racine des 13 premieres etait `gardes.spec.ts`, douze promesses
-      # de couverture et zero annotation `@req`.
-      - name: Matrice de tracabilite REQ vers tache vers test vers PR
-        run: pnpm gov:trace
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json
-      - name: La matrice de tracabilite sait rougir
-        run: pnpm gov:trace:prove
-      - name: La vue de tracabilite est derivee de ses sources
-        run: pnpm gov:trace:verifier
-      # GOV-035, REQ-GOV-032. LA CINQUIEME VUE : des compteurs falsifies, ancres conservees, ne font
-      # rougir aucun des verificateurs ci-dessus. Elle compare tout, sauf ce que le generateur a LU
-      # hors du depot pour l'ecrire : comparer le SHA de main ou la file des PR mesurerait la forge,
-      # pas la derivation, et une gate rouge apres chaque fusion s'apprend a etre sautee (RM-02,
-      # LEC-13). Le vert imprime chaque exemption avec la source lue. Pas de continue-on-error.
-      # Ce que CETTE etape ne rougit pas, et qui rougit plus bas dans `pnpm test` : une mesure du
-      # domaine devenue illisible (le vert imprime X/Y avec X < Y et sort 0) ; une lecture GRATUITE
-      # de la forge ajoutee au generateur pour sortir un element du controle (le vert l'exempte ;
-      # le temoin « exemption PORTANTE » rougit, parce que son texte ne change pas d'une forge a
-      # l'autre).
-      # AUCUN GH_TOKEN ici, et ce n est pas un oubli : le perimetre compare ne depend d aucun
-      # appel a la forge. Sans jeton, seules les zones deja NON comparees changent de contenu. Le
-      # verdict n en depend pas non plus, parce que le generateur ramene tout ce qu il ecrit dans une
-      # zone qui a lu la forge a UNE ligne sans `<` : une valeur de la forge n ouvre ni ligne, ni
-      # rubrique, ni HTML. Ce n est pas cette etape qui le prouve : c est le temoin « exemption
-      # PORTANTE » de `pnpm test`, qui juge une vue sous une forge LISIBLE aux valeurs hostiles sur
-      # plusieurs lignes, puis la meme vue fautive sous cette forge et sous une forge illisible.
-      - name: La vue de l etat vivant est egale a sa source
-        run: pnpm plan-state:verifier
-      # GOV-037, REQ-GOV-021 et REQ-GOV-003. Le depot derivait ses NOMBRES, pas ses ATTRIBUTIONS :
-      # quelle tache porte quelle garde, quel poste porte quelle tache, quel lot porte quelle tache,
-      # et a qui appartient le fichier ou la prose qui nomme une tache. Chacune est ecrite DEUX FOIS,
-      # dans deux fichiers. `gov:identifiants` juge la FORME d'un identifiant, jamais sa RESOLUTION ;
-      # la relation exigence <-> tache, elle, est tenue par `gov:requirements`.
-      - name: Attributions — garde, poste, lot et identifiants nommes confrontes a leurs sources
-        run: pnpm gov:attributions
-      - name: La garde des attributions sait rougir, et laisse passer la citation legitime
-        run: pnpm gov:attributions:prove
-      - name: contracts:hash — le contrat est derive, et son empreinte le tient
-        run: pnpm contracts:hash
-      - name: La garde de PR sait rougir
-        run: pnpm gov:pr:prove
-      - name: Vue GATES.md derivee du registre
-        run: pnpm gov:gates-derivees
-      - name: Le decompte des gardes sait rougir
-        run: pnpm gates:prouvees:prove
-      - name: Les paths derives sont a jour
-        run: pnpm lot:paths:check
-      # GOV-006 : le glossaire etait une consigne, pas un controle. Ces deux etapes sont ce qui
-      # le rend opposable — la constante ETATS_OCCUPANTS confrontee a REQ-DM-003, chaque valeur
-      # d enum confrontee au glossaire.
-      - name: Vocabulaire — enums, glossaire et etats occupants
-        run: pnpm partners:schema:enums
-      - name: La garde du vocabulaire sait rougir
-        run: pnpm partners:schema:enums:prove
-      # DM-02, REQ-DM-001. Tout montant est un Int en centimes suffixe Cents ; aucun Float ni
-      # Decimal, quel que soit le nom. Le schema se lit par le lecteur unique : un modele se ferme
-      # sur SON accolade, un champ apres un commentaire ne s echappe pas.
+      # 7 bis. Ce que LIT un apporteur (GOV-160, #319) : textes, courriels, contrat, vocabulaire
+      # interdit de la charte. Chaque garde ne juge que les fichiers ajoutes ou modifies par la PR.
+      - name: Termes interdits du glossaire (messages, src, contrat d evenements)
+        run: pnpm gov:termes-interdits
+      - name: La garde des termes interdits sait rougir
+        run: pnpm gov:termes-interdits:prove
+      - name: Textes de l apporteur — liste noire de la charte (espace, courriels, micro-copie, contrat)
+        run: pnpm gov:lexique
+      - name: La garde des textes de l apporteur sait rougir
+        run: pnpm gov:lexique:prove
+      - name: Textes de l apporteur et documents remis — aucun terme du droit social
+        run: pnpm jur:lexique-social
+      - name: La garde du lexique social sait rougir
+        run: pnpm jur:lexique-social:prove
+      - name: Espace — aucun agregat du reseau
+        run: pnpm jur:aucun-agregat-reseau
+      - name: La garde des agregats sait rougir
+        run: pnpm jur:aucun-agregat-reseau:prove
+      - name: Espace — aucune progression ni objectif
+        run: pnpm jur:aucune-progression
+      - name: La garde de la progression sait rougir
+        run: pnpm jur:aucune-progression:prove
+      - name: Contenus — remuneration toujours indicative
+        run: pnpm jur:copy-indicative-partners
+      - name: La garde de la remuneration indicative sait rougir
+        run: pnpm jur:copy-indicative-partners:prove
+      - name: Contrat — annexe 1 chiffree
+        run: pnpm jur:grille-chiffree
+      - name: La garde de la grille chiffree sait rougir
+        run: pnpm jur:grille-chiffree:prove
+      # 8. Secrets et matrice d'autonomie des agents.
+      - name: Matrice d autonomie des agents et garde des secrets
+        run: pnpm gov:autonomie
+      - name: La garde d autonomie sait rougir
+        run: pnpm gov:autonomie:prove
+      # 9. Argent : centimes, seuils à source unique, contrat d'intégration.
       - name: Centimes — aucun flottant, montants en Cents
         run: pnpm partners:schema:cents
       - name: La garde des centimes sait rougir
         run: pnpm partners:schema:cents:prove
-      # DM-02, REQ-DM-037. Les migrations sont additives : toutes les migrations suivies sont lues,
-      # pas celles de la PR. Seule absolution : une ADR acceptee citee en premiere ligne, et la
-      # faute absoute est IMPRIMEE.
+      - name: Seuils et delais — une seule source, aucun litteral hors SSOT
+        run: pnpm ssot:seuils
+      - name: La garde des seuils sait rougir
+        run: pnpm ssot:seuils:prove
+      - name: Contrat d integration — derive, et son empreinte le tient
+        run: pnpm contracts:hash
+      # 10. Vocabulaire : enums et glossaire, pour les seuls termes visibles des apporteurs.
+      - name: Vocabulaire — enums, termes des apporteurs et etats occupants
+        run: pnpm partners:schema:enums
+      - name: La garde du vocabulaire sait rougir
+        run: pnpm partners:schema:enums:prove
+      # 11. Migrations additives.
       - name: Migrations additives
         run: pnpm partners:migrations:additive
       - name: La garde des migrations sait rougir
         run: pnpm partners:migrations:additive:prove
-      # GOV-030 : la garde des TERMES INTERDITS que des documents invoquaient sans qu'elle existe
-      # (`docs/GLOSSAIRE.md`, `docs/CONVENTIONS.md` §2, RM-01 et RM-06, `packages/contracts/events.ts`,
-      # REQ-GOV-001, `docs/GATES.md`). BLOQUANTE : pas de `continue-on-error` — la famille
-      # `etape_toleree` de `gov:conventions` le refuse, sur cette etape comme sur toute etape de ce job,
-      # sous toute forme evaluee. Ce commentaire citait `lint_non_bloquant`, qui ne juge que le lint et
-      # le format : il promettait un refus qu'aucune garde ne portait. Une gate qui ne bloque rien ne
-      # garde rien.
-      #
-      # `partners/ADR-0018` a tranche l'homonymie : l'identifiant de cette garde au registre EST la
-      # commande ecrite ci-dessous. Ces deux lignes `run:` sont donc ce que `gov:conventions` lit
-      # pour conclure que la garde est APPELEE — la reconnaissance ne tient plus au litteral d'un
-      # COMMENTAIRE, et le present commentaire peut disparaitre sans rien casser. La forme reste
-      # FERMEE `pnpm <script>`, que GOV-031 exige de tout YAML suivi : `npx` resoudrait un paquet
-      # hors du verrou.
-      - name: Termes interdits — nomenclature, modeles d axionia et synonymes
-        run: pnpm gov:termes-interdits
-      - name: La garde des termes interdits sait rougir
-        run: pnpm gov:termes-interdits:prove
-      # GOV-013 : le lexique interdit (REQ-GOV-017, durci par REQ-JUR-037). La garde vise la
-      # TOURNURE et non le mot — « aucun objectif, aucun quota » est la phrase qui protege du
-      # la charte relationnelle, et une garde qui la ferait rougir forcerait a la RETIRER. La preuve
-      # suit tient les deux sens : un temoin par famille, huit positions limites, et des
-      # contre-temoins verts, dont la phrase de l'ADR « valeurs du monde réel » verbatim.
-      - name: Lexique interdit — aucun usage prescriptif dans le perimetre de REQ-GOV-017
-        run: pnpm gov:lexique
-      - name: La garde du lexique sait rougir, et laisse passer la negation qui protege
-        run: pnpm gov:lexique:prove
-      # JUR-T26, REQ-JUR-034 a REQ-JUR-037 : les gardes STRUCTURELLES de la charte relationnelle.
-      # Decision de Will : classements et statistiques cote console SEULEMENT, ni challenge ni
-      # progression entre apporteurs. Aucun agregat du reseau dans un DTO de l espace et aucun import
-      # de la console ; aucun nom ni element de progression ; une PR qui touche ce qu un apporteur lit
-      # porte le label apporteur-facing et la checklist des douze motifs (la revue du juriste se juge
-      # sous --pr, avant fusion), et CODEOWNERS la demande ; aucun terme ni rubrique du droit social,
-      # meme nie, dans un document remis. Chaque vert imprime ce qu il a confronte.
-      - name: Charte — aucun agregat du reseau dans l espace
-        run: pnpm jur:aucun-agregat-reseau
-      - name: La garde des agregats du reseau sait rougir
-        run: pnpm jur:aucun-agregat-reseau:prove
-      # SEC-46 : aucun style en ligne ni HTML injecte sous src/app/ — la politique de contenu les
-      # refuserait en silence. La preuve suit, par paire.
-      - name: Securite — aucun style en ligne sous src/app
-        run: pnpm csp:inline
-      - name: La garde des styles en ligne sait rougir
-        run: pnpm csp:inline:prove
-      - name: Charte — aucune progression vers un seuil dans l espace
-        run: pnpm jur:aucune-progression
-      - name: La garde des progressions sait rougir
-        run: pnpm jur:aucune-progression:prove
-      - name: Charte — revue du juriste sur ce qu un apporteur lit, label et checklist
-        run: pnpm jur:revue-apporteur-facing
-      - name: La garde de la revue apporteur-facing sait rougir
-        run: pnpm jur:revue-apporteur-facing:prove
-      - name: Charte — aucun terme ni rubrique du droit social
-        run: pnpm jur:lexique-social
-      - name: La garde du lexique social sait rougir
-        run: pnpm jur:lexique-social:prove
-      # QA-T69 (REQ-JUR-001, REQ-JUR-002) : la remuneration d un apporteur ne se promet pas. La garde
-      # d axion-ia (JUR-T29) transposee sur src/content/ et docs/maquettes/ : aucun taux ni montant
-      # presente comme ferme sans mention indicative, aucun revenu sans plafond, aucun rythme mensuel.
-      - name: Charte — aucune remuneration presentee comme ferme
-        run: pnpm jur:copy-indicative-partners
-      - name: La garde de la remuneration indicative sait rougir
-        run: pnpm jur:copy-indicative-partners:prove
-      # JUR-T01 : l'annexe 1 du gabarit de contrat ne nomme jamais un forfait, un bareme ou un
-      # pourcentage sans valeur numerique. Sur le gabarit source les montants sont des variables :
-      # c'est un fil tendu ; la regle protege au rendu (exigerGabaritPubliable, src/domain/contrat).
-      - name: Grille du contrat — aucun forfait, bareme ou pourcentage sans chiffre dans l annexe 1
-        run: pnpm jur:grille-chiffree
-      - name: La garde de la grille chiffree sait rougir
-        run: pnpm jur:grille-chiffree:prove
-      # JUR-T02 (REQ-JUR-015, REQ-EXT-028, RM-10) : chaque delai et chaque seuil du contrat vit dans
-      # la SSOT src/domain/seuils/ssot.ts, source et date a l appui. Aucun litteral de duree ou de
-      # montant de seuil hors d elle dans src/, aucun preavis indexe sur l anciennete, et le gabarit
-      # dit les memes valeurs que la SSOT. Le vert imprime les fichiers lus et les exemptions nommees.
-      - name: Seuils et delais du contrat — une seule source, aucun litteral hors SSOT
-        run: pnpm ssot:seuils
-      - name: La garde des seuils sait rougir, famille par famille, sans faux positif
-        run: pnpm ssot:seuils:prove
-      # UX-P1-10 (REQ-JUR-039, REQ-UX-016) : la date de lecture d une notification de l espace n est
-      # le point de depart d aucun delai ; un delai court de courriels_envoyes.envoye_at. La garde lit
-      # l arbre syntaxique de src/ et le SQL des migrations, et nomme chaque lecture hors permission.
-      - name: La date de lecture d une notification ne fait courir aucun delai
-        run: pnpm notifications:lue-at-inerte
-      - name: La garde de la date de lecture sait rougir, famille par famille
-        run: pnpm notifications:lue-at-inerte:prove
-      # UX-P0-02 : une tache d'ecran ne s'attribue pas avant que Will ait valide sa maquette
-      # (docs/maquettes/VALIDATION.md). Le composeur l'appliquait seul, au moment de composer ;
-      # une attribution faite a la main ne rougissait nulle part. La garde lit le tableau par ses
-      # en-tetes, refuse une validation ecrite a moitie ou par un autre que Will, et IMPRIME les
-      # taches d'ecran qu'elle ecarte.
-      - name: Maquettes — aucune tache d'ecran attribuee sans validation de Will
-        run: pnpm gov:maquettes-validees
-      - name: La garde des maquettes sait rougir, y compris sur une ligne du milieu du tableau
-        run: pnpm gov:maquettes-validees:prove
-      # UX-P0-01 (REQ-UX-002, REQ-UX-019) : la micro-copie de l'espace est complete et elle est la
-      # seule — chaque issue de IssueDepot relue contre le registre, un etat vide par ecran de la
-      # carte des routes et de la console, aucun libelle en dur dans un composant. Elle IMPRIME ce
-      # qu'elle a confronte : « 0 composant » n'est pas « aucun defaut », la preuve le dit.
-      - name: Micro-copie — chaque issue et chaque ecran ont leur texte, aucun libelle en dur
-        run: pnpm ux:exhaustivite
-      - name: La garde de la micro-copie sait rougir, en nommant la valeur, l'ecran ou le fichier
-        run: pnpm ux:exhaustivite:prove
-      # GOV-019, REQ-GOV-028. Elle ne MESURE aucun octet : elle tient les budgets en place et
-      # refuse qu'une route naisse sans le sien. Elle IMPRIME son perimetre — « 0 route balayee »
-      # n'est pas « aucun defaut », et elle le dit en toutes lettres. Pas de `continue-on-error` :
-      # la famille `etape_ci_muselee` le refuse, et une gate qui ne bloque rien ne garde rien.
-      - name: Budgets de performance derives de REQ-GOV-028
-        run: pnpm perf:budgets
-      - name: La garde des budgets sait rougir
-        run: pnpm perf:budgets:prove
-      - name: Les budgets sur le disque sont le rendu de leur exigence
-        run: pnpm perf:budgets:verifier
-      # QA-T20, REQ-UX-033. Le poids que le navigateur charge VRAIMENT, route par route, lu dans les
-      # manifestes de Next 16 (`.next/static/chunks/app/` n est pas produit sous Turbopack : les
-      # anciens globs mesuraient zero octet). BLOQUANTE des sa livraison (arbitrage -d7 du 2026-09-30) :
-      # une faute de MESURE, une route livree sans budget et tout DEPASSEMENT, de route ou du socle,
-      # rougissent ; aucun mode souple. Pas de `continue-on-error`.
-      - name: La mesure du poids par route sait rougir, y compris sur zero octet
-        run: pnpm perf:bundle:prove
-      # SEC-10, REQ-SEC-016. Tout compteur de debit est declare au registre unique, sous l un des
-      # cinq prefixes, avec sa conduite sur panne REQUISE ; la garde EXECUTE chaque compteur contre
-      # un cache qui leve et confronte le verdict a la conduite declaree. Le vert imprime les
-      # compteurs confrontes, les fichiers lus et les appels vus. Pas de continue-on-error.
-      - name: Compteurs de debit — conduite sur panne declaree et executee, famille close
-        run: pnpm securite:rate-famille
-      - name: La garde des compteurs de debit sait rougir
-        run: pnpm securite:rate-famille:prove
-      # GOV-014, REQ-GOV-018 + REQ-GOV-029. Les gardes d'axionia retenues ; le tri des entrees du
-      # registre dont le script manque ; et la confrontation de CHAQUE etape de ce job a son
-      # constat (`PORTE_A_FIGEE`). Ses perimetres vides, elle les IMPRIME avec leur motif et la tache qui les
-      # ouvrira — c'est ce qui separe une garde differee d'une garde oubliee. Leur nombre ne se recopie
-      # pas ici : la sortie le dit.
-      - name: Conventions et gardes transposees d axionia
-        run: pnpm gov:conventions
-      - name: La garde des conventions sait rougir
-        run: pnpm gov:conventions:prove
-      # GOV-142, REQ-QA-013. Le decoupage de la porte A en jobs ne perd, ne double ni n altere aucune
-      # etape : le temoin confronte ce fichier a l « avant » fige (scripts/gates/ci-etapes-reference.json).
-      - name: Les etapes de la porte A sont celles d avant le decoupage
-        run: pnpm gov:ci-etapes
-      - name: La garde des etapes de la porte A sait rougir
-        run: pnpm gov:ci-etapes:prove
-      # DM-01, REQ-DM-041. La charge d un evenement du journal ne porte aucune donnee personnelle :
-      # le journal est append-only, une donnee personnelle qui y entrerait ne s effacerait jamais.
-      # La garde juge les schemas Zod eux-memes et imprime le compte des types et champs confrontes.
+      # 12-13. Journal immuable et données personnelles.
       - name: Journal sans donnee personnelle
         run: pnpm journal:sans-pii
       - name: La garde du journal sait rougir
         run: pnpm journal:sans-pii:prove
-      # SEC-08, REQ-SEC-024. Aucune colonne de personne en clair dans le schema (chiffree ou
-      # empreinte seulement, adresse reseau par empreinte seule) et aucun bloc ni empreinte ecrit
-      # hors de src/server/securite/pii.ts. Le vert imprime les champs, fichiers et sites confrontes.
       - name: Donnees personnelles chiffrees, schema et chemins d ecriture
         run: pnpm securite:schema-pii
       - name: La garde des donnees personnelles sait rougir
         run: pnpm securite:schema-pii:prove
-      # SEC-17, REQ-SEC-023. Chaque action et chaque route de la console appellent requireRole avec un droit litteral, present dans LA matrice
-      # (src/server/roles/matrice.ts) : la liste est DERIVEE du disque, et le defaut est le refus. Le vert imprime les fichiers lus, les actions
-      # et routes confrontees et le compte des couples ; un perimetre vide est dit, avec sa tache.
+      # 14. Autorisation, cloisonnement, débit, en-têtes, adaptateur MCP.
       - name: Roles de la console — requireRole partout, droits dans la matrice
         run: pnpm securite:roles
       - name: La garde des roles sait rougir
         run: pnpm securite:roles:prove
-      # GOV-031, REQ-GOV-018. LES DEUX ETAPES QUI MANQUAIENT, ET SANS LESQUELLES LES DEUX
-      # FAMILLES CI-DESSUS NE MESURAIENT RIEN. `outillage_non_epingle` et `lint_non_bloquant`
-      # ne s'arment qu'en PRESENCE d'une etape qui lance l'outil — l'acceptation de GOV-031 le
-      # dit en toutes lettres : « sans etape, rien ne ment ». Rien ne mentait, et rien ne
-      # gardait : `eslint.config.mjs` et `.prettierrc.json` etaient commites depuis GOV-014 et
-      # n'avaient jamais tourne en CI. C'est ici que la configuration cesse d'etre une intention.
-      #
-      # PAS DE `continue-on-error`, ET C'EST LE POINT DE L'EXIGENCE, pas un detail de cablage.
-      # Cote axionia, TOUTES les gates PR de budget portent ce drapeau : aucune PR qui alourdit
-      # le bundle n'y rougit, et la documentation du depot a affirme le contraire pendant des
-      # mois. Une gate qui ne bloque rien ne garde rien.
-      #
-      # CE QUE CHACUNE NE MESURE PAS n'est pas recopie ici : depuis QA-T01, aucun avertissement
-      # n'est tolere (`eslint . --max-warnings 0`, aucune regle en `warn`) ; les fichiers hors format
-      # sont dans `.prettierignore`, chacun avec son motif. Et chaque etape reste EXACTEMENT
-      # `run: pnpm lint` / `run: pnpm format:check`, sans `if:` ni `||` :
-      # `gardes-transposees.spec.ts` juge l'acte de l'etape, pas l'absence d'un mot.
-      - name: Lint
-        run: pnpm lint
-      # QA-T07, REQ-QA-013. Semgrep dans son IMAGE OFFICIELLE epinglee au condensat (la meme sur
-      # le poste), regles maison de `.semgrep.yml` + jeux publics charges du registre A
-      # L'EXECUTION. `--disable-nosem` : un commentaire en ligne n'eteint rien. Le vert imprime
-      # le compte des regles REELLEMENT executees, lu dans la sortie de semgrep. Le registre
-      # injoignable fait ROUGIR cette etape : elle echoue fermee, elle ne saute pas.
-      # Pas de `continue-on-error` ni de `if:` : une gate qui ne bloque rien ne garde rien.
-      - name: Semgrep — regles maison et jeux publics sur src
-        run: pnpm sec:semgrep
-      - name: Semgrep — chaque regle maison mord sur son temoin, nosemgrep n eteint rien
-        run: pnpm sec:semgrep:prove
-      - name: Format
-        run: pnpm format:check
-      - name: Typecheck
-        run: pnpm typecheck
-      # INT-T11, REQ-INT-026. L adaptateur MCP federe `partners` : les neuf controles du socle, chacun
-      # imprime avec ce qu il a confronte (la porte est sondee en cinq appels, dont le limiteur AVANT la
-      # serrure). Le controle 6 confronte deja le manifeste versionne au code : `pnpm mcp:manifeste`
-      # n est pas rejoue ici. Le temoin a deux faces vit dans `tests/integration/adaptateur-mcp.spec.ts`.
+      - name: Compteurs de debit — famille close
+        run: pnpm securite:rate-famille
+      - name: La garde des compteurs de debit sait rougir
+        run: pnpm securite:rate-famille:prove
+      - name: Securite — aucun style en ligne sous src/app
+        run: pnpm csp:inline
+      - name: La garde des styles en ligne sait rougir
+        run: pnpm csp:inline:prove
       - name: Harnais de l adaptateur MCP
         run: pnpm harnais-mcp
+      # 15. Analyse statique de sécurité et dépendances.
+      - name: Semgrep — regles maison et jeux publics sur src
+        run: pnpm sec:semgrep
+      - name: Semgrep — chaque regle maison mord sur son temoin
+        run: pnpm sec:semgrep:prove
+      - name: Dependances de production — aucun avis haut ou critique
+        run: pnpm securite:audit
 
   porte-d:
-    # GOV-142 : ce qui confronte la PR a sa base dans l historique (`fetch-depth: 0`) : la porte D et
-    # red-first, en parallele.
+    # 11 (suite) et 5 : la PR confrontée à sa base dans l'historique.
     runs-on: ubuntu-latest
     if: ${{ github.event.pull_request.merged != true }}
     permissions:
@@ -492,130 +158,47 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      # La version de pnpm vient de `packageManager` dans package.json — une seule source.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
-      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
-      # la cle du verrou ; une action, donc avant toute commande.
       - name: Cache des moteurs de Prisma
         uses: actions/cache@v4
         with:
           path: ~/.cache/prisma
           key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
-      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
-      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
-      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
-      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
-      - name: Les vues derivees sont rendues, et le rendu est reproductible
-        run: pnpm vues:rendre
-      # QA-T11, REQ-QA-021. La PORTE D : les migrations de la PR confrontees au code DEPLOYE
-      # (expand puis contract), puis base vierge et vidage N-1 SEME, migres, `migrate diff` vide,
-      # aucune ligne perdue, et l image N-1 demarree sur le schema N. La logique vit dans
-      # `scripts/gates/gate-d.sh` ; la base N-1 se lit dans l historique (`fetch-depth: 0`). Sa
-      # preuve d abord : un bac d essai qui supprime une colonne encore lue doit sortir en non nul
-      # en nommant la colonne et le fichier. Pas de `continue-on-error` : une porte qui tolere son
-      # echec ne garde rien.
       - name: La porte D sait rougir — une colonne encore lue, supprimee, est nommee
         run: pnpm gate-d:prove
       - name: Porte D — expand/contract, base vierge, vidage N-1 seme, diff vide, image N-1
         run: pnpm gate-d
-      # CPL-T22, REQ-CPL-022. Les tests NOUVEAUX de la PR, lances contre le code de sa base, doivent
-      # ECHOUER : un test deja vert sur main ne prouve rien de ce que la PR ajoute (RM-02). La garde
-      # pose un arbre de la base a cote, y copie les tests de la PR, les lance un par un, puis retire
-      # l arbre. Seule sortie : `@no-red-first:` suivi d une justification, IMPRIMEE. Sur `push`, il
-      # n y a pas de PR a juger : l etape ne tourne que sur `pull_request`. Ici, et pas dans un
-      # workflow a part : seul `gate-a` est un check requis, et une garde qui ne bloque rien ne garde
-      # rien. Avant `Tests`, pour que son rouge se lise avant celui de la suite. La base est lue par la
-      # garde dans `GITHUB_BASE_REF`, que GitHub pose sur `pull_request` : la commande reste FERMEE.
       - name: red-first — les tests nouveaux de la PR rougissent contre sa base
         if: github.event_name == 'pull_request'
         run: pnpm red-first
       - name: La garde red-first sait rougir
         run: pnpm red-first:prove
+
   tests-1:
-    # GOV-142 : la suite en DEUX jobs explicites, identiques hormis `ECLAT` et le nom de leur
-    # artefact (temoin : `gov:ci-etapes`, famille `eclats_divergents`). Pas de matrice : chaque
-    # job publie l empreinte de SON blob par ses propres `outputs`, que la fusion relit.
+    # 3. La suite (unitaires et intégration, base réelle), en deux éclats identiques hormis `ECLAT`.
     runs-on: ubuntu-latest
-    needs: [forge]
     if: ${{ github.event.pull_request.merged != true }}
     permissions:
       contents: read
-      pull-requests: read
-    outputs:
-      empreinte: ${{ steps.blob.outputs.empreinte }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      # La version de pnpm vient de `packageManager` dans package.json — une seule source.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
-      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
-      # la cle du verrou ; une action, donc avant toute commande.
       - name: Cache des moteurs de Prisma
         uses: actions/cache@v4
         with:
           path: ~/.cache/prisma
           key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # QA-T59. Le cache des navigateurs des passes d accessibilite, AVANT toute commande (une
-      # action qui suit une commande peut reecrire l arbre que les gardes mesurent). Sa CLE derive
-      # du verrou, qui epingle Playwright (RM-01) : aucune version ecrite ici, aucune commande pour
-      # la lire ; une montee de dependance refroidit le cache une fois, jamais un navigateur perime.
-      - name: Cache des navigateurs des passes d accessibilite
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # GOV-142 : l instantane de la forge, lu UNE fois par le job `forge`, recu du run courant (ni
-      # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
-      - name: Reception de l instantane de la forge
-        uses: actions/download-artifact@v4
-        with:
-          name: forge-instantane
-          path: ${{ runner.temp }}
       - run: pnpm install --frozen-lockfile
-      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
-      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
-      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
-      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
-      - name: Les vues derivees sont rendues, et le rendu est reproductible
-        run: pnpm vues:rendre
-      - name: L instantane de la forge est celui que le job forge a publie
-        run: pnpm ci:artefact:verifier
-        env:
-          ARTEFACT: ${{ runner.temp }}/forge-instantane.json
-          EMPREINTE_ATTENDUE: ${{ needs.forge.outputs.empreinte_forge }}
-      # UX-P0-03, REQ-UX-017. Les passes d accessibilite de `tests/a11y/` tournent DANS `pnpm test`
-      # et pilotent un vrai navigateur : WebKit pour le profil iPhone, Chromium pour le bureau. Sans
-      # eux, la suite rougirait sur une absence d outil, pas sur une faute. Avant `Tests`, donc.
-      # QA-T59. Cette etape est restee bloquee plus de 25 min : un telechargement qui ne repond plus
-      # immobilisait toute la porte A. `scripts/ci/navigateurs-bornes.ts` tente trois fois au plus,
-      # chaque tentative tuee a quatre minutes ; si toutes echouent, l etape ECHOUE — une nouvelle
-      # tentative, jamais un vert de complaisance ; `timeout-minutes` borne l etape entiere. Un script
-      # du depot, sous une forme fermee (REQ-GOV-018) ; `pnpm pre-gate` le classe lent. Le cache des
-      # navigateurs est en tete du job. Temoins : `tests/unit/qualite/ci-navigateurs-a11y.spec.ts` et
-      # `tests/unit/qualite/navigateurs-bornes.spec.ts`.
-      - name: Navigateurs des passes d accessibilite
-        timeout-minutes: 15
-        run: pnpm a11y:navigateurs:bornes
-      # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessous :
-      # `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` lancent la garde contre le depot
-      # REEL, et elle echoue quand elle ne peut pas lire la forge — c est ce qu on lui demande.
-      # Sans le jeton ici, la suite rougissait sur deux tests qui ne disaient rien du code.
       - name: Tests — un eclat de la suite
         run: pnpm test:eclat
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json
           ECLAT: 1/2
-      - name: Empreinte du blob de l eclat
-        id: blob
-        run: pnpm ci:artefact:publier
-        env:
-          ARTEFACT: .vitest-reports/blob-1-2.json
       - name: Depot du blob de l eclat
         uses: actions/upload-artifact@v4
         with:
@@ -626,83 +209,25 @@ jobs:
           retention-days: 1
   tests-2:
     runs-on: ubuntu-latest
-    needs: [forge]
     if: ${{ github.event.pull_request.merged != true }}
     permissions:
       contents: read
-      pull-requests: read
-    outputs:
-      empreinte: ${{ steps.blob.outputs.empreinte }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      # La version de pnpm vient de `packageManager` dans package.json — une seule source.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
-      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
-      # la cle du verrou ; une action, donc avant toute commande.
       - name: Cache des moteurs de Prisma
         uses: actions/cache@v4
         with:
           path: ~/.cache/prisma
           key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # QA-T59. Le cache des navigateurs des passes d accessibilite, AVANT toute commande (une
-      # action qui suit une commande peut reecrire l arbre que les gardes mesurent). Sa CLE derive
-      # du verrou, qui epingle Playwright (RM-01) : aucune version ecrite ici, aucune commande pour
-      # la lire ; une montee de dependance refroidit le cache une fois, jamais un navigateur perime.
-      - name: Cache des navigateurs des passes d accessibilite
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # GOV-142 : l instantane de la forge, lu UNE fois par le job `forge`, recu du run courant (ni
-      # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
-      - name: Reception de l instantane de la forge
-        uses: actions/download-artifact@v4
-        with:
-          name: forge-instantane
-          path: ${{ runner.temp }}
       - run: pnpm install --frozen-lockfile
-      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
-      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
-      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
-      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
-      - name: Les vues derivees sont rendues, et le rendu est reproductible
-        run: pnpm vues:rendre
-      - name: L instantane de la forge est celui que le job forge a publie
-        run: pnpm ci:artefact:verifier
-        env:
-          ARTEFACT: ${{ runner.temp }}/forge-instantane.json
-          EMPREINTE_ATTENDUE: ${{ needs.forge.outputs.empreinte_forge }}
-      # UX-P0-03, REQ-UX-017. Les passes d accessibilite de `tests/a11y/` tournent DANS `pnpm test`
-      # et pilotent un vrai navigateur : WebKit pour le profil iPhone, Chromium pour le bureau. Sans
-      # eux, la suite rougirait sur une absence d outil, pas sur une faute. Avant `Tests`, donc.
-      # QA-T59. Cette etape est restee bloquee plus de 25 min : un telechargement qui ne repond plus
-      # immobilisait toute la porte A. `scripts/ci/navigateurs-bornes.ts` tente trois fois au plus,
-      # chaque tentative tuee a quatre minutes ; si toutes echouent, l etape ECHOUE — une nouvelle
-      # tentative, jamais un vert de complaisance ; `timeout-minutes` borne l etape entiere. Un script
-      # du depot, sous une forme fermee (REQ-GOV-018) ; `pnpm pre-gate` le classe lent. Le cache des
-      # navigateurs est en tete du job. Temoins : `tests/unit/qualite/ci-navigateurs-a11y.spec.ts` et
-      # `tests/unit/qualite/navigateurs-bornes.spec.ts`.
-      - name: Navigateurs des passes d accessibilite
-        timeout-minutes: 15
-        run: pnpm a11y:navigateurs:bornes
-      # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessous :
-      # `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` lancent la garde contre le depot
-      # REEL, et elle echoue quand elle ne peut pas lire la forge — c est ce qu on lui demande.
-      # Sans le jeton ici, la suite rougissait sur deux tests qui ne disaient rien du code.
       - name: Tests — un eclat de la suite
         run: pnpm test:eclat
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json
           ECLAT: 2/2
-      - name: Empreinte du blob de l eclat
-        id: blob
-        run: pnpm ci:artefact:publier
-        env:
-          ARTEFACT: .vitest-reports/blob-2-2.json
       - name: Depot du blob de l eclat
         uses: actions/upload-artifact@v4
         with:
@@ -711,36 +236,25 @@ jobs:
           overwrite: false
           if-no-files-found: error
           retention-days: 1
+
   apres-tests:
-    # GOV-142 : ce qui lit les RESULTATS de la suite. La fusion des blobs juge la couverture
-    # aux seuils de vitest.config.ts et ecrit test-results/vitest.json, comme `pnpm test`.
+    # 3 (couverture : 100 % sur src/domain) et 4 (mutation des fichiers de la PR).
     runs-on: ubuntu-latest
-    needs: [forge, tests-1, tests-2]
+    needs: [tests-1, tests-2]
     if: ${{ github.event.pull_request.merged != true }}
     permissions:
       contents: read
-      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      # La version de pnpm vient de `packageManager` dans package.json — une seule source.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
-      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
-      # la cle du verrou ; une action, donc avant toute commande.
       - name: Cache des moteurs de Prisma
         uses: actions/cache@v4
         with:
           path: ~/.cache/prisma
           key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # GOV-142 : l instantane de la forge, lu UNE fois par le job `forge`, recu du run courant (ni
-      # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
-      - name: Reception de l instantane de la forge
-        uses: actions/download-artifact@v4
-        with:
-          name: forge-instantane
-          path: ${{ runner.temp }}
       - name: Reception du blob de l eclat 1
         uses: actions/download-artifact@v4
         with:
@@ -752,159 +266,26 @@ jobs:
           name: blob-2
           path: .vitest-reports
       - run: pnpm install --frozen-lockfile
-      # GOV-123, REQ-GOV-032. Les vues derivees ne sont plus commitees : elles se RENDENT ici,
-      # avant toute etape qui en lit une, puis une seconde fois pour que deux rendus identiques
-      # octet par octet soient exiges (la vue non reproductible est nommee). Aucun jeton : les
-      # lectures de la forge de PLAN-STATE echouent de la meme facon aux deux rendus.
-      - name: Les vues derivees sont rendues, et le rendu est reproductible
-        run: pnpm vues:rendre
-      - name: L instantane de la forge est celui que le job forge a publie
-        run: pnpm ci:artefact:verifier
-        env:
-          ARTEFACT: ${{ runner.temp }}/forge-instantane.json
-          EMPREINTE_ATTENDUE: ${{ needs.forge.outputs.empreinte_forge }}
-      - name: Le blob de l eclat 1 est celui que son job a publie
-        run: pnpm ci:artefact:verifier
-        env:
-          ARTEFACT: .vitest-reports/blob-1-2.json
-          EMPREINTE_ATTENDUE: ${{ needs.tests-1.outputs.empreinte }}
-      - name: Le blob de l eclat 2 est celui que son job a publie
-        run: pnpm ci:artefact:verifier
-        env:
-          ARTEFACT: .vitest-reports/blob-2-2.json
-          EMPREINTE_ATTENDUE: ${{ needs.tests-2.outputs.empreinte }}
       - name: Tests — fusion des eclats, aux seuils de la configuration
         run: pnpm test:fusion
-      # QA-T03, REQ-QA-014. LA MEME garde que "Matrice de tracabilite" plus haut (`gov-trace.ts`),
-      # relancee ICI avec les RESULTATS que `pnpm test` vient d ecrire (`test-results/vitest.json`) :
-      # c est la seule passe qui sache qu un test est VERT, et pas seulement ecrit. Juste apres
-      # "Tests", sans `if:` ni tolerance d echec : des resultats absents, illisibles ou partiels la
-      # font rougir. L etape d avant les tests reste, pour le retour rapide. Le jeton sert la source
-      # PR, facultative, comme plus haut.
-      - name: req:check — chaque paire (tache, REQ) a son test annote et VERT
-        run: pnpm req:check
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json
-      # GOV-101, REQ-QA-002 — decision de Will du 2026-09-26 (W16, partners/ADR-0024) : la lentille
-      # `mutation` n est plus une revue d agent, c est cette mesure. Stryker, en BAC A SABLE, sur les
-      # seuls fichiers de `src/domain/`, `src/server/` et `src/lib/` que la PR ajoute ou modifie
-      # (base de fusion
-      # avec `origin/$GITHUB_BASE_REF`, que GitHub pose sur `pull_request`) ; sur `push` de main le
-      # diff est vide, et l etape le dit et passe. Sous `thresholds.break` de `stryker.config.json`,
-      # elle rougit et NOMME chaque survivant `fichier:ligne`. Les scripts de garde touches sont
-      # nommes et ecartes : leur preuve de mutation est leur `--prove`, joue plus haut. Ici, dans
-      # `gate-a`, et pas dans un job a part : seul `gate-a` est un check requis. Pas de
-      # `continue-on-error`. La preuve du lecteur d abord : un verdict qui ne sait plus rougir ne vaut rien.
       - name: Le lecteur du rapport de mutation sait rougir
         run: pnpm mutation:prove
       - name: Mutation des fichiers de la PR — Stryker en bac a sable, survivants nommes
         run: pnpm mutation:pr
-      # GOV-059, REQ-QA-013. `gov:etat` vient APRES toutes les etapes de mesure. Elle lit l etat
-      # GLOBAL de la forge : un rouge venu d une AUTRE demande de fusion faisait « sauter » lint,
-      # format, typecheck et tests, qui avaient l air d avoir mesure et n avaient rien mesure.
-      # `gov:etat` LIT GitHub (PR ouvertes, labels de revendication, PR fusionnees). Sans jeton,
-      # elle ECHOUE en nommant les cinq familles non evaluees — et c est voulu : une gate verte
-      # parce qu elle n a pas pu lire est pire que pas de gate. Constate en CI le 2026-09-04,
-      # premier run de cette etape : « gh: To use GitHub CLI in a GitHub Actions workflow, set the
-      # GH_TOKEN environment variable ». La reponse n est PAS `--hors-ligne`, qui abandonnerait les
-      # cinq familles en silence : c est de lui donner le jeton pour qu elle fasse son travail.
-      - name: Etat vivant — fraicheur, verrou d owner, journal
-        run: pnpm gov:etat --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOV_FORGE: ${{ runner.temp }}/forge-instantane.json
-      - name: La garde de l etat vivant sait rougir
-        run: pnpm gov:etat:prove
-  poids:
-    # GOV-142 : construire puis mesurer, seul dans son job : aucune garde ne voit `.next/`.
-    runs-on: ubuntu-latest
-    if: ${{ github.event.pull_request.merged != true }}
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      # La version de pnpm vient de `packageManager` dans package.json — une seule source.
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
-      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
-      # la cle du verrou ; une action, donc avant toute commande.
-      - name: Cache des moteurs de Prisma
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/prisma
-          key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm install --frozen-lockfile
-      # QA-T20 : construire puis mesurer, EN DERNIER. `next build` ecrit `.next/` et
-      # `next-env.d.ts` ; pose plus haut, il faisait rougir `format:check` sur un fichier genere
-      # (mesure en pre-vol le 2026-09-29). Aucune etape ne vient apres : aucune ne voit ces artefacts.
-      - name: Construire l application pour la mesure
-        run: pnpm perf:bundle:construire
-      - name: Poids par route de l espace — JS propre et socle commun
-        run: pnpm perf:bundle
+
   gate-a:
-    # GOV-142 : LA PORTE FINALE, seul nom que la protection de branche exige. Un job dont elle
-    # depend qui echoue la ferait SAUTER, et un « skipped » requis compte comme reussi : elle tourne
-    # donc toujours (`always()`, avec la garde de fusion), et son etape exige `success` de CHAQUE
-    # job de `needs`, liste lue dans `toJSON(needs)` et jamais recopiee.
-    # ⚠️ LA SEULE CHOSE QUE CE JOB N'A RIEN A MESURER : une demande de fusion DEJA FUSIONNEE.
-    # Le runbook fait cocher la huitieme case de la definition de termine APRES
-    # `gh pr merge --delete-branch`. Cette edition du corps relance `pull_request: edited`, la tete
-    # n'est plus une branche, et `gov:pr`, au premier tiers du job, echouait sur `git diff base...tete` :
-    # toutes les etapes suivantes restaient en « skipped », dont Lint, Format, Typecheck, Tests, `req:check` et
-    # `gov:etat`. Elles avaient l'air d'avoir mesure et n'avaient rien mesure. C'est la pathologie
-    # que GOV-059 vient de fermer un cran plus bas, par l'ORDRE des etapes ; ici elle se produisait
-    # A CHAQUE demande de fusion, par construction. Un bruit qu'on apprend a ignorer finit par
-    # cacher un vrai rouge.
-    #
-    # LA CONDITION EST LA PLUS ETROITE QUI FERME CE CAS, et pas une de plus :
-    #   — elle ne regarde PAS `github.event.action` : ecarter `edited` tuerait la raison d'etre du
-    #     declencheur, juste au-dessus (corriger un titre refuse par `gov:pr` doit relancer la
-    #     mesure, PR 26) ;
-    #   — elle ne regarde PAS `github.event_name` : sur `push`, `github.event.pull_request` est
-    #     absent, la propriete rend `null`, et GitHub compare en NOMBRES des operandes de types
-    #     differents (`null` -> 0, `true` -> 1). `null != true` est donc VRAI et la porte A tourne
-    #     sur main comme avant. Ajouter `github.event_name != 'pull_request' ||` n'ecarterait pas un
-    #     run de plus : ce serait une seconde ecriture de la meme regle, donc une divergence a venir
-    #     (RM-01) ;
-    #   — une demande de fusion OUVERTE dont on edite le corps porte `merged: false` : elle reste
-    #     mesuree, et c'est exige par le temoin.
-    # Le seul run ecarte est celui dont il n'y a plus rien a lire. Le diff FUSIONNE, lui, n'est pas
-    # perdu : il change de porte, et se mesure au run `push: main` du meme sha.
-    #
-    # Ce `if:` est au JOB, pas aux etapes : un job saute se lit « skipped » sans aucun rouge, alors
-    # que des dizaines d'etapes sautees une par une afficheraient exactement l'image qu'on retire d'ici.
-    #
-    # TEMOIN : `tests/unit/gouvernance/revendication-par-branche.spec.ts`, qui EVALUE cette
-    # expression contre cinq contextes d'evenement au lieu d'en chercher le texte, et qui exige la
-    # meme garde de TOUT job de TOUT workflow declenche par `pull_request` — en suivant `needs:`,
-    # pour qu'un job neuf qui reprendrait ces etapes ne puisse pas s'y soustraire en silence.
-    # EXPLICITES, et ce n'est pas de la ceinture-bretelles. `gov:entite:corps` est BLOQUANTE et
-    # rend 2 (donc echoue) quand elle ne peut pas lire. Le defaut de `GITHUB_TOKEN` se configure
-    # au niveau du depot ou de l'organisation : le jour ou quelqu'un le passe en restreint, la
-    # garde deviendrait INSATISFIABLE — exactement ce qu'on apprend a sauter. Nommer le droit
-    # ici, c'est le soustraire a un reglage qu'on ne relit jamais.
+    # LA PORTE FINALE, seul check requis par la protection de main. Elle tourne toujours
+    # (`always()`) et exige `success` de chaque job de `needs`, lu dans `toJSON(needs)`.
     runs-on: ubuntu-latest
-    needs: [forge, gardes, porte-d, tests-1, tests-2, apres-tests, poids]
+    needs: [gardes, porte-d, tests-1, tests-2, apres-tests]
     if: ${{ always() && github.event.pull_request.merged != true }}
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      # La version de pnpm vient de `packageManager` dans package.json — une seule source.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
-      # GOV-142 : les moteurs de Prisma, que `pnpm install` telecharge (crochet postinstall), en cache par
-      # la cle du verrou ; une action, donc avant toute commande.
-      - name: Cache des moteurs de Prisma
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/prisma
-          key: prisma-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
       - name: Chaque job de la porte A a reussi
         run: pnpm ci:porte-finale

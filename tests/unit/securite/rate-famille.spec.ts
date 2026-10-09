@@ -58,6 +58,7 @@ import {
   type SignalDePanne,
   type SujetDeCompteur,
   type VerdictDeLimite,
+  VARIABLE_DES_PLAFONDS,
 } from '../../../src/server/securite/rate-limit';
 import {
   SAUTS_DE_CONFIANCE,
@@ -90,6 +91,7 @@ import {
   sourcesDuDisque,
   universDuDepot,
   type Univers,
+  COMPTEURS_EN_CONFIGURATION,
 } from '../../../scripts/gates/rate-famille';
 
 const NOMS = Object.keys(COMPTEURS) as NomDeCompteur[];
@@ -328,11 +330,17 @@ describe('REQ-SEC-016 — le verdict d’un compteur sain', () => {
 
 // ── REQ-SEC-016 : la panne ──────────────────────────────────────────────────────────────────────
 
+/** SEC-72 : des plafonds FACTICES, de forme valide ; aucune vraie valeur au dépôt. */
+const PLAFONDS_FACTICES =
+  'identite_jour=7;identite_court=2;ip_jour=9;fenetre_jour_minutes=600;fenetre_court_minutes=5';
+
 describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se dit', () => {
   it('REQ-SEC-016 — contre un cache qui LÈVE, chaque compteur rend sa conduite, `panne: true`', async () => {
     const cache = magasinEnPanne();
     const { signaux, signaler } = capteur();
     const constates: string[] = [];
+    // SEC-72 : les compteurs hors dépôt lisent leurs plafonds dans le secret — ici FACTICES.
+    vi.stubEnv(VARIABLE_DES_PLAFONDS, PLAFONDS_FACTICES);
     for (const nom of NOMS) {
       const v = await limiter(nom, SUJET, 0, cache.magasin, signaler);
       const d = COMPTEURS[nom];
@@ -342,8 +350,12 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
       constates.push(nom);
     }
     expect(constates).toEqual(NOMS);
-    // Aucun compteur n'est hors dépôt : le cache a été ATTEINT par chacun — pas un vert à vide.
-    expect(NOMS.filter((n) => (COMPTEURS[n].limite as unknown) === LIMITE_HORS_DEPOT)).toEqual([]);
+    vi.unstubAllEnvs();
+    // Seuls les compteurs de la configuration privée sont hors dépôt (SEC-72), et le cache a été
+    // ATTEINT par chacun, eux compris — pas un vert à vide.
+    expect(NOMS.filter((n) => (COMPTEURS[n].limite as unknown) === LIMITE_HORS_DEPOT)).toEqual([
+      ...COMPTEURS_EN_CONFIGURATION,
+    ]);
     expect(cache.appels()).toBe(NOMS.length);
     expect(signaux.map((s) => s.prefixe)).toEqual(NOMS.map((n) => COMPTEURS[n].prefixe));
   });
@@ -1309,7 +1321,7 @@ describe('REQ-SEC-016 — option 1 : une limite lue en SSOT est confrontée à d
     expect(r.fautes).toEqual([]);
     expect(Object.keys(r.voies).sort()).toEqual([...NOMS].sort());
     for (const nom of NOMS) {
-      expect(['chiffre', 'ssot'], nom).toContain(r.voies[nom]);
+      expect(['chiffre', 'ssot', 'configuration'], nom).toContain(r.voies[nom]);
     }
     expect(r.confrontes).toHaveLength(NOMS.length);
   });

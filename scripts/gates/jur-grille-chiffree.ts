@@ -17,6 +17,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { fautesGrilleChiffree } from '../../src/domain/contrat/grille-chiffree';
+import { restreindreALaPr } from './fichiers-de-la-pr';
 
 export const GABARIT = 'docs/contrat/CONTRAT-APPORTEUR-V1.md';
 
@@ -76,6 +77,13 @@ if (APPELE_DIRECTEMENT) {
     process.exit(0);
   }
 
+  // GOV-160 : sur une PR qui ne touche pas le gabarit, il n'y a rien de la PR à juger.
+  if (restreindreALaPr([GABARIT]).length === 0) {
+    console.log(
+      `✅ jur:grille-chiffree — la PR ne modifie pas ${GABARIT} : rien de la PR à juger.`
+    );
+    process.exit(0);
+  }
   if (!existsSync(GABARIT)) {
     console.error(
       `❌ jur:grille-chiffree — ${GABARIT} est introuvable : rien à juger n'est pas un vert.`

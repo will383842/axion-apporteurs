@@ -530,13 +530,9 @@ describe('REQ-QA-013 — aucune gate ne se désarme par `continue-on-error`, et 
 
   it('REQ-QA-013 — la tolérance posée au niveau d’un JOB, hors de gate-a, est nommée', async () => {
     const nightly = readFileSync(NIGHTLY, 'utf8');
-    const variante = substituer(
-      nightly,
-      '  gates-prouvees:\n',
-      `  gates-prouvees:\n    ${TOLERANCE}: true\n`
-    );
+    const variante = substituer(nightly, '  depot:\n', `  depot:\n    ${TOLERANCE}: true\n`);
     expect((await relever(NIGHTLY, variante)).fautes).toEqual([
-      `${NIGHTLY} › job gates-prouvees : ${TOLERANCE}`,
+      `${NIGHTLY} › job depot : ${TOLERANCE}`,
     ]);
   });
 
@@ -568,8 +564,8 @@ describe('REQ-QA-013 — aucune gate ne se désarme par `continue-on-error`, et 
         CI,
         substituer(
           ci,
-          '      empreinte_forge: ${{ steps.forge.outputs.empreinte }}\n    steps:\n',
-          '      empreinte_forge: ${{ steps.forge.outputs.empreinte }}\n    steps: &etapes\n'
+          '    steps:\n      - uses: actions/checkout@v4\n      - uses: pnpm/action-setup@v4\n',
+          '    steps: &etapes\n      - uses: actions/checkout@v4\n      - uses: pnpm/action-setup@v4\n'
         )
       )
     ).rejects.toThrow(/ancre/);
@@ -578,8 +574,8 @@ describe('REQ-QA-013 — aucune gate ne se désarme par `continue-on-error`, et 
         CI,
         substituer(
           ci,
-          '      empreinte_forge: ${{ steps.forge.outputs.empreinte }}\n    steps:\n',
-          '      empreinte_forge: ${{ steps.forge.outputs.empreinte }}\n    steps: 3\n    x:\n'
+          '    steps:\n      - uses: actions/checkout@v4\n      - uses: pnpm/action-setup@v4\n',
+          '    steps: 3\n    x:\n'
         )
       )
     ).rejects.toThrow();

@@ -446,6 +446,17 @@ juridique ou sécurité, le dit. `config/gel-phase-1.json` porte la liste des t�
 
 ## 7. Fichiers réservés et label exigé (gate de REQ-GOV-010)
 
+> **GOV-160 (décision de Williams du 2026-10-09, #319, commentaire 6077512137) — CE QUI CHANGE ICI.** La famille `fichier_reserve_sans_label` est **archivée**
+> avec l'ancienne garde de PR : un label de rôle n'est plus exigé. Les chemins ci-dessous disent
+> encore **qui répond** d'un fichier ; ce qui garde vraiment, c'est le **niveau** de la PR
+> (`scripts/gates/gov-pr-niveaux.ts`, Pas 2 de `docs/PROTOCOLE-FUSION.md`) : `prisma/**`,
+> `packages/contracts/**`, `.claude/**`, `.github/**`, `config/**`, `package.json`, `pnpm-lock.yaml`
+> et `docs/gates.json` rendent une PR **critique** (deux lentilles, veto de `securite`), et l'avis
+> `schema` d'A02 est exigé dès qu'une migration n'est pas purement additive. Labels d'une PR : aucun
+> n'est requis ; `schema` se pose sur une PR de schéma, par lisibilité. Aucune PR n'écrit plus de
+> statut dans `docs/tasks.json` (le paragraphe GOV-145 ci-dessous est sans objet) ; une garde
+> nouvelle exige une décision de Williams citée.
+
 Une PR qui modifie un chemin réservé **sans porter le label du poste** rougit (`gov:pr`, famille
 `fichier_reserve_sans_label`). Le label suit le nom de la fiche (`docs/CONVENTIONS.md` §5 : `role:<fiche>`) ;
 le code de poste, lui, va dans le champ `Auteur:`. **Ce tableau est lu par le script**, ligne par ligne : le

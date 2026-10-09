@@ -72,6 +72,7 @@ import * as CONFIRMATION_DU_DEPOT from '../../src/content/micro-copy/espace/conf
 import * as INFORMATION_DES_TIERS from '../../src/content/micro-copy/espace/information-tiers';
 import * as ETATS_DES_DEPOTS from '../../src/content/micro-copy/espace/etats-attribution';
 import * as NOTIFICATIONS_DE_L_ESPACE from '../../src/content/micro-copy/espace/notifications';
+import * as VERIFICATION_DE_L_ESPACE from '../../src/content/micro-copy/espace/verification';
 import { ETATS_VIDES_CONSOLE } from '../../src/content/micro-copy/console/etats-vides';
 import { GABARITS } from '../../src/server/notifications/table-ssot';
 import type { ActionEcran, EtatVide, TexteIssue } from '../../src/content/micro-copy/types';
@@ -107,6 +108,7 @@ const MICRO_COPIE_DE_L_ESPACE: Readonly<Record<string, unknown>> = {
   'espace/etats-attribution.ts': ETATS_DES_DEPOTS,
   // UX-P1-54 : l'écran des notifications de l'espace.
   'espace/notifications.ts': NOTIFICATIONS_DE_L_ESPACE,
+  'espace/verification.ts': VERIFICATION_DE_L_ESPACE,
   // Hors d'`espace/`, mais importé par chaque module de l'espace : parcouru comme eux.
   'types.ts': TYPES_DE_LA_MICRO_COPIE,
   // UX-P1-10 : les notifications de l'apporteur (e-mail et espace), lues par lui : parcourues aussi.
@@ -225,6 +227,9 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   // #752) — l'article de SA mise en demeure, la date de fin de SON contrat ; aucun autre apporteur.
   'espace/notifications.ts › DECISIONS_PURGEES › mise_en_demeure': ['article'],
   'espace/notifications.ts › DECISIONS_PURGEES › manquement_grave': ['dateEffet'],
+  // SEC-15 : la suspension purgée, du jour de SA notification à celui de SA fin (juriste, #794
+  // 6036374348 ; #474 6036797355), lus sur la ligne nue et au journal.
+  'espace/notifications.ts › DECISIONS_PURGEES › suspension': ['dateDebut', 'dateFin'],
   // DM-25 : l'annulation de SON dépôt pour antériorité de la Société (art. 3.3) — SON entreprise, et le
   // délai de réponse à SA contestation, venu de la SSOT. Aucun critère d'antériorité (règle de SEC-12).
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_annulee_anteriorite': [
@@ -266,6 +271,9 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   // DM-55 : les faits retenus contre SON dépôt (art. 3.7), saisis par la console et lus au rendu ;
   // sans lien, sans nom de tiers, sans les mots refusés (sécurité, rattrapage 64).
   'courriels/notifications.ts › MOTIFS_DES_DECISIONS › anomalie_confirmee': ['faits'],
+  // DM-71 (art. 3.3 du v2) : la fraude établie annule SON attribution confirmée ; ses faits sont ceux de
+  // SON anomalie confirmée, saisis et lus comme ceux de `anomalie_confirmee` (juriste, 6039893112).
+  'courriels/notifications.ts › MOTIFS_DES_DECISIONS › fraude_etablie': ['faits'],
   // SEC-19 (juriste, #703) : SA mise en demeure — l'article de la liste fermée de l'art. 11.2, les
   // faits saisis par la console (règles de DM-55), le délai venu de la SSOT (RM-10).
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure': [

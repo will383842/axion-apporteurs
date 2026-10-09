@@ -641,7 +641,9 @@ if (LANCE_EN_SCRIPT) {
   // L'INSTANT DE LA PASSE, lu UNE fois et injecté partout : une `fusionneeAt` postérieure est une
   // faute (`attestation_date_future`), et deux appels de la même passe jugent au même instant.
   const horsLigne = vuesDeLaPasse(Date.now());
-  const gelees = lireGel();
+  // GOV-160 (#319, 6077512137) : le gel de la phase 1 est SUPPRIMÉ, au profit de docs/PRIORITES.md.
+  // `config/gel-phase-1.json` est retiré ; le contrôle `gel_phase_1` ne s arme plus (gelees nul).
+  const gelees: ReadonlySet<string> | null = null;
 
   if (process.argv.includes('--render') || process.argv.includes('--verifie-rendu')) {
     const fautes = controler(doc, schema, registre, chemins, horsLigne, gelees);
