@@ -347,6 +347,11 @@ model Apporteur {
   anomalies               Anomalie[]               @relation("AnomaliesDeLApporteur")
   contestations           Contestation[]
   appareilsConnus         AppareilConnu[]
+  /// T-ARG-045 (REQ-ARG-014, REQ-ARG-018) : les lignes de commission, leurs autofactures, et le
+  /// compteur de leur séquence sans trou.
+  lignesCommission        LigneCommission[]
+  autofactures            Autofacture[]
+  compteurAutofacture     CompteurAutofacture?
 
   /// CPL-T06 (REQ-CPL-006) : les décisions sur la candidature, en ajout seul.
   decisionsCandidature DecisionCandidature[]
@@ -1713,4 +1718,99 @@ model LitigeDecisionDeContrat {
 
   @@index([decisionId, closAt], map: "litiges_decisions_de_contrat_decision_clos_idx")
   @@map("litiges_decisions_de_contrat")
+}
+
+// ── T-ARG-045 : la ligne de commission et son autofacture (REQ-ARG-014, REQ-ARG-018) ────────────
+
+/// Le type d'une ligne de commission (GLOSSAIRE §3, REQ-DM-020).
+enum TypeLigneCommission {
+  commission
+  reprise
+  parrainage
+  bonus_filleul
+
+  @@map("type_ligne_commission")
+}
+
+/// Le statut d'une ligne de commission (GLOSSAIRE §3, 6 + 1 ; `dechue` supprimée, HYP-D11).
+enum StatutLigneCommission {
+  prevue
+  acquise
+  bloquee
+  a_payer
+  payee
+  annulee
+  contestee
+
+  @@map("statut_ligne_commission")
+}
+
+/// T-ARG-045 — une ligne de commission, réduite à ce que l'émission des autofactures lit ; T-ARG-010
+/// la complète par migration additive. UNE ligne entre dans AU PLUS UNE autofacture (REQ-ARG-014) :
+/// `autofactureId` est une colonne, pas une table de liaison ; l'émission l'affecte par
+/// `UPDATE … WHERE autofacture_id IS NULL`, et la base refuse ensuite de la changer (déclencheur
+/// `lignes_commission_facturee_figee`, SQL brut), qui refuse aussi d'affecter une ligne à une
+/// autofacture déjà émise : l'émission affecte, PUIS insère. Clé étrangère composite (autofacture, apporteur) :
+/// la base refuse une autofacture d'un autre apporteur. Elle est DIFFÉRÉE à la validation, parce que
+/// l'émission affecte les lignes AVANT d'insérer l'autofacture. Ni `prevue`, ni `annulee`, ni une
+/// `reprise` n'entrent dans une autofacture (CHECK).
+model LigneCommission {
+  id                     String                @id @default(uuid()) @db.Uuid
+  apporteurId            String                @map("apporteur_id") @db.Uuid
+  apporteur              Apporteur             @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  type                   TypeLigneCommission
+  statut                 StatutLigneCommission
+  commissionCents        Int                   @map("commission_cents")
+  /// Le jour (Paris) où l'encaissement intégral rend la commission acquise (REQ-ARG-004).
+  encaissementIntegralLe DateTime              @map("encaissement_integral_le") @db.Date
+  /// Le jour (Paris) où la Société constate l'encaissement intégral.
+  constateLe             DateTime              @map("constate_le") @db.Date
+  /// Le décompte d'une ligne `commission` : sa commande et ses prix ; nuls pour les autres types (CHECK).
+  commandeRef            String?               @map("commande_ref") @db.VarChar(64)
+  prixFactureCents       Int?                  @map("prix_facture_cents")
+  prixPublicCents        Int?                  @map("prix_public_cents")
+  autofactureId          String?               @map("autofacture_id") @db.Uuid
+  autofacture            Autofacture?          @relation(fields: [autofactureId, apporteurId], references: [id, apporteurId], onDelete: Restrict, onUpdate: Restrict, map: "lignes_commission_autofacture_fkey")
+  creeAt                 DateTime              @default(dbgenerated("clock_timestamp()")) @map("cree_at") @db.Timestamptz(3)
+
+  @@index([apporteurId])
+  @@index([autofactureId])
+  @@map("lignes_commission")
+}
+
+/// T-ARG-045 — une autofacture émise (REQ-ARG-018). Ajout seul : jamais réouverte, jamais modifiée,
+/// jamais supprimée (gabarit `refuser_modification_sauf`). `numero` est posé par la BASE à
+/// l'insertion (déclencheur `autofactures_numerotation`) depuis `CompteurAutofacture` : séquence
+/// propre à l'apporteur, continue et sans trou ; une transaction annulée ne consomme aucun numéro.
+/// À la validation, la base vérifie qu'elle porte au moins une ligne et que `montantCents` en est la
+/// somme exacte (déclencheurs de contrainte différés) : une ligne ajoutée à une autofacture déjà
+/// émise rompt cette somme, et la transaction est refusée.
+model Autofacture {
+  id           String    @id @db.Uuid
+  apporteurId  String    @map("apporteur_id") @db.Uuid
+  apporteur    Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// Posé par la base ; toute valeur fournie est remplacée.
+  numero       Int       @default(0)
+  emiseLe      DateTime  @map("emise_le") @db.Date
+  echeanceLe   DateTime  @map("echeance_le") @db.Date
+  montantCents Int       @map("montant_cents")
+  creeAt       DateTime  @default(dbgenerated("clock_timestamp()")) @map("cree_at") @db.Timestamptz(3)
+
+  lignes LigneCommission[]
+
+  @@unique([apporteurId, numero], map: "autofactures_apporteur_numero_key")
+  @@unique([id, apporteurId], map: "autofactures_id_apporteur_key")
+  @@map("autofactures")
+}
+
+/// T-ARG-045 — le dernier numéro d'autofacture de chaque apporteur (REQ-ARG-018). N'est écrit que
+/// par `autofactures_numerotation`, sous le verrou de sa ligne : il naît à 1 et ne monte que d'un
+/// (déclencheur `compteurs_autofacture_monotone`) ; DELETE et TRUNCATE refusés. Les avoirs
+/// d'autofacture partageront cette séquence.
+model CompteurAutofacture {
+  apporteurId   String    @id @map("apporteur_id") @db.Uuid
+  apporteur     Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  dernierNumero Int       @map("dernier_numero")
+
+  @@map("compteurs_autofacture")
 }
