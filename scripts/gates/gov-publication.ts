@@ -137,9 +137,10 @@ const CHIFFRES: { motif: RegExp; quoi: string }[] = [
  * (d) SEC-48 — une donnée du POSTE de travail : l'identité système (`uid=…(nom)`, `gid=…`, la sortie
  * de `id`) et le dossier personnel, qui nomme l'utilisateur. Mesuré le 2026-10-02 : une expansion du
  * shell (`` `id` `` dans une chaîne entre guillemets doubles) a versé l'identité du poste dans un
- * commentaire de `prisma/schema.prisma` (PR #480). Le dossier personnel se lit sous ses trois
- * écritures, sans égard à la casse : `C:\Users\…` (doublé dans une chaîne compris), `C:/Users/…` et
- * `/c/Users/…` de Git Bash. UNE SEULE forme est permise, et nommée (lentille sécurité) : le marqueur
+ * commentaire de `prisma/schema.prisma` (PR #480). Le dossier personnel se lit sous ses écritures
+ * Windows, sans égard à la casse : `C:\Users\…` (barres inverses doublées ou quadruplées dans une
+ * chaîne comprises), `C:/Users/…` et `/c/Users/…` de Git Bash ; et sous ses écritures macOS
+ * (`/Users/…`) et Linux (`/home/…`), en casse exacte. UNE SEULE forme est permise, et nommée (lentille sécurité) : le marqueur
  * littéral `<nom>`. Tout autre segment après `Users` rougit, nom réel ou inventé : le
  * dépôt dit un chemin par son rôle (`%USERPROFILE%`, `~`, relatif au dépôt), jamais par une personne.
  * Un segment qui COMMENCE par une ponctuation n'est pas un nom : `C:\Users\, C:/Users/` énumère les
@@ -149,8 +150,13 @@ const SEGMENT = '[^\\\\/\\s`\'",;:.)\\]}>][^\\\\/\\s`\'"]*';
 const POSTE: RegExp[] = [
   /\buid=\d+\(/,
   /\bgid=\d+\b/,
-  new RegExp(`\\b[A-Za-z]:(?:\\\\{1,2}|/)Users(?:\\\\{1,2}|/)(?!<nom>)${SEGMENT}`, 'i'),
+  new RegExp(`\\b[A-Za-z]:(?:\\\\+|/)Users(?:\\\\+|/)(?!<nom>)${SEGMENT}`, 'i'),
   new RegExp(`(?:^|[^\\w.])/(?:mnt/)?[a-z]/Users/(?!<nom>)${SEGMENT}`, 'i'),
+  // Le poste macOS (`/Users/…`) et le poste Linux (`/home/…`, celui de la CI et des sessions cloud),
+  // en casse exacte : une route `/users/me` ou une URL `…/home/accueil` ne nomme aucun poste.
+  // `/home/runner` est le compte public des exécuteurs GitHub Actions, un rôle et non une personne :
+  // une spec de la CI le cite (`tests/archive/unit/qualite/navigateurs-bornes.spec.ts`).
+  new RegExp(`(?:^|[^\\w.:/])/(?:Users/(?!<nom>)|home/(?!<nom>|runner/))${SEGMENT}`),
   // Le même dossier ENCODÉ, tel que l'outil de session nomme ses projets (`C--Users-<nom>-Documents`).
   /\b[A-Za-z]--Users-(?!<nom>)[^-\s`'"/\\]+/i,
 ];
@@ -206,16 +212,28 @@ function fichiersSuivis(): string[] {
   return fichiersSuivisOuRefus('gov:publication');
 }
 
+/**
+ * Les fichiers jugés par TOUTES les familles : le code, la prose, la configuration, le schéma, les
+ * scripts. SEC-48 (lentille sécurité, #861) : `prisma/schema.prisma` — le fichier même de l'incident
+ * #480 — les scripts `.sh` et les modules `.mjs`/`.cjs` n'y figuraient pas, et la ligne de #480
+ * rejouée à l'identique laissait la garde verte.
+ */
+const TOUTES_FAMILLES = /\.(ts|tsx|js|jsx|mjs|cjs|md|json|yml|yaml|sql|prisma|sh)$/;
+
 function analyser(fichiers: string[]): Faute[] {
   const fautes: Faute[] = [];
   for (const f of fichiers) {
     if (EXEMPTS.some((r) => r.test(f))) continue;
     if (!existsSync(f)) continue;
-    if (!/\.(ts|tsx|js|jsx|md|json|yml|yaml|sql)$/.test(f)) continue;
-
-    readFileSync(f, 'utf8')
-      .split('\n')
-      .forEach((ligne, i) => fautes.push(...fautesDeLigne(ligne, f, i)));
+    const texte = readFileSync(f, 'utf8');
+    if (texte.includes('\u0000')) continue; // un binaire ne porte pas de ligne
+    // Tout autre fichier texte suivi (`.html`, `.toml`, `.txt`, `Dockerfile`, `.env.example`…) est lu
+    // pour la donnée du poste : une sortie de commande se verse dans n'importe quel fichier.
+    const toutes = TOUTES_FAMILLES.test(f);
+    texte.split('\n').forEach((ligne, i) => {
+      const f2 = fautesDeLigne(ligne, f, i);
+      fautes.push(...(toutes ? f2 : f2.filter((x) => x.famille === DONNEE_DU_POSTE)));
+    });
   }
   return fautes;
 }
@@ -260,6 +278,9 @@ if (process.argv.includes('--prove')) {
     { ligne: `C:\\USERS\\Poste`, famille: DONNEE_DU_POSTE },
     { ligne: `~/.claude/projects/C--Users-poste-Documents-Projets/`, famille: DONNEE_DU_POSTE },
     { ligne: `git -C /c/Users/poste/Documents/Projets worktree add`, famille: DONNEE_DU_POSTE },
+    { ligne: `cd /home/poste/work/axion-apporteurs`, famille: DONNEE_DU_POSTE },
+    { ligne: `cd /Users/poste/Documents/Projets`, famille: DONNEE_DU_POSTE },
+    { ligne: `"C:\\\\\\\\Users\\\\\\\\poste\\\\\\\\Documents"`, famille: DONNEE_DU_POSTE },
   ];
 
   // Contre-témoins : ce que la garde ne doit PAS faire rougir. Une garde qui rougit sur tout
@@ -280,6 +301,11 @@ if (process.argv.includes('--prove')) {
     'new URL(`${racine}/api/v1/deploy?uuid=${uuid}&force=false`)',
     `%USERPROFILE%\\Documents\\Projets\\axion-apporteurs`,
     `cd <dossier des projets>\\axion-apporteurs`,
+    `cd /home/<nom>/work`,
+    `configurationApt('/home/runner/.cache/apt-navigateurs')`,
+    `cd /Users/<nom>/Documents`,
+    `GET https://exemple.test/home/accueil`,
+    `router.get('/users/me')`,
     // L'énumération des écritures, sans nom : la fiche de SEC-48 elle-même.
     `les trois écritures C:\\\\Users\\\\, C:/Users/ et /c/Users/, insensibles à la casse`,
   ];
