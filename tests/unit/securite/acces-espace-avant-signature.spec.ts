@@ -25,6 +25,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import ts from 'typescript';
 import {
+  SEGMENTS_LECTURE,
   SEGMENTS_LIMITES,
   SEGMENTS_PLEINS,
   SEGMENTS_PUBLICS,
@@ -92,7 +93,7 @@ function ports(statut: string, journal?: RefusDOuvertureLimitee[]): PortsDeSessi
   };
 }
 
-describe('REQ-SEC-032 — un seul verdict à trois niveaux, défaut fermé', () => {
+describe('REQ-SEC-032 — un seul verdict à quatre niveaux, défaut fermé', () => {
   it('REQ-SEC-032 : plein pour signe et suspendu, limité pour kyc_en_cours et pret_a_signer, fermé pour tout autre statut du domaine', () => {
     const par = (n: string) => STATUTS_APPORTEUR.filter((s) => niveauDAcces(s) === n);
     expect(par('plein')).toEqual(['signe', 'suspendu']);
@@ -111,6 +112,13 @@ describe('REQ-SEC-032 — un seul verdict à trois niveaux, défaut fermé', () 
     expect(peutOuvrirLEspace('kyc_en_cours')).toBe(true);
     expect(peutOuvrirLEspace('pret_a_signer')).toBe(true);
   });
+
+  it('REQ-SEC-032 : SEC-70 — AUCUN statut n’est plus en LECTURE : le résilié est fermé, même avec des droits en cours', () => {
+    const avecDroits = niveauDAcces as (statut: string, droitsEnCours?: boolean) => string;
+    expect(STATUTS_APPORTEUR.filter((s) => avecDroits(s, true) === 'lecture')).toEqual([]);
+    expect(avecDroits('resilie', true)).toBe('ferme');
+    expect(peutOuvrirLEspace('resilie')).toBe(false);
+  });
 });
 
 describe('REQ-UX-006 — les segments sont une union fermée', () => {
@@ -128,8 +136,18 @@ describe('REQ-UX-006 — les segments sont une union fermée', () => {
     }
   });
 
+  it('REQ-UX-006 : SEC-19 — en lecture, la liste blanche SEGMENTS_LECTURE et l’acceptation répondent, et elles seules ; la liste est prise DANS les segments protégés', () => {
+    const lus: readonly string[] = SEGMENTS_LECTURE;
+    for (const s of [...SEGMENTS_LIMITES, ...SEGMENTS_PLEINS]) {
+      expect(routeOuverte('lecture', s), s).toBe(lus.includes(s));
+    }
+    expect(routeOuverte('lecture', SEGMENT_DE_L_ACCEPTATION)).toBe(true);
+    const proteges: readonly string[] = [...SEGMENTS_LIMITES, ...SEGMENTS_PLEINS];
+    for (const s of SEGMENTS_LECTURE) expect(proteges, s).toContain(s);
+  });
+
   it('REQ-UX-006 : un segment INCONNU est refusé à tout niveau — aucun niveau n’est implicite', () => {
-    for (const n of ['plein', 'limite', 'ferme'] as const) {
+    for (const n of ['plein', 'limite', 'lecture', 'ferme'] as const) {
       expect(routeOuverte(n, 'une-route-qui-n-existe-pas-encore')).toBe(false);
       expect(routeOuverte(n, '')).toBe(false);
     }

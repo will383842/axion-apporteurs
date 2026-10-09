@@ -85,6 +85,8 @@ async function recevoir(
           inscrites.push(e);
           return 'inscrit';
         },
+        // INT-T76-P : aucune v4 reçue, la fenêtre de bascule n'est pas ouverte.
+        premiereReceptionDeLaVersionCourante: async () => null,
       },
       alerteur: creerAlerteurPlafonne(() => undefined),
       declencher: () => undefined,

@@ -1,6 +1,6 @@
 ---
 name: release-manager
-description: Fusionne les PR d'Axion Partners, UNE à la fois, et vérifie l'atterrissage avant la suivante. Ne fusionne jamais sa propre PR ni rien côté axionia.
+description: Fusionne les PR d'Axion Partners par paquets adaptatifs, chaque fusion vérifiée à l'atterrissage avant la suivante. Ne fusionne jamais sa propre PR ni rien côté axionia.
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -27,6 +27,33 @@ gh pr view <n> --json mergeStateStatus,statusCheckRollup,author
    ```
 4. **Vérifie l'atterrissage** : `pnpm deploy:verify <sha>` — l'en-tête `x-partners-build-sha` doit valoir le
    sha fusionné. Tant que ce n'est pas vrai, **la PR suivante attend**.
+
+## Par paquets adaptatifs (GOV-158)
+
+Décision de Williams du 2026-10-08 (#319) : les PR d'un lot se fusionnent par **paquets**, sans qu'aucune
+garde ne tombe. Le paquet se **dérive**, il ne s'écrit jamais à la main :
+
+```bash
+npx tsx scripts/lot/paquets-de-fusion.ts composer --taille <t> --prs <n,n,…> --ordre-a02 <m,m,…>   # aucun fichier commun, ordre d'A02
+npx tsx scripts/lot/paquets-de-fusion.ts moities --prs <paquet>                # sur un échec
+npx tsx scripts/lot/paquets-de-fusion.ts attente --prs <saines> --ecartees <n,…> --ordre-a02 <m,m,…>
+npx tsx scripts/lot/paquets-de-fusion.ts taille --apres <t> --premier-coup oui|non
+```
+
+1. Le paquet est testé **ensemble, une fois**, sur la pointe de `main` : worktree jetable détaché sur
+   `origin/main`, chaque PR fusionnée localement (`git fetch origin pull/<n>/head` puis
+   `git merge --no-edit FETCH_HEAD`), le pré-vol complet, worktree retiré.
+2. **Rouge** : le paquet est coupé en deux, et chaque moitié retestée, jusqu'à isoler la fautive. Les saines
+   fusionnent ; la fautive seule retourne à son auteur. Une saine dont la migration suit celle d'une PR
+   écartée **attend** (`attente`) : la fusionner d'abord inverserait l'ordre des migrations sur `main`.
+   L'ordre d'A02 est celui que l'architecte a fixé dans sa revue `schema` ; il n'est jamais deviné.
+3. **Vert** : ses PR passent la séquence ci-dessus **une par une** — gate-a verte, `pnpm gov:pr --pr <n>`
+   (avis par tête, veto de `securite`), `--match-head-commit`, et `pnpm deploy:verify <sha>` avant la
+   suivante. Le paquet économise les tests, pas les gardes.
+4. La taille part de 4 ; elle monte jusqu'à 10 tant que les paquets passent du premier coup, et revient à 4
+   après un échec.
+
+Ton rendu est alors `{ "fusions": [ … ] }`, une entrée par PR au format ci-dessous.
 
 ## Lire un run rouge
 
@@ -59,7 +86,7 @@ La vérité est dans `x-partners-build-sha`, pas dans la couleur du run.
 
 ### Mission
 
-Fusionner une PR à la fois sur `main` : réserver le créneau avant `update-branch`, attendre toutes les gates vertes, lancer `pnpm gov:pr --pr <numéro>`, relire `mergeStateStatus` et fusionner dans le même appel, puis vérifier que `x-partners-build-sha` vaut le sha fusionné avant de laisser passer la suivante.
+Fusionner les PR d'un lot sur `main` par paquets adaptatifs (GOV-158) : composer le paquet par `scripts/lot/paquets-de-fusion.ts` (aucun fichier commun, ordre d'A02), le tester ensemble une fois sur la pointe de `main`, le couper en deux sur un rouge jusqu'à isoler la fautive ; puis faire passer chaque PR saine par la séquence de fusion — créneau réservé avant `update-branch`, gates vertes, `pnpm gov:pr --pr <numéro>`, `mergeStateStatus` relu et fusion dans le même appel — et vérifier que `x-partners-build-sha` vaut le sha fusionné avant la suivante.
 
 ### Entrées
 
@@ -78,7 +105,6 @@ Fusionner une PR à la fois sur `main` : réserver le créneau avant `update-bra
 
 ### Documents à lire
 
-- `docs/PLAN-STATE.md` — le dernier atterrissage et les PR ouvertes
 - `docs/REGLES-MAISON.md` — RM-09, une fusion à la fois, l'atterrissage vérifié
 - `docs/CONVENTIONS.md` — §5, squash, historique linéaire, forme du titre de PR
 - `docs/CHARTE-AGENTS.md` — §8, ce que `gov:pr --pr <n>` contrôle en plus avant la fusion

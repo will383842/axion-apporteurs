@@ -7,9 +7,10 @@
  * puis TOUS les autres faits sont lus, quelle que soit la cause — le travail, donc le délai, ne
  * dépend pas de la réponse ; la vérification est journalisée ; l'état seul est rendu.
  *
- * ÉCHEC FERMÉ SUR LES LIMITES (rattrapage 96). Aucun chiffre n'est posé tant que Williams n'a pas
- * tranché : un compteur ABSENT du registre REFUSE la vérification (`compterAvantLaDecision`).
- * « Aucun chiffre » ne devient jamais « pas de limite ». Les noms des compteurs ne s'écrivent qu'au
+ * ÉCHEC FERMÉ SUR LES LIMITES (rattrapage 96, SEC-72). Les plafonds sont hors dépôt, dans un secret
+ * (`compterAuRegistre`) : absents ou illisibles, chaque compteur REFUSE la vérification.
+ * « Aucun chiffre » ne devient jamais « pas de limite ». Le refus est le même pour les trois fenêtres ;
+ * il n'écrit rien et n'est lu par aucune décision. Le DÉPÔT ne passe jamais par ce service. Les noms des compteurs ne s'écrivent qu'au
  * registre (garde `securite:rate-famille`) : ce service ne demande que QUOI compter. Une adresse
  * sans empreinte ne se compte pas : refusée aussi.
  *
@@ -19,6 +20,7 @@
 import type { SujetDeCompteur } from '../securite/rate-limit';
 import {
   causeDuJournal,
+  dejaDeclareeParLePasse,
   etatDeVerification,
   type CauseDeVerification,
   type EtatDeLEntreprise,
@@ -62,11 +64,22 @@ export type PortsDeVerification = {
    */
   entreprise: (siren: string) => Promise<EtatDeLEntreprise | 'indisponible'>;
   occupation: (siren: string) => Promise<{ occupee: boolean; enFile: number }>;
+  /**
+   * EXT-T06 : la fin de la DERNIÈRE attribution terminée sur le SIREN, par le lecteur réservé du
+   * journal ; `null` si aucune, ou si elle est illisible (échec fermé : aucun signal).
+   */
+  derniereFin: (siren: string) => Promise<Date | null>;
+  maintenant: () => Date;
   journaliser: (ligne: LigneDuJournal) => Promise<void>;
 };
 
 export type ResultatDeVerification =
-  | { ok: true; dto: { etat: EtatVerification } }
+  /**
+   * EXT-T06 (REQ-EXT-006, condition 1 de la sécurité) : `dejaDeclaree` est TOUJOURS présent, à la même
+   * place, vrai ou faux : la forme de la réponse ne dit rien. Il n'est vrai que pour `libre`, et pour
+   * un apporteur ; jamais pour la console.
+   */
+  | { ok: true; dto: { etat: EtatVerification; dejaDeclaree: boolean } }
   | { ok: false; refus: 'siren_invalide' | 'limite' | 'registre_indisponible' };
 
 const REFUS_LIMITE = { ok: false, refus: 'limite' } as const;
@@ -89,10 +102,12 @@ export async function verifierUneEntreprise(
   const entreprise = await ports.entreprise(siren);
   if (entreprise === 'indisponible') return { ok: false, refus: 'registre_indisponible' };
   // Puis tous les faits, toujours : aucune cause ne s'arrête plus tôt qu'une autre.
-  const [anteriorite, surLaListe, occupation] = await Promise.all([
+  // La dernière fin aussi, TOUJOURS, dans la même lecture : le délai ne dépend pas du signal.
+  const [anteriorite, surLaListe, occupation, derniereFin] = await Promise.all([
     ports.anteriorite(siren),
     ports.surLaListe(siren),
     ports.occupation(siren),
+    ports.derniereFin(siren).catch(() => null),
   ]);
   const faits = { anteriorite, surLaListe, entreprise, ...occupation };
 
@@ -104,5 +119,9 @@ export async function verifierUneEntreprise(
     resultat: causeDuJournal(faits),
     ipHash: demande.ipHash,
   });
-  return { ok: true, dto: { etat: etatDeVerification(faits) } };
+  // Le signal n'est ni journalisé ni stocké : il se dérive ici, et seulement pour un apporteur.
+  const dejaDeclaree =
+    'apporteurId' in demande.porteur &&
+    dejaDeclareeParLePasse(faits, derniereFin?.getTime() ?? null, ports.maintenant().getTime());
+  return { ok: true, dto: { etat: etatDeVerification(faits), dejaDeclaree } };
 }

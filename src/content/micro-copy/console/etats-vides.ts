@@ -13,6 +13,8 @@
  * de blocage est celui du glossaire (« bloqué »), jamais celui de la paie.
  */
 import type { EtatVide } from '../types';
+import { ANOMALIES_CONSOLE } from './anomalies';
+import { MISE_EN_DEMEURE_CONSOLE } from './mise-en-demeure';
 
 export const ETATS_VIDES_CONSOLE: Readonly<Record<string, EtatVide>> = {
   'file-qualification': {
@@ -87,5 +89,17 @@ export const ETATS_VIDES_CONSOLE: Readonly<Record<string, EtatVide>> = {
     titre: 'Une candidature reçue hors du site ?',
     phrase: 'Saisissez-la ici : elle suit ensuite le même parcours que les autres.',
     action: { libelle: 'Saisir une candidature', route: null },
+  },
+  // UX-P1-57 : l'apporteur hors contrat, qui ne reçoit pas de mise en demeure ; textes de l'écran.
+  'mise-en-demeure': {
+    titre: MISE_EN_DEMEURE_CONSOLE.horsContrat.titre,
+    phrase: MISE_EN_DEMEURE_CONSOLE.horsContrat.phrase,
+    action: { libelle: MISE_EN_DEMEURE_CONSOLE.horsContrat.action, route: null },
+  },
+  // UX-P1-56 : aucune anomalie de sincérité ouverte ; textes de l'écran, le geste suivant est l'accueil.
+  anomalies: {
+    titre: ANOMALIES_CONSOLE.vide.titre,
+    phrase: ANOMALIES_CONSOLE.vide.phrase,
+    action: { libelle: ANOMALIES_CONSOLE.vide.action, route: '/console' },
   },
 };

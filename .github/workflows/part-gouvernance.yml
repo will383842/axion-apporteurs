@@ -1,0 +1,22 @@
+# GOV-160 (#319, 6077512137) — la part des commits de gouvernance sur 7 jours, chaque lundi.
+# Script sans IA. Rouge au-dessus de 15 % : c'est un RAPPORT, pas une garde — aucune PR ne
+# l'attend, aucun check requis ne le porte. Le rouge se lit dans l'onglet Actions.
+name: Part de gouvernance
+on:
+  schedule:
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rapport:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Part des commits de gouvernance sur 7 jours
+        run: pnpm gov:part-gouvernance

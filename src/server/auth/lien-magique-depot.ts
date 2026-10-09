@@ -15,6 +15,9 @@
 
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { CHAMPS_PII, decryptPii, type ClesPii } from '../securite/pii';
+import { ajouterEvenement } from '../evenement/journal';
+import { invitationOuverte } from '../console/utilisateurs/regles';
+import { depotDAppareils, type PortsDesAppareils } from './appareil';
 import {
   ESSAIS_DU_CODE_MAX,
   type PortsDEmission,
@@ -77,6 +80,8 @@ export function ecrituresDeLien(prisma: PrismaClient): EcrituresDeLien {
 
 function consommationSur(tx: Prisma.TransactionClient): TransactionDeConsommation {
   return {
+    // SEC-55 : l'appareil qui consomme est RECONNU dans cette transaction ; il n'y est jamais confirmé.
+    appareils: depotDAppareils(tx),
     async consommer(condition, donnees) {
       const { count } = await tx.lienMagique.updateMany({ where: condition, data: donnees });
       return count;
@@ -115,15 +120,49 @@ export function transactionDeConsommation(
 }
 
 /**
+ * SEC-55 — la transaction COURTE de la confirmation, ouverte APRÈS l'avis accepté (voie (b) de la
+ * lentille sécurité) : elle relit la session que la consommation a ouverte, avec le lien qui l'a
+ * ouverte, et confirme l'appareil par le même dépôt. Aucun appel réseau n'y a lieu.
+ */
+export function transactionDeConfirmation(prisma: PrismaClient): PortsDesAppareils['transaction'] {
+  return (travail) =>
+    prisma.$transaction((tx) =>
+      travail({
+        async lireSession(tokenHash) {
+          const ligne = await tx.sessionEspace.findUnique({
+            where: { tokenHash },
+            select: {
+              id: true,
+              apporteurId: true,
+              kid: true,
+              expireAt: true,
+              revoqueAt: true,
+              sessionVersion: true,
+              lienMagiqueId: true,
+              apporteur: { select: { statut: true, sessionVersion: true } },
+              lienMagique: { select: { consommeAt: true } },
+            },
+          });
+          if (ligne === null) return null;
+          const { lienMagiqueId, ...session } = ligne;
+          return { ligne: session, lienMagiqueId };
+        },
+        appareils: depotDAppareils(tx),
+      })
+    );
+}
+
+/**
  * SEC-54 — la vérification du code, dans UNE transaction. L'essai est compté par UNE instruction
  * conditionnelle (`UPDATE … WHERE tentatives_code < 5 … RETURNING`) : des essais concurrents ne
  * dépassent jamais cinq, et la base le double (CHECK et déclencheur `liens_magiques_code_fige`).
  */
 function codeSur(tx: Prisma.TransactionClient): TransactionDuCode {
-  const { statutApporteur, ouvrirSession } = consommationSur(tx);
+  const { statutApporteur, ouvrirSession, appareils } = consommationSur(tx);
   return {
     statutApporteur,
     ouvrirSession,
+    appareils,
     async lienActifDe(emailHash, maintenant) {
       const lien = await tx.lienMagique.findFirst({
         where: {
@@ -178,6 +217,26 @@ export function transactionDuCode(prisma: PrismaClient): PortsDuCode['transactio
 
 /** Le nom du modèle dans la donnée authentifiée des blocs chiffrés d'un utilisateur de la console. */
 export const MODELE_UTILISATEUR_CONSOLE = 'UtilisateurConsole';
+
+/**
+ * SEC-30 — l'identité d'un utilisateur de la CONSOLE (son nom et son adresse), déchiffrée ICI, dans le
+ * module qui déchiffre déjà l'adresse du courriel de connexion : jamais sous la console, où seul le
+ * lecteur unique des coordonnées d'apporteurs et de contacts déchiffre (SEC-58). Lue pour l'écran
+ * des utilisateurs (admin seul) et pour les courriels de l'administration. Un bloc absent rend `null`.
+ */
+export function identiteDeLUtilisateurConsole(
+  ligne: { id: string; nomChiffre: Uint8Array | null; emailChiffre: Uint8Array | null },
+  cles: ClesPii
+): { nom: string | null; adresse: string | null } {
+  const lire = (champ: string, bloc: Uint8Array | null) =>
+    bloc === null
+      ? null
+      : decryptPii({ modele: MODELE_UTILISATEUR_CONSOLE, champ, id: ligne.id }, bloc, cles);
+  return {
+    nom: lire(CHAMPS_PII.nom.chiffre, ligne.nomChiffre),
+    adresse: lire(CHAMPS_PII.email.chiffre, ligne.emailChiffre),
+  };
+}
 
 export type LectureDuCompteConsole = Pick<
   PortsDEmissionConsole,
@@ -251,15 +310,56 @@ function consommationConsoleSur(tx: Prisma.TransactionClient): TransactionDeCons
       });
       return n === 1;
     },
-    async utilisateurActif(utilisateurConsoleId) {
+    async utilisateurActif(utilisateurConsoleId, maintenant) {
       const u = await tx.utilisateurConsole.findUnique({
         where: { id: utilisateurConsoleId },
-        select: { desactiveAt: true },
+        select: { desactiveAt: true, inviteeAt: true, activeeAt: true },
       });
-      return u !== null && u.desactiveAt === null;
+      if (u === null || u.desactiveAt !== null) return false;
+      // SEC-30 (forme d'A02) : une invitation non activée à son échéance répond comme un compte
+      // désactivé ; l'égalité est refusée, à la milliseconde. Un compte activé ne vieillit plus.
+      if (u.activeeAt == null && u.inviteeAt != null)
+        return invitationOuverte({ inviteeAt: u.inviteeAt, activeeAt: null }, maintenant);
+      return true;
     },
     async ouvrirSessionConsole(session) {
-      await tx.sessionEspace.create({ data: session });
+      const neuve = await tx.sessionEspace.create({ data: session, select: { id: true } });
+      if (session.utilisateurConsoleId == null) return;
+      // L'ordre (relecture de la sécurité) : `utilisateurActif` a déjà jugé, avant cette écriture ;
+      // puis l'activation ; puis seulement la révocation des autres sessions. Un compte refusé
+      // (désactivé, invitation échue) n'arrive jamais ici et ne révoque rien.
+      //
+      // SEC-30 : la première connexion ACTIVE le compte invité, une seule fois, dans la transaction
+      // qui ouvre la session ; le geste est journalisé, l'utilisateur étant son propre acteur.
+      const { count } = await tx.utilisateurConsole.updateMany({
+        where: { id: session.utilisateurConsoleId, activeeAt: null },
+        data: { activeeAt: session.creeAt },
+      });
+      if (count === 1)
+        await ajouterEvenement(tx, {
+          type: 'utilisateur_console_modifie',
+          agregat: 'utilisateur_console',
+          agregatId: session.utilisateurConsoleId,
+          survenuAt: session.creeAt,
+          charge: {
+            geste: 'activer',
+            de: null,
+            vers: null,
+            acteur: { par: 'utilisateur_console', id: session.utilisateurConsoleId },
+          },
+        });
+      // SEC-30 (option (a) de la sécurité) : UNE session de console vivante par personne. Dans la
+      // transaction d'ouverture, les AUTRES sessions ouvertes du même utilisateur sont révoquées ;
+      // le filtre porte sur l'utilisateur de la console, jamais une session de l'espace n'est
+      // touchée. Le relèvement (step-up) en hérite : sa session neuve révoque l'ancienne.
+      await tx.sessionEspace.updateMany({
+        where: {
+          utilisateurConsoleId: session.utilisateurConsoleId,
+          revoqueAt: null,
+          id: { not: neuve.id },
+        },
+        data: { revoqueAt: session.creeAt },
+      });
     },
   };
 }

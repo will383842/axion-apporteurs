@@ -66,6 +66,18 @@ import {
   type ClientCloisonnable,
   type ModeleCloisonne,
 } from '../../src/server/acces/for-apporteur';
+import { relireLaContestation } from '../../src/server/contestation/relire';
+import { clesPii } from '../../src/server/securite/pii';
+import { NOMS_DES_SECRETS } from '../../src/lib/env';
+
+/** Les clés FACTICES de la relecture d'une contestation : aucune n'est lue dans l'environnement. */
+const CLES_DE_LA_RELECTURE = clesPii({
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-idor-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: 'd'.repeat(64),
+});
 
 // ══ I. LA GARDE STATIQUE DES SURFACES ═══════════════════════════════════════════════════════════
 
@@ -123,6 +135,27 @@ const IDOR_CASES: readonly Cas[] = [
     cloisonnement: 'sans_ressource',
     motif:
       'politique tirée du registre, la même pour tous ; l’état d’accord lu est celui de la session',
+  },
+  {
+    surface: 'page /notifications',
+    cloisonnement: 'sans_ressource',
+    motif:
+      'ne reçoit aucun identifiant ; ne lit que les notifications de l’apporteur de la session, et écarte celle dont l’attribution n’est pas la sienne',
+  },
+  {
+    // UX-P1-51 (REQ-DM-043) : le segment EST l'identifiant d'une contestation. Le lecteur la cherche
+    // par cet id ET par l'apporteur de la session : celle d'un autre rend « indisponible », octet pour
+    // octet comme un id inexistant (témoins de tests/integration/contestation-relecture.spec.ts).
+    surface: 'page /contestations/:id',
+    cloisonnement: 'ressource',
+    appeler: async (a, id) =>
+      Response.json(
+        await relireLaContestation(
+          base.prisma,
+          { contestationId: id, apporteurId: a.apporteurId },
+          CLES_DE_LA_RELECTURE
+        )
+      ),
   },
   {
     surface: 'action accepterLaPolitiqueDeConfidentialite',
@@ -254,7 +287,7 @@ describe('REQ-QA-010 → REQ-SEC-009 — garde statique : une surface neuve de l
   it('REQ-QA-010 → REQ-SEC-009 : TÉMOIN À DEUX FACES — le dépôt réel sort en 0 avec le compte des routes et des actions confrontées', () => {
     const { code, sortie } = confronter(deriverSurfaces(RACINE), IDOR_CASES);
     console.log(sortie);
-    expect(sortie).toBe('idor:check — ✓ 3 routes et 5 actions confrontées');
+    expect(sortie).toBe('idor:check — ✓ 5 routes et 5 actions confrontées');
     expect(code).toBe(0);
   });
 

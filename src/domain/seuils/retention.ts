@@ -84,6 +84,20 @@ export const DUREES_DE_RETENTION = {
     verifieLe: '2026-10-02',
   },
   /**
+   * DM-60 (REQ-JUR-065) : la trace d'une demande de droit du contact (droit, donnée visée, issue,
+   * dates, sans valeur), conservée comme preuve du traitement, puis ANONYMISÉE : son lien à
+   * l'attribution est vidé. Comptée de la clôture de la demande, ou de sa réception si elle n'a
+   * jamais été close.
+   */
+  DROITS_CONTACT_TRACE_ANS: {
+    valeur: 5,
+    unite: 'ans',
+    source:
+      'Décision de Williams du 2026-10-03 (trace des demandes de droits du contact), code civil art. 2224 (prescription quinquennale, texte non encore confronté), REQ-JUR-065',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
+  /**
    * DM-62 (REQ-DM-033) : une anomalie LEVÉE sans suite est anonymisée à ce délai de sa levée
    * (`traite_at`). Elle n'est jamais gelée.
    */
@@ -141,5 +155,45 @@ export const DUREES_DE_RETENTION = {
       'décision de Williams du 2026-10-03, après l’avis de la juriste (journalisation des accès)',
     renvois: [],
     verifieLe: '2026-10-03',
+  },
+  /**
+   * SEC-65 (REQ-SEC-003) : une session de l'espace ou de la console, expirée ou révoquée, et son
+   * empreinte d'adresse réseau, effacées à ce délai de sa FIN — la plus tôt de `expire_at` et de
+   * `revoque_at` (juriste, #739). Une session vivante n'est jamais touchée.
+   */
+  SESSIONS_CONSERVATION_APRES_FIN_MOIS: {
+    valeur: 6,
+    unite: 'mois',
+    source:
+      'décision de Williams du 2026-10-04 (registre de l’article 30, sessions et empreinte d’adresse réseau), CNIL, recommandation relative à la journalisation (2021)',
+    renvois: [],
+    verifieLe: '2026-10-04',
+  },
+  /**
+   * SEC-65 (REQ-JUR-068) : un accès DÉSACTIVÉ de la console perd son nom, son adresse chiffrée et son
+   * empreinte à ce délai de `desactive_at`, preuve des actes accomplis dans la console jusque-là ;
+   * l'identifiant et le rôle restent. Un compte actif n'est jamais touché.
+   */
+  UTILISATEUR_CONSOLE_DESACTIVE_EFFACE_APRES_ANS: {
+    valeur: 5,
+    unite: 'ans',
+    source:
+      'décision de Williams du 2026-10-04 (registre de l’article 30, accès désactivé de la console)',
+    renvois: [],
+    verifieLe: '2026-10-04',
+  },
+  /**
+   * DM-65 (REQ-DM-028) : la trace d'une période d'inscription sur la liste tenue par la Société
+   * (SIREN, catégorie, auteur, dates), gardée à ce délai de son retrait — preuve du motif d'un refus
+   * si un apporteur le conteste —, puis effacée par la tâche de purge. Une période ouverte ne
+   * s'efface jamais.
+   */
+  LISTE_NOIRE_TRACE_ANS: {
+    valeur: 5,
+    unite: 'ans',
+    source:
+      'REQ-DM-028, texte de la juriste au registre de l’article 30 (rattrapage 98), forme d’A02 (DM-65)',
+    renvois: [],
+    verifieLe: '2026-10-04',
   },
 } as const satisfies Record<string, Seuil>;

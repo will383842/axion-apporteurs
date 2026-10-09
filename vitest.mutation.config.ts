@@ -36,6 +36,9 @@ import base from './vitest.config';
  * l'instrumentation dans l'arbre de travail — mesuré le 2026-09-25, 220 fichiers suivis réécrits.
  */
 const ECARTES = [
+  // DM-55 : ce témoin LIT le texte de src/server/taches/envoyer-notifications-espace.ts (la forme exacte
+  // du lot, `cle: { in: [...CLES_ENVOYEES_PAR_LE_PASSAGE] }`), que Stryker instrumente dans le bac.
+  'le passage n.envoie aucune autre clé : son lot lit la liste, et elle seule',
   'aucun fichier de src/domain/temps/ ne nomme Date',
   'le module n.écrit aucune durée de dormance en dur',
   'le module n.importe que le domaine',
@@ -64,6 +67,15 @@ const ECARTES = [
   // voisines `gardes-de-schema` et `journal-charge-fermee`. Joué par pnpm test et la porte A ; le nom de
   // compteur de la frontière est tué par un espion unitaire.
   'REQ-SEC-016 — la garde de famille',
+  // SEC-12 : les trois autres blocs de `rate-famille.spec.ts` qui partent de l'univers du dépôt
+  // (`universDuDepot`) : la garde y lit les sources MUTÉES par la PR, instrumentées dans le bac. Mesuré
+  // en instrumentant les quatre fichiers mutés de #691 : 48 témoins rougissent, 40 sous le bloc
+  // ci-dessus, ces 8 sous les trois suivants. Le reste du fichier EXÉCUTE `limiter` (verdict, panne,
+  // `REDIS_URL`, empreinte) et reste sous mutation : l'écarter ENTIER faisait tomber `rate-limit.ts` à
+  // 28,57 % (porte A de #691, `mutation:pr` à 70,52 %).
+  'REQ-SEC-016 — option 1 : une limite lue en SSOT',
+  'REQ-SEC-016 — la garde lit le texte en vigueur',
+  'confrontée au chiffre de l.exigence ou à la SSOT ; aucun compteur par identité',
   // JUR-T13 : `jur:aucun-agregat-reseau` lancée sur les sources du dépôt — juge les sources du dépôt,
   // pas le code sous mutation : le bac à sable instrumenté n'est pas la source.
   'le binaire sur le dépôt sort en 0 et imprime les fichiers et clés confrontés',
@@ -73,6 +85,13 @@ const ECARTES = [
   'REQ-JUR-035 : le binaire sur le dépôt sort en 0 et imprime les noms confrontés',
   'REQ-JUR-037 : le binaire `jur:lexique-social` sur le dépôt sort en 0 et imprime les fichiers lus',
   'REQ-SEC-029 : le dépôt réel — aucune faute, et un plancher de fichiers et d.attributs confrontés',
+  // SEC-30 : ce témoin LIT le texte des sources de la console (src/server/console, src/app/(console)) ;
+  // dans le bac, ce texte porte l'instrumentation de Stryker (vu rougir au run initial de la PR 667).
+  // Joué par pnpm test, sur le vrai texte.
+  'TÉMOIN STATIQUE — aucun code de la console ne pose valide_at à une création',
+  // UX-P1-57 : ce témoin LIT le texte de src/server/console/mise-en-demeure/actions.ts, que Stryker
+  // instrumente dans le bac. Joué par pnpm test, sur le vrai texte.
+  'TÉMOIN statique — l.action ne lit ni le nombre ni l.historique des mises en demeure',
 ];
 
 export default defineConfig({
@@ -98,6 +117,25 @@ export default defineConfig({
       'tests/unit/juridique/**/*.spec.ts',
       // UX-P1-41 : les témoins du rendu de l'e-mail au contact (`src/domain/confirmation/`), en processus.
       'tests/unit/micro-copy/**/*.spec.ts',
+      // UX-P1-53 : les témoins de l'écran des gels du journal des accès (droit relu, liste bornée, curseur,
+      // traces) et de la navigation dérivée de la matrice, en processus sur un faux client — sans eux,
+      // les mutants de `gels-journal-acces.ts` et de `navigation.ts` sortaient « sans couverture »
+      // (porte A de la PR 758 : 55,70 %).
+      'tests/unit/console/gels-journal-acces-ecran.spec.ts',
+      'tests/unit/console/navigation-par-role.spec.ts',
+      // INT-T73-P : le témoin de la réconciliation des sommes, rangé sous tests/integration/ mais EN
+      // PROCESSUS (lignes simulées et faux client, aucune base, aucun dépôt git, aucun sous-processus).
+      'tests/integration/reconciliation-sommes.spec.ts',
+      // UX-P1-16 : le témoin de la navigation de la console, en processus (aucun dépôt git ni sous-processus).
+      'tests/unit/console/navigation-par-role.spec.ts',
+      // UX-P1-57 : les témoins de l'action de mise en demeure (droit, step-up, refus, idempotence), en
+      // processus sur des doubles — sans eux, les 94 mutants de `mise-en-demeure/actions.ts` sortaient
+      // « sans couverture » (porte A de la PR 748 : 30,99 %).
+      'tests/unit/console/mise-en-demeure.spec.ts',
+      // UX-P1-56 : les témoins de la confirmation d'une anomalie (droit relu, clôture chiffrée, transition
+      // selon l'état), en processus sur des doubles ; sans eux, `anomalies/confirmer.ts` sortirait
+      // « sans couverture ».
+      'tests/unit/console/confirmer-anomalie.spec.ts',
     ],
     exclude: [
       ...(base.test?.exclude ?? []),

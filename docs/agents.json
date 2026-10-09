@@ -24,7 +24,8 @@
       "entrees": [
         "une exigence à écrire, à corriger ou à arbitrer",
         "les manques rendus par `critique-completude` (A11) à chaque fin de lot",
-        "une clôture de phase à prononcer"
+        "une clôture de phase à prononcer",
+        "les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier"
       ],
       "sorties": [
         "`docs/REQUIREMENTS.md`, `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` à jour",
@@ -36,11 +37,8 @@
         "Interpréter seul une ambiguïté : il ouvre une ADR ou remonte la question à Will ou à l'expert-comptable."
       ],
       "documents": [
-        { "chemin": "docs/PLAN-STATE.md", "pourquoi": "où en est le projet, ce qui est bloqué — fichier dérivé" },
         { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "les douze règles RM-nn qui ont coûté cher" },
         { "chemin": "docs/CONVENTIONS.md", "pourquoi": "§8, les fichiers réservés qu'il est seul à écrire" },
-        { "chemin": "docs/REQUIREMENTS.md", "pourquoi": "le registre qu'il tient : texte testable, phase, module, étape" },
-        { "chemin": "docs/DECISIONS.md", "pourquoi": "hypothèses datées, réversibilité, propriétaire" },
         { "chemin": "docs/PRESEANCE.md", "pourquoi": "l'ordre qui tranche deux REQ contradictoires" },
         { "chemin": "docs/GLOSSAIRE.md", "pourquoi": "le vocabulaire fermé des enums" }
       ],
@@ -76,10 +74,8 @@
         "Ne réintroduit pas de référentiel entreprises local."
       ],
       "documents": [
-        { "chemin": "docs/PLAN-STATE.md", "pourquoi": "où en est le projet, ce qui est bloqué" },
         { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "RM-01 dérivation, RM-04 enums, RM-06 index partiel" },
         { "chemin": "docs/CONVENTIONS.md", "pourquoi": "§5, la PR `schema` et son approbation bloquante" },
-        { "chemin": "docs/adr/INDEX.md", "pourquoi": "les décisions déjà prises — index dérivé, jamais tenu à la main" },
         { "chemin": "docs/GLOSSAIRE.md", "pourquoi": "toute valeur d'enum doit y être" },
         { "chemin": "docs/AFFIRMATIONS-AXIONIA.md", "pourquoi": "ce que le code d'axionia fait vraiment, et à quelle date c'est vérifié" }
       ],
@@ -110,9 +106,7 @@
         "N'édite pas `docs/PLAN-STATE.md` à la main : il améliore le script qui le génère."
       ],
       "documents": [
-        { "chemin": "docs/PLAN-STATE.md", "pourquoi": "la vue dont il garde la lisibilité, sans jamais l'éditer" },
         { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "la section « Leçons » lui confie `docs/LECONS.md`" },
-        { "chemin": "docs/adr/INDEX.md", "pourquoi": "l'index qu'il régénère, dérivé du système de fichiers" },
         { "chemin": "docs/tiers/README.md", "pourquoi": "la forme imposée d'une fiche de tiers" },
         { "chemin": "docs/runbooks/fusion-axionia.md", "pourquoi": "le modèle d'un runbook déjà exercé" }
       ],
@@ -124,8 +118,8 @@
       "code": "A04",
       "role": "release-manager",
       "libelle": "Release manager",
-      "description": "Fusionne les PR d'Axion Partners, UNE à la fois, et vérifie l'atterrissage avant la suivante. Ne fusionne jamais sa propre PR ni rien côté axionia.",
-      "mission": "Fusionner une PR à la fois sur `main` : réserver le créneau avant `update-branch`, attendre toutes les gates vertes, lancer `pnpm gov:pr --pr <numéro>`, relire `mergeStateStatus` et fusionner dans le même appel, puis vérifier que `x-partners-build-sha` vaut le sha fusionné avant de laisser passer la suivante.",
+      "description": "Fusionne les PR d'Axion Partners par paquets adaptatifs, chaque fusion vérifiée à l'atterrissage avant la suivante. Ne fusionne jamais sa propre PR ni rien côté axionia.",
+      "mission": "Fusionner les PR d'un lot sur `main` par paquets adaptatifs (GOV-158) : composer le paquet par `scripts/lot/paquets-de-fusion.ts` (aucun fichier commun, ordre d'A02), le tester ensemble une fois sur la pointe de `main`, le couper en deux sur un rouge jusqu'à isoler la fautive ; puis faire passer chaque PR saine par la séquence de fusion — créneau réservé avant `update-branch`, gates vertes, `pnpm gov:pr --pr <numéro>`, `mergeStateStatus` relu et fusion dans le même appel — et vérifier que `x-partners-build-sha` vaut le sha fusionné avant la suivante.",
       "entrees": [
         "une PR annoncée prête par le développeur, avec ses trois lentilles et l'avis de mutation",
         "l'état de la file de fusion et le créneau réservé"
@@ -139,7 +133,6 @@
         "Jamais `--auto`, jamais `--force`, jamais de push sur `main`, jamais de fusion côté axionia."
       ],
       "documents": [
-        { "chemin": "docs/PLAN-STATE.md", "pourquoi": "le dernier atterrissage et les PR ouvertes" },
         { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "RM-09, une fusion à la fois, l'atterrissage vérifié" },
         { "chemin": "docs/CONVENTIONS.md", "pourquoi": "§5, squash, historique linéaire, forme du titre de PR" },
         { "chemin": "docs/CHARTE-AGENTS.md", "pourquoi": "§8, ce que `gov:pr --pr <n>` contrôle en plus avant la fusion" },
@@ -158,7 +151,8 @@
       "entrees": [
         "une tâche de `docs/tasks.json` : id, titre, reqs, paths, acceptance, tests, sensible",
         "le texte mot à mot de chaque REQ citée",
-        "l'horodatage de référence du lot, fourni par le workflow"
+        "l'horodatage de référence du lot, fourni par le workflow",
+        "les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier"
       ],
       "sorties": [
         "une branche, des commits conventionnels et une PR portant les REQ couvertes et le bloc ROUGE/VERT",
@@ -171,11 +165,8 @@
         "Ne fusionne pas, ne relit pas sa propre PR, n'écrit aucun fichier réservé."
       ],
       "documents": [
-        { "chemin": "docs/PLAN-STATE.md", "pourquoi": "où en est le projet, ce qui est bloqué" },
         { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "les règles qui ont coûté cher, à ne pas réapprendre" },
         { "chemin": "docs/CONVENTIONS.md", "pourquoi": "nommage, argent en centimes, branches, worktrees, pré-vol" },
-        { "chemin": "docs/REQUIREMENTS.md", "pourquoi": "le texte mot à mot des REQ citées par sa tâche" },
-        { "chemin": "docs/DECISIONS.md", "pourquoi": "l'hypothèse par défaut qui rend sa tâche codable — ou son absence, qui la stoppe" },
         { "chemin": "docs/GLOSSAIRE.md", "pourquoi": "le vocabulaire fermé : une valeur d'enum s'y déclare" }
       ],
       "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
@@ -202,7 +193,6 @@
         "N'emploie pas le lexique interdit ni les formulations de financement refusées par la garde lexicale, qui est inconditionnelle."
       ],
       "documents": [
-        { "chemin": "docs/PLAN-STATE.md", "pourquoi": "où en est le projet, ce qui est bloqué" },
         { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "RM-04 : un état affiché vient d'un enum, pas d'une chaîne libre" },
         { "chemin": "docs/CONVENTIONS.md", "pourquoi": "nommage français, forme des libellés" },
         { "chemin": "docs/maquettes/VALIDATION.md", "pourquoi": "une tâche d'écran n'est pas attribuable tant que sa maquette n'y est pas validée" },
@@ -221,7 +211,8 @@
       "mission": "Tenir le gabarit de contrat (clauses en variables, version figée à chaque signature, avenants), la checkliste des douze motifs à refuser, le lexique interdit et la liste fermée des documents remis ; repasser à chaque fin de phase tous les écrans et tous les e-mails déjà livrés.",
       "entrees": [
         "un écran, un e-mail ou une ressource destinés à un apporteur",
-        "la note d'analyse qui fonde les règles relationnelles — fournie avec sa tâche, jamais dans ce dépôt"
+        "la note d'analyse qui fonde les règles relationnelles — fournie avec sa tâche, jamais dans ce dépôt",
+        "les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier"
       ],
       "sorties": [
         "le gabarit de contrat et ses avenants",
@@ -234,9 +225,7 @@
         "Ne justifie pas une règle relationnelle dans un fichier de ce dépôt (REQ-GOV-031, `pnpm gov:publication`)."
       ],
       "documents": [
-        { "chemin": "docs/PLAN-STATE.md", "pourquoi": "où en est le projet, ce qui est bloqué" },
         { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "RM-10 : un seuil légal a une source et une date, jamais un littéral" },
-        { "chemin": "docs/DECISIONS.md", "pourquoi": "les décisions `avenant`, à trancher avant le premier envoi DocuSeal" },
         { "chemin": "docs/tiers/docuseal.md", "pourquoi": "ce que le prestataire de signature accepte vraiment" },
         { "chemin": "docs/GLOSSAIRE.md", "pourquoi": "« relevé de commissions », « autofacture » : le mot légal, pas le mot d'usage" }
       ],
@@ -265,7 +254,6 @@
         "Ne crée jamais de jonction `node_modules` dans un worktree."
       ],
       "documents": [
-        { "chemin": "docs/PLAN-STATE.md", "pourquoi": "où en est le projet, ce qui est bloqué" },
         { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "RM-03, une fixture vient du producteur réel et porte sa `Source:`" },
         { "chemin": "docs/runbooks/fusion-axionia.md", "pourquoi": "il n'ouvre pas de PR hors du créneau annoncé" },
         { "chemin": "docs/AFFIRMATIONS-AXIONIA.md", "pourquoi": "ce que le code d'axionia fait vraiment — un modèle cité par la spec peut avoir été supprimé" },
@@ -283,7 +271,8 @@
       "mission": "Recevoir la tâche, le numéro de PR et sa lentille — `exactitude` ou `securite`, les deux seules exigées depuis la décision de Will du 2026-09-26 (`partners/ADR-0024`) — et ne lire que sous celle-là, une fois la porte A verte sur la tête ; vérifier d'abord que le test annoncé comme rouge porte réellement sur la REQ ; citer un fichier et une ligne à chaque motif de refus.",
       "entrees": [
         "la tâche, le numéro de PR et la lentille imposée",
-        "le diff complet et le corps de la PR (REQ annoncées, bloc ROUGE/VERT)"
+        "le diff complet et le corps de la PR (REQ annoncées, bloc ROUGE/VERT)",
+        "les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier"
       ],
       "sorties": [
         "une revue GitHub ouverte par la ligne `A09 · <sa lentille>` — c'est ce que `gov:pr` compte",
@@ -298,8 +287,6 @@
       ],
       "documents": [
         { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "la lentille `exactitude` tient RM-01 (dérivation depuis une source unique), la lentille `securite` est RM-05" },
-        { "chemin": "docs/REQUIREMENTS.md", "pourquoi": "les REQ citées, une par une, confrontées au diff" },
-        { "chemin": "docs/DECISIONS.md", "pourquoi": "un motif déjà arbitré au registre n'est plus un refus recevable" },
         { "chemin": "docs/CHARTE-AGENTS.md", "pourquoi": "§6, la forme de son avis et la portée de son veto" }
       ],
       "tools": ["Read", "Grep", "Glob", "Bash"],
@@ -314,7 +301,8 @@
       "mission": "Sur demande, et toujours quand l'auteur est A07, pour une garde introduite par la PR : muter (inverser une condition, retirer un `where`, supprimer un `CHECK`, retirer la clause `WHERE` d'un index partiel), lancer le test qui devrait la couvrir, noter le message, restaurer ; et chercher les trois pièges — fixture écrite à la main, défaut sur ce que le test fait varier, test qui teste son mock.",
       "entrees": [
         "une PR et les gardes qu'elle introduit",
-        "le message ROUGE que son auteur affirme avoir constaté"
+        "le message ROUGE que son auteur affirme avoir constaté",
+        "les seules gates que la PR touche, extraites de `docs/gates.json` par identifiant — jamais le registre entier"
       ],
       "sorties": [
         "la ligne `Rouge constaté par:` quand il supplée A07 — aucune revue `A10 · mutation` n'est plus exigée (décision de Will du 2026-09-26, `partners/ADR-0024`)",
@@ -326,8 +314,6 @@
       ],
       "documents": [
         { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "RM-02, une garde ne vaut que si on l'a vue rougir ; RM-11, aucun défaut sur ce que le test fait varier" },
-        { "chemin": "docs/GATES.md", "pourquoi": "la vue des gates et de leur preuve rouge" },
-        { "chemin": "docs/gates.json", "pourquoi": "la `fixtureRouge` et la `preuveRouge` déclarées par chaque gate" },
         { "chemin": "docs/CHARTE-AGENTS.md", "pourquoi": "§6, sa suppléance de A07, qui n'a pas Bash et ne peut produire aucun rouge" }
       ],
       "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
@@ -342,7 +328,8 @@
       "mission": "À chaque fin de lot et de phase, chercher les orphelins dans les deux sens (une REQ sans test, un test sans REQ), les étapes du cycle sans tâche, les tiers sans plan de repli, les décisions prises et jamais enregistrées, les événements consommés sans émetteur, les fins de vie non traitées — et dire pour chaque manque quoi, où, et la tâche à créer.",
       "entrees": [
         "les tâches du lot, leurs REQ, leurs résultats, et les tâches écartées par le composeur",
-        "le registre des exigences et, s'il existe, la traçabilité générée"
+        "le registre des exigences et, s'il existe, la traçabilité générée",
+        "les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier"
       ],
       "sorties": [
         "un rendu `{ manques: [{ quoi, ou, tacheProposee }] }`",
@@ -354,11 +341,7 @@
         "Ne rend pas une liste vide par confort — s'il ne trouve rien, il dit où il a cherché."
       ],
       "documents": [
-        { "chemin": "docs/REQUIREMENTS.md", "pourquoi": "les orphelins se cherchent dans les deux sens, depuis ce registre" },
-        { "chemin": "docs/requirements.json", "pourquoi": "la même chose, exploitable par script : REQ → tâches" },
-        { "chemin": "docs/tasks.json", "pourquoi": "les tâches du lot et celles que le composeur a écartées" },
-        { "chemin": "docs/tiers/README.md", "pourquoi": "un tiers sans plan de repli écrit est un manque" },
-        { "chemin": "docs/PLAN-STATE.md", "pourquoi": "les bloquées, les questions ouvertes, la dette déclarée" }
+        { "chemin": "docs/tiers/README.md", "pourquoi": "un tiers sans plan de repli écrit est un manque" }
       ],
       "tools": ["Read", "Grep", "Glob", "Bash"],
       "ecrit": "non",
@@ -372,7 +355,8 @@
       "mission": "Découper une exigence de sa zone en tâches d'au plus une session, à chemins disjoints, avec un critère d'acceptation vérifiable et les tests qui le prouvent ; répondre aux questions de conception ; trancher après deux tours de revue échoués ; coder lui-même les briques fondatrices de sa zone ; suppléer A04 à la fusion.",
       "entrees": [
         "sa zone, donnée en paramètre, et les exigences qui la peuplent",
-        "une tâche revenue d'un deuxième tour de revue échoué"
+        "une tâche revenue d'un deuxième tour de revue échoué",
+        "les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier"
       ],
       "sorties": [
         "des tâches prêtes : acceptation vérifiable, tests nommés, chemins disjoints",
@@ -385,11 +369,7 @@
         "Ne tranche pas une question qui appartient à Will ou à l'expert-comptable : il rend `stop`."
       ],
       "documents": [
-        { "chemin": "docs/PLAN-STATE.md", "pourquoi": "le chemin critique et ce qui est bloqué" },
         { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "les douze règles qu'il fait respecter dans sa zone" },
-        { "chemin": "docs/REQUIREMENTS.md", "pourquoi": "les exigences de sa zone, à découper" },
-        { "chemin": "docs/tasks.json", "pourquoi": "la forme d'une tâche prête : acceptance, tests, paths, sensible" },
-        { "chemin": "docs/DECISIONS.md", "pourquoi": "ce qui est tranché, ce qui attend Will — et ne se devine pas" },
         { "chemin": "docs/CHARTE-AGENTS.md", "pourquoi": "§6, sa suppléance de A04 et ce qu'elle ne transporte pas" }
       ],
       "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
@@ -404,7 +384,8 @@
       "mission": "Éprouver le cloisonnement en boîte noire à chaque fin de phase : deux apporteurs complets, toutes les routes et Server Actions énumérées depuis le système de fichiers, chacune appelée avec la session de l'un et l'identifiant de l'autre, et l'exigence d'un 404 strictement identique — puis les jetons, les rôles de console, les webhooks, les API sortantes, les oracles, la PII et les secrets.",
       "entrees": [
         "une fin de phase, et l'espace apporteur tel qu'il est déployé en preview",
-        "les routes énumérées depuis le système de fichiers, jamais une liste écrite à la main"
+        "les routes énumérées depuis le système de fichiers, jamais une liste écrite à la main",
+        "les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier"
       ],
       "sorties": [
         "un constat par défaut trouvé, avec son scénario d'exploitation et une preuve rejouable",
@@ -417,9 +398,7 @@
       ],
       "documents": [
         { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "RM-05, droit porté par un rôle, défaut = refus, masquage qui échoue fermé" },
-        { "chemin": "docs/ESPACE-ROUTES.md", "pourquoi": "les routes de l'espace, à énumérer et à éprouver une par une" },
-        { "chemin": "docs/REQUIREMENTS.md", "pourquoi": "les REQ-SEC, qui disent ce qu'un refus doit répondre" },
-        { "chemin": "docs/GATES.md", "pourquoi": "les gates de sécurité déjà armées, et ce qu'elles ne couvrent pas" }
+        { "chemin": "docs/ESPACE-ROUTES.md", "pourquoi": "les routes de l'espace, à énumérer et à éprouver une par une" }
       ],
       "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
       "ecrit": "oui, jamais le code audité",
@@ -433,7 +412,8 @@
       "mission": "Rejouer la séquence complète d'un cycle de vente en la dégradant — même identifiant trois fois, ordre inverse, événement manquant, producteur indisponible, version inconnue, signature altérée, corps trop grand, horodatage hors tolérance — et vérifier que le hash du contrat est identique des deux côtés, que les fixtures viennent du producteur réel et que la réconciliation compare deux choses indépendantes.",
       "entrees": [
         "le contrat d'événements et son hash, dans les deux dépôts",
-        "une séquence complète d'un cycle de vente, à dégrader"
+        "une séquence complète d'un cycle de vente, à dégrader",
+        "les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier"
       ],
       "sorties": [
         "un constat par dégradation dont le comportement exigé n'est pas obtenu",
@@ -446,7 +426,6 @@
       "documents": [
         { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "RM-03 fixtures du producteur réel, RM-08 valeur confrontée à la doc du tiers" },
         { "chemin": "docs/AFFIRMATIONS-AXIONIA.md", "pourquoi": "ce que l'autre dépôt fait vraiment, et depuis quand" },
-        { "chemin": "docs/REQUIREMENTS.md", "pourquoi": "les REQ-INT, qui fixent le comportement exigé sous dégradation" },
         { "chemin": "docs/runbooks/fusion-axionia.md", "pourquoi": "travailler dans l'autre dépôt sans prendre sa file de fusion" }
       ],
       "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
@@ -461,7 +440,8 @@
       "mission": "Écrire en SQL, depuis les règles des documents, une implémentation indépendante du calcul de commission, et la confronter au domaine sur cinquante scénarios nommés dont le résultat attendu a été calculé à la main : l'écart doit être nul, au centime — puis ajouter les propriétés tirées au sort, au moins cinq cents tirages chacune.",
       "entrees": [
         "les règles de calcul telles que les documents les écrivent, jamais l'implémentation TypeScript",
-        "cinquante scénarios nommés, dont le résultat attendu est calculé à la main"
+        "cinquante scénarios nommés, dont le résultat attendu est calculé à la main",
+        "les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier"
       ],
       "sorties": [
         "un contre-calcul en SQL et ses scénarios, avec la gate qui exige zéro centime d'écart",
@@ -474,8 +454,6 @@
       ],
       "documents": [
         { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "RM-01 la grille se dérive, RM-10 un seuil a une source et une date" },
-        { "chemin": "docs/REQUIREMENTS.md", "pourquoi": "les REQ-ARG, seule base de son contre-calcul" },
-        { "chemin": "docs/DECISIONS.md", "pourquoi": "les hypothèses de calcul encore ouvertes, qu'il ne tranche pas" },
         { "chemin": "docs/GLOSSAIRE.md", "pourquoi": "acquis, reprise, prorata, solde : les mots ont un sens fermé" }
       ],
       "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],

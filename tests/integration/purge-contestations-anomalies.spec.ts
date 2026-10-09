@@ -38,6 +38,7 @@ import { DUREES_DE_RETENTION } from '../../src/domain/seuils/retention';
 import { MS_PAR_JOUR } from '../../src/domain/temps/calendrier-civil';
 import { TACHES } from '../../src/server/taches/registre';
 import { inscriptions } from '../../src/server/taches/inscriptions';
+import { ajouterEvenement } from '../../src/server/evenement/journal';
 import {
   anonymiserLesAnomalies,
   mesuresOuvertesAuDela,
@@ -570,5 +571,47 @@ describe('REQ-DM-033 et REQ-DM-043 — les durées vivent dans la SSOT, chaque p
       const r = await passage!();
       for (const v of Object.values(r)) expect(typeof v).toBe('number');
     }
+  });
+});
+
+describe('REQ-DM-033 — l’anonymisation délie les notifications de l’espace (juriste, DM-55)', () => {
+  it('REQ-DM-033 : TÉMOIN — après l’anonymisation, AUCUNE notification ne pointe plus vers l’anomalie ; la notification reste', async () => {
+    const id = await uneAnomalie({
+      statut: 'confirmee',
+      traiteAt: d('2026-04-21T15:02:03.004Z'),
+      mesureTermineeAt: d('2026-04-21T15:02:03.004Z'),
+    });
+    const { id: evenementId } = await app.$transaction((tx) =>
+      ajouterEvenement(tx, {
+        type: 'attribution_etat_modifie',
+        agregat: 'attribution',
+        agregatId: attributionId,
+        survenuAt: CREATION,
+        charge: {
+          de: 'provisoire',
+          vers: 'invalidee',
+          transition: 'anomalie_confirmee',
+          acteur: { par: 'utilisateur_console', id: adminId },
+          lienInteret: 'non_declare',
+        },
+      })
+    );
+    const notification = await base.prisma.notificationEspace.create({
+      data: {
+        apporteurId,
+        cle: 'decision_attribution',
+        attributionId,
+        evenementId: BigInt(evenementId),
+        anomalieId: id,
+      },
+    });
+    await anonymiserLesAnomalies(app, d('2031-04-21T15:02:03.004Z'));
+    expect(await anonymisee(id)).toBe(true);
+    expect(await base.prisma.notificationEspace.count({ where: { anomalieId: id } })).toBe(0);
+    const reste = await base.prisma.notificationEspace.findUniqueOrThrow({
+      where: { id: notification.id },
+    });
+    expect(reste.anomalieId).toBeNull();
+    expect(reste.evenementId).toBe(BigInt(evenementId));
   });
 });

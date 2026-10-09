@@ -355,6 +355,8 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
     'espace/confirmation-du-depot.ts': ['FORMULAIRE_DU_CONTACT', 'titre'],
     // UX-P0-01b : le module n'exporte que ses libellés ; le contexte étranger est un export témoin.
     'espace/etats-attribution.ts': ['EXPORT_TEMOIN', 'phrase'],
+    // UX-P1-59 : les textes fermés d'une décision purgée ; le contexte étranger est le titre de l'écran.
+    'espace/notifications.ts': ['NOTIFICATIONS', 'titre'],
   };
 
   it('REQ-UX-002 : chaque paramètre permis rougit HORS de son contexte, dans le même fichier', () => {
@@ -678,6 +680,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › quoiFaire : Il part tout seul dès le retour du réseau ; le téléphone de {contact} vous sera alors demandé. S'il n'est pas parti le {dateEffacement}, il s'efface de ce téléphone.
       espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › actionPrincipale › libelle : Retour à l'accueil
       espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › actionPrincipale › route : /
+      espace/issues-depot.ts › INFORMATION_LISTE_TENUE : Axion-IA tient une liste d'organismes avec lesquels elle est déjà en relation : administrations, financeurs publics ou paritaires, et organismes de formation. Une entreprise qui y figure ne peut pas être déposée, et le refus vous indique cette catégorie (contrat, article 3.3 bis).
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › titre : Bienvenue dans votre espace
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › phrase : Quand vous rencontrez une entreprise qui pourrait former ses salariés, vous pouvez taper son nom ci-dessous. Vous vérifiez qu'elle est libre, vous dites qui vous avez rencontré, et Axion-IA l'appelle. Si elle passe commande pendant la durée de votre droit à commission, une commission vous revient au fil des paiements.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › action › libelle : Vérifier
@@ -687,7 +690,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises › action › libelle : Déposer une entreprise
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises › action › route : /deposer
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › titre : Pas encore de commission
-      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › phrase : Elles apparaissent ici quand une entreprise que vous avez déposée signe, puis quand elle paie. Vous verrez alors ce qui vous revient, quand, et d'où vient chaque montant.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › phrase : Elles apparaissent ici quand une entreprise que vous avez déposée signe, puis à chaque paiement. Vous verrez alors ce qui vous revient, quand, et d'où vient chaque montant.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › action › libelle : Retour à l'accueil
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › action › route : /
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /plus › titre : Le reste de votre espace
@@ -744,6 +747,10 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › phrase : Il est préparé quand vos pièces sont vérifiées. Vous le lirez ici avant de le signer ; rien n’est à faire d’ici là.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › action › libelle : Voir mes vérifications
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mon-contrat › action › route : /conformite
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /contestations/[id] › titre : Cette contestation n’est pas disponible
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /contestations/[id] › phrase : Vos contestations se retrouvent depuis Mes entreprises.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /contestations/[id] › action › libelle : Voir Mes entreprises
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /contestations/[id] › action › route : /mes-entreprises
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /notifications › titre : Aucune notification
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /notifications › phrase : Les nouvelles de vos entreprises apparaîtront ici. Rien n’est à consulter régulièrement : les avis importants arrivent aussi par e-mail.
       espace/etats-vides.ts › ETATS_VIDES_ESPACE › /notifications › action › libelle : Retour à l'accueil
@@ -772,6 +779,8 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/vocabulaire.ts › FORMULES › releveParCourrierElectronique : Chaque relevé vous est envoyé par courrier électronique ; il indique les mentions à reporter sur votre facture.
       espace/vocabulaire.ts › FORMULES › numeroDEntreprise : numéro d'entreprise
       espace/vocabulaire.ts › FORMULES › rienAFaire : Rien à faire de votre côté
+      espace/vocabulaire.ts › DEJA_DEPOSEE › titre : Déjà déposée par le passé
+      espace/vocabulaire.ts › DEJA_DEPOSEE › phrase : Cette entreprise a déjà fait l'objet d'un dépôt, aujourd'hui terminé. Elle est disponible : vous pouvez la déposer.
       espace/vocabulaire.ts › ACTIONS_COMMUNES › retourAccueil › libelle : Retour à l'accueil
       espace/vocabulaire.ts › ACTIONS_COMMUNES › retourAccueil › route : /
       espace/vocabulaire.ts › ACTIONS_COMMUNES › envoyerLeDepot › libelle : Envoyer le dépôt
@@ -779,6 +788,8 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/vocabulaire.ts › ACTIONS_COMMUNES › deposerUneEntreprise › route : /deposer
       espace/vocabulaire.ts › ACTIONS_COMMUNES › ecrireAAxionIA › libelle : Écrire à Axion-IA
       espace/vocabulaire.ts › ACTIONS_COMMUNES › ecrireAAxionIA › route : /aide
+      espace/vocabulaire.ts › ACTIONS_COMMUNES › voirMesEntreprises › libelle : Voir Mes entreprises
+      espace/vocabulaire.ts › ACTIONS_COMMUNES › voirMesEntreprises › route : /mes-entreprises
       espace/vocabulaire.ts › NAVIGATION_AVANT_SIGNATURE › 0 : Ma conformité
       espace/vocabulaire.ts › NAVIGATION_AVANT_SIGNATURE › 1 : Mon contrat
       espace/vocabulaire.ts › CONNEXION › champCourriel : Adresse électronique
@@ -824,6 +835,29 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/vocabulaire.ts › CONFIDENTIALITE › erreur › action : Réessayer
       espace/vocabulaire.ts › CONFIDENTIALITE › horsLigne › titre : Vous êtes hors ligne
       espace/vocabulaire.ts › CONFIDENTIALITE › horsLigne › phrase : La politique de confidentialité s’affichera dès le retour du réseau.
+      espace/vocabulaire.ts › CONTESTATION › titre : Ma contestation
+      espace/vocabulaire.ts › CONTESTATION › retour : ← Mes entreprises
+      espace/vocabulaire.ts › CONTESTATION › objets › refus_depot : Refus d’un dépôt
+      espace/vocabulaire.ts › CONTESTATION › objets › annulation_attribution : Annulation d’un dépôt
+      espace/vocabulaire.ts › CONTESTATION › objets › demande_rattachement : Demande de rattachement
+      espace/vocabulaire.ts › CONTESTATION › votreEcrit : Votre écrit, reçu le {date}
+      espace/vocabulaire.ts › CONTESTATION › reponse : Réponse d’Axion-IA, le {date}
+      espace/vocabulaire.ts › CONTESTATION › attente › titre : La réponse n’est pas encore arrivée
+      espace/vocabulaire.ts › CONTESTATION › attente › phrase : Axion-IA vous répond de façon motivée dans les {delaiReponse} qui suivent la réception de votre écrit, au plus tard le {dateLimite}.
+      espace/vocabulaire.ts › CONTESTATION › attente › action › libelle : Voir Mes entreprises
+      espace/vocabulaire.ts › CONTESTATION › attente › action › route : /mes-entreprises
+      espace/vocabulaire.ts › CONTESTATION › contestationRecue : Contestation reçue le {date}
+      espace/vocabulaire.ts › CONTESTATION › statut › repondue : réponse donnée
+      espace/vocabulaire.ts › CONTESTATION › statut › enAttente : en attente de réponse
+      espace/vocabulaire.ts › CONTESTATION › purgee : Le texte de cette contestation et la réponse d'Axion-IA ne sont plus conservés, leur durée de conservation ayant pris fin.
+      espace/vocabulaire.ts › CONTESTATION › indisponible › titre : Cette contestation n’est pas disponible
+      espace/vocabulaire.ts › CONTESTATION › indisponible › phrase : Vos contestations se retrouvent depuis Mes entreprises.
+      espace/vocabulaire.ts › CONTESTATION › indisponible › action › libelle : Voir Mes entreprises
+      espace/vocabulaire.ts › CONTESTATION › indisponible › action › route : /mes-entreprises
+      espace/vocabulaire.ts › CONTESTATION › chargement : Chargement…
+      espace/vocabulaire.ts › CONTESTATION › erreur › titre : Votre contestation ne s’affiche pas
+      espace/vocabulaire.ts › CONTESTATION › erreur › phrase : Rien n’est perdu : elle s’affichera au prochain essai.
+      espace/vocabulaire.ts › CONTESTATION › erreur › action : Réessayer
       espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › titre : Qui avez-vous rencontré ?
       espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › nom : Nom et prénom
       espace/confirmation-du-depot.ts › FORMULAIRE_DU_CONTACT › fonction : Fonction
@@ -850,6 +884,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/confirmation-du-depot.ts › BADGES_DU_DEPOT › reservationTerminee : Réservation terminée · l'entreprise est de nouveau disponible
       espace/confirmation-du-depot.ts › AIDE_DU_BADGE : Sans réponse de votre contact, votre dépôt est confirmé {delaiTacite} après la réception de notre e-mail.
       espace/confirmation-du-depot.ts › CARENCE_DU_REDEPOT : Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}.
+      espace/information-tiers.ts › CASE_INFORMATION_TIERS : Cette personne sait qu'Axion-IA va la contacter.
       espace/etats-attribution.ts › LIBELLES_DES_ETATS › en_attente › libelle : En attente
       espace/etats-attribution.ts › LIBELLES_DES_ETATS › en_attente › phrase : Cette entreprise est déjà réservée. Votre dépôt attend, avec son heure d’envoi.
       espace/etats-attribution.ts › LIBELLES_DES_ETATS › provisoire › libelle : En cours de confirmation
@@ -876,11 +911,28 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/etats-attribution.ts › LIBELLES_DES_ETATS › expiree › phrase : Ce dépôt a pris fin le {dateFin} : sa durée est écoulée, ou votre contrat a pris fin.
       espace/etats-attribution.ts › LIBELLES_DES_ETATS › annulee › libelle : Annulée
       espace/etats-attribution.ts › LIBELLES_DES_ETATS › annulee › phrase : Ce dépôt est annulé. Le motif vous a été indiqué par notification.
+      espace/notifications.ts › NOTIFICATIONS › titre : Notifications
+      espace/notifications.ts › NOTIFICATIONS › aucunDelai : Les avis qui font courir un délai vous sont toujours envoyés par e-mail ; cette liste n’en fait courir aucun.
+      espace/notifications.ts › NOTIFICATIONS › faitsNonConserves : Faits retenus : leur détail n'est plus conservé, sa durée de conservation ayant pris fin
+      espace/notifications.ts › NOTIFICATIONS › chargement : Chargement…
+      espace/notifications.ts › NOTIFICATIONS › erreur › titre : Les notifications n’ont pas pu être chargées
+      espace/notifications.ts › NOTIFICATIONS › erreur › phrase : Rien n’est perdu : elles s’afficheront au prochain essai.
+      espace/notifications.ts › NOTIFICATIONS › erreur › action : Réessayer
+      espace/notifications.ts › DECISIONS_PURGEES › mise_en_demeure : Axion-IA vous a adressé une mise en demeure au titre de l'article {article} du contrat. Le détail des faits n'est plus conservé, sa durée de conservation ayant pris fin. Cette mise en demeure n'est ni un avertissement ni une mesure disciplinaire, et elle ne constitue pas un antécédent.
+      espace/notifications.ts › DECISIONS_PURGEES › manquement_grave : Axion-IA a résilié votre contrat d'apporteur sans préavis, par une décision motivée, en application de l'article 11.2 ; le détail du motif n'est plus conservé, sa durée de conservation ayant pris fin. Le contrat a pris fin le {dateEffet}.
+      espace/notifications.ts › DECISIONS_PURGEES › suspension : Axion-IA a suspendu l'enregistrement de vos nouveaux dépôts du {dateDebut} au {dateFin}, le temps d'une vérification, au titre de l'article 3.7 du contrat. Le détail des faits n'est plus conservé, sa durée de conservation ayant pris fin. Cette suspension n'a eu d'effet ni sur les entreprises que vous avez déposées, ni sur vos commandes, ni sur vos commissions, et elle ne constitue pas un antécédent.
+      espace/verification.ts › VERIFICATION_INDISPONIBLE › titre : Vérification indisponible pour le moment
+      espace/verification.ts › VERIFICATION_INDISPONIBLE › phrase : Vous pourrez vérifier cette entreprise un peu plus tard. Vous pouvez aussi la déposer dès maintenant, sans la vérifier.
+      espace/verification.ts › VERIFICATION_INDISPONIBLE › action › libelle : Déposer une entreprise
+      espace/verification.ts › VERIFICATION_INDISPONIBLE › action › route : /deposer
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › titre : Votre lien de connexion à votre espace
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › lien_magique › appel : Ouvrir mon espace
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › titre : {entreprise} : la confirmation de l'échange est en cours
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › appel : Voir Mes entreprises
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › depot_injoignable_j5 › corps : Axion-IA n'a pas encore pu joindre {contact}. Votre dépôt garde son heure d'enregistrement.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_annulee_anteriorite › titre : {entreprise} : votre dépôt est annulé — antériorité de la Société
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_annulee_anteriorite › appel : Voir Mes entreprises
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_annulee_anteriorite › corps : Axion-IA connaissait déjà cette entreprise à la date de votre dépôt (contrat, article 3.3) : votre dépôt est annulé, et aucune commission nouvelle n'est due à son titre. Les commissions déjà acquises restent acquises. Vous pouvez contester cette décision par écrit ; Axion-IA vous répond de façon motivée dans les {delaiReponse}.
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee › titre : {entreprise} : réservation terminée
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee › appel : Voir Mes entreprises
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › decision_attribution › titre : {entreprise} : une décision concerne votre dépôt
@@ -900,10 +952,50 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › titre : {entreprise} : décision de rattachement
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › appel : Voir Mes entreprises
       courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › rattachement_decide › corps : {decision}. Motif : {motif}.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › nouvel_appareil › titre : Connexion à votre espace depuis un nouvel appareil
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › nouvel_appareil › appel : Demander un nouveau lien de connexion
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › nouvel_appareil › corps : Votre lien de connexion a été utilisé le {dateHeure} sur un appareil que nous ne connaissions pas encore pour votre compte. Si c'est bien vous, vous n'avez rien à faire. Sinon, ne cliquez sur aucun lien reçu que vous n'avez pas demandé, demandez un nouveau lien de connexion depuis la page de connexion, et écrivez à Axion-IA.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure › titre : Mise en demeure de remédier à un manquement au contrat
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure › appel : Écrire à Axion-IA
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure › corps : Axion-IA vous met en demeure de remédier, dans un délai de {delaiMiseEnDemeure} à compter de l'envoi de ce message, au manquement suivant à l'article {article} du contrat : {faits}. À défaut, Axion-IA pourra résilier le contrat sans préavis, par une décision motivée (article 11.2). Cette mise en demeure n'est ni un avertissement ni une mesure disciplinaire, et elle ne constitue pas un antécédent. Vous pouvez répondre par écrit à Axion-IA.
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › resiliation › titre : Fin de votre contrat d'apporteur
+      courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › resiliation › appel : Écrire à Axion-IA
       courriels/notifications.ts › CORPS_DE_LA_LIBERATION › demande_verifiee : Ce dépôt a pris fin sans confirmation de l'échange. Vous pourrez déposer à nouveau cette entreprise à partir du {dateRedepot}. Cette fin n'emporte aucune autre conséquence pour vous.
       courriels/notifications.ts › CORPS_DE_LA_LIBERATION › peremption_ou_fin_de_duree : Cette entreprise est de nouveau disponible, y compris pour un nouveau dépôt de votre part.
+      courriels/notifications.ts › MOTIFS_DES_DECISIONS › anomalie_confirmee : À la vérification, ce dépôt ne remplit pas les conditions de l'article 3.7 du contrat. Faits retenus : {faits}
+      courriels/notifications.ts › MOTIFS_DES_DECISIONS › non_confirmee : L'entreprise a indiqué expressément n'avoir eu aucun échange avec vous (contrat, article 3.7) ; vous pouvez demander à Axion-IA l'extrait de sa réponse
+      courriels/notifications.ts › MOTIFS_DES_DECISIONS › non_confirmee_par_courriel : L'entreprise a indiqué expressément n'avoir eu aucun échange avec vous (contrat, article 3.7) ; vous pouvez demander à Axion-IA l'extrait de sa réponse
+      courriels/notifications.ts › MOTIFS_DES_DECISIONS › annulee_par_la_console : Axion-IA a annulé ce dépôt avant sa confirmation, pour la raison suivante : {raison}
+      courriels/notifications.ts › MOTIFS_DES_DECISIONS › annulee_erreur_identification : Ce dépôt est annulé : l'entreprise a été identifiée par erreur (contrat, article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues
+      courriels/notifications.ts › MOTIFS_DES_DECISIONS › fraude_etablie : À la vérification, ce dépôt ne remplit pas les conditions de l'article 3.7 du contrat et il est annulé (article 3.3) ; les commandes signées et les commissions acquises avant cette annulation restent dues. Faits retenus : {faits}
+      courriels/notifications.ts › RAISONS_D_ANNULATION › demande_de_l_apporteur : à votre demande
+      courriels/notifications.ts › RAISONS_D_ANNULATION › declaration_en_double : vous aviez déjà déposé cette entreprise, et ce dépôt faisait double emploi avec le premier
+      courriels/notifications.ts › RAISONS_D_ANNULATION › entreprise_relevant_de_l_article_3_3_bis : {categorie} (contrat, article 3.3 bis), situation qui existait déjà à la date de votre dépôt
+      courriels/notifications.ts › ENTREPRISE_DE_REPLI : Entreprise n° {numeroEntreprise}
+      courriels/notifications.ts › FAITS_NON_CONSERVES : les faits vous ont été indiqués dans le courriel qui vous a informé de cette décision
+      courriels/notifications.ts › LIBELLES_DES_CATEGORIES › administration : l'entreprise est une administration avec laquelle Axion-IA est en relation
+      courriels/notifications.ts › LIBELLES_DES_CATEGORIES › financeur_public : l'entreprise est un financeur public avec lequel Axion-IA est en relation
+      courriels/notifications.ts › LIBELLES_DES_CATEGORIES › financeur_paritaire : l'entreprise est un financeur paritaire avec lequel Axion-IA est en relation
+      courriels/notifications.ts › LIBELLES_DES_CATEGORIES › organisme_de_formation_partenaire : l'entreprise est un organisme de formation avec lequel Axion-IA est en relation
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 0 : janvier
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 1 : février
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 2 : mars
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 3 : avril
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 4 : mai
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 5 : juin
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 6 : juillet
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 7 : août
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 8 : septembre
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 9 : octobre
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 10 : novembre
+      courriels/notifications.ts › MOIS_EN_TOUTES_LETTRES › 11 : décembre
       courriels/notifications.ts › CODE_DU_COURRIEL_DE_CONNEXION › avant : Vous pouvez aussi saisir ce code sur la page de connexion :
-      courriels/notifications.ts › CODE_DU_COURRIEL_DE_CONNEXION › apres : Il ne sert qu’une fois, et pas plus longtemps que le lien."
+      courriels/notifications.ts › CODE_DU_COURRIEL_DE_CONNEXION › apres : Il ne sert qu’une fois, et pas plus longtemps que le lien.
+      courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › ordinaire_apporteur : Axion-IA a bien reçu, le {dateReception}, votre décision de résilier le contrat. Celui-ci prend fin le {dateEffet}, au terme du préavis prévu à l'article 11.1.
+      courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › ordinaire_axion : Axion-IA résilie votre contrat d'apporteur, comme le permet l'article 11.1. Le préavis court à compter de l'envoi de ce message : le contrat prend fin le {dateEffet}.
+      courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › manquement_grave : Axion-IA résilie votre contrat d'apporteur sans préavis, par une décision motivée, en application de l'article 11.2 : {motif}. Le contrat prend fin le {dateEffet}.
+      courriels/notifications.ts › PARAGRAPHES_DE_LA_RESILIATION › fin_de_plein_droit : Le contrat d'apporteur a pris fin de plein droit le {dateEffet}, en application de l'article 12.5.
+      courriels/notifications.ts › PARAGRAPHE_COMMUN_DE_LA_RESILIATION : Vos dépôts en cours de confirmation et vos dépôts en attente sont annulés ; vos réservations sans commande prennent fin. Les commandes signées avant la fin du contrat, ou pendant le préavis, continuent de vous ouvrir droit à commission, même si votre dépôt n'était pas encore confirmé : la commission vous est due quand Axion-IA en a encaissé l'intégralité du prix, quelle que soit la date de cet encaissement. Les commissions déjà acquises vous sont facturées par autofacture et versées dans les conditions du contrat, sans montant minimum. Votre accès à l'espace en ligne prend fin à la date de fin du contrat. Vos autofactures, leurs décomptes et le motif de tout blocage vous sont envoyés par courrier électronique jusqu'à l'extinction de vos droits ; vous pouvez obtenir sur simple demande écrite à Axion-IA la copie de votre contrat, de vos autofactures et de vos contestations, et contester par écrit une commission ou une décision dans les délais du contrat."
     `);
   });
 

@@ -76,7 +76,17 @@ beforeAll(async () => {
       },
     })
   ).id;
-  apporteurId = (
+  apporteurId = await unApporteur();
+  adminId = await utilisateur('admin');
+}, 180_000);
+
+/**
+ * Un apporteur signé, neuf. Depuis SEC-18, une seule anomalie `auto_parrainage` OUVERTE par
+ * apporteur (index `anomalies_auto_parrainage_une_ouverte`) : chaque anomalie de ces témoins est
+ * ouverte sur son propre apporteur, pour que l'unicité ne masque pas la règle jugée.
+ */
+async function unApporteur(): Promise<string> {
+  return (
     await base.prisma.apporteur.create({
       data: {
         statut: 'signe',
@@ -91,8 +101,7 @@ beforeAll(async () => {
       },
     })
   ).id;
-  adminId = await utilisateur('admin');
-}, 180_000);
+}
 
 afterAll(async () => {
   await app?.$disconnect();
@@ -377,7 +386,7 @@ describe('REQ-DM-033 — anomalies : la forme, une clôture une seule fois, sans
       id,
       type,
       score,
-      apporteurId,
+      await unApporteur(),
       MAINTENANT
     );
     return id;

@@ -80,6 +80,15 @@ enum TypeEvenementJournal {
   contestation_modifiee
   rattachement_manuel_modifie
   anomalie_gel_modifie
+  utilisateur_console_modifie
+  journal_acces_gel_modifie
+  apporteur_mis_en_demeure
+  /// SEC-15 : la pose et la levée du gel des dépôts (migration 004920), en fin d'enum comme en base.
+  apporteur_gel_modifie
+  acces_coordonnees_reservee
+  piece_kyc_rib_verifie
+  apporteur_resiliation_notifiee
+  decision_contrat_litige_modifie
 
   @@map("type_evenement_journal")
 }
@@ -94,6 +103,8 @@ enum AgregatJournal {
   contrat
   demande_confirmation
   anomalie
+  utilisateur_console
+  journal_acces_gel
 
   @@map("agregat_journal")
 }
@@ -111,11 +122,26 @@ model Evenement {
   prevHash  String               @unique @map("prev_hash") @db.Char(64)
   selfHash  String               @unique @map("self_hash") @db.Char(64)
 
+  /// DM-55 : les notifications de l'espace que cet événement a produites.
+  notificationsEspace NotificationEspace[]
+  /// SEC-19 : la décision de contrat que cet événement fonde.
+  decisionDeContrat   DecisionDeContrat?
+
   @@index([agregat, agregatId])
   @@map("evenements")
 }
 
 // ── DM-06 : l'apporteur ─────────────────────────────────────────────────────
+
+/// SEC-15 (REQ-SEC-019) : le gel des dépôts, à TROIS valeurs. `suspendu` si et seulement si le gel
+/// n'est pas `libre` (CHECK `apporteurs_suspendu_si_gele`, SQL brut).
+enum EtatGel {
+  libre
+  gele_non_confirmation
+  gele_fraude
+
+  @@map("etat_gel")
+}
 
 /// Les neuf statuts STOCKÉS de l'apporteur (REQ-DM-011, `docs/GLOSSAIRE.md` §2). `actif` et
 /// `dormant` sont dérivés par `src/domain/apporteur/activite.ts`, jamais stockés (REQ-CPL-027).
@@ -244,8 +270,9 @@ model Apporteur {
   qualiteExercice       QualiteExercice?       @map("qualite_exercice")
   professionReglementee ProfessionReglementee? @map("profession_reglementee")
 
-  /// Surcharge manuelle du seuil de vérification prioritaire (REQ-DM-010). NULLE = le défaut,
-  /// DÉRIVÉ du palier par `seuilPrioritaire()` (HYP-D3) — aucun défaut littéral en base (RM-10).
+  /// Surcharge manuelle du seuil de vérification prioritaire (REQ-DM-010). SEC-56 : aucun code ne la
+  /// lit ni ne l'écrit plus, aucun palier ni seuil de dépôts n'existe par apporteur (REQ-JUR-032) ;
+  /// la colonne et son CHECK tombent à la seconde PR de SEC-56, après le déploiement de celle-ci.
   seuilVerificationPrioritaire   Int?      @map("seuil_verification_prioritaire")
   /// La trace de la surcharge : présente si et seulement si la surcharge l'est (CHECK en SQL brut).
   seuilVerificationPrioritaireAt DateTime? @map("seuil_verification_prioritaire_at") @db.Timestamptz(3)
@@ -283,6 +310,20 @@ model Apporteur {
   /// (déclencheur `apporteurs_version_de_session`, SQL brut).
   sessionVersion Int @default(0) @map("session_version")
 
+  /// SEC-15 (REQ-SEC-019, REQ-SEC-038) : le gel des dépôts, la suspension de vérification du contrat v2,
+  /// art. 3.7 al. 3. Posé et levé par la seule fonction de `src/server/apporteur/suspension.ts` ; la
+  /// garde `apporteurs_gel_garde` (SQL brut) n'admet que la pose et la levée. L'instant est celui de la
+  /// pose ET de la notification : les quinze jours en courent.
+  etatGel              EtatGel             @default(libre) @map("etat_gel")
+  depotsGelesDepuis    DateTime?           @map("depots_geles_depuis") @db.Timestamptz(3)
+  gelAnomalieId        String?             @map("gel_anomalie_id") @db.Uuid
+  gelAnomalie          Anomalie?           @relation("GelDesDepots", fields: [gelAnomalieId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  gelPoseParId         String?             @map("gel_pose_par_id") @db.Uuid
+  gelPosePar           UtilisateurConsole? @relation("GelsPoses", fields: [gelPoseParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// La décision `suspension` du même apporteur, qui porte les faits notifiés (voie (a), A02, 6036131730).
+  gelDecisionContratId String?             @map("gel_decision_contrat_id") @db.Uuid
+  gelDecisionContrat   DecisionDeContrat?  @relation("GelParDecision", fields: [gelDecisionContratId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
   /// L'acceptation de la politique de confidentialité (REQ-JUR-025) : la date et la version, ensemble
   /// ou aucune (CHECK en SQL brut).
   confidentialiteAccepteeAt DateTime? @map("confidentialite_acceptee_at") @db.Timestamptz(3)
@@ -299,11 +340,13 @@ model Apporteur {
   personnesDeclarees      PersonneDeclaree[]
   piecesKyc               PieceKyc[]
   notificationsEspace     NotificationEspace[]
+  decisionsDeContrat      DecisionDeContrat[]      @relation("DecisionsDeLApporteur")
   preferencesNotification PreferenceNotification[]
   verifications           Verification[]
   alertesLiberation       AlerteLiberation[]
-  anomalies               Anomalie[]
+  anomalies               Anomalie[]               @relation("AnomaliesDeLApporteur")
   contestations           Contestation[]
+  appareilsConnus         AppareilConnu[]
 
   /// CPL-T06 (REQ-CPL-006) : les décisions sur la candidature, en ajout seul.
   decisionsCandidature DecisionCandidature[]
@@ -313,7 +356,9 @@ model Apporteur {
 }
 
 /// Un jeton de dépôt privé (REQ-DM-012). Seule l'EMPREINTE se stocke ; un jeton révoqué ne se
-/// réactive pas (déclencheur `jetons_depot_revocation_definitive`, SQL brut).
+/// réactive pas (déclencheur `jetons_depot_revocation_definitive`, SQL brut). Un seul jeton ACTIF
+/// par apporteur (REQ-SEC-005, SEC-11) : index unique partiel `jetons_depot_un_actif_par_apporteur`,
+/// SQL brut. Aucune colonne d'expiration : l'échéance se dérive de `creeAt` et de la SSOT.
 model JetonDepot {
   id             String    @id @default(uuid()) @db.Uuid
   apporteurId    String    @map("apporteur_id") @db.Uuid
@@ -387,6 +432,28 @@ model SessionEspace {
   @@map("sessions_espace")
 }
 
+/// SEC-55 (REQ-SEC-003) : un appareil sur lequel un lien ou un code de connexion a été consommé,
+/// par apporteur (la formule du registre de l'article 30).
+/// Un signal de sécurité du COMPTE, jamais une anomalie : il n'est inscrit ni au dossier ni sur un
+/// dépôt, et n'a AUCUNE vue dans l'espace. Seule l'EMPREINTE de l'appareil est gardée — un HMAC
+/// tronqué à 128 bits, sous la clé dédiée des appareils (`kid`) —, jamais l'adresse réseau ni
+/// l'identifiant en clair (CHECK `appareils_connus_empreinte_forme`, SQL brut). La dernière vue
+/// avance à chaque reconnaissance ; la ligne est purgée une durée de session après elle
+/// (`appareils_purger`). Migration `20261003002800_appareils_connus`.
+model AppareilConnu {
+  id            String    @id @default(uuid()) @db.Uuid
+  apporteurId   String    @map("apporteur_id") @db.Uuid
+  apporteur     Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  empreinte     String    @db.Char(32)
+  kid           String    @db.Char(8)
+  confirmeAt    DateTime  @map("confirme_at") @db.Timestamptz(3)
+  derniereVueAt DateTime  @map("derniere_vue_at") @db.Timestamptz(3)
+
+  @@unique([apporteurId, empreinte, kid])
+  @@index([derniereVueAt])
+  @@map("appareils_connus")
+}
+
 // ── SEC-17 : les utilisateurs de la console ─────────────────────────────────
 
 /// Un utilisateur de la console (SEC-17, REQ-SEC-023, partners/ADR-0022) : la cible de toutes les
@@ -397,28 +464,55 @@ model SessionEspace {
 /// empreinte, ensemble) ne peut manquer que sur un utilisateur désactivé (DM-44, CHECK
 /// `utilisateurs_console_adresse_si_actif`).
 model UtilisateurConsole {
-  id           String      @id @default(uuid()) @db.Uuid
-  role         ConsoleRole
-  nomChiffre   Bytes?      @map("nom_chiffre")
-  emailChiffre Bytes?      @map("email_chiffre")
-  emailHash    String?     @unique @map("email_hash") @db.Char(64)
-  creeAt       DateTime    @map("cree_at") @db.Timestamptz(3)
+  id                     String               @id @default(uuid()) @db.Uuid
+  role                   ConsoleRole
+  nomChiffre             Bytes?               @map("nom_chiffre")
+  emailChiffre           Bytes?               @map("email_chiffre")
+  emailHash              String?              @unique @map("email_hash") @db.Char(64)
+  creeAt                 DateTime             @map("cree_at") @db.Timestamptz(3)
   /// Non nulle : l'utilisateur ne franchit plus la requête suivante, quelle que soit la date posée.
-  desactiveAt  DateTime?   @map("desactive_at") @db.Timestamptz(3)
+  desactiveAt            DateTime?            @map("desactive_at") @db.Timestamptz(3)
+  /// SEC-30 (REQ-SEC-003) : incrémentée par la BASE à tout changement de rôle et à toute
+  /// désactivation ; une session d'une version antérieure est refusée (`version_perimee`).
+  sessionVersion         Int                  @default(0) @map("session_version")
+  /// SEC-30 (REQ-DM-024) : l'invitation et l'activation ; l'échéance se dérive d'`inviteeAt` et de
+  /// `DUREES_AUTH.invitationConsoleMs`, jamais d'une colonne.
+  inviteeAt              DateTime?            @map("invitee_at") @db.Timestamptz(3)
+  activeeAt              DateTime?            @default(dbgenerated("clock_timestamp()")) @map("activee_at") @db.Timestamptz(3)
+  /// SEC-30 (quatre yeux, déclencheur `utilisateurs_console_quatre_yeux`) : un admin dont `valideAt`
+  /// est nul est EN ATTENTE ; il n'a aucun droit d'administrateur.
+  valideParId            String?              @map("valide_par_id") @db.Uuid
+  validePar              UtilisateurConsole?  @relation("ValidationDesAdministrateurs", fields: [valideParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  valideAt               DateTime?            @map("valide_at") @db.Timestamptz(3)
+  administrateursValides UtilisateurConsole[] @relation("ValidationDesAdministrateurs")
 
-  liensMagiques           LienMagique[]
-  sessionsEspace          SessionEspace[]
-  attributions            Attribution[]         @relation("AttributionsDuConseiller")
-  suspensionsDePeremption Attribution[]         @relation("SuspensionsDePeremption")
-  verifications           Verification[]
-  anomaliesTraitees       Anomalie[]
-  rattachementsDecides    RattachementManuel[]
-  contestationsRepondues  Contestation[]
-  qualificationsSaisies   Qualification[]
-  accesJournalises        JournalAccesConsole[]
-  sirensListeNoireAjoutes SirenListeNoire[]
+  liensMagiques                LienMagique[]
+  sessionsEspace               SessionEspace[]
+  attributions                 Attribution[]             @relation("AttributionsDuConseiller")
+  suspensionsDePeremption      Attribution[]             @relation("SuspensionsDePeremption")
+  annulationsApresConfirmation Attribution[]             @relation("AnnulationsApresConfirmation")
+  verifications                Verification[]
+  anomaliesTraitees            Anomalie[]
+  rattachementsDecides         RattachementManuel[]
+  contestationsRepondues       Contestation[]
+  qualificationsSaisies        Qualification[]
+  accesJournalises             JournalAccesConsole[]
+  /// SEC-61 : les gels du journal des accès qui visent l'utilisateur, ceux qu'il a posés, levés.
+  gelsJournalVises             JournalAccesConsoleGel[]  @relation("GelsJournalVises")
+  /// SEC-15 : les gels des dépôts posés par cet administrateur, jusqu'à leur levée.
+  gelsPoses                    Apporteur[]               @relation("GelsPoses")
+  gelsJournalPoses             JournalAccesConsoleGel[]  @relation("GelsJournalPoses")
+  gelsJournalLeves             JournalAccesConsoleGel[]  @relation("GelsJournalLeves")
+  sirensListeNoireAjoutes      SirenListeNoire[]
+  tracesListeNoireAjoutees     SirenListeNoireTrace[]    @relation("TracesListeNoireAjoutees")
+  tracesListeNoireRetirees     SirenListeNoireTrace[]    @relation("TracesListeNoireRetirees")
   /// CPL-T06 : les décisions de candidature dont l'utilisateur est l'auteur.
-  decisionsCandidature    DecisionCandidature[]
+  decisionsCandidature         DecisionCandidature[]
+  /// CPL-T24 : les RIB que l'utilisateur a vérifiés, et ceux qu'il a confirmés.
+  ribsVerifies                 PieceKyc[]                @relation("RibsVerifies")
+  ribsConfirmes                PieceKyc[]                @relation("RibsConfirmes")
+  litigesOuverts               LitigeDecisionDeContrat[] @relation("LitigesOuverts")
+  litigesClos                  LitigeDecisionDeContrat[] @relation("LitigesClos")
 
   @@map("utilisateurs_console")
 }
@@ -471,20 +565,30 @@ model IdentiteFacturation {
 /// QUE sur une pièce `rib`, chiffré (SEC-08) et empreint (CHECK). `expireAt` est obligatoire pour
 /// `vigilance` et `rc_pro` (CHECK). Le fichier vit sur un stockage privé (REQ-SEC-026).
 model PieceKyc {
-  id             String         @id @default(uuid()) @db.Uuid
-  apporteurId    String         @map("apporteur_id") @db.Uuid
-  apporteur      Apporteur      @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  type           TypePieceKyc
-  statut         StatutPieceKyc
-  verifieeAt     DateTime?      @map("verifiee_at") @db.Timestamptz(3)
-  expireAt       DateTime?      @map("expire_at") @db.Timestamptz(3)
+  id               String              @id @default(uuid()) @db.Uuid
+  apporteurId      String              @map("apporteur_id") @db.Uuid
+  apporteur        Apporteur           @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  type             TypePieceKyc
+  statut           StatutPieceKyc
+  verifieeAt       DateTime?           @map("verifiee_at") @db.Timestamptz(3)
+  expireAt         DateTime?           @map("expire_at") @db.Timestamptz(3)
   /// La référence du fichier sur le stockage privé, jamais une URL publique.
-  fichierRef     String?        @map("fichier_ref") @db.VarChar(300)
+  fichierRef       String?             @map("fichier_ref") @db.VarChar(300)
   /// La purge du fichier (la pièce d'identité, dès validation : REQ-JUR-029).
-  fichierPurgeAt DateTime?      @map("fichier_purge_at") @db.Timestamptz(3)
-  remplaceeAt    DateTime?      @map("remplacee_at") @db.Timestamptz(3)
-  ibanChiffre    Bytes?         @map("iban_chiffre")
-  ibanHash       String?        @map("iban_hash") @db.Char(64)
+  fichierPurgeAt   DateTime?           @map("fichier_purge_at") @db.Timestamptz(3)
+  remplaceeAt      DateTime?           @map("remplacee_at") @db.Timestamptz(3)
+  ibanChiffre      Bytes?              @map("iban_chiffre")
+  ibanHash         String?             @map("iban_hash") @db.Char(64)
+  /// CPL-T24 (REQ-UX-027, REQ-DM-027) : le RIB à quatre yeux. Le premier regard VÉRIFIE hors bande,
+  /// un AUTRE administrateur validé CONFIRME ; les quatre colonnes ne vivent que sur une pièce `rib`,
+  /// s'écrivent une fois, et un RIB n'est `valide` que confirmé (CHECK et déclencheur
+  /// `pieces_kyc_rib_quatre_yeux_garde`, SQL brut).
+  ribVerifieParId  String?             @map("rib_verifie_par_id") @db.Uuid
+  ribVerifiePar    UtilisateurConsole? @relation("RibsVerifies", fields: [ribVerifieParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  ribVerifieAt     DateTime?           @map("rib_verifie_at") @db.Timestamptz(3)
+  ribConfirmeParId String?             @map("rib_confirme_par_id") @db.Uuid
+  ribConfirmePar   UtilisateurConsole? @relation("RibsConfirmes", fields: [ribConfirmeParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  ribConfirmeAt    DateTime?           @map("rib_confirme_at") @db.Timestamptz(3)
 
   identitesFacturation IdentiteFacturation[]
 
@@ -498,17 +602,21 @@ model PieceKyc {
 /// BASE (déclencheur), et fait courir le délai d'un mois de l'art. 12.3. Aucune donnée en clair :
 /// la nouvelle valeur d'une rectification est chiffrée, puis effacée à la clôture ou à l'échéance.
 model DemandeDroitContact {
-  id             String             @id @default(uuid()) @db.Uuid
-  attributionId  String             @map("attribution_id") @db.Uuid
-  attribution    Attribution        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  droit          DroitContact
-  recueAt        DateTime           @default(dbgenerated("clock_timestamp()")) @map("recue_at") @db.Timestamptz(3)
-  traiteeAt      DateTime?          @map("traitee_at") @db.Timestamptz(3)
-  issue          IssueDemandeDroit?
-  donneeVisee    DonneeContact?     @map("donnee_visee")
-  valeurChiffree Bytes?             @map("valeur_chiffree")
-  valeurPurgeeAt DateTime?          @map("valeur_purgee_at") @db.Timestamptz(3)
-  prolongeeAt    DateTime?          @map("prolongee_at") @db.Timestamptz(3)
+  id                String             @id @default(uuid()) @db.Uuid
+  /// NULL une fois la trace anonymisée (DM-60, partners/ADR-0031), avec `traceAnonymiseeAt` (CHECK).
+  attributionId     String?            @map("attribution_id") @db.Uuid
+  attribution       Attribution?       @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  droit             DroitContact
+  recueAt           DateTime           @default(dbgenerated("clock_timestamp()")) @map("recue_at") @db.Timestamptz(3)
+  traiteeAt         DateTime?          @map("traitee_at") @db.Timestamptz(3)
+  issue             IssueDemandeDroit?
+  donneeVisee       DonneeContact?     @map("donnee_visee")
+  valeurChiffree    Bytes?             @map("valeur_chiffree")
+  valeurPurgeeAt    DateTime?          @map("valeur_purgee_at") @db.Timestamptz(3)
+  prolongeeAt       DateTime?          @map("prolongee_at") @db.Timestamptz(3)
+  /// DM-60 (REQ-JUR-065) : l'anonymisation de la trace, cinq ans après sa clôture
+  /// (`DROITS_CONTACT_TRACE_ANS`), écrite une fois, liée au lien vidé (CHECK en SQL brut).
+  traceAnonymiseeAt DateTime?          @map("trace_anonymisee_at") @db.Timestamptz(3)
 
   @@index([attributionId])
   @@map("demandes_droits_contact")
@@ -524,14 +632,15 @@ enum SourceEvenementRecu {
   @@map("source_evenement_recu")
 }
 
-/// Les types d'événements reçus : les douze de `TYPES_EVENEMENT` (`packages/contracts/events.ts`),
+/// Les types d'événements reçus : les treize de `TYPES_EVENEMENT` (`packages/contracts/events.ts`),
 /// dans leur ordre, chacun sous son identifiant snake_case — le nom de fil dont le point devient un
 /// souligné. La base porte le MÊME libellé : un nom de fil écrit ici en clair serait une recopie du
 /// contrat que `gov:termes-interdits` refuse hors de `packages/contracts`. La correspondance est
 /// DÉRIVÉE par `identifiantDuType` et confrontée à `pg_enum` par `tests/integration/webhook.spec.ts`.
 /// Les quatre derniers sont entrés en `schema_version` 2, par ajout en fin d'enum (migration
 /// `20260927000300_types_evenement_recu_v2`), le douzième en `schema_version` 3 (migration
-/// `20261003000900_type_evenement_recu_devis_emis`) ; INT-T12 y ajoutera les types DocuSeal.
+/// `20261003000900_type_evenement_recu_devis_emis`), le treizième en `schema_version` 4 (migration
+/// `20261003005090_type_evenement_recu_financement_etape`) ; INT-T12 y ajoutera les types DocuSeal.
 enum TypeEvenementRecu {
   client_cree
   client_mis_a_jour
@@ -545,6 +654,7 @@ enum TypeEvenementRecu {
   facture_annulee
   client_fusionne
   devis_emis
+  financement_etape
 
   @@map("type_evenement_recu")
 }
@@ -596,6 +706,9 @@ model EvenementRecu {
   @@unique([source, eventId])
   @@index([statut, receivedAt])
   @@index([sujetRef])
+  /// INT-T76-P (recommandation d'A02) : la première réception de la version courante, départ de la
+  /// fenêtre de bascule, se lit par cet index, jamais par un parcours de la table.
+  @@index([source, schemaVersion, receivedAt])
   @@map("evenements_recus")
 }
 
@@ -635,23 +748,28 @@ enum MotifSuppressionCourriel {
 /// Chaque demande d'envoi, qu'elle parte ou non (REQ-INT-022, REQ-INT-023, REQ-UX-016). Aucun corps,
 /// aucune adresse : l'empreinte de recherche seule. DM-07 y a ajouté `attribution_id`.
 model CourrielEnvoye {
-  id                   String         @id @default(uuid()) @db.Uuid
+  id                   String              @id @default(uuid()) @db.Uuid
   /// Exception E2 de partners/ADR-0022 (point 9) : clé de `src/server/notifications/table-ssot.ts`.
-  gabarit              String         @db.VarChar(64)
+  gabarit              String              @db.VarChar(64)
   /// Empreinte de l'adresse de destination (`empreinteRecherche('courriel', …)`).
-  emailHash            String         @map("email_hash") @db.Char(64)
-  apporteurId          String?        @map("apporteur_id") @db.Uuid
-  apporteur            Apporteur?     @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  emailHash            String              @map("email_hash") @db.Char(64)
+  apporteurId          String?             @map("apporteur_id") @db.Uuid
+  apporteur            Apporteur?          @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
   statut               StatutCourriel
-  demandeAt            DateTime       @map("demande_at") @db.Timestamptz(3)
+  demandeAt            DateTime            @map("demande_at") @db.Timestamptz(3)
   /// La date qui fait courir un délai (REQ-UX-016) — jamais une date de lecture.
-  envoyeAt             DateTime?      @map("envoye_at") @db.Timestamptz(3)
-  fournisseurMessageId String?        @map("fournisseur_message_id") @db.VarChar(200)
+  envoyeAt             DateTime?           @map("envoye_at") @db.Timestamptz(3)
+  fournisseurMessageId String?             @map("fournisseur_message_id") @db.VarChar(200)
   /// Un code fermé, jamais la réponse du relais.
-  erreur               String?        @db.VarChar(300)
+  erreur               String?             @db.VarChar(300)
   /// L'attribution dont le courriel parle (DM-07), nulle sinon.
-  attributionId        String?        @map("attribution_id") @db.Uuid
-  attribution          Attribution?   @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attributionId        String?             @map("attribution_id") @db.Uuid
+  attribution          Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// DM-55 : la notification de l'espace que le courriel porte. Au plus un courriel non échoué par
+  /// notification : index unique partiel `courriels_envoyes_un_par_notification`, en SQL brut. SET NULL :
+  /// la purge de DM-61 supprime la notification, le courriel (preuve du délai) reste.
+  notificationEspaceId String?             @map("notification_espace_id") @db.Uuid
+  notificationEspace   NotificationEspace? @relation(fields: [notificationEspaceId], references: [id], onDelete: SetNull, onUpdate: Restrict)
 
   @@index([emailHash])
   @@index([apporteurId, gabarit])
@@ -666,19 +784,39 @@ model CourrielEnvoye {
 /// AUCUN calcul de délai : un délai court de `courriels_envoyes.envoye_at` (garde
 /// `notifications-lue-at-inerte`).
 model NotificationEspace {
-  id            String       @id @default(uuid()) @db.Uuid
-  apporteurId   String       @map("apporteur_id") @db.Uuid
-  apporteur     Apporteur    @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  cle           String       @db.VarChar(64)
-  attributionId String?      @map("attribution_id") @db.Uuid
-  attribution   Attribution? @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  id                String             @id @default(uuid()) @db.Uuid
+  apporteurId       String             @map("apporteur_id") @db.Uuid
+  apporteur         Apporteur          @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  cle               String             @db.VarChar(64)
+  attributionId     String?            @map("attribution_id") @db.Uuid
+  attribution       Attribution?       @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   /// L'heure d'inscription dans l'espace, PAS un horodatage opposable : aucun délai ne s'y appuie ;
   /// un délai court de `courriels_envoyes.envoye_at` (relecture A02, 2026-10-02).
-  creeAt        DateTime     @default(now()) @map("cree_at") @db.Timestamptz(3)
-  lueAt         DateTime?    @map("lue_at") @db.Timestamptz(3)
+  creeAt            DateTime           @default(now()) @map("cree_at") @db.Timestamptz(3)
+  lueAt             DateTime?          @map("lue_at") @db.Timestamptz(3)
+  /// DM-55 : l'événement du journal qui a produit la notification. L'idempotence tient au fait :
+  /// index unique partiel `notifications_espace_une_par_evenement` (cle, evenement_id), et CHECK
+  /// `notifications_espace_machine_a_son_evenement` (les deux clés de la machine ont leur événement),
+  /// en SQL brut (partners/ADR-0015).
+  evenementId       BigInt?            @map("evenement_id")
+  /// Relation vers le journal chaîné, jamais employée par le code : on écrit `evenementId` (garde de l'écrivain unique).
+  faitDuJournal     Evenement?         @relation(fields: [evenementId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  /// DM-55 : l'anomalie confirmée qui fonde une `decision_attribution`, et elle seule (CHECK
+  /// `notifications_espace_anomalie_decision_seule`, en SQL brut). Ses faits se lisent dans sa ligne au
+  /// rendu ; ils n'entrent jamais dans le journal chaîné (décision (d) de la juriste pour DM-12).
+  anomalieId        String?            @map("anomalie_id") @db.Uuid
+  anomalie          Anomalie?          @relation(fields: [anomalieId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  /// SEC-19 : la décision de contrat (`mise_en_demeure`, `resiliation`) dont le passage rend le texte et
+  /// les dates (CHECK `notifications_espace_decision_contrat_cle`, en SQL brut). SET NULL : rien ne
+  /// bloque la purge de DM-61.
+  decisionContratId String?            @map("decision_contrat_id") @db.Uuid
+  decisionContrat   DecisionDeContrat? @relation(fields: [decisionContratId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  /// DM-55 : les courriels qui l'ont portée, une tentative par ligne.
+  courriels         CourrielEnvoye[]
 
   @@index([apporteurId, creeAt])
   @@index([attributionId])
+  @@index([decisionContratId])
   /// DM-61 : la purge à douze mois lit `cree_at` seul.
   @@index([creeAt])
   @@map("notifications_espace")
@@ -763,6 +901,15 @@ enum CategorieEntreprise {
 }
 
 /// Les sept motifs de refus d'un dépôt (REQ-SEC-022), exactement.
+/// DM-71 (art. 3.3 du v2) : l'exception d'une annulation après la confirmation (forme d'A02, #806).
+enum ExceptionAnnulation {
+  erreur_identification
+  fraude
+  retablissement_apporteur
+
+  @@map("exception_annulation")
+}
+
 enum MotifRefusDepot {
   anteriorite_client
   anteriorite_devis
@@ -853,6 +1000,9 @@ model Attribution {
   /// Chiffrée (décision A02 du 2026-10-02) : la borne de 120 caractères porte sur le clair.
   fonctionContactChiffre      Bytes?            @map("fonction_contact_chiffre")
   contexteChiffre             Bytes?            @map("contexte_chiffre")
+  /// DM-49 (REQ-DM-064) : l'IDCC facultatif, quatre chiffres EN TEXTE (« 0044 »), en clair — il désigne une
+  /// convention collective, pas une personne ; saisi par l'apporteur, jamais accompagné d'un document (CHECK).
+  idccSaisi                   String?           @map("idcc_saisi") @db.Char(4)
   /// La personne déclarée qui a rencontré le contact (UX-P1-15).
   personneDeclareeId          String?           @map("personne_declaree_id") @db.Uuid
   personneDeclaree            PersonneDeclaree? @relation(fields: [personneDeclareeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
@@ -861,24 +1011,30 @@ model Attribution {
   lienInteretPrecisionChiffre Bytes?            @map("lien_interet_precision_chiffre")
 
   // Le temps de la machine (REQ-DM-004, REQ-DM-007, REQ-UX-022).
-  aQualifierDepuisAt               DateTime?           @map("a_qualifier_depuis_at") @db.Timestamptz(3)
-  premierContactAt                 DateTime?           @map("premier_contact_at") @db.Timestamptz(3)
-  confirmeeAt                      DateTime?           @map("confirmee_at") @db.Timestamptz(3)
-  fenetreFinAt                     DateTime?           @map("fenetre_fin_at") @db.Timestamptz(3)
-  peremptionAt                     DateTime?           @map("peremption_at") @db.Timestamptz(3)
+  aQualifierDepuisAt               DateTime?            @map("a_qualifier_depuis_at") @db.Timestamptz(3)
+  premierContactAt                 DateTime?            @map("premier_contact_at") @db.Timestamptz(3)
+  confirmeeAt                      DateTime?            @map("confirmee_at") @db.Timestamptz(3)
+  fenetreFinAt                     DateTime?            @map("fenetre_fin_at") @db.Timestamptz(3)
+  peremptionAt                     DateTime?            @map("peremption_at") @db.Timestamptz(3)
   /// La suspension de péremption : les trois ensemble ou aucune (CHECK).
-  peremptionSuspendueAt            DateTime?           @map("peremption_suspendue_at") @db.Timestamptz(3)
-  peremptionSuspendueParId         String?             @map("peremption_suspendue_par_id") @db.Uuid
-  peremptionSuspenduePar           UtilisateurConsole? @relation("SuspensionsDePeremption", fields: [peremptionSuspendueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  peremptionSuspendueJustification String?             @map("peremption_suspendue_justification") @db.Text
-  fenetreRedeclarationFinAt        DateTime?           @map("fenetre_redeclaration_fin_at") @db.Timestamptz(3)
-  purgeContactAt                   DateTime?           @map("purge_contact_at") @db.Timestamptz(3)
-  contactPurgeAt                   DateTime?           @map("contact_purge_at") @db.Timestamptz(3)
+  peremptionSuspendueAt            DateTime?            @map("peremption_suspendue_at") @db.Timestamptz(3)
+  peremptionSuspendueParId         String?              @map("peremption_suspendue_par_id") @db.Uuid
+  peremptionSuspenduePar           UtilisateurConsole?  @relation("SuspensionsDePeremption", fields: [peremptionSuspendueParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  peremptionSuspendueJustification String?              @map("peremption_suspendue_justification") @db.Text
+  fenetreRedeclarationFinAt        DateTime?            @map("fenetre_redeclaration_fin_at") @db.Timestamptz(3)
+  /// DM-71 (art. 3.3 du v2, migration 005020) : l'exception d'une annulation APRÈS la confirmation et
+  /// son auteur humain, posés ensemble avec l'arrivée en `annulee`, immuables ensuite (garde
+  /// `attributions_annulation_apres_confirmation`).
+  annulationException              ExceptionAnnulation? @map("annulation_exception")
+  annulationParId                  String?              @map("annulation_par_id") @db.Uuid
+  annulationPar                    UtilisateurConsole?  @relation("AnnulationsApresConfirmation", fields: [annulationParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  purgeContactAt                   DateTime?            @map("purge_contact_at") @db.Timestamptz(3)
+  contactPurgeAt                   DateTime?            @map("contact_purge_at") @db.Timestamptz(3)
   /// L'empreinte HMAC du jeton de la page des droits du contact, jamais le jeton (DM-59). Unique
   /// quand posée (index partiel en SQL), effacée par la purge du contact.
-  jetonDroitsHash                  String?             @map("jeton_droits_hash") @db.Char(64)
+  jetonDroitsHash                  String?              @map("jeton_droits_hash") @db.Char(64)
   /// Verrou optimiste de la fiche (REQ-CPL-024).
-  versionQualification             Int                 @default(0) @map("version_qualification")
+  versionQualification             Int                  @default(0) @map("version_qualification")
 
   courrielsEnvoyes      CourrielEnvoye[]
   demandeConfirmation   DemandeConfirmation?
@@ -1156,32 +1312,36 @@ model AlerteLiberation {
 /// Une anomalie (REQ-DM-033). Le score n'existe que pour la sincérité ; la clôture pose statut,
 /// date, auteur et justification ensemble, une fois, sans retour (fonction dédiée).
 model Anomalie {
-  id                    String              @id @default(uuid()) @db.Uuid
+  id                    String               @id @default(uuid()) @db.Uuid
   type                  TypeAnomalie
-  score                 Int?                @db.SmallInt
-  apporteurId           String?             @map("apporteur_id") @db.Uuid
-  apporteur             Apporteur?          @relation(fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  attributionId         String?             @map("attribution_id") @db.Uuid
-  attribution           Attribution?        @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  statut                StatutAnomalie      @default(ouverte)
-  ouverteAt             DateTime            @default(now()) @map("ouverte_at") @db.Timestamptz(3)
-  traiteParId           String?             @map("traite_par_id") @db.Uuid
-  traitePar             UtilisateurConsole? @relation(fields: [traiteParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  traiteAt              DateTime?           @map("traite_at") @db.Timestamptz(3)
+  score                 Int?                 @db.SmallInt
+  apporteurId           String?              @map("apporteur_id") @db.Uuid
+  apporteur             Apporteur?           @relation("AnomaliesDeLApporteur", fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attributionId         String?              @map("attribution_id") @db.Uuid
+  attribution           Attribution?         @relation(fields: [attributionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  statut                StatutAnomalie       @default(ouverte)
+  ouverteAt             DateTime             @default(now()) @map("ouverte_at") @db.Timestamptz(3)
+  traiteParId           String?              @map("traite_par_id") @db.Uuid
+  traitePar             UtilisateurConsole?  @relation(fields: [traiteParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  traiteAt              DateTime?            @map("traite_at") @db.Timestamptz(3)
   /// La justification, CHIFFRÉE (`CHAMPS_PII`) : elle porte un soupçon sur une personne. Posée à la
   /// clôture, vidée par la purge seule.
-  justificationChiffre  Bytes?              @map("justification_chiffre")
-  justificationPurgeeAt DateTime?           @map("justification_purgee_at") @db.Timestamptz(3)
+  justificationChiffre  Bytes?               @map("justification_chiffre")
+  justificationPurgeeAt DateTime?            @map("justification_purgee_at") @db.Timestamptz(3)
   /// L'ANONYMISATION : tout ce qui désigne une personne est vidé ; restent l'id, le type, le statut
   /// et les mois d'ouverture et de traitement (forme d'A02).
-  anonymiseeAt          DateTime?           @map("anonymisee_at") @db.Timestamptz(3)
+  anonymiseeAt          DateTime?            @map("anonymisee_at") @db.Timestamptz(3)
   /// La fin réelle de la mesure fondée sur une anomalie confirmée, posée une fois, jamais avant
   /// `traiteAt` ; elle fait courir l'échéance de l'anonymisation.
-  mesureTermineeAt      DateTime?           @map("mesure_terminee_at") @db.Timestamptz(3)
+  mesureTermineeAt      DateTime?            @map("mesure_terminee_at") @db.Timestamptz(3)
   /// Le gel pour litige : posé une fois avec sa référence (un numéro, jamais un nom), levé une fois.
-  gelLitigeAt           DateTime?           @map("gel_litige_at") @db.Timestamptz(3)
-  gelLitigeLeveAt       DateTime?           @map("gel_litige_leve_at") @db.Timestamptz(3)
-  gelLitigeRef          String?             @map("gel_litige_ref") @db.VarChar(64)
+  gelLitigeAt           DateTime?            @map("gel_litige_at") @db.Timestamptz(3)
+  gelLitigeLeveAt       DateTime?            @map("gel_litige_leve_at") @db.Timestamptz(3)
+  gelLitigeRef          String?              @map("gel_litige_ref") @db.VarChar(64)
+  /// DM-55 : les notifications des décisions qu'elle fonde.
+  notificationsEspace   NotificationEspace[]
+  /// SEC-15 : les apporteurs dont elle fonde le gel (`gele_fraude`).
+  gelsDesDepots         Apporteur[]          @relation("GelDesDepots")
 
   @@index([apporteurId])
   @@index([attributionId])
@@ -1318,6 +1478,7 @@ enum NatureAccesConsole {
   connexion
   lecture_coordonnees_apporteur
   lecture_coordonnees_contact
+  lecture_journal_acces
 
   @@map("nature_acces_console")
 }
@@ -1326,8 +1487,10 @@ enum NatureAccesConsole {
 /// l'empreinte tronquée de l'adresse réseau ; aucun contenu. Ajout seul par le gabarit commun
 /// (`refuser_modification_sauf`) : la purge, à l'échéance de la SSOT, vide l'utilisateur, la cible et
 /// l'empreinte et pose `purgeAt`, une fois ; la ligne nue (nature, date) reste. `cibleId` est
-/// polymorphe (un apporteur, ou l'attribution qui porte le contact), sans clé étrangère : le code la
-/// vérifie avant d'écrire. Seule une connexion RÉUSSIE s'inscrit.
+/// polymorphe (un apporteur, l'attribution qui porte le contact, ou, pour une lecture du journal
+/// (SEC-60), l'utilisateur de la console dont les traces sont lues), sans clé étrangère, pour les trois
+/// cibles, cette dernière comprise : le code vérifie chacune avant d'écrire. Seule une connexion
+/// RÉUSSIE s'inscrit.
 model JournalAccesConsole {
   id                   String              @id @db.Uuid
   utilisateurConsoleId String?             @map("utilisateur_console_id") @db.Uuid
@@ -1341,6 +1504,43 @@ model JournalAccesConsole {
   @@index([survenuAt])
   @@index([utilisateurConsoleId, survenuAt], map: "journal_acces_console_utilisateur_survenu_idx")
   @@map("journal_acces_console")
+}
+
+/// Le motif d'un gel du journal des accès à la console (SEC-61) : les valeurs du glossaire.
+enum MotifGelJournal {
+  incident
+  litige
+
+  @@map("motif_gel_journal")
+}
+
+/// Un gel du journal des accès à la console (SEC-61, forme d'A02 accordée avec la sécurité). Il vise
+/// UNE portée, un utilisateur de la console OU une cible (CHECK `journal_acces_console_gels_une_portee`),
+/// et protège de la purge les lignes de cette portée survenues depuis `depuis`, futures comprises si
+/// `jusquA` est nul, tant qu'il est OUVERT ; `jusquA` posé BORNE le gel, inclus, et ne se modifie pas. La référence
+/// est opaque (CHECK `journal_acces_console_gels_reference_forme`). Personne ne gèle ses propres traces
+/// (CHECK `journal_acces_console_gels_pas_sur_soi`) ; la levée est faite par un autre que l'auteur et
+/// que la personne visée (CHECK `journal_acces_console_gels_levee_quatre_yeux`). Garde dédiée en SQL
+/// brut (`journal_acces_console_gels_garde`) : un gel naît ouvert, seule la levée s'écrit, une fois ;
+/// il ne s'efface que levé et ses lignes purgées ; TRUNCATE refusé. Filet de la base sur le journal
+/// (`journal_acces_console_gel_respecte`). Deux index partiels sur les gels ouverts.
+model JournalAccesConsoleGel {
+  id                String              @id @db.Uuid
+  motif             MotifGelJournal
+  reference         String              @db.VarChar(40)
+  utilisateurViseId String?             @map("utilisateur_vise_id") @db.Uuid
+  utilisateurVise   UtilisateurConsole? @relation("GelsJournalVises", fields: [utilisateurViseId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "journal_acces_console_gels_utilisateur_vise_fkey")
+  cibleId           String?             @map("cible_id") @db.Uuid
+  depuis            DateTime            @db.Timestamptz(3)
+  jusquA            DateTime?           @map("jusqu_a") @db.Timestamptz(3)
+  poseParId         String              @map("pose_par_id") @db.Uuid
+  posePar           UtilisateurConsole  @relation("GelsJournalPoses", fields: [poseParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  poseAt            DateTime            @default(dbgenerated("clock_timestamp()")) @map("pose_at") @db.Timestamptz(3)
+  leveParId         String?             @map("leve_par_id") @db.Uuid
+  levePar           UtilisateurConsole? @relation("GelsJournalLeves", fields: [leveParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  leveAt            DateTime?           @map("leve_at") @db.Timestamptz(3)
+
+  @@map("journal_acces_console_gels")
 }
 
 /// L'origine d'une entreprise connue de la Société (REQ-DM-029) : les valeurs du glossaire.
@@ -1373,6 +1573,28 @@ model SirenListeNoire {
   @@map("sirens_liste_noire")
 }
 
+/// La trace de la liste de la Société (DM-65, REQ-DM-028) : une ligne par PÉRIODE d'inscription,
+/// ouverte par la base à l'ajout (`sirens_liste_noire_tracer_ajout`), fermée par le code avant le
+/// retrait (`sirens_liste_noire_retrait_trace` refuse un retrait non tracé), effacée par la purge cinq
+/// ans après le retrait. En SQL brut (ADR-0015) : la forme du SIREN (`sirens_liste_noire_trace_siren_forme`),
+/// une seule période ouverte par SIREN (index unique partiel `sirens_liste_noire_trace_une_ouverte`),
+/// l'index de la purge (`sirens_liste_noire_trace_retire_at_idx`) et la garde
+/// `sirens_liste_noire_trace_garde` (seule la fermeture, une fois ; seule une période fermée
+/// s'efface ; TRUNCATE refusé). L'identifiant naît dans la base (`gen_random_uuid()`), sans défaut ici.
+model SirenListeNoireTrace {
+  id          String              @id @db.Uuid
+  siren       String              @db.Char(9)
+  motif       MotifListeNoire
+  ajouteParId String              @map("ajoute_par_id") @db.Uuid
+  ajoutePar   UtilisateurConsole  @relation("TracesListeNoireAjoutees", fields: [ajouteParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  ajouteAt    DateTime            @map("ajoute_at") @db.Timestamptz(3)
+  retireParId String?             @map("retire_par_id") @db.Uuid
+  retirePar   UtilisateurConsole? @relation("TracesListeNoireRetirees", fields: [retireParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  retireAt    DateTime?           @map("retire_at") @db.Timestamptz(3)
+
+  @@map("sirens_liste_noire_trace")
+}
+
 /// La projection locale de l'antériorité (DM-10-P, REQ-DM-029) : une ligne par SIREN et par origine,
 /// alimentée par les seuls événements d'axionia et par la liste de la Société. Mutable : la trace
 /// vit dans `evenements_recus`.
@@ -1401,4 +1623,94 @@ model DevisConnu {
 
   @@index([siren])
   @@map("devis_connus")
+}
+
+// ── SEC-19 : les décisions de contrat (forme d'A02, #703) ───────────────────
+
+/// Le geste d'une décision de contrat (art. 11 et 12).
+enum GesteDecisionContrat {
+  mise_en_demeure
+  resiliation
+  /// SEC-15 : la suspension de vérification (art. 3.7 al. 3), notifiée avec ses faits (migration 004922).
+  suspension
+
+  @@map("geste_decision_contrat")
+}
+
+/// SEC-19 (REQ-JUR-006) : le texte d'une mise en demeure (`{faits}`) ou d'une résiliation motivée
+/// (`{motif}`), CHIFFRÉ, et ses dates ; jamais au journal chaîné. La ligne nue reste comme preuve du
+/// fait daté : seul le texte est purgé (garde `decisions_de_contrat_garde` et CHECK en SQL brut).
+model DecisionDeContrat {
+  id                  String                    @id @default(uuid()) @db.Uuid
+  apporteurId         String                    @map("apporteur_id") @db.Uuid
+  apporteur           Apporteur                 @relation("DecisionsDeLApporteur", fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  geste               GesteDecisionContrat
+  /// La liste FERMÉE de l'art. 11.2, pour la mise en demeure seule (CHECK).
+  article             String?                   @db.VarChar(4)
+  texteChiffre        Bytes?                    @map("texte_chiffre")
+  /// Jours civils de Paris, pour la résiliation seule (CHECK).
+  dateReception       DateTime?                 @map("date_reception") @db.Date
+  dateEffet           DateTime?                 @map("date_effet") @db.Date
+  /// L'événement qui fonde la décision. Relation jamais employée par le code : on écrit `evenementId`.
+  evenementId         BigInt                    @unique @map("evenement_id")
+  faitDuJournal       Evenement                 @relation(fields: [evenementId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creeAt              DateTime                  @default(dbgenerated("clock_timestamp()")) @map("cree_at") @db.Timestamptz(3)
+  textePurgeAt        DateTime?                 @map("texte_purge_at") @db.Timestamptz(3)
+  /// La clé d'idempotence, tirée par le serveur au rendu du formulaire : UNIQUE, immuable, jamais
+  /// purgée ; exigée pour une mise en demeure (CHECK).
+  cleIdempotence      String?                   @unique @map("cle_idempotence") @db.Uuid
+  /// L'empreinte HMAC des faits (`empreinteRecherche('faits_mise_en_demeure', …)`) : elle vit et meurt
+  /// avec le texte (CHECK et garde) ; jamais de clair pour comparer.
+  faitsEmpreinte      String?                   @map("faits_empreinte") @db.Char(64)
+  notificationsEspace NotificationEspace[]
+  /// SEC-15 : l'apporteur dont cette suspension fonde le gel, tant qu'il dure.
+  gelsDesDepots       Apporteur[]               @relation("GelParDecision")
+  /// JUR-T64 : les litiges ouverts puis clos sur cette décision ; un litige OUVERT gèle la purge du texte.
+  litiges             LitigeDecisionDeContrat[]
+
+  @@index([apporteurId])
+  @@map("decisions_de_contrat")
+}
+
+/// JUR-T64 (juriste #703 6041829569 ; forme d'A02, #703 6041868006) : la nature du litige, liste FERMÉE.
+enum MotifOuvertureLitige {
+  contestation_ecrite
+  reclamation_formelle
+  mediation
+  action_en_justice
+
+  @@map("motif_ouverture_litige")
+}
+
+/// JUR-T64 : la fin du litige, liste FERMÉE.
+enum MotifClotureLitige {
+  reponse_donnee
+  accord
+  decision_definitive
+  desistement
+
+  @@map("motif_cloture_litige")
+}
+
+/// JUR-T64 (code civil art. 2241 et 2231) : un litige sur une décision de contrat. Tant qu'il est OUVERT,
+/// le texte de la décision n'est jamais purgé (filet `decisions_de_contrat_gel_litige`) ; à sa clôture, le
+/// départ de la conservation devient le plus tardif du départ ordinaire et du jour de la clôture. Ajout
+/// seul : seule la clôture s'écrit, une fois. Aucun texte libre. Un fait de la Société, jamais rendu à
+/// l'espace.
+model LitigeDecisionDeContrat {
+  id             String               @id @db.Uuid
+  decisionId     String               @map("decision_id") @db.Uuid
+  decision       DecisionDeContrat    @relation(fields: [decisionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  motifOuverture MotifOuvertureLitige @map("motif_ouverture")
+  /// L'heure de la BASE à l'insertion (garde de naissance).
+  ouvertAt       DateTime             @default(dbgenerated("clock_timestamp()")) @map("ouvert_at") @db.Timestamptz(3)
+  ouvertParId    String               @map("ouvert_par_id") @db.Uuid
+  ouvertPar      UtilisateurConsole   @relation("LitigesOuverts", fields: [ouvertParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  motifCloture   MotifClotureLitige?  @map("motif_cloture")
+  closAt         DateTime?            @map("clos_at") @db.Timestamptz(3)
+  closParId      String?              @map("clos_par_id") @db.Uuid
+  closPar        UtilisateurConsole?  @relation("LitigesClos", fields: [closParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([decisionId, closAt], map: "litiges_decisions_de_contrat_decision_clos_idx")
+  @@map("litiges_decisions_de_contrat")
 }

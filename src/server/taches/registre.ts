@@ -26,19 +26,58 @@ export const TACHES = {
   contacts_purger: { req: 'REQ-DM-031' },
   /** DM-53 — la purge du SIREN des dépôts refusés, douze mois après le refus. */
   siren_refuses_purger: { req: 'REQ-DM-043' },
+  /**
+   * DM-66 — l'effacement des projections de l'antériorité (`devis_connus`, `entreprises_connues`)
+   * quand elles ne fondent plus aucun refus (`purgerLesEntreprisesConnues`).
+   */
+  entreprises_connues_purger: { req: 'REQ-DM-029' },
   /** DM-28 — la reprise des codes NAF nuls d'un dépôt en repli manuel (`completerLesCodesNaf`). */
   naf_completer: { req: 'REQ-DM-046' },
   /** DM-61 — la suppression des notifications de l'espace douze mois après leur inscription. */
   notifications_espace_purger: { req: 'REQ-UX-016' },
+  /**
+   * DM-55 — l'envoi, APRÈS le commit de la transition, du courriel des notifications de la machine
+   * (`decision_attribution`, `premier_rang_libere`) ; la fenêtre de redéclaration court de l'envoi.
+   */
+  notifications_espace_envoyer: { req: 'REQ-UX-016' },
+  /**
+   * DM-25 — le rapprochement QUOTIDIEN des projections de l'antériorité avec les attributions
+   * occupantes : l'antériorité établie après coup annule le dépôt (`rapprocherLesAnteriorites`).
+   */
+  anteriorites_rapprocher: { req: 'REQ-JUR-007' },
   /** DM-59 — l'effacement, à échéance, de la valeur d'une rectification demandée par le contact. */
   droits_contact_purger: { req: 'REQ-JUR-065' },
+  /** DM-60 — l'anonymisation, cinq ans après sa clôture, de la trace d'une demande de droit du contact. */
+  droits_contact_anonymiser: { req: 'REQ-JUR-065' },
+  /** SEC-15 — la levée de plein droit d'une suspension, quinze jours après sa notification. */
+  suspensions_lever: { req: 'REQ-SEC-019' },
+  /** SEC-55 — la purge des appareils connus, une durée de session après leur dernière vue. */
+  appareils_purger: { req: 'REQ-SEC-003' },
   /** SEC-58 — la purge, à échéance, du journal des accès à la console. */
   journal_acces_console_purger: { req: 'REQ-SEC-023' },
+  /** SEC-65 — la suppression des sessions finies, six mois après leur fin. */
+  sessions_purger: { req: 'REQ-SEC-003' },
+  /** SEC-65 — l'effacement du nom et de l'adresse d'un accès désactivé de la console, cinq ans après. */
+  utilisateurs_console_effacer: { req: 'REQ-JUR-068' },
+  /** SEC-66 — le passage à `resilie` d'une résiliation par la Société, à sa date d'effet. */
+  resiliations_a_date_effet: { req: 'REQ-JUR-015' },
+  /** DM-65 — l'effacement, cinq ans après le retrait, de la trace de la liste tenue par la Société. */
+  traces_liste_noire_purger: { req: 'REQ-DM-028' },
   /**
    * INT-T08-P — la réconciliation quotidienne avec axion-ia : relecture de sa file depuis la plus
    * haute séquence reçue, rejeu des trous (`src/server/jobs/reconciliation.ts`).
    */
   reconciliation_axionia: { req: 'REQ-INT-013' },
+  /**
+   * SEC-18 — l'ouverture DIFFÉRÉE des anomalies d'auto-parrainage, sur les naissances de candidatures
+   * et de pièces RIB lues au journal (`src/server/taches/ouvrir-anomalies-auto-parrainage.ts`).
+   */
+  auto_parrainage_ouvrir: { req: 'REQ-SEC-031' },
+  /**
+   * SEC-14 — l'ouverture DIFFÉRÉE des anomalies de sincérité, jamais dans la transaction du dépôt
+   * (`ouvrirLesAnomaliesDeSincerite`, `src/server/anomalie/sincerite.ts`).
+   */
+  sincerite_ouvrir: { req: 'REQ-SEC-017' },
   /**
    * DM-62 — l'anonymisation des anomalies à leur échéance, et le NOMBRE des mesures ouvertes au-delà
    * de `MESURE_OUVERTE_ALERTE_JOURS` (`anonymiserLesAnomalies`).
@@ -48,6 +87,10 @@ export const TACHES = {
   contestations_purger: { req: 'REQ-DM-043' },
   /** DM-62 — la purge dédiée du démenti d'un contact, que la purge du contact excepte. */
   dementis_purger: { req: 'REQ-DM-043' },
+  /** DM-70 — la purge du texte d'une décision de contrat, cinq ans après son point de départ. */
+  decisions_contrat_purger: { req: 'REQ-JUR-029' },
+  /** DM-51 — le rappel d'échéance de l'attestation `rc_pro`, une fois par échéance (`rappelerLesAttestationsRcPro`). */
+  rc_pro_rappeler: { req: 'REQ-DM-027' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;

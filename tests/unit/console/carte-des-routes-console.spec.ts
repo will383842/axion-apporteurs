@@ -200,7 +200,8 @@ describe('REQ-UX-048 — la carte des routes de la console', () => {
       )
     ).toContain('/console/utilisateurs : un conseiller dans les rôles');
     expect(
-      fautesDeLaCarte(carte.replace(ligne, ligne.replace('| prévue |', '| bientôt |')))
+      // SEC-30 : la ligne de `/console/utilisateurs` est « livrée » ; le témoin casse ce statut-là.
+      fautesDeLaCarte(carte.replace(ligne, ligne.replace('| livrée |', '| bientôt |')))
     ).toContain('/console/utilisateurs : statut illisible');
     expect(fautesDeLaCarte('# vide\n')).toEqual(['aucun tableau d’écrans (en-tête « Route »)']);
   });

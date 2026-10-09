@@ -79,7 +79,6 @@ Implémenter, dans l'autre dépôt, les producteurs d'événements vers Partners
 
 ### Documents à lire
 
-- `docs/PLAN-STATE.md` — où en est le projet, ce qui est bloqué
 - `docs/REGLES-MAISON.md` — RM-03, une fixture vient du producteur réel et porte sa `Source:`
 - `docs/runbooks/fusion-axionia.md` — il n'ouvre pas de PR hors du créneau annoncé
 - `docs/AFFIRMATIONS-AXIONIA.md` — ce que le code d'axionia fait vraiment — un modèle cité par la spec peut avoir été supprimé

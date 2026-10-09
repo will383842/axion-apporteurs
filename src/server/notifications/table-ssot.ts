@@ -27,6 +27,7 @@
 import { z } from 'zod';
 import { SEUILS } from '../../domain/seuils/ssot';
 import { CONNEXION_CONSOLE } from '../../content/micro-copy/console/connexion';
+import { UTILISATEURS_CONSOLE } from '../../content/micro-copy/console/utilisateurs';
 import {
   TEXTES_DES_NOTIFICATIONS,
   type TexteDeNotification,
@@ -64,6 +65,11 @@ export type LigneDeNotification = {
   readonly route: string | null;
   /** Quand la route n'est pas encore déclarée : la tâche qui la posera. */
   readonly routeEnAttente: string | null;
+  /**
+   * SEC-70 : un appel qui ne mène PAS à l'espace. `contact_entite` : le mailto: de l'adresse de
+   * contact de l'entité, lue au registre ; sans elle, l'appel part seul.
+   */
+  readonly lien?: 'contact_entite';
 };
 
 const action = (cle: keyof typeof TEXTES_DES_NOTIFICATIONS) => [
@@ -117,6 +123,78 @@ export const GABARITS = {
     route: '/console/connexion',
     routeEnAttente: null,
   },
+  /**
+   * SEC-30 : la création d'un administrateur, notifiée à TOUS les administrateurs actifs, auteur
+   * compris (HYP-W19-QUATRE-YEUX). Une émission par administrateur. Textes de la juriste (96).
+   */
+  admin_cree: {
+    destinataire: 'utilisateur_console',
+    req: 'REQ-SEC-023',
+    emetteur: 'SEC-30',
+    fondement:
+      'REQ-SEC-023 et HYP-W19-QUATRE-YEUX — toute création d’un administrateur est notifiée à tous les administrateurs',
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: false,
+    canaux: ['email'],
+    desactivable: false,
+    actions: [
+      {
+        libelle: UTILISATEURS_CONSOLE.courriels.adminCree.appel,
+        source: 'src/content/micro-copy/console/utilisateurs.ts',
+      },
+    ],
+    route: '/console/utilisateurs',
+    routeEnAttente: null,
+  },
+  /**
+   * SEC-30 : la réactivation d'un administrateur, qui repart en attente, notifiée à TOUS les
+   * administrateurs actifs, auteur compris. Une émission par administrateur. Texte de la juriste (98).
+   */
+  admin_reactive: {
+    destinataire: 'utilisateur_console',
+    req: 'REQ-SEC-023',
+    emetteur: 'SEC-30',
+    fondement:
+      'REQ-SEC-023 et HYP-W19-QUATRE-YEUX — toute réactivation d’un administrateur est notifiée à tous les administrateurs',
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: false,
+    canaux: ['email'],
+    desactivable: false,
+    actions: [
+      {
+        libelle: UTILISATEURS_CONSOLE.courriels.adminReactive.appel,
+        source: 'src/content/micro-copy/console/utilisateurs.ts',
+      },
+    ],
+    route: '/console/utilisateurs',
+    routeEnAttente: null,
+  },
+  /**
+   * SEC-30 : l'invitation à la console, SANS lien de connexion : l'adresse de `/console/connexion`.
+   * L'échéance FERME l'invitation, elle n'ouvre aucun délai. Textes de la juriste (96).
+   */
+  invitation_console: {
+    destinataire: 'utilisateur_console',
+    req: 'REQ-UX-048',
+    emetteur: 'SEC-30',
+    fondement:
+      'REQ-UX-048 et REQ-DM-024 — invitation à la console, transactionnelle, sans lien de connexion',
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: false,
+    canaux: ['email'],
+    desactivable: false,
+    actions: [
+      {
+        libelle: UTILISATEURS_CONSOLE.courriels.invitation.appel,
+        source: 'src/content/micro-copy/console/utilisateurs.ts',
+      },
+    ],
+    route: '/console/connexion',
+    routeEnAttente: null,
+  },
   depot_injoignable_j5: {
     destinataire: 'apporteur',
     req: 'REQ-UX-038',
@@ -128,6 +206,21 @@ export const GABARITS = {
     canaux: ['email', 'espace'],
     desactivable: true,
     actions: action('depot_injoignable_j5'),
+    route: '/mes-entreprises',
+    routeEnAttente: null,
+  },
+  attribution_annulee_anteriorite: {
+    destinataire: 'apporteur',
+    req: 'REQ-JUR-007',
+    emetteur: 'DM-25',
+    fondement:
+      'art. 3.3 — l’antériorité de la Société établie après coup : le dépôt est annulé, les commissions acquises restent acquises',
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: false,
+    canaux: ['email', 'espace'],
+    desactivable: false,
+    actions: action('attribution_annulee_anteriorite'),
     route: '/mes-entreprises',
     routeEnAttente: null,
   },
@@ -231,6 +324,59 @@ export const GABARITS = {
     route: '/mes-entreprises',
     routeEnAttente: null,
   },
+  /**
+   * SEC-62 (texte du rattrapage 102) : l'avis de sécurité du COMPTE, à la consommation d'un lien ou
+   * d'un code sur un appareil que le compte ne connaît pas encore. Un avis de sécurité ne se désactive
+   * pas, et part par courriel seul, à l'adresse vérifiée, comme le lien qu'il signale.
+   */
+  nouvel_appareil: {
+    destinataire: 'apporteur',
+    req: 'REQ-SEC-003',
+    emetteur: 'SEC-62',
+    fondement: 'REQ-SEC-003 — avis de sécurité du compte, à la connexion depuis un nouvel appareil',
+    declencheur: LIEN_DE_L_ESPACE.declencheur,
+    notificationObligatoire: LIEN_DE_L_ESPACE.notificationObligatoire,
+    faitCourirUnDelai: LIEN_DE_L_ESPACE.faitCourirUnDelai,
+    canaux: LIEN_DE_L_ESPACE.canaux,
+    desactivable: LIEN_DE_L_ESPACE.desactivable,
+    actions: action('nouvel_appareil'),
+    route: '/connexion',
+    routeEnAttente: null,
+  },
+  // SEC-19 (fiches de la juriste, #703, 5980966503 ; arrêt d'A02, 5980982895 §1) : la mise en demeure
+  // fait courir son délai de l'envoi du courriel ; son texte vit dans `decisions_de_contrat`.
+  mise_en_demeure: {
+    destinataire: 'apporteur',
+    req: 'REQ-JUR-006',
+    emetteur: 'SEC-19',
+    fondement: `art. 11.2 — ${SEUILS.MISE_EN_DEMEURE_JOURS.valeur} jours pour remédier au manquement, à compter de l’envoi`,
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: true,
+    canaux: ['email', 'espace'],
+    desactivable: false,
+    actions: action('mise_en_demeure'),
+    route: '/mes-entreprises',
+    routeEnAttente: null,
+  },
+  // SEC-19 : la fin du contrat ; elle fait courir le préavis d'une résiliation par la Société (art. 11.1
+  // et 20). SEC-70 (art. 12.3) : l'espace est fermé au résilié — l'appel ne mène à aucune route, mais à la
+  // demande écrite (juriste, #824 6043086595).
+  resiliation: {
+    destinataire: 'apporteur',
+    req: 'REQ-DM-011',
+    emetteur: 'SEC-19',
+    fondement: 'art. 11 et 12.5 — la fin du contrat et ses effets (art. 12), notifiés par écrit',
+    declencheur: 'evenement',
+    notificationObligatoire: true,
+    faitCourirUnDelai: true,
+    canaux: ['email', 'espace'],
+    desactivable: false,
+    actions: action('resiliation'),
+    route: null,
+    routeEnAttente: null,
+    lien: 'contact_entite',
+  },
 } as const satisfies Readonly<Record<string, LigneDeNotification>>;
 
 export type Gabarit = keyof typeof GABARITS;
@@ -329,7 +475,8 @@ export function fautesDeLaTable(
       f.push(`action_non_unique : ${cle} doit porter UN appel, celui de la micro-copie`);
     if (l.route !== null && !routes.includes(l.route))
       f.push(`route_non_declaree : ${cle} mène à ${l.route}, absente de ${sourceDesRoutes}`);
-    if (l.route === null && l.routeEnAttente === null)
+    // SEC-70 : un appel vers le contact de l'entité ne mène à aucune route de l'espace.
+    if (l.route === null && l.routeEnAttente === null && l.lien === undefined)
       f.push(`route_absente_sans_tache : ${cle} n'a ni route ni tâche qui la posera`);
   }
   return f;

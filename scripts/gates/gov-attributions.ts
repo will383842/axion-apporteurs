@@ -1539,6 +1539,17 @@ export const CITATIONS_DECLAREES: Citation[] = [
       'vraies sont GOV-017a et GOV-017b. Fichier hors des paths de GOV-037.',
   },
   {
+    ou: 'tests/unit/gouvernance/tout-check-est-cable.spec.ts',
+    ligne: 10,
+    id: 'QA-T28',
+    nature: 'contexte',
+    raison:
+      'mention périmée : « size-limit (QA-T28) » donne size-limit à QA-T28 comme reste à livrer, et ' +
+      'c’est faux depuis le rattrapage 115, où QA-T28 devient l’audit de sécurité avant lancement ; ' +
+      'le budget size-limit est porté par QA-T20 (REQ-QA-031), fusionnée. À corriger par la prochaine ' +
+      'tâche qui touche ce fichier ; d’ici là, QA-T28 n’y est nommée que comme voisine.',
+  },
+  {
     ou: 'scripts/lot/tasks.schema.json',
     ligne: 18,
     id: 'GOV-017a',
@@ -1843,14 +1854,6 @@ export const CITATIONS_DECLAREES: Citation[] = [
       'la garde de l’oracle appartient à SEC-16 ; UX-P1-01 est nommée comme l’écran dont les réponses doivent rester indistinctes.',
   },
   {
-    ou: 'docs/gates.json(tests/unit/securite/revocation.spec.ts).verifie',
-    ligne: 1,
-    id: 'SEC-19',
-    nature: 'contexte',
-    raison:
-      'la garde de révocation appartient à SEC-04 ; SEC-19 est nommée comme la tâche voisine qui prolonge la règle.',
-  },
-  {
     ou: 'docs/gates.json(scripts/gates/harnais-mcp.ts).verifie',
     ligne: 1,
     id: 'INT-T13',
@@ -1999,11 +2002,6 @@ export const EXEMPTIONS_FIGEES: ExemptionFigee[] = [
   },
   {
     nature: 'mention_paths_non_resolus',
-    tache: 'QA-T28',
-    site: 'tests/unit/gouvernance/tout-check-est-cable.spec.ts:10',
-  },
-  {
-    nature: 'mention_paths_non_resolus',
     tache: 'GOV-022',
     site: 'tests/unit/gouvernance/tracabilite.spec.ts:9',
   },
@@ -2120,7 +2118,7 @@ export const EXEMPTIONS_FIGEES: ExemptionFigee[] = [
   {
     nature: 'mention_paths_non_resolus',
     tache: 'JUR-T28',
-    site: 'docs/gates.json(tests/domain/acteur-humain.spec.ts).verifie:1',
+    site: 'docs/gates.json(tests/unit/domaine/resiliation-acteur-humain.spec.ts).verifie:1',
   },
   {
     nature: 'mention_paths_non_resolus',

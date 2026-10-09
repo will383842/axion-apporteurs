@@ -1,5 +1,8 @@
 // @req REQ-DM-024
 // @req REQ-DM-031
+// @req REQ-DM-027
+// @req REQ-SEC-058
+// @req REQ-JUR-015
 /**
  * `journal-charges.spec.ts` — les charges FERMÉES du journal (`src/domain/evenement/charges.ts`),
  * jugées valeur par valeur : la forme d'une empreinte, les constructeurs de formes, la charge de
@@ -41,18 +44,34 @@ describe('REQ-DM-024 — les formes admises dans une charge', () => {
 describe('REQ-DM-024 — une charge par type, fermée', () => {
   it('REQ-DM-024 : les types du journal sont exactement ceux-ci', () => {
     expect(Object.keys(CHARGES_PAR_TYPE).sort()).toEqual([
+      // SEC-52 : un accès de la console aux coordonnées du contact d'une entreprise réservée.
+      'acces_coordonnees_reservee',
       'anomalie_gel_modifie',
       'anomalie_statut_modifie',
+      // SEC-15 (A02, #794) : la pose et la levée du gel des dépôts.
+      'apporteur_gel_modifie',
+      // SEC-19 (A02, #703) : la mise en demeure datée d'un apporteur, par article.
+      'apporteur_mis_en_demeure',
+      // SEC-66 (A02, #703) : la décision de la Société de résilier, sans changement de statut.
+      'apporteur_resiliation_notifiee',
       'apporteur_statut_modifie',
       'attribution_contact_purge',
       'attribution_etat_modifie',
       'attribution_peremption_suspendue',
       'attribution_porteur_reaffecte',
       'contestation_modifiee',
+      // JUR-T64 (A02, #703) : l'ouverture et la clôture d'un litige sur une décision de contrat.
+      'decision_contrat_litige_modifie',
       'demande_confirmation_etat_modifie',
+      // SEC-61 : la pose et la levée d'un gel du journal des accès à la console.
+      'journal_acces_gel_modifie',
       'journal_ouvert',
+      // SEC-69 : le premier regard d'un RIB, sa vérification hors bande.
+      'piece_kyc_rib_verifie',
       'piece_kyc_statut_modifie',
       'rattachement_manuel_modifie',
+      // SEC-30 : tout changement d'un utilisateur de la console, dans la transaction du geste.
+      'utilisateur_console_modifie',
     ]);
   });
 
@@ -198,9 +217,377 @@ describe('REQ-DM-033 REQ-DM-043 — le gel pour litige au journal : le geste, ja
       const forme = (schema as { _def: { schema?: { shape?: object } } })._def;
       const shape = (schema as unknown as { shape?: object }).shape ?? forme.schema?.shape ?? {};
       expect(Object.keys(shape).length, `${type} : forme lue`).toBeGreaterThan(0);
-      for (const cle of Object.keys(shape)) {
-        expect(cle, type).not.toMatch(/ref|litige/i);
+      for (const [cle, champ] of Object.entries(shape)) {
+        // SEC-61 (forme d'A02 et de la sécurité) : une référence n'entre qu'en EMPREINTE, sous une clé
+        // suffixée `Empreinte` dont la forme refuse tout ce qui n'est pas 64 hexadécimaux. Jamais en clair.
+        if (cle.endsWith('Empreinte')) {
+          const z = champ as { safeParse: (v: unknown) => { success: boolean } };
+          expect(z.safeParse('INC-0001').success, `${type}.${cle}`).toBe(false);
+          expect(z.safeParse('a'.repeat(64)).success, `${type}.${cle}`).toBe(true);
+          continue;
+        }
+        // JUR-T64 (forme d'A02, #703 6041868006) : `litigeId` est l'IDENTIFIANT de la ligne du litige,
+        // jamais sa référence : une clé suffixée `Id` refuse une référence en clair et n'admet qu'un UUID.
+        if (cle.endsWith('Id')) {
+          const z = champ as { safeParse: (v: unknown) => { success: boolean } };
+          expect(z.safeParse('RG-24/01234').success, `${type}.${cle}`).toBe(false);
+          expect(z.safeParse(ID).success, `${type}.${cle}`).toBe(true);
+          continue;
+        }
+        // CPL-T07 : « refus » n'est pas une référence — le motif FERMÉ d'un refus de pièce
+        // (`motifRefus`, forme d'A02) passe ; « ref » seul, « reference », « litige » restent refusés.
+        expect(cle, type).not.toMatch(/ref(?!us)|litige/i);
       }
     }
+  });
+
+  it('REQ-SEC-058 : la pose et la levée d’un gel du journal des accès passent, sans aucun identifiant', () => {
+    const charge = CHARGES_PAR_TYPE.journal_acces_gel_modifie;
+    for (const geste of ['poser', 'lever'] as const)
+      expect(
+        charge.safeParse({
+          geste,
+          motif: 'incident',
+          portee: { type: 'utilisateur' },
+          referenceEmpreinte: 'b'.repeat(64),
+          acteur: { par: 'utilisateur_console' },
+        }).success,
+        geste
+      ).toBe(true);
+  });
+
+  it('REQ-SEC-058 : TÉMOIN — la charge du gel refuse toute autre clé : un id d’employé, de cible ou la référence en clair', () => {
+    const charge = CHARGES_PAR_TYPE.journal_acces_gel_modifie;
+    const juste = {
+      geste: 'poser',
+      motif: 'litige',
+      portee: { type: 'cible' },
+      referenceEmpreinte: 'c'.repeat(64),
+      acteur: { par: 'utilisateur_console' },
+    };
+    const id = '0190f0f0-0000-7000-8000-000000000001';
+    for (const [nom, variante] of [
+      ['poseParId', { ...juste, poseParId: id }],
+      ['leveParId', { ...juste, leveParId: id }],
+      ['utilisateurViseId', { ...juste, utilisateurViseId: id }],
+      ['cibleId', { ...juste, cibleId: id }],
+      ['reference', { ...juste, reference: 'LIT-0001' }],
+      ['portee.id', { ...juste, portee: { type: 'cible', id } }],
+      ['acteur.id', { ...juste, acteur: { par: 'utilisateur_console', id } }],
+      ['referenceEmpreinte en clair', { ...juste, referenceEmpreinte: 'LIT-0001' }],
+    ] as const)
+      expect(charge.safeParse(variante).success, nom).toBe(false);
+    expect(Object.keys(charge.shape).sort()).toEqual([
+      'acteur',
+      'geste',
+      'motif',
+      'portee',
+      'referenceEmpreinte',
+    ]);
+  });
+});
+
+describe('REQ-DM-027 — le refus d’une pièce porte un motif fermé, et lui seul', () => {
+  const charge = CHARGES_PAR_TYPE.piece_kyc_statut_modifie;
+  const base = {
+    de: 'a_verifier',
+    type: 'rib',
+    acteur: { par: 'utilisateur_console', id: '0190f0f0-0000-7000-8000-000000000001' },
+  } as const;
+
+  it('REQ-DM-027 : TÉMOIN À DEUX FACES — un refus SANS motif est refusé ; le même refus avec un motif de la liste passe', () => {
+    expect(charge.safeParse({ ...base, vers: 'refusee' }).success).toBe(false);
+    expect(charge.safeParse({ ...base, vers: 'refusee', motifRefus: 'illisible' }).success).toBe(
+      true
+    );
+  });
+
+  it('REQ-DM-027 : TÉMOIN — un motif hors refus, un texte libre ou « autre » sont refusés', () => {
+    expect(charge.safeParse({ ...base, vers: 'valide', motifRefus: 'illisible' }).success).toBe(
+      false
+    );
+    for (const libre of ['autre', 'La pièce est floue', ''])
+      expect(charge.safeParse({ ...base, vers: 'refusee', motifRefus: libre }).success, libre).toBe(
+        false
+      );
+    expect(charge.safeParse({ ...base, vers: 'valide' }).success).toBe(true);
+  });
+});
+
+// La passe de mutation (PR 667) a montré des refus jugés sans leur CHEMIN ni leur MESSAGE, et des
+// charges valides jamais acceptées. Chaque type : une charge juste passe ; chaque incohérence est
+// refusée avec son chemin et son message exacts.
+describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est nommée', () => {
+  const ID = '0190f0f0-0000-7000-8000-000000000001';
+  const CONSOLE = { par: 'utilisateur_console', id: ID } as const;
+  const SANS_ID = { par: 'utilisateur_console' } as const;
+  const H = 'a'.repeat(64);
+  const QUAND = '2026-10-04T08:00:00.000Z';
+  const refus = (type: keyof typeof CHARGES_PAR_TYPE, charge: unknown) => {
+    const r = CHARGES_PAR_TYPE[type].safeParse(charge);
+    return r.success ? [] : r.error.issues.map((i) => `${i.path.join('.')}:${i.message}`);
+  };
+  const passe = (type: keyof typeof CHARGES_PAR_TYPE, charge: unknown) =>
+    expect(CHARGES_PAR_TYPE[type].safeParse(charge).success, type).toBe(true);
+
+  it('REQ-DM-024 : l’antériorité établie porte son critère et son fait fondateur, de nature accordée', () => {
+    const base = {
+      de: 'active',
+      vers: 'active',
+      transition: 'anteriorite_etablie',
+      acteur: CONSOLE,
+    };
+    passe('attribution_etat_modifie', {
+      ...base,
+      critere: 'cliente',
+      fait: { nature: 'facture', ref: H, le: QUAND },
+    });
+    passe('attribution_etat_modifie', {
+      ...base,
+      critere: 'devis',
+      fait: { nature: 'devis', ref: H, le: QUAND },
+    });
+    expect(refus('attribution_etat_modifie', base)).toEqual(['critere:critere_incoherent']);
+    expect(
+      refus('attribution_etat_modifie', {
+        ...base,
+        critere: 'cliente',
+        fait: { nature: 'devis', ref: H, le: QUAND },
+      })
+    ).toEqual(['fait:fait_incoherent']);
+    expect(
+      refus('attribution_etat_modifie', {
+        ...base,
+        critere: 'cliente',
+        fait: { nature: 'autre', ref: H, le: QUAND },
+      }).length
+    ).toBeGreaterThan(0);
+  });
+
+  it('REQ-DM-024 : l’ouverture d’une anomalie a `de` nul, et elle seule', () => {
+    passe('anomalie_statut_modifie', { de: null, vers: 'ouverte', acteur: SANS_ID });
+    passe('anomalie_statut_modifie', { de: 'ouverte', vers: 'levee', acteur: SANS_ID });
+    expect(
+      refus('anomalie_statut_modifie', { de: 'ouverte', vers: 'ouverte', acteur: SANS_ID })
+    ).toEqual(['de:de_nul_a_la_naissance']);
+    expect(refus('anomalie_statut_modifie', { de: null, vers: 'levee', acteur: SANS_ID })).toEqual([
+      'de:de_nul_a_la_naissance',
+    ]);
+  });
+
+  it('REQ-DM-024 : l’acteur sans identité n’a QUE sa population, console ou système', () => {
+    for (const par of ['utilisateur_console', 'systeme'] as const)
+      passe('anomalie_gel_modifie', { vers: 'gel_pose', acteur: { par } });
+    expect(
+      refus('anomalie_gel_modifie', { vers: 'gel_pose', acteur: { par: 'apporteur' } }).length
+    ).toBeGreaterThan(0);
+    expect(
+      refus('anomalie_gel_modifie', { vers: 'gel_leve', acteur: CONSOLE }).length
+    ).toBeGreaterThan(0);
+  });
+
+  it('REQ-DM-024 : les autres types acceptent leur charge juste', () => {
+    passe('piece_kyc_statut_modifie', {
+      de: null,
+      vers: 'a_verifier',
+      type: 'rib',
+      acteur: CONSOLE,
+    });
+    passe('demande_confirmation_etat_modifie', { de: null, vers: 'planifiee', acteur: CONSOLE });
+    passe('contestation_modifiee', {
+      contestationId: ID,
+      de: null,
+      vers: 'recue',
+      acteur: CONSOLE,
+    });
+    passe('contestation_modifiee', {
+      contestationId: ID,
+      de: 'recue',
+      vers: 'gel_pose',
+      acteur: CONSOLE,
+    });
+    passe('rattachement_manuel_modifie', { rattachementId: ID, vers: 'decide', acteur: CONSOLE });
+  });
+
+  it('REQ-DM-024 : le changement d’un utilisateur de la console accorde `de` et `vers` à son geste, nommé', () => {
+    const u = (geste: string, de: string | null, vers: string | null) =>
+      refus('utilisateur_console_modifie', { geste, de, vers, acteur: CONSOLE });
+    // changer_role : les deux posés, et différents
+    expect(u('changer_role', 'lecteur', 'admin')).toEqual([]);
+    expect(u('changer_role', 'lecteur', 'lecteur')).toEqual([
+      'vers:roles_incoherents_avec_le_geste',
+    ]);
+    expect(u('changer_role', null, 'admin')).toEqual(['vers:roles_incoherents_avec_le_geste']);
+    expect(u('changer_role', 'lecteur', null)).toEqual(['vers:roles_incoherents_avec_le_geste']);
+    // inviter : `de` nul, `vers` posé
+    expect(u('inviter', null, 'admin')).toEqual([]);
+    expect(u('inviter', null, null)).toEqual(['vers:roles_incoherents_avec_le_geste']);
+    expect(u('inviter', 'lecteur', 'admin')).toEqual(['vers:roles_incoherents_avec_le_geste']);
+    // tout autre geste : les deux nuls
+    for (const geste of [
+      'relancer',
+      'activer',
+      'valider',
+      'desactiver',
+      'reactiver',
+      'revoquer_sessions',
+    ])
+      expect(u(geste, null, null), geste).toEqual([]);
+    expect(u('desactiver', 'lecteur', null)).toEqual(['vers:roles_incoherents_avec_le_geste']);
+    expect(u('desactiver', null, 'lecteur')).toEqual(['vers:roles_incoherents_avec_le_geste']);
+  });
+
+  it('REQ-JUR-029 : TÉMOIN — JUR-T64 : le litige d’une décision porte son geste, ses deux identifiants, un motif FERMÉ de SON geste et l’acteur de la console, rien d’autre', () => {
+    const base = { litigeId: ID, decisionContratId: ID, acteur: CONSOLE };
+    for (const motif of [
+      'contestation_ecrite',
+      'reclamation_formelle',
+      'mediation',
+      'action_en_justice',
+    ]) {
+      passe('decision_contrat_litige_modifie', { ...base, geste: 'ouvrir', motif });
+    }
+    for (const motif of ['reponse_donnee', 'accord', 'decision_definitive', 'desistement']) {
+      passe('decision_contrat_litige_modifie', { ...base, geste: 'clore', motif });
+    }
+    // Un motif de clôture à l'ouverture, ou l'inverse : refusé, nommé.
+    expect(
+      refus('decision_contrat_litige_modifie', { ...base, geste: 'ouvrir', motif: 'accord' })
+    ).toEqual(['motif:motif_hors_du_geste']);
+    expect(
+      refus('decision_contrat_litige_modifie', { ...base, geste: 'clore', motif: 'mediation' })
+    ).toEqual(['motif:motif_hors_du_geste']);
+    expect(
+      refus('decision_contrat_litige_modifie', { ...base, geste: 'ouvrir', motif: 'autre' })
+    ).toHaveLength(1);
+    // NI texte NI référence : la charge est fermée.
+    expect(
+      refus('decision_contrat_litige_modifie', {
+        ...base,
+        geste: 'ouvrir',
+        motif: 'mediation',
+        reference: 'RG-2027-1',
+      })
+    ).toHaveLength(1);
+    // Un utilisateur de la console, jamais le système.
+    expect(
+      refus('decision_contrat_litige_modifie', {
+        ...base,
+        geste: 'ouvrir',
+        motif: 'mediation',
+        acteur: { par: 'systeme' },
+      })
+    ).toEqual(['acteur:acteur_console_attendu']);
+  });
+
+  it('REQ-JUR-006 : la mise en demeure ne porte que l’article, pris dans la liste FERMÉE de l’art. 11.2, et l’acteur de la console', () => {
+    for (const article of ['3.7', '6', '7', '8', '9', '23']) {
+      passe('apporteur_mis_en_demeure', { article, acteur: CONSOLE });
+    }
+    expect(refus('apporteur_mis_en_demeure', { article: '10', acteur: CONSOLE })).toHaveLength(1);
+    expect(refus('apporteur_mis_en_demeure', { article: '11.2', acteur: CONSOLE })[0]).toMatch(
+      /^article:/
+    );
+    // NI les faits NI aucun texte libre : la charge est fermée.
+    expect(
+      refus('apporteur_mis_en_demeure', { article: '6', acteur: CONSOLE, faits: 'x' })
+    ).toHaveLength(1);
+    // Un utilisateur de la console, jamais le système ni l'apporteur.
+    expect(refus('apporteur_mis_en_demeure', { article: '6', acteur: { par: 'systeme' } })).toEqual(
+      ['acteur:acteur_console_attendu']
+    );
+    expect(
+      refus('apporteur_mis_en_demeure', { article: '6', acteur: { par: 'apporteur', id: ID } })
+    ).toEqual(['acteur:acteur_console_attendu']);
+  });
+
+  it('REQ-SEC-042 : un accès aux coordonnées d’une entreprise réservée ne porte que l’acteur de la console, par identifiant', () => {
+    passe('acces_coordonnees_reservee', { acteur: CONSOLE });
+    // Qui a lu : un utilisateur de la console, jamais le système ni l'apporteur.
+    expect(refus('acces_coordonnees_reservee', { acteur: { par: 'systeme' } })).toEqual([
+      'acteur:acteur_console_attendu',
+    ]);
+    expect(refus('acces_coordonnees_reservee', { acteur: { par: 'apporteur', id: ID } })).toEqual([
+      'acteur:acteur_console_attendu',
+    ]);
+    // L'acteur est obligatoire.
+    expect(refus('acces_coordonnees_reservee', {})).toHaveLength(1);
+    // La charge est FERMÉE : ni les coordonnées, ni le SIREN, ni l'apporteur, ni la cause ou la date de la réserve.
+    for (const intrus of [
+      'nom',
+      'email',
+      'telephone',
+      'siren',
+      'apporteurId',
+      'cause',
+      'reserveJusqua',
+    ]) {
+      expect(
+        refus('acces_coordonnees_reservee', { acteur: CONSOLE, [intrus]: 'x' }),
+        intrus
+      ).toHaveLength(1);
+    }
+  });
+
+  it('REQ-JUR-015 : SEC-66 — la décision de la Société porte le motif ordinaire_axion, un horodatage de minuit et l’acteur de la console, rien d’autre', () => {
+    const juste = {
+      motif: 'ordinaire_axion',
+      dateEffet: '2026-11-02T23:00:00.000Z',
+      acteur: CONSOLE,
+    };
+    passe('apporteur_resiliation_notifiee', juste);
+    for (const motif of ['ordinaire_apporteur', 'manquement_grave', 'fin_de_plein_droit']) {
+      expect(refus('apporteur_resiliation_notifiee', { ...juste, motif }), motif).toHaveLength(1);
+    }
+    expect(
+      refus('apporteur_resiliation_notifiee', { ...juste, dateEffet: '2026-11-03' })
+    ).toHaveLength(1);
+    expect(refus('apporteur_resiliation_notifiee', { ...juste, texte: 'x' })).toHaveLength(1);
+    expect(
+      refus('apporteur_resiliation_notifiee', { ...juste, acteur: { par: 'systeme' } })
+    ).toEqual(['acteur:acteur_console_attendu']);
+  });
+
+  it('REQ-JUR-015 : SEC-66 — le passage à resilie pour ordinaire_axion CITE sa décision ; aucun autre passage ne cite', () => {
+    const resilie = {
+      de: 'signe',
+      vers: 'resilie',
+      transition: 'resilier',
+      resiliationMotif: 'ordinaire_axion',
+      acteur: CONSOLE,
+    };
+    passe('apporteur_statut_modifie', { ...resilie, decisionContratId: ID });
+    // Sans citation, refusé ; une citation hors forme aussi.
+    expect(refus('apporteur_statut_modifie', resilie)).toEqual([
+      'decisionContratId:citation_de_la_decision_incoherente',
+    ]);
+    expect(refus('apporteur_statut_modifie', { ...resilie, decisionContratId: '42' })[0]).toMatch(
+      /^decisionContratId:/
+    );
+    // Une citation sur un autre motif, ou sur un autre passage, refusée.
+    for (const resiliationMotif of [
+      'ordinaire_apporteur',
+      'manquement_grave',
+      'fin_de_plein_droit',
+    ]) {
+      passe('apporteur_statut_modifie', { ...resilie, resiliationMotif });
+      expect(
+        refus('apporteur_statut_modifie', {
+          ...resilie,
+          resiliationMotif,
+          decisionContratId: ID,
+        }),
+        resiliationMotif
+      ).toEqual(['decisionContratId:citation_de_la_decision_incoherente']);
+    }
+    expect(
+      refus('apporteur_statut_modifie', {
+        de: 'signe',
+        vers: 'suspendu',
+        transition: 'suspendre',
+        acteur: CONSOLE,
+        decisionContratId: ID,
+      })
+    ).toEqual(['decisionContratId:citation_de_la_decision_incoherente']);
   });
 });

@@ -229,16 +229,67 @@ function segments(contenu: string, ou: string, filtres: Filtre[]): Segment[] {
   return [...texte, ...manques];
 }
 
-function lireRubriques(lignes: readonly string[], filtres: Filtre[]): Rubrique[] {
+/**
+ * Les rubriques d'UN bloc de traitement du registre, dans l'ordre donné : la lecture commune à la
+ * politique de l'espace et à la page « Vos données dans la console » (JUR-T61). Mêmes segments, mêmes
+ * retenues nommées, mêmes refus ; une rubrique absente est refusée.
+ */
+function rubriquesDuTraitement<C extends string>(
+  lignes: readonly string[],
+  traitement: string,
+  rubriques: Readonly<Record<C, string>>,
+  ordre: readonly C[],
+  filtres: Filtre[]
+): { readonly cle: C; readonly contenu: readonly Segment[] }[] {
   const tableau = lignesDeTableau(
-    section(lignes, new RegExp(`^### ${TRAITEMENT}\\b`), /^#{1,3} /, TRAITEMENT)
+    section(lignes, new RegExp(`^### ${traitement}\\b`), /^#{1,3} /, traitement)
   );
-  return ORDRE.map((cle) => {
-    const nom = RUBRIQUES_AFFICHEES[cle];
+  return ordre.map((cle) => {
+    const nom = rubriques[cle];
     const ligne = tableau.find((c) => normaliser(cellule(c, 0)) === nom);
-    if (ligne === undefined) throw refus(`rubrique absente de ${TRAITEMENT} : ${nom}`);
+    if (ligne === undefined) throw refus(`rubrique absente de ${traitement} : ${nom}`);
     return { cle, contenu: segments(cellule(ligne, 1), cle, filtres) };
   });
+}
+
+function lireRubriques(lignes: readonly string[], filtres: Filtre[]): Rubrique[] {
+  return rubriquesDuTraitement(lignes, TRAITEMENT, RUBRIQUES_AFFICHEES, ORDRE, filtres);
+}
+
+export type LectureDUnTraitement<C extends string> =
+  | {
+      readonly ok: true;
+      readonly rubriques: readonly { readonly cle: C; readonly contenu: readonly Segment[] }[];
+      readonly filtres: readonly Filtre[];
+    }
+  | { readonly ok: false; readonly refus: string };
+
+/**
+ * JUR-T61 — la lecture GÉNÉRIQUE d'un bloc de traitement du registre (`### <traitement>`) : ses
+ * rubriques nommées, dans l'ordre donné, par la même lecture que la politique de l'espace, ou le
+ * refus nommé qui l'empêche. Aucun changement de comportement pour `extrairePolitique`.
+ */
+export function lireUnTraitement<C extends string>(
+  registre: string,
+  traitement: string,
+  rubriques: Readonly<Record<C, string>>,
+  ordre: readonly C[]
+): LectureDUnTraitement<C> {
+  try {
+    const filtres: Filtre[] = [];
+    const lues = rubriquesDuTraitement(
+      registre.split(/\r?\n/),
+      traitement,
+      rubriques,
+      ordre,
+      filtres
+    );
+    // Le refus des conseillers est déjà jugé texte par texte (`texteAffichable`), avant toute
+    // retenue : une seconde vérification sur le rendu serait une branche que rien n'atteint.
+    return { ok: true, rubriques: lues, filtres };
+  } catch (e) {
+    return { ok: false, refus: String(e).replace(/^Error: /, '') };
+  }
 }
 
 /** Le tableau de la section 4 : ses lignes, et l'index d'une colonne nommée par l'en-tête. */

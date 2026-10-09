@@ -58,11 +58,18 @@ import {
   type SignalDePanne,
   type SujetDeCompteur,
   type VerdictDeLimite,
+  VARIABLE_DES_PLAFONDS,
 } from '../../../src/server/securite/rate-limit';
 import {
   SAUTS_DE_CONFIANCE,
   adresseDuClient,
 } from '../../../src/server/securite/adresse-du-client';
+import {
+  CONVERSIONS_EN_SECONDES,
+  SECONDES_PAR_JOUR,
+  SECONDES_PAR_MINUTE,
+  conversionDeLUnite,
+} from '../../../src/domain/seuils/conversions';
 import {
   FORMULAIRES_A_POT_DE_MIEL,
   accuserSiLaLigneExiste,
@@ -73,17 +80,28 @@ import {
 } from '../../../src/server/securite/pot-de-miel';
 import {
   CONTRE_TEMOINS,
+  CONTRE_TEMOINS_D_UNIVERS,
   FAMILLES,
+  LUE_EN_SSOT,
   TEMOINS,
   analyser,
   exigenceDuCompteur,
+  universAvecUnCompteurLuEnSsot,
   fabriquesDuRegistre,
   sourcesDuDisque,
   universDuDepot,
   type Univers,
+  COMPTEURS_EN_CONFIGURATION,
 } from '../../../scripts/gates/rate-famille';
 
 const NOMS = Object.keys(COMPTEURS) as NomDeCompteur[];
+
+/**
+ * Le compteur chiffré qui LAISSE PASSER en panne, sur lequel les témoins de la panne lisent la conduite
+ * ouverte. GOV-149 : `depot:ip` y servait, et SEC-12 le passe en `refuser` ; `depot:entreprise-ip`
+ * reste en `laisser-passer` (REQ-SEC-013), et le témoin du registre le revérifie.
+ */
+const LAISSE_PASSER = 'depot:entreprise-ip' satisfies NomDeCompteur;
 
 /** Un magasin fabriqué SOUS les tests, qu'on tente ensuite d'injecter hors des tests. */
 const magasinDepuisSousTests = () =>
@@ -246,15 +264,31 @@ describe('REQ-SEC-016 — le registre des compteurs', () => {
     }
   });
 
-  it('REQ-SEC-016 — le dépôt : 20 / 10 min par empreinte d’adresse en `laisser-passer`, l’identité en `refuser`', () => {
-    expect(COMPTEURS['depot:ip']).toMatchObject({
-      prefixe: 'depot:',
-      limite: 20,
-      fenetreSecondes: 600,
-      surPanne: 'laisser-passer',
-      source: 'REQ-SEC-016',
-    });
-    expect(COMPTEURS['depot:identite']).toMatchObject({ prefixe: 'depot:', surPanne: 'refuser' });
+  // GOV-149 : ce témoin figeait « 20 / 10 min, `laisser-passer` ». Il garde ses faces (le préfixe,
+  // la source) et ne fige plus de valeur : `depot:ip` est CONFRONTÉ, soit au chiffre de REQ-SEC-016,
+  // soit à des seuils de la SSOT sourcés, et sa conduite est celle du texte. SEC-12 : le compteur par
+  // identité a disparu du registre (REQ-DM-009 interdit tout compteur par identité).
+  it('REQ-SEC-016 — le dépôt : l’empreinte d’adresse sous `depot:`, confrontée au chiffre de l’exigence ou à la SSOT ; aucun compteur par identité', async () => {
+    expect(COMPTEURS['depot:ip']).toMatchObject({ prefixe: 'depot:', source: 'REQ-SEC-016' });
+    expect(Object.keys(COMPTEURS)).not.toContain('depot:identite');
+    // Le compteur sur lequel les témoins de la panne lisent la conduite OUVERTE l'est vraiment.
+    expect(COMPTEURS[LAISSE_PASSER]).toMatchObject({ surPanne: 'laisser-passer' });
+    expect(COMPTEURS[LAISSE_PASSER].limite).not.toBe(LIMITE_HORS_DEPOT);
+    const u = universDuDepot();
+    const r = await analyser(u);
+    expect(r.fautes).toEqual([]);
+    expect(['chiffre', 'ssot']).toContain(r.voies['depot:ip']);
+    const exigee = exigenceDuCompteur(u.exigences['REQ-SEC-016']!, COMPTEURS['depot:ip'].ancre);
+    expect(exigee).not.toBeNull();
+    expect(COMPTEURS['depot:ip'].surPanne).toBe(exigee!.surPanne);
+    if (r.voies['depot:ip'] === 'chiffre') {
+      expect([COMPTEURS['depot:ip'].limite, COMPTEURS['depot:ip'].fenetreSecondes]).toEqual([
+        exigee!.limite,
+        exigee!.fenetreSecondes,
+      ]);
+    } else {
+      expect(exigee!.limite).toBe(LUE_EN_SSOT);
+    }
   });
 
   it('REQ-SEC-016 — une conduite absente, glissée par un cast, se lit REFUSER à l’exécution', () => {
@@ -296,26 +330,33 @@ describe('REQ-SEC-016 — le verdict d’un compteur sain', () => {
 
 // ── REQ-SEC-016 : la panne ──────────────────────────────────────────────────────────────────────
 
+/** SEC-72 : des plafonds FACTICES, de forme valide ; aucune vraie valeur au dépôt. */
+const PLAFONDS_FACTICES =
+  'identite_jour=7;identite_court=2;ip_jour=9;fenetre_jour_minutes=600;fenetre_court_minutes=5';
+
 describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se dit', () => {
   it('REQ-SEC-016 — contre un cache qui LÈVE, chaque compteur rend sa conduite, `panne: true`', async () => {
     const cache = magasinEnPanne();
     const { signaux, signaler } = capteur();
     const constates: string[] = [];
+    // SEC-72 : les compteurs hors dépôt lisent leurs plafonds dans le secret — ici FACTICES.
+    vi.stubEnv(VARIABLE_DES_PLAFONDS, PLAFONDS_FACTICES);
     for (const nom of NOMS) {
       const v = await limiter(nom, SUJET, 0, cache.magasin, signaler);
       const d = COMPTEURS[nom];
       expect(v.panne, nom).toBe(true);
       expect(v.autorise, nom).toBe(d.surPanne === 'laisser-passer');
-      expect(v.motif, nom).toBe(
-        d.limite === LIMITE_HORS_DEPOT ? 'limite_non_configuree' : 'cache_indisponible'
-      );
+      expect(v.motif, nom).toBe('cache_indisponible');
       constates.push(nom);
     }
     expect(constates).toEqual(NOMS);
-    // Le cache a été ATTEINT par chaque compteur dont la limite est écrite : pas un vert à vide.
-    const chiffres = NOMS.filter((n) => COMPTEURS[n].limite !== LIMITE_HORS_DEPOT);
-    expect(chiffres.length).toBeGreaterThan(0);
-    expect(cache.appels()).toBe(chiffres.length);
+    vi.unstubAllEnvs();
+    // Seuls les compteurs de la configuration privée sont hors dépôt (SEC-72), et le cache a été
+    // ATTEINT par chacun, eux compris — pas un vert à vide.
+    expect(NOMS.filter((n) => (COMPTEURS[n].limite as unknown) === LIMITE_HORS_DEPOT)).toEqual([
+      ...COMPTEURS_EN_CONFIGURATION,
+    ]);
+    expect(cache.appels()).toBe(NOMS.length);
     expect(signaux.map((s) => s.prefixe)).toEqual(NOMS.map((n) => COMPTEURS[n].prefixe));
   });
 
@@ -328,7 +369,7 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
     const avant = await limiter('magic:ip', SUJET, 0, cache, () => undefined);
     tombe = true;
     const pendant = await limiter('magic:ip', SUJET, 1, cache, () => undefined);
-    const depot = await limiter('depot:ip', SUJET, 1, cache, () => undefined);
+    const depot = await limiter(LAISSE_PASSER, SUJET, 1, cache, () => undefined);
     expect([avant.autorise, avant.panne]).toEqual([true, false]);
     expect([pendant.autorise, pendant.panne, pendant.motif]).toEqual([
       false,
@@ -356,21 +397,6 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
       motif: 'cache_indisponible',
     });
     expect(ecrit[0]).not.toContain(SUJET);
-  });
-
-  it('REQ-SEC-016 — `depot:identite` sans configuration : refus, `panne: true`, `limite_non_configuree`, cache non atteint', async () => {
-    const cache = magasinEnPanne();
-    const { signaux, signaler } = capteur();
-    const v = await limiter('depot:identite', SUJET, 0, cache.magasin, signaler);
-    expect(v).toEqual({
-      autorise: false,
-      restant: 0,
-      repriseAt: null,
-      panne: true,
-      motif: 'limite_non_configuree',
-    });
-    expect(cache.appels()).toBe(0);
-    expect(signaux).toEqual([{ prefixe: 'depot:', motif: 'limite_non_configuree' }]);
   });
 
   describe('REQ-SEC-016 — une panne réelle est RAPIDE', () => {
@@ -447,7 +473,7 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
           /^fabrique_hors_tests/
         );
         // Contre-témoin : les défauts du registre, écrits ou omis, passent.
-        expect(await limiter('depot:ip', SUJET, 0, undefined, undefined)).toMatchObject({
+        expect(await limiter(LAISSE_PASSER, SUJET, 0, undefined, undefined)).toMatchObject({
           autorise: true,
           panne: true,
         });
@@ -515,7 +541,7 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
       const m = creerMagasinRedis(`redis://127.0.0.1:${muet.port}`, OPTIONS_DU_CLIENT);
       try {
         const v = await sousLeDelai(
-          limiter('depot:ip', SUJET, 0, m, () => undefined),
+          limiter(LAISSE_PASSER, SUJET, 0, m, () => undefined),
           1_000
         );
         expect(v, 'le cache muet a SUSPENDU la requête').not.toBe(SUSPENDU);
@@ -558,7 +584,7 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
         autorise: false,
         panne: true,
       });
-      expect(await limiter('depot:ip', SUJET, 0, undefined, signaler)).toMatchObject({
+      expect(await limiter(LAISSE_PASSER, SUJET, 0, undefined, signaler)).toMatchObject({
         autorise: true,
         panne: true,
       });
@@ -588,7 +614,7 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
     });
     try {
       expect(await limiter('magic:ip', SUJET, 0)).toMatchObject({ autorise: false, panne: true });
-      expect(await limiter('depot:ip', SUJET, 0)).toMatchObject({ autorise: true, panne: true });
+      expect(await limiter(LAISSE_PASSER, SUJET, 0)).toMatchObject({ autorise: true, panne: true });
     } finally {
       espion.mockRestore();
       vi.unstubAllEnvs();
@@ -721,7 +747,7 @@ describe('REQ-SEC-016 — la garde de famille', () => {
     const trahis = r.fautes.filter((x) => x.famille === 'conduite_trahie').map((x) => x.message);
     expect(trahis.some((m) => m.includes('`magic:ip`'))).toBe(true);
     expect(trahis.some((m) => m.includes('`magic:courriel`'))).toBe(true);
-    expect(trahis.some((m) => m.includes('`depot:ip`'))).toBe(false);
+    expect(trahis.some((m) => m.includes(`\`${LAISSE_PASSER}\``))).toBe(false);
   });
 
   it('REQ-SEC-016 — un verdict qui ne se dit pas en panne est une conduite trahie', async () => {
@@ -1097,7 +1123,309 @@ describe('REQ-SEC-016 — la garde de famille', () => {
   });
 });
 
+// ── REQ-SEC-016 : l'option 1, les limites lues en SSOT (GOV-149) ───────────────────────────────
+
+/**
+ * GOV-149 — les critères de la sécurité (#619, commentaire 5982320469), à deux faces chacun : une
+ * exigence qui ne chiffre rien et dit « lus en SSOT » dans la phrase de l'ancre, après elle, fait
+ * lire la limite et la fenêtre dans `SEUILS`, sans aucun littéral, sous une constante de conversion
+ * de la table fermée ; le seuil porte une source et une date ; la conduite reste lue dans le texte ;
+ * et aucun compteur n'échappe à la confrontation.
+ */
+describe('REQ-SEC-016 — option 1 : une limite lue en SSOT est confrontée à des seuils sourcés', () => {
+  const base = universDuDepot();
+  const NOM = 'depot:temoin-ssot';
+  const fautesDe = async (u: Univers, famille: string) =>
+    (await analyser(u)).fautes.filter((f) => f.famille === famille).map((f) => f.message);
+
+  it('REQ-SEC-016 — CONTRE-TÉMOIN : un compteur « lus en SSOT » bien écrit passe, par la voie `ssot`', async () => {
+    const r = await analyser(universAvecUnCompteurLuEnSsot(base));
+    expect(r.fautes).toEqual([]);
+    expect(r.voies[NOM]).toBe('ssot');
+    expect(r.confrontes.some((c) => c.startsWith(`${NOM}→refuser`))).toBe(true);
+  });
+
+  it.each(CONTRE_TEMOINS_D_UNIVERS.map((c) => [c.libelle, c] as const))(
+    'REQ-SEC-016 — CONTRE-TÉMOIN D’UNIVERS : %s reste vert',
+    async (_l, c) => {
+      expect((await analyser(c.univers(base))).fautes).toEqual([]);
+    }
+  );
+
+  it.each([
+    ['la limite tapée', { limite: '4' }],
+    ['la fenêtre tapée', { fenetre: '60' }],
+    [
+      'la conversion par un littéral (`* 60`)',
+      { fenetre: 'SEUILS.TEMOIN_FENETRE_MINUTES.valeur * 60' },
+    ],
+    ['un littéral ajouté au seuil', { limite: 'SEUILS.TEMOIN_PLAFOND.valeur + 0' }],
+    ['un accès calculé au seuil', { limite: "SEUILS['TEMOIN_PLAFOND'].valeur" }],
+    ['la sentinelle hors dépôt', { limite: 'LIMITE_HORS_DEPOT' }],
+  ])(
+    'REQ-SEC-016 — %s, sous une exigence « lus en SSOT » : `valeur_tapee_hors_ssot`, compteur nommé',
+    async (_l, o) => {
+      const m = await fautesDe(universAvecUnCompteurLuEnSsot(base, o), 'valeur_tapee_hors_ssot');
+      expect(m.length).toBeGreaterThan(0);
+      expect(m.every((x) => x.includes(`\`${NOM}\``) && x.includes('préfixe `depot:`'))).toBe(true);
+    }
+  );
+
+  it.each([
+    [
+      'dans une AUTRE phrase que l’ancre',
+      'Le témoin est limité par un compteur de témoin ; `surPanne: refuser`. La fenêtre et le plafond sont lus en SSOT, avec leur source.',
+    ],
+    [
+      'AVANT l’ancre, dans sa phrase',
+      'La fenêtre et le plafond sont lus en SSOT pour le compteur de témoin ; `surPanne: refuser`.',
+    ],
+  ])(
+    'REQ-SEC-016 — « lus en SSOT » %s : rien ne confronte le compteur, `compteur_sans_confrontation`',
+    async (_l, exigence) => {
+      const m = await fautesDe(
+        universAvecUnCompteurLuEnSsot(base, { exigence }),
+        'compteur_sans_confrontation'
+      );
+      expect(m).toHaveLength(1);
+      expect(m[0]).toContain(`\`${NOM}\``);
+    }
+  );
+
+  it.each([
+    ['sans source', { source: '' }],
+    ['sans date', { verifieLe: undefined }],
+    ['à une date qui n’en est pas une', { verifieLe: '2026-02-31' }],
+  ])('REQ-SEC-016 — un seuil %s : `seuil_sans_source`, seuil nommé', async (_l, champ) => {
+    const seuil: Record<string, unknown> = {
+      valeur: 4,
+      unite: 'tentatives',
+      source: 'témoin',
+      renvois: [],
+      verifieLe: '2026-10-04',
+      ...champ,
+    };
+    const m = await fautesDe(
+      universAvecUnCompteurLuEnSsot(base, { seuils: { TEMOIN_PLAFOND: seuil } }),
+      'seuil_sans_source'
+    );
+    expect(m).toHaveLength(1);
+    expect(m[0]).toContain('TEMOIN_PLAFOND');
+  });
+
+  it('REQ-SEC-016 — un seuil absent de `SEUILS` : `seuil_inconnu`, seuil nommé', async () => {
+    const m = await fautesDe(
+      universAvecUnCompteurLuEnSsot(base, { limite: 'SEUILS.PLAFOND_INVENTE.valeur' }),
+      'seuil_inconnu'
+    );
+    expect(m).toHaveLength(1);
+    expect(m[0]).toContain('PLAFOND_INVENTE');
+  });
+
+  it.each([
+    [
+      'une fenêtre en minutes convertie en jours',
+      { fenetre: 'SEUILS.TEMOIN_FENETRE_MINUTES.valeur * SECONDES_PAR_JOUR' },
+    ],
+    ['une fenêtre en minutes sans conversion', { fenetre: 'SEUILS.TEMOIN_FENETRE_MINUTES.valeur' }],
+    [
+      'une conversion hors de la table fermée',
+      { fenetre: 'SEUILS.TEMOIN_FENETRE_MINUTES.valeur * SOIXANTE' },
+    ],
+    ['une limite convertie', { limite: 'SEUILS.TEMOIN_PLAFOND.valeur * SECONDES_PAR_MINUTE' }],
+    ['une limite lue dans un délai', { limite: 'SEUILS.TEMOIN_FENETRE_MINUTES.valeur' }],
+    [
+      'une fenêtre lue dans un nombre de tentatives',
+      { fenetre: 'SEUILS.TEMOIN_PLAFOND.valeur * SECONDES_PAR_MINUTE' },
+    ],
+    ['une constante au bon nom, définie à côté de la table et non importée', { importe: false }],
+  ])('REQ-SEC-016 — %s : `facteur_d_unite_faux`', async (_l, o) => {
+    // Le registre réel peut lire lui-même en SSOT : seules comptent les fautes du compteur témoin.
+    const m = (
+      await fautesDe(universAvecUnCompteurLuEnSsot(base, o), 'facteur_d_unite_faux')
+    ).filter((x) => x.includes(`\`${NOM}\``));
+    expect(m).toHaveLength(1);
+  });
+
+  it('REQ-SEC-016 — une valeur à l’exécution qui n’est pas celle de la SSOT : `ecart_a_l_exigence`', async () => {
+    const m = await fautesDe(
+      universAvecUnCompteurLuEnSsot(base, { valeurs: { limite: 5, fenetreSecondes: 60 } }),
+      'ecart_a_l_exigence'
+    );
+    expect(m).toHaveLength(1);
+    expect(m[0]).toContain('TEMOIN_PLAFOND');
+  });
+
+  it('REQ-SEC-016 — la conduite d’un compteur lu en SSOT reste lue dans le texte : contraire, `ecart_a_l_exigence` ; absente, `conduite_absente`', async () => {
+    const contraire = await fautesDe(
+      universAvecUnCompteurLuEnSsot(base, { surPanne: 'laisser-passer' }),
+      'ecart_a_l_exigence'
+    );
+    expect(contraire).toHaveLength(1);
+    expect(contraire[0]).toContain('surPanne');
+    const absente = await fautesDe(
+      universAvecUnCompteurLuEnSsot(base, { surPanne: null }),
+      'conduite_absente'
+    );
+    expect(absente).toHaveLength(1);
+    expect(absente[0]).toContain(`\`${NOM}\``);
+  });
+
+  it('REQ-SEC-016 — une exigence qui CHIFFRE et dit « lus en SSOT » est confrontée sur le chiffre', async () => {
+    const exigence =
+      'Le témoin est limité à 3 / 1 min compteur de témoin, lus en SSOT ; `surPanne: refuser`.';
+    const u = universAvecUnCompteurLuEnSsot(base, { exigence });
+    const r = await analyser(u);
+    expect(r.voies[NOM]).toBe('chiffre');
+    const m = r.fautes.filter((f) => f.famille === 'ecart_a_l_exigence').map((f) => f.message);
+    expect(m).toHaveLength(1);
+    expect(m[0]).toContain('limite 4 au lieu de 3');
+    const juste = universAvecUnCompteurLuEnSsot(base, {
+      exigence: exigence.replace('3 / 1 min', '4 / 1 min'),
+    });
+    expect((await analyser(juste)).fautes).toEqual([]);
+  });
+
+  it.each([
+    [
+      'une exigence sans chiffre ni « lus en SSOT », un compteur chiffré',
+      { exigence: 'Le témoin est limité par un compteur de témoin ; `surPanne: refuser`.' },
+    ],
+    [
+      'un compteur hors dépôt qui LAISSE PASSER : aucune limite opposée',
+      {
+        exigence: 'Le témoin est limité par un compteur de témoin ; `surPanne: laisser-passer`.',
+        limite: 'LIMITE_HORS_DEPOT',
+        fenetre: 'LIMITE_HORS_DEPOT',
+        surPanne: 'laisser-passer',
+        valeurs: { limite: 'hors-depot', fenetreSecondes: 'hors-depot' },
+      },
+    ],
+    [
+      'un compteur hors dépôt FERMÉ (`refuser`) : il n’y a plus de troisième voie',
+      {
+        exigence: 'Le témoin est limité par un compteur de témoin ; `surPanne: refuser`.',
+        limite: 'LIMITE_HORS_DEPOT',
+        fenetre: 'LIMITE_HORS_DEPOT',
+        valeurs: { limite: 'hors-depot', fenetreSecondes: 'hors-depot' },
+      },
+    ],
+  ])('REQ-SEC-016 — %s : `compteur_sans_confrontation`', async (_l, o) => {
+    const m = await fautesDe(universAvecUnCompteurLuEnSsot(base, o), 'compteur_sans_confrontation');
+    expect(m).toHaveLength(1);
+    expect(m[0]).toContain(`\`${NOM}\``);
+  });
+
+  it('REQ-SEC-016 — TOUS les compteurs du registre sont confrontés, chacun par une voie nommée', async () => {
+    const r = await analyser(base);
+    expect(r.fautes).toEqual([]);
+    expect(Object.keys(r.voies).sort()).toEqual([...NOMS].sort());
+    for (const nom of NOMS) {
+      expect(['chiffre', 'ssot', 'configuration'], nom).toContain(r.voies[nom]);
+    }
+    expect(r.confrontes).toHaveLength(NOMS.length);
+  });
+});
+
+// ── REQ-SEC-016 : le texte en vigueur, jamais une note [REMPLACÉ …] (SEC-12, sécurité) ──────────
+
+/**
+ * Une note entre crochets d'une exigence cite le texte qu'un amendement a REMPLACÉ. La garde la
+ * retire avant de chercher l'ancre, la conduite et les chiffres : une ancre qui ne vit que dans une
+ * note n'est pas trouvée, et un chiffre ou une conduite de la note ne se lit jamais. Témoin à deux
+ * faces, sur la fonction de la garde ET sur la garde entière.
+ */
+describe('REQ-SEC-016 — la garde lit le texte en vigueur d’une exigence, jamais une note [REMPLACÉ …]', () => {
+  const base = universDuDepot();
+  const NOM = 'depot:temoin-ssot';
+  const NOTE =
+    ' [Amendée : remplace « limité à 20 / 10 min par compteur de témoin (`surPanne: laisser-passer`) ».]';
+
+  it('REQ-SEC-016 — FACE ROUGE : une ancre qui ne vit que dans une note n’est pas trouvée', () => {
+    const texte = 'Le témoin est limité par un compteur de SESSION ; `surPanne: refuser`.' + NOTE;
+    expect(exigenceDuCompteur(texte, 'compteur de témoin')).toBeNull();
+    expect(exigenceDuCompteur(texte, 'compteur de SESSION')).not.toBeNull();
+  });
+
+  it('REQ-SEC-016 — FACE VERTE : l’ancre du texte en vigueur se lit sans le chiffre ni la conduite de la note', () => {
+    const texte =
+      'Le témoin est limité par un compteur de témoin ; la fenêtre et le plafond sont lus en SSOT ; ' +
+      '`surPanne: refuser`.' +
+      NOTE;
+    expect(exigenceDuCompteur(texte, 'compteur de témoin')).toEqual({
+      limite: LUE_EN_SSOT,
+      fenetreSecondes: LUE_EN_SSOT,
+      surPanne: 'refuser',
+    });
+  });
+
+  it('REQ-SEC-016 — la garde entière : un compteur dont l’ancre ne vit que dans une note est sans source lisible', async () => {
+    const r = await analyser(
+      universAvecUnCompteurLuEnSsot(base, {
+        exigence: 'Le témoin est limité par un compteur de SESSION ; `surPanne: refuser`.' + NOTE,
+      })
+    );
+    const m = r.fautes.filter((f) => f.famille === 'ecart_a_l_exigence').map((f) => f.message);
+    expect(m).toHaveLength(1);
+    expect(m[0]).toContain(`\`${NOM}\``);
+    expect(m[0]).toContain('ne se retrouve pas');
+    expect(r.voies[NOM]).toBeUndefined();
+  });
+
+  it('REQ-SEC-016 — CONTRE-TÉMOIN : la même note après un texte en vigueur lu en SSOT reste verte', async () => {
+    const r = await analyser(
+      universAvecUnCompteurLuEnSsot(base, {
+        exigence:
+          'Le témoin est limité par un compteur de témoin ; la fenêtre et le plafond sont lus en ' +
+          'SSOT, avec leur source ; `surPanne: refuser`.' +
+          NOTE,
+      })
+    );
+    expect(r.fautes).toEqual([]);
+    expect(r.voies[NOM]).toBe('ssot');
+  });
+
+  it('REQ-SEC-016 — le dépôt réel : REQ-SEC-016 porte une note, et ses deux compteurs se lisent dans le texte en vigueur', async () => {
+    expect(base.exigences['REQ-SEC-016']).toMatch(/\[[^\]]*\]/);
+    const r = await analyser(base);
+    expect(r.fautes).toEqual([]);
+    expect(r.voies['depot:ip']).toBe('ssot');
+    expect(r.voies['depot:session']).toBe('ssot');
+  });
+
+  it('REQ-SEC-016 — plus de troisième voie : ni sentinelle, ni famille qui la garde', () => {
+    expect(FAMILLES as readonly string[]).not.toContain('sentinelle_appelee');
+  });
+});
+
 // ── REQ-SEC-002 : les valeurs de la demande de lien magique ─────────────────────────────────────
+
+// La table de conversion est jugée EN PROCESSUS : la garde la lit en sous-processus, que la passe de
+// mutation ne voit pas (GOV-149 ; Gate A, `apres-tests`, sur 77c39068 puis 9e7b7c49 : des constantes
+// de module seules ne portent aucun mutant, `ignoreStatic`).
+describe('REQ-SEC-016 — la table fermée des conversions en secondes', () => {
+  it('REQ-SEC-016 — `conversionDeLUnite` lit la table, et rien d’autre : une clé héritée n’est pas une unité', () => {
+    expect(conversionDeLUnite('minutes')).toStrictEqual({
+      constante: 'SECONDES_PAR_MINUTE',
+      valeur: 60,
+    });
+    expect(conversionDeLUnite('jours')).toStrictEqual({
+      constante: 'SECONDES_PAR_JOUR',
+      valeur: 86_400,
+    });
+    for (const absente of ['mois', 'ans', 'tentatives', '', 'constructor', 'toString', '__proto__'])
+      expect(conversionDeLUnite(absente), absente).toBeUndefined();
+  });
+
+  it('REQ-SEC-016 — une minute vaut 60 s, un jour 86 400 s, et la table n’a que ces deux unités', () => {
+    expect(SECONDES_PAR_MINUTE).toBe(60);
+    expect(SECONDES_PAR_JOUR).toBe(86_400);
+    expect(CONVERSIONS_EN_SECONDES).toStrictEqual({
+      minutes: { constante: 'SECONDES_PAR_MINUTE', valeur: 60 },
+      jours: { constante: 'SECONDES_PAR_JOUR', valeur: 86_400 },
+    });
+  });
+});
 
 describe('REQ-SEC-002 — les compteurs du lien magique portent les valeurs de l’exigence', () => {
   const texte = (id: string): string => {

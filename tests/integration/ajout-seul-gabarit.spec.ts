@@ -1,5 +1,7 @@
 // @req REQ-DM-031
 // @req REQ-DM-043
+// @req REQ-SEC-058
+// @req REQ-DM-028
 /**
  * DM-07, en base RÉELLE — le gabarit « ajout seul, sauf purge » (HYP-A02-GABARIT-AJOUT-SEUL) : UNE
  * fonction générique, `refuser_modification_sauf()`, sans `EXECUTE`, que chaque table en ajout seul
@@ -14,6 +16,9 @@
  *     une valeur est refusé, `une_fois` réécrit est refusé ;
  *   — DELETE et TRUNCATE sont refusés partout ;
  *   — chaque argument de `pg_trigger.tgargs` nomme une colonne qui existe (`information_schema`) ;
+ *   — une table dont le gabarit a reçu une fonction DÉDIÉE, au préfixe du gabarit, reste comptée :
+ *     `demandes_droits_contact` et `refuser_modification_sauf_droits_contact()`, sans argument
+ *     (DM-68, partners/ADR-0032) ;
  *   — un modèle cloisonné est dans `MODELES_EN_AJOUT_SEUL` si et seulement si sa table est
  *     branchée sur le gabarit (décision A02 : l'égalité porte sur l'intersection, d'autres tables
  *     non cloisonnées s'y brancheront) ;
@@ -254,7 +259,7 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
       FROM pg_trigger t
       JOIN pg_class c ON c.oid = t.tgrelid
       JOIN pg_proc p ON p.oid = t.tgfoid
-      WHERE p.proname = 'refuser_modification_sauf' AND NOT t.tgisinternal
+      WHERE p.proname LIKE 'refuser\\_modification\\_sauf%' AND NOT t.tgisinternal
         AND c.relpersistence = 'p'`;
     const tables = new Set(branchements.map((b) => b.table));
     expect([...tables].sort()).toEqual([
@@ -263,6 +268,7 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
       'demandes_droits_contact',
       'depots_refuses',
       'journal_acces_console',
+      'litiges_decisions_de_contrat',
       'personnes_declarees',
       'qualifications',
       'rattachements_manuels',
@@ -284,6 +290,25 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
       }
     }
     expect(absentes).toEqual([]);
+  });
+
+  it('REQ-SEC-058 : les gels du journal des accès ont une GARDE DÉDIÉE, hors du gabarit : la levée s’écrit une fois, et un gel épuisé s’efface', async () => {
+    // SEC-61 (forme d'A02) : `journal_acces_console_gels` n'est pas en ajout seul — la levée est une
+    // écriture, et un gel levé dont les lignes sont purgées est supprimé. Sa garde est la sienne.
+    const declencheurs = await base.prisma.$queryRaw<{ nom: string; fonction: string }[]>`
+      SELECT t.tgname AS nom, p.proname AS fonction
+      FROM pg_trigger t
+      JOIN pg_class c ON c.oid = t.tgrelid
+      JOIN pg_proc p ON p.oid = t.tgfoid
+      WHERE c.relname = 'journal_acces_console_gels' AND NOT t.tgisinternal
+      ORDER BY t.tgname`;
+    expect(declencheurs).toEqual([
+      { nom: 'journal_acces_console_gels_garde', fonction: 'journal_acces_console_gels_garde' },
+      {
+        nom: 'journal_acces_console_gels_troncature',
+        fonction: 'journal_acces_console_gels_garde',
+      },
+    ]);
   });
 
   it('REQ-DM-031 : TÉMOIN — une nature d’argument inconnue lève à l’appel, nommée', async () => {
@@ -312,7 +337,7 @@ describe('REQ-DM-031 — la liste des modèles en ajout seul égale, sur les mod
           FROM pg_trigger t
           JOIN pg_class c ON c.oid = t.tgrelid
           JOIN pg_proc p ON p.oid = t.tgfoid
-          WHERE p.proname = 'refuser_modification_sauf' AND NOT t.tgisinternal
+          WHERE p.proname LIKE 'refuser\\_modification\\_sauf%' AND NOT t.tgisinternal
             AND c.relpersistence = 'p'`
       ).map((l) => l.table)
     );
@@ -324,6 +349,39 @@ describe('REQ-DM-031 — la liste des modèles en ajout seul égale, sur les mod
     };
     const branches = MODELES_CLOISONNES.filter((m) => branchees.has(tableDe(m)));
     expect([...branches].sort()).toEqual([...MODELES_EN_AJOUT_SEUL].sort());
+  });
+});
+
+describe('REQ-DM-028 — les tables à garde DÉDIÉE, hors du gabarit commun', () => {
+  // Une table dont la durée est FINIE et dont la purge EFFACE la ligne ne peut pas porter le gabarit
+  // commun, qui refuse tout DELETE : elle porte sa propre garde, nommée ici, déclencheur par déclencheur.
+  const GARDES_DEDIEES = {
+    sirens_liste_noire_trace: [
+      'sirens_liste_noire_trace_garde:BEFORE UPDATE OR DELETE:ROW',
+      'sirens_liste_noire_trace_troncature:BEFORE TRUNCATE:STATEMENT',
+    ],
+  } as const;
+
+  it('REQ-DM-028 : chaque table à garde dédiée porte exactement ses déclencheurs, et jamais le gabarit commun', async () => {
+    for (const [table, attendus] of Object.entries(GARDES_DEDIEES)) {
+      const lus = await base.prisma.$queryRaw<{ d: string }[]>`
+        SELECT trigger_name || ':' || action_timing || ' ' || string_agg(event_manipulation, ' OR '
+                 ORDER BY CASE event_manipulation WHEN 'INSERT' THEN 0 WHEN 'UPDATE' THEN 1
+                                                  WHEN 'DELETE' THEN 2 ELSE 3 END)
+               || ':' || action_orientation AS d
+        FROM information_schema.triggers WHERE event_object_table = ${table}
+        GROUP BY trigger_name, action_timing, action_orientation ORDER BY 1`;
+      const troncatures = await base.prisma.$queryRaw<{ d: string }[]>`
+        SELECT t.tgname || ':BEFORE TRUNCATE:STATEMENT' AS d FROM pg_trigger t
+        JOIN pg_class c ON c.oid = t.tgrelid
+        WHERE c.relname = ${table} AND NOT t.tgisinternal AND (t.tgtype & 32) <> 0`;
+      expect([...lus, ...troncatures].map((l) => l.d).sort(), table).toEqual([...attendus].sort());
+      const [commun] = await base.prisma.$queryRaw<{ n: bigint }[]>`
+        SELECT count(*) AS n FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
+        JOIN pg_proc p ON p.oid = t.tgfoid
+        WHERE c.relname = ${table} AND p.proname = 'refuser_modification_sauf'`;
+      expect(commun?.n, table).toBe(0n);
+    }
   });
 });
 

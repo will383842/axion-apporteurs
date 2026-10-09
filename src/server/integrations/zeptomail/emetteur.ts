@@ -21,7 +21,7 @@
  * fiche ne porte pas le rapport d'agrégation daté. Aucun courriel ne peut donc partir de
  * production, et c'est l'état voulu.
  */
-import type { PrismaClient, StatutCourriel } from '@prisma/client';
+import type { Prisma, PrismaClient, StatutCourriel } from '@prisma/client';
 import { z } from 'zod';
 import { estSentinelle } from '../../../config/entite';
 import { schemaConfiguration } from '../../../lib/env';
@@ -128,6 +128,8 @@ export interface DemandeDEnvoi {
   sujet: string;
   corps: string;
   apporteurId: string | null;
+  /** DM-55 : la notification de l'espace que le courriel porte ; absente pour les autres courriels. */
+  notificationEspaceId?: string;
 }
 
 /** Une ligne de `courriels_envoyes` : aucune adresse, aucun corps. */
@@ -141,6 +143,8 @@ export interface LigneCourriel {
   envoyeAt: Date | null;
   fournisseurMessageId: string | null;
   erreur: string | null;
+  /** DM-55 : présente seulement pour le courriel d'une notification ; absente, la colonne reste nulle. */
+  notificationEspaceId?: string;
 }
 
 export interface Relais {
@@ -187,6 +191,17 @@ export async function demanderEnvoi(
   demande: DemandeDEnvoi,
   d: DependancesDeLEmetteur
 ): Promise<StatutCourriel> {
+  return (await emettre(demande, d)).statut;
+}
+
+/**
+ * La même demande, qui rend la ligne ENTIÈRE telle qu'elle est consignée : le passage des
+ * notifications de l'espace (DM-55) y lit l'heure de l'envoi effectif, qui fait courir un délai.
+ */
+export async function emettre(
+  demande: DemandeDEnvoi,
+  d: DependancesDeLEmetteur
+): Promise<LigneCourriel> {
   jugerLaDemande(demande);
   const ligne: LigneCourriel = {
     id: d.nouvelId(),
@@ -198,6 +213,7 @@ export async function demanderEnvoi(
     envoyeAt: null,
     fournisseurMessageId: null,
     erreur: null,
+    ...(demande.notificationEspaceId ? { notificationEspaceId: demande.notificationEspaceId } : {}),
   };
 
   if (await d.depot.estSupprimee(ligne.emailHash)) {
@@ -222,12 +238,18 @@ export async function demanderEnvoi(
     }
   }
   await d.depot.consigner(ligne);
-  return ligne.statut;
+  return ligne;
 }
 
 // ── L'adaptateur Prisma ─────────────────────────────────────────────────────────────────────────
 
-export function depotDesCourriels(prisma: PrismaClient): DepotDesCourriels {
+/**
+ * Le dépôt, sur le client ou sur une TRANSACTION : le passage de DM-55 consigne le courriel dans la
+ * transaction qui tient le verrou de la notification, et l'index unique partiel refuse un doublon.
+ */
+export function depotDesCourriels(
+  prisma: PrismaClient | Prisma.TransactionClient
+): DepotDesCourriels {
   return {
     async estSupprimee(emailHash) {
       const l = await prisma.suppressionCourriel.findUnique({

@@ -1,5 +1,6 @@
 // @req REQ-SEC-023
 // @req REQ-UX-024 → REQ-SEC-023
+// @req REQ-SEC-058
 /**
  * `matrice-des-roles.spec.ts` — les rôles de la console (SEC-17) : la matrice droits × rôles en UN
  * fichier, `requireRole` relu en base à chaque requête, et la garde qui confronte le disque à la
@@ -25,10 +26,15 @@
  */
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { ConsoleRole, type PrismaClient } from '@prisma/client';
 import { kidDe } from '../../../src/lib/env';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
+import {
+  invitationOuverte,
+  jugerChangementDeRole,
+} from '../../../src/server/console/utilisateurs/regles';
 import {
   consommerLien,
   empreinteDeSessionConsole,
@@ -38,6 +44,8 @@ import {
 } from '../../../src/server/auth/lien-magique';
 import { jugerSession, type LigneDeSession } from '../../../src/server/auth/session';
 import { MATRICE_DES_ROLES, ROLES_CONSOLE, roleAutorise } from '../../../src/server/roles/matrice';
+import { ROLES_CONSOLE as ROLES_DU_DOMAINE } from '../../../src/domain/console/roles';
+import { CHARGES_PAR_TYPE } from '../../../src/domain/evenement/charges';
 import {
   MOTIFS_DE_REFUS_CONSOLE,
   depotDeSessionsConsole,
@@ -80,7 +88,7 @@ describe('REQ-SEC-023 — les quatre rôles et la matrice unique', () => {
   });
 
   it('REQ-SEC-023 : chaque droit de la matrice ne nomme que des rôles de l’enum, sans doublon', () => {
-    for (const [droit, roles] of Object.entries(MATRICE_DES_ROLES)) {
+    for (const [droit, { roles }] of Object.entries(MATRICE_DES_ROLES)) {
       expect(droit).toMatch(/^(action|ecran):[a-z0-9_]+$/);
       expect(roles.length).toBeGreaterThan(0);
       expect(new Set(roles).size).toBe(roles.length);
@@ -110,6 +118,13 @@ describe('REQ-SEC-023 — les quatre rôles et la matrice unique', () => {
     expect(roleAutorise('action:rattacher_manuellement', 'lecteur')).toBe(false);
   });
 
+  it('REQ-SEC-058 : TÉMOIN — la lecture du journal des accès est à l’admin seul, refusée à tout rôle non nommé', () => {
+    expect(Object.hasOwn(MATRICE_DES_ROLES, 'action:lire_journal_des_acces')).toBe(true);
+    expect(roleAutorise('action:lire_journal_des_acces', 'admin')).toBe(true);
+    for (const role of ROLES_CONSOLE.filter((r) => r !== 'admin'))
+      expect(roleAutorise('action:lire_journal_des_acces', role)).toBe(false);
+  });
+
   it('REQ-SEC-023 : le `comptable` voit l’IBAN, approuve le lot et produit le pain.001 — rien de plus', () => {
     const duComptable = SENSIBLES.filter((d) => roleAutorise(d, 'comptable'));
     expect(duComptable).toEqual([
@@ -133,6 +148,9 @@ const valide = (): Session => ({
   revoqueAt: null,
   // SEC-29 : vue à l'instant ; une session jamais vue est refusée comme inactive.
   derniereVueAt: T0,
+  // SEC-30 : ouverte à l'instant (le step-up tient) et de la version de son utilisateur.
+  creeAt: T0,
+  sessionVersion: 0,
 });
 
 /** Un dépôt en mémoire qui relit son état À CHAQUE appel, et compte ses lectures. */
@@ -148,7 +166,15 @@ function univers(utilisateur: Utilisateur | null, ligne: Session) {
         if (tokenHash !== empreinteDeSessionConsole(JETON, SECRET)) return null;
         return {
           ...etat.ligne,
-          utilisateurConsole: etat.utilisateur === null ? null : { ...etat.utilisateur },
+          // SEC-30 : l'utilisateur est à la version 0, celle de `valide()`.
+          utilisateurConsole:
+            etat.utilisateur === null
+              ? null
+              : {
+                  ...etat.utilisateur,
+                  sessionVersion: 0,
+                  valideAt: etat.utilisateur.role === 'admin' ? T0 : null,
+                },
         };
       },
     },
@@ -327,6 +353,9 @@ describe('REQ-SEC-023 — requireRole : le défaut est le refus, le rôle est re
       'desactive',
       'role_refuse',
       'inactive',
+      'version_perimee',
+      'releve_requis',
+      'admin_en_attente',
     ]);
     expect(jugerAcces('action:lever_gel', null, T0, KID)).toEqual({
       ok: false,
@@ -362,7 +391,17 @@ describe('REQ-SEC-023 — l’adaptateur Prisma de requireRole', () => {
           expireAt: true,
           revoqueAt: true,
           derniereVueAt: true,
-          utilisateurConsole: { select: { id: true, role: true, desactiveAt: true } },
+          creeAt: true,
+          sessionVersion: true,
+          utilisateurConsole: {
+            select: {
+              id: true,
+              role: true,
+              desactiveAt: true,
+              sessionVersion: true,
+              valideAt: true,
+            },
+          },
         },
       },
     ]);
@@ -1410,5 +1449,358 @@ describe('REQ-SEC-023 — la garde `securite:roles` confronte le disque à la ma
     const sortie = `${r.stdout ?? ''}${r.stderr ?? ''}`;
     expect(sortie).toMatch(/couple\(s\) écran-rôle confronté\(s\)/);
     expect(r.status).toBe(0);
+  });
+});
+
+// ── 5. SEC-30 : la version de session de la console, et le refus de l'auto-changement de rôle ─────
+
+describe('REQ-SEC-003 — SEC-30 : un changement de rôle ou une désactivation coupe toutes les sessions', () => {
+  const ligne = (versionSession: number, versionUtilisateur: number) => ({
+    ...valide(),
+    sessionVersion: versionSession,
+    utilisateurConsole: {
+      id: 'u-admin',
+      role: 'admin' as const,
+      desactiveAt: null,
+      sessionVersion: versionUtilisateur,
+      valideAt: T0,
+    },
+  });
+
+  it('REQ-SEC-003 : TÉMOIN À DEUX FACES — une session d’une version antérieure à celle de son utilisateur est refusée ; la même version passe', () => {
+    expect(jugerAcces('action:lever_gel', ligne(0, 1), T0, KID)).toEqual({
+      ok: false,
+      motif: 'version_perimee',
+    });
+    expect(jugerAcces('action:lever_gel', ligne(1, 1), T0, KID).ok).toBe(true);
+  });
+
+  it('REQ-SEC-003 : le motif de la version périmée entre dans la liste fermée', () => {
+    expect(MOTIFS_DE_REFUS_CONSOLE).toContain('version_perimee');
+  });
+});
+
+describe('REQ-SEC-023 — SEC-30 : personne ne change son propre rôle', () => {
+  const admin = { id: 'u-admin', role: 'admin' as const };
+
+  it('REQ-SEC-023 : TÉMOIN — l’auto-changement de rôle est refusé, nommé ; le changement du rôle d’un autre par un admin passe', () => {
+    expect(
+      jugerChangementDeRole({
+        acteur: admin,
+        cible: { id: 'u-admin', role: 'admin' },
+        vers: 'lecteur',
+      })
+    ).toEqual({ ok: false, motif: 'auto_changement' });
+    expect(
+      jugerChangementDeRole({
+        acteur: admin,
+        cible: { id: 'u-q', role: 'qualifieur' },
+        vers: 'admin',
+      })
+    ).toEqual({ ok: true });
+  });
+
+  it('REQ-SEC-023 : TÉMOIN — un non-admin ne change aucun rôle ; un changement vers le même rôle n’est pas un changement', () => {
+    expect(
+      jugerChangementDeRole({
+        acteur: { id: 'u-c', role: 'comptable' },
+        cible: { id: 'u-q', role: 'qualifieur' },
+        vers: 'lecteur',
+      })
+    ).toEqual({ ok: false, motif: 'droit_absent' });
+    expect(
+      jugerChangementDeRole({
+        acteur: admin,
+        cible: { id: 'u-q', role: 'qualifieur' },
+        vers: 'qualifieur',
+      })
+    ).toEqual({ ok: false, motif: 'sans_changement' });
+  });
+});
+
+describe('REQ-SEC-023 — SEC-30 : le step-up déclaré dans la matrice (arbitrage de la sécurité)', () => {
+  const ligneOuverteIlYA = (ms: number) => ({
+    ...valide(),
+    creeAt: new Date(T0.getTime() - ms),
+    utilisateurConsole: {
+      id: 'u-admin',
+      role: 'admin' as const,
+      desactiveAt: null,
+      sessionVersion: 0,
+      valideAt: T0,
+    },
+  });
+  const releve = DUREES_AUTH.releveMs.valeur;
+
+  it('REQ-SEC-023 : TÉMOIN — la gestion des utilisateurs est réservée à admin, avec step-up déclaré ; son écran aussi est à admin seul', () => {
+    expect(MATRICE_DES_ROLES['action:gerer_utilisateur_console']).toEqual({
+      roles: ['admin'],
+      stepUp: true,
+    });
+    expect(MATRICE_DES_ROLES['ecran:utilisateurs_console']).toEqual({
+      roles: ['admin'],
+      stepUp: false,
+    });
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — une session ouverte il y a le délai de relèvement est refusée « releve_requis » sur une action à step-up ; un instant avant, elle passe', () => {
+    expect(
+      jugerAcces('action:gerer_utilisateur_console', ligneOuverteIlYA(releve), T0, KID)
+    ).toEqual({ ok: false, motif: 'releve_requis' });
+    expect(
+      jugerAcces('action:gerer_utilisateur_console', ligneOuverteIlYA(releve - 1), T0, KID).ok
+    ).toBe(true);
+  });
+
+  it('REQ-SEC-023 : une action SANS step-up ne regarde pas l’âge de la session ; le motif entre dans la liste fermée', () => {
+    expect(jugerAcces('action:approuver_lot', ligneOuverteIlYA(releve * 10), T0, KID).ok).toBe(
+      true
+    );
+    expect(MOTIFS_DE_REFUS_CONSOLE).toContain('releve_requis');
+  });
+
+  // Texte de la sécurité (rattrapage 96), point 4 : le step-up est déclaré dès maintenant pour la
+  // levée d'un gel, qui existe ; point 5 : chaque entrée porte un stepUp EXPLICITE.
+  it('REQ-SEC-023 : TÉMOIN — la levée d’un gel exige le step-up ; chaque entrée de la matrice déclare son stepUp, vrai ou faux', () => {
+    expect(MATRICE_DES_ROLES['action:lever_gel'].stepUp).toBe(true);
+    for (const [droit, entree] of Object.entries(MATRICE_DES_ROLES))
+      expect(typeof (entree as { stepUp?: unknown }).stepUp, droit).toBe('boolean');
+  });
+
+  // Condition 4 de la sécurité (rattrapage 96) : un export de données de personnes demande le
+  // step-up ; l'IBAN en clair aussi (décision de la coordination).
+  it.each([
+    'action:exporter_pain001',
+    'action:exporter_das2',
+    'action:voir_iban_en_clair',
+    'action:resilier_apporteur',
+  ] as const)(
+    'REQ-SEC-023 : TÉMOIN À DEUX FACES — %s : une session ouverte il y a le délai de relèvement est refusée « releve_requis » ; un instant avant, elle passe',
+    (droit) => {
+      expect(MATRICE_DES_ROLES[droit].stepUp).toBe(true);
+      expect(jugerAcces(droit, ligneOuverteIlYA(releve), T0, KID)).toEqual({
+        ok: false,
+        motif: 'releve_requis',
+      });
+      expect(jugerAcces(droit, ligneOuverteIlYA(releve - 1), T0, KID).ok).toBe(true);
+    }
+  );
+});
+
+// Forme d'A02 (rattrapage 96, quatre yeux) : un admin dont `valide_at` est nul est EN ATTENTE ; il
+// n'a aucun droit d'administrateur. Il garde ce qui est ouvert aux quatre rôles : arriver, partir.
+describe('REQ-SEC-023 — SEC-30 : un administrateur non validé par un autre n’a aucun droit d’administrateur', () => {
+  const ligneDAdmin = (valideAt: Date | null) => ({
+    ...valide(),
+    utilisateurConsole: {
+      id: 'u-admin',
+      role: 'admin' as const,
+      desactiveAt: null,
+      sessionVersion: 0,
+      valideAt,
+    },
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — un admin en attente est refusé « admin_en_attente » sur une action d’admin ; validé, même appel, il passe', () => {
+    expect(jugerAcces('action:suspendre_apporteur', ligneDAdmin(null), T0, KID)).toEqual({
+      ok: false,
+      motif: 'admin_en_attente',
+    });
+    expect(jugerAcces('action:suspendre_apporteur', ligneDAdmin(T0), T0, KID).ok).toBe(true);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN — en attente, il arrive et part (droits ouverts aux quatre rôles) ; le motif entre dans la liste fermée', () => {
+    expect(jugerAcces('ecran:accueil', ligneDAdmin(null), T0, KID).ok).toBe(true);
+    expect(jugerAcces('action:se_deconnecter', ligneDAdmin(null), T0, KID).ok).toBe(true);
+    expect(jugerAcces('action:approuver_lot', ligneDAdmin(null), T0, KID)).toEqual({
+      ok: false,
+      motif: 'admin_en_attente',
+    });
+    expect(MOTIFS_DE_REFUS_CONSOLE).toContain('admin_en_attente');
+  });
+});
+
+describe('REQ-DM-024 — SEC-30 : une invitation expire si le compte n’est pas activé à temps', () => {
+  const invite = (ilYA: number, activeeAt: Date | null = null) => ({
+    inviteeAt: new Date(T0.getTime() - ilYA),
+    activeeAt,
+  });
+  // Le nom tranché par la coordination (rattrapage 96) : `invitationConsoleMs`, dans `durees.ts`, à
+  // côté de `releveMs` ; 72 h exprimées en millisecondes, validées par Williams le 2026-10-03.
+  const delai = DUREES_AUTH.invitationConsoleMs.valeur;
+
+  it('REQ-DM-024 : TÉMOIN À DEUX FACES — non activée à l’échéance, l’invitation est expirée ; un instant avant, elle vaut encore ; activée, elle ne vieillit plus', () => {
+    expect(invitationOuverte(invite(delai), T0)).toBe(false);
+    expect(invitationOuverte(invite(delai - 1), T0)).toBe(true);
+    expect(invitationOuverte(invite(delai * 10, new Date(T0.getTime() - delai)), T0)).toBe(true);
+  });
+
+  it('REQ-DM-024 : le délai d’invitation vient des durées de l’authentification, 72 h, validées par Williams', () => {
+    expect(DUREES_AUTH.invitationConsoleMs.valeur).toBe(72 * 60 * 60 * 1000);
+    expect(DUREES_AUTH.invitationConsoleMs.source).toMatch(/SEC-30/);
+  });
+});
+
+// Forme d'A02 : le domaine porte sa liste des rôles, confrontée à l'enum du schéma ; et l'événement
+// de l'administration des utilisateurs ne porte un rôle que là où le geste en touche un.
+describe('REQ-SEC-023 — SEC-30 : la liste des rôles du domaine, et l’événement de l’administration', () => {
+  it('REQ-SEC-023 : TÉMOIN — la liste du domaine est l’enum ConsoleRole du schéma, en ordre et en contenu', () => {
+    expect([...ROLES_DU_DOMAINE]).toEqual(Object.values(ConsoleRole));
+  });
+
+  const acteur = {
+    par: 'utilisateur_console' as const,
+    id: '00000000-0000-4000-8000-000000000001',
+  };
+  const charge = CHARGES_PAR_TYPE.utilisateur_console_modifie;
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — changer_role exige deux rôles différents ; inviter, un rôle d’arrivée ; tout autre geste, aucun', () => {
+    expect(
+      charge.safeParse({ geste: 'changer_role', de: 'lecteur', vers: 'comptable', acteur }).success
+    ).toBe(true);
+    expect(
+      charge.safeParse({ geste: 'changer_role', de: 'lecteur', vers: 'lecteur', acteur }).success
+    ).toBe(false);
+    expect(
+      charge.safeParse({ geste: 'changer_role', de: null, vers: 'lecteur', acteur }).success
+    ).toBe(false);
+    expect(
+      charge.safeParse({ geste: 'inviter', de: null, vers: 'qualifieur', acteur }).success
+    ).toBe(true);
+    expect(
+      charge.safeParse({ geste: 'inviter', de: 'admin', vers: 'qualifieur', acteur }).success
+    ).toBe(false);
+    expect(charge.safeParse({ geste: 'desactiver', de: null, vers: null, acteur }).success).toBe(
+      true
+    );
+    expect(charge.safeParse({ geste: 'valider', de: null, vers: 'admin', acteur }).success).toBe(
+      false
+    );
+  });
+
+  it('REQ-SEC-023 : la charge est fermée : un champ de plus (une adresse) est refusé', () => {
+    expect(
+      charge.safeParse({
+        geste: 'desactiver',
+        de: null,
+        vers: null,
+        acteur,
+        email: 'x@example.org',
+      }).success
+    ).toBe(false);
+  });
+});
+
+// Remarque de la sécurité : `activee_at` a un défaut (clock_timestamp()) ; l'invitation est le SEUL
+// chemin d'un compte non activé, et elle doit l'écrire EXPLICITEMENT, sinon le défaut l'activerait.
+describe('REQ-DM-024 — SEC-30 : l’invitation écrit activeeAt: null explicitement', () => {
+  it('REQ-DM-024 : TÉMOIN STATIQUE — la création de l’invitation porte inviteeAt et activeeAt: null', () => {
+    const source = readFileSync('src/server/console/utilisateurs/administration.ts', 'utf8');
+    const creation = source.slice(source.indexOf('tx.utilisateurConsole.create('));
+    const bloc = creation.slice(0, creation.indexOf('});'));
+    expect(bloc).toContain('inviteeAt: d.maintenant');
+    expect(bloc).toContain('activeeAt: null');
+  });
+});
+
+// Précision de la sécurité (a), rattrapage 96 : le chemin de la console écrit TOUJOURS un
+// administrateur en attente ; seul le semeur ou une commande d'exploitation pose un premier
+// administrateur sans validateur.
+describe('REQ-SEC-023 — SEC-30 : la console ne crée jamais un administrateur validé', () => {
+  const sources = (dossier: string): string[] =>
+    readdirSync(dossier, { recursive: true, withFileTypes: true })
+      .filter((e) => e.isFile() && /\.tsx?$/.test(e.name))
+      .map((e) => readFileSync(join(e.parentPath, e.name), 'utf8'));
+  const console_ = [...sources('src/server/console'), ...sources('src/app/(console)')];
+
+  it('REQ-SEC-023 : TÉMOIN STATIQUE — aucun code de la console ne pose valide_at à une création, ni sans le validateur qu’est l’acteur', () => {
+    const ecritures = console_.flatMap((s) =>
+      [...s.matchAll(/valideAt:\s*([^,}\n]+)/g)].map((m) => ({ s, m }))
+    );
+    for (const { s, m } of ecritures) {
+      const autour = s.slice(Math.max(0, (m.index ?? 0) - 120), (m.index ?? 0) + 80);
+      // Une lecture (`select`) n'écrit rien ; toute écriture va avec le validateur, l'acteur.
+      if (/valideAt:\s*true/.test(m[0])) continue;
+      expect(autour).toContain('valideParId: d.acteur.id');
+      expect(autour).not.toContain('.create(');
+    }
+    for (const s of console_) expect(s).not.toMatch(/create\(\{[^}]*valideAt/s);
+  });
+});
+
+// CPL-T07 : le dossier de conformité. Vérifier une pièce à l'admin et au qualifieur ; ouvrir et
+// valider le dossier à l'admin seul ; la validation, qui mène à la signature, sous step-up
+// (condition de la sécurité).
+describe('REQ-SEC-023 — CPL-T07 : les droits du dossier de conformité', () => {
+  const sessionAdmin = (ms: number) => ({
+    ...valide(),
+    creeAt: new Date(T0.getTime() - ms),
+    utilisateurConsole: {
+      id: 'u-admin',
+      role: 'admin' as const,
+      desactiveAt: null,
+      sessionVersion: 0,
+      valideAt: T0,
+    },
+  });
+  const releve = DUREES_AUTH.releveMs.valeur;
+
+  it('REQ-SEC-023 : TÉMOIN — vérifier une pièce : admin et qualifieur ; ouvrir et valider le dossier : admin seul', () => {
+    expect(MATRICE_DES_ROLES['ecran:conformite_apporteur']).toEqual({
+      roles: ['admin', 'qualifieur'],
+      stepUp: false,
+    });
+    expect(MATRICE_DES_ROLES['action:verifier_piece']).toEqual({
+      roles: ['admin', 'qualifieur'],
+      stepUp: false,
+    });
+    expect(MATRICE_DES_ROLES['action:ouvrir_kyc']).toEqual({ roles: ['admin'], stepUp: false });
+    expect(MATRICE_DES_ROLES['action:valider_kyc']).toEqual({ roles: ['admin'], stepUp: true });
+    for (const role of ['comptable', 'lecteur'] as const)
+      for (const droit of [
+        'action:verifier_piece',
+        'action:ouvrir_kyc',
+        'action:valider_kyc',
+        'ecran:conformite_apporteur',
+      ])
+        expect(roleAutorise(droit, role), `${droit} × ${role}`).toBe(false);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN — vérifier et confirmer un RIB (CPL-T24) : admin seul, sous step-up', () => {
+    expect(MATRICE_DES_ROLES['action:verifier_rib']).toEqual({ roles: ['admin'], stepUp: true });
+    for (const role of ['qualifieur', 'comptable', 'lecteur'] as const)
+      expect(roleAutorise('action:verifier_rib', role), role).toBe(false);
+    expect(jugerAcces('action:verifier_rib', sessionAdmin(releve), T0, KID)).toEqual({
+      ok: false,
+      motif: 'releve_requis',
+    });
+    expect(jugerAcces('action:verifier_rib', sessionAdmin(releve - 1), T0, KID).ok).toBe(true);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN — l’écran des gels du journal des accès : admin seul, sans step-up ; ses deux gestes à step-up', () => {
+    expect(MATRICE_DES_ROLES['ecran:gels_journal_acces']).toEqual({
+      roles: ['admin'],
+      stepUp: false,
+    });
+    expect(MATRICE_DES_ROLES['action:poser_gel_journal_acces']).toEqual({
+      roles: ['admin'],
+      stepUp: true,
+    });
+    expect(MATRICE_DES_ROLES['action:lever_gel_journal_acces']).toEqual({
+      roles: ['admin'],
+      stepUp: true,
+    });
+    for (const role of ['qualifieur', 'comptable', 'lecteur'] as const)
+      expect(roleAutorise('ecran:gels_journal_acces', role), role).toBe(false);
+  });
+
+  it('REQ-SEC-023 : TÉMOIN À DEUX FACES — valider le dossier, session ouverte il y a le délai de relèvement : « releve_requis » ; un instant avant, elle passe', () => {
+    expect(jugerAcces('action:valider_kyc', sessionAdmin(releve), T0, KID)).toEqual({
+      ok: false,
+      motif: 'releve_requis',
+    });
+    expect(jugerAcces('action:valider_kyc', sessionAdmin(releve - 1), T0, KID).ok).toBe(true);
+    // Ouvrir le dossier ne regarde pas l'âge de la session.
+    expect(jugerAcces('action:ouvrir_kyc', sessionAdmin(releve * 10), T0, KID).ok).toBe(true);
   });
 });

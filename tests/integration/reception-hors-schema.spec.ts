@@ -162,9 +162,11 @@ describe('REQ-INT-003 REQ-QA-007 — un payload hors schéma est refusé 422, av
  * La version d'un `held` qu'on rejoue : la version publiée ANTÉRIEURE à la courante. Depuis
  * INT-T46-P, un `held` se juge contre les `$defs` de SA version, et une version sans contrat publié
  * (la courante + 1) n'est jamais conforme : le témoin d'une charge conforme part donc d'une version
- * publiée.
+ * publiée. Depuis INT-T76-P, la v3 est TRAITÉE pendant la fenêtre de bascule (ouverte par la première
+ * v4 reçue) : le témoin part donc de la v2, publiée, qui connaît la candidature, et qui est toujours
+ * `held`.
  */
-const VERSION_DU_HELD = SCHEMA_VERSION - 1;
+const VERSION_DU_HELD = 2;
 
 describe('REQ-INT-003 — condition de la sécurité : le rejeu d’un `held` passe par la MÊME validation', () => {
   it('REQ-INT-003 : un `held` conforme, conservé sans `utm`, est jugé conforme à son rejeu', async () => {

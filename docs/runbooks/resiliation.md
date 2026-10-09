@@ -44,7 +44,7 @@
 ## 4. Le geste de résiliation en console
 
 - Il est réservé au rôle nommé qui porte la résiliation (DM-63). Il est contrôlé côté serveur et
-  journalisé avec l'utilisateur de la console qui l'accomplit (`src/server/apporteur/resilier.ts`).
+  journalisé avec l'utilisateur de la console qui l'accomplit (`src/server/apporteur/resiliation.ts`).
 - Le motif enregistré (`apporteurs.resiliation_motif`) est choisi selon le cas du tableau :
   - `ordinaire_apporteur` pour une résiliation par l'apporteur ;
   - `ordinaire_axion` pour une résiliation par la Société sans motif ;
@@ -62,13 +62,16 @@ Ils s'appliquent d'eux-mêmes au geste, dans la même transaction :
 - les attributions **provisoires** et les déclarations **en attente** sont **annulées**, et les entreprises
   redeviennent librement déclarables ;
 - les attributions **définitives sans commande prennent fin** ;
-- une attribution dont une **commande a été signée** avant la fin du contrat **continue d'ouvrir droit** à
-  commission, au fur et à mesure des encaissements, **quelle qu'en soit la date** (art. 12.3) ;
-- les **commissions acquises sont payées** au dernier relevé, sans le seuil de versement de l'art. 5.1
-  (art. 12.2), et **aucune commission acquise n'est perdue** ;
+- une attribution dont une **commande a été signée** avant la fin du contrat, ou pendant le préavis,
+  **continue d'ouvrir droit** à commission, même non encore confirmée : la commission est due quand la
+  Société a encaissé l'intégralité du prix, **quelle que soit la date de cet encaissement** (art. 12.3 et 4.2) ;
+- les **commissions acquises** et non encore facturées **sont facturées par autofacture et versées** dans
+  les conditions des art. 5.1 et 5.3, **sans montant minimum** (art. 12.2), et **aucune commission acquise
+  n'est perdue** ;
 - un **solde négatif** s'impute sur les commissions à venir (art. 12.4) ;
-- **l'accès en lecture** de l'apporteur à son espace est **maintenu** jusqu'à l'extinction de ses droits,
-  ou ses relevés, factures et motifs de blocage lui sont envoyés par courriel (art. 12.3).
+- **l'accès à l'espace prend fin** à la date de fin du contrat ; ses autofactures, ses avoirs, leurs
+  décomptes et le motif de tout blocage lui sont envoyés par courriel jusqu'à l'extinction de ses droits
+  (art. 12.3, SEC-70).
 
 **Fin de plein droit (art. 12.5) : à qui verser.** Les commissions acquises à la date de la fin sont
 versées, selon le cas, à l'apporteur, à ses ayants droit (décès) ou au mandataire désigné (mandataire
@@ -89,7 +92,34 @@ Un écrit à son adresse enregistrée, qui dit :
 - **la date d'effet** ;
 - l'article appliqué, et, pour l'art. 11.2, la décision motivée ;
 - les effets de la section 5, en particulier : ses commandes signées continuent de lui ouvrir droit, ses
-  commissions acquises lui seront payées, et il garde l'accès en lecture à son espace ;
+  commissions acquises lui seront payées, son accès à l'espace prend fin avec le contrat, et ses
+  documents lui sont envoyés par courriel ;
 - l'adresse à laquelle écrire pour toute question ou contestation.
 
 Le courriel envoyé est tracé dans `courriels_envoyes`.
+
+## 7. L'espace de l'apporteur après le geste (SEC-70, art. 12.3, REQ-SEC-032)
+
+Réécrit par SEC-70 sur le contrat v2 (art. 12.3 : « son lien personnel est révoqué à la fin du
+contrat »), dans le cadre posé par la sécurité. Il remplace la lecture seule de SEC-19.
+
+- **Toutes ses sessions tombent au geste.** La base incrémente sa version de session à la résiliation
+  (migration `sessions_revocables`) : chaque appareil connecté est déconnecté à la requête suivante.
+  Il n'y a rien à faire en console.
+- **L'accès à l'espace prend fin à la date de fin du contrat, sans exception.** Il ne se reconnecte
+  plus : une demande de lien reçoit la même réponse qu'une adresse inconnue, et un lien déjà émis
+  n'ouvre aucune session. Ses droits en cours (une commande signée avant la fin) n'y changent rien.
+- **Ses documents lui parviennent par courriel**, à l'adresse vérifiée de son compte, jusqu'à
+  l'extinction de ses droits : ses autofactures, ses avoirs, leurs décomptes et le motif de tout
+  blocage. Aucun relevé, aucune autofacture ni aucun motif de blocage n'est émis à ce jour : il n'y a
+  rien à lui envoyer. Les tâches qui les émettront ne sont mises en service qu'avec l'envoi par
+  courriel, à son émission, de tout document destiné à un apporteur résilié.
+- **Ce qu'il peut encore faire, par écrit** à l'adresse de contact de la Société : obtenir la copie de
+  son contrat, de ses autofactures et de ses contestations ; contester une commission ou une décision
+  dans les délais du contrat (art. 5.5) ; exercer ses droits RGPD (`docs/runbooks/demandes-de-droits.md`).
+  Une contestation reçue ainsi est saisie **en console**.
+- **Son RIB ne change plus en libre service.** Ses commissions continuent d'être payées (art. 12.3) :
+  s'il faut changer ses coordonnées bancaires, il l'écrit, et le changement se fait **en console**, avec
+  la validation à quatre yeux du RIB (CPL-T24). Aucun versement ne part vers un RIB non validé.
+- **S'il signale qu'il ne peut plus se connecter**, c'est le fonctionnement voulu : on lui répond par
+  écrit que l'accès a pris fin avec le contrat, et que ses documents lui sont envoyés par courriel.

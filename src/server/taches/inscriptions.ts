@@ -41,6 +41,9 @@ import { clesPii } from '../securite/pii';
 import {
   FORMES_D_ATTENTE,
   creerAlerteur,
+  DECISION_TRANSFERT_TELEGRAM,
+  exigerLeTransfertConsigne,
+  type DecisionDuTransfert,
   notifieurTelegram,
   type Alerteur,
 } from '../integrations/telegram/alertes';
@@ -53,24 +56,51 @@ import {
   portsDeBase as portsDeReconciliation,
   reconcilier,
 } from '../integrations/axionia/reconciliation';
+import {
+  passageDesSommes,
+  portsDesSommesEnBase,
+} from '../integrations/axionia/reconciliation-sommes';
 import { passageQuotidien } from '../jobs/reconciliation';
 import { minimiserCandidatures } from './minimiser-candidatures';
 import { purgerLesContacts } from './purger-contacts';
+import { purgerLesEntreprisesConnues } from './purger-entreprises-connues';
 import { purgerLesSirenRefuses } from './purger-siren-refuses';
+import { purgerLesAppareils } from './purger-appareils';
 import { purgerLesNotificationsDeLEspace } from './purger-notifications-espace';
+import { alerterLesNonRendus, passageDEnvoiDesNotifications } from './envoyer-notifications-espace';
 import { purgerLesValeursDesDroits } from './purger-valeurs-droits-contact';
+import { anonymiserLesTracesDesDroits } from './anonymiser-traces-droits-contact';
+import { leverLesSuspensionsEchues } from '../apporteur/suspension';
 import {
   anonymiserLesAnomalies,
   purgerLesContestations,
   purgerLesDementis,
 } from './purger-contestations-anomalies';
 import { purgerLeJournalDesAccesConsole } from './purger-journal-acces-console';
+import { purgerLesSessions } from './purger-sessions-espace';
+import { resilierALaDateDEffet } from './resilier-a-date-effet';
+import { effacerLesComptesDesactives } from './purger-utilisateurs-console';
+import { purgerLesTracesDeLaListe } from './purger-traces-liste-noire';
+import { purgerLesTextesDesDecisions } from './purger-textes-des-decisions';
+import { rappelerLesAttestationsRcPro } from './rappeler-rc-pro';
+import { domaines } from '../../config/entite';
+import { creerJournal } from '../../lib/logger';
+import { creerNotifieur } from '../../lib/notify';
+import { envoiDesNotifications } from '../auth/lien-magique-production';
+import { configurationDeLEmetteur, depotDesCourriels } from '../integrations/zeptomail/emetteur';
+import { relaisZeptomail } from '../integrations/zeptomail/relais';
 import { completerLesCodesNaf, portsDeBase } from './completer-code-naf';
+import {
+  ouvrirLesAnomaliesDAutoParrainage,
+  precedentDuBattement,
+} from './ouvrir-anomalies-auto-parrainage';
+import { lireReglageDeSincerite, ouvrirLesAnomaliesDeSincerite } from '../anomalie/sincerite';
 import { creerDisjoncteur } from '../integrations/recherche-entreprises/disjoncteur';
 import { PARAMETRES } from '../integrations/recherche-entreprises/parametres';
 import { clientDuTiers } from '../integrations/recherche-entreprises/tiers';
 import { limiteurDuRegistre } from '../integrations/recherche-entreprises/limiteur';
 import { traitantsDeLAnteriorite } from '../entreprise-connue/projection';
+import { rapprocherLesAnteriorites } from '../jobs/anteriorite-retroactive';
 
 /**
  * Les traitants branchés, par type d'événement reçu. Un seul aujourd'hui : la candidature reçue
@@ -159,10 +189,16 @@ export async function alerterLesFranchissements(
 }
 
 /** Le canal d'alerte du serveur, lu dans l'environnement ; `null` s'il n'est pas configuré. */
-export function canalDAlerte(env: Readonly<Record<string, string | undefined>>): Alerteur | null {
+export function canalDAlerte(
+  env: Readonly<Record<string, string | undefined>>,
+  decision: DecisionDuTransfert | null = DECISION_TRANSFERT_TELEGRAM
+): Alerteur | null {
   const jeton = env.TELEGRAM_BOT_TOKEN;
   const salon = env.TELEGRAM_CHAT_ID;
   if (jeton === undefined || jeton === '' || salon === undefined || salon === '') return null;
+  // SEC-64 (sécurité, 5982916235) : le canal réel se construirait ; sans décision consignée sur le
+  // transfert, il est refusé, nommé, et le lanceur ne démarre pas.
+  exigerLeTransfertConsigne(env, decision);
   return creerAlerteur({
     notifieur: notifieurTelegram(jeton, salon),
     horloge: horlogeSysteme,
@@ -204,12 +240,47 @@ export function inscriptions(
     // DM-53 (REQ-DM-043) : le SIREN des dépôts refusés, douze mois après le refus.
     siren_refuses_purger: () =>
       purgerLesSirenRefuses(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-66 (REQ-DM-029) : les projections de l'antériorité, effacées quand elles ne fondent plus de refus.
+    entreprises_connues_purger: () =>
+      purgerLesEntreprisesConnues(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-61 (REQ-UX-016) : les notifications de l'espace, douze mois après leur inscription.
     notifications_espace_purger: () =>
       purgerLesNotificationsDeLEspace(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-55 (REQ-UX-016) : le courriel des notifications de la machine, après le commit de la
+    // transition ; la fenêtre de redéclaration court de son envoi effectif.
+    notifications_espace_envoyer: async () => {
+      const bilan = await passageDEnvoiDesNotifications(prisma, env)();
+      // Arbitrage de la sécurité : un non-rendu lève aussi une alerte fermée (motif et nombre).
+      await alerterLesNonRendus(bilan, canalDAlerte(env));
+      return bilan;
+    },
+    // DM-25 (REQ-JUR-007) : l'antériorité établie après coup, jugée au dépôt sur des faits antérieurs.
+    anteriorites_rapprocher: () =>
+      rapprocherLesAnteriorites(prisma, new Date(horlogeSysteme.maintenant())),
     // DM-59 (REQ-JUR-065) : la valeur d'une rectification, effacée à son échéance même sans traitement.
     droits_contact_purger: () =>
       purgerLesValeursDesDroits(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-60 (REQ-JUR-065) : la trace d'une demande de droit, anonymisée cinq ans après sa clôture.
+    droits_contact_anonymiser: () =>
+      anonymiserLesTracesDesDroits(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-15 (REQ-SEC-019) : la levée de plein droit des suspensions échues, chacune SA transaction.
+    suspensions_lever: () =>
+      leverLesSuspensionsEchues(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-18 (REQ-SEC-031) : l'ouverture DIFFÉRÉE des anomalies d'auto-parrainage, depuis le curseur
+    // que son propre battement porte.
+    auto_parrainage_ouvrir: () =>
+      ouvrirLesAnomaliesDAutoParrainage(prisma, {
+        maintenant: () => new Date(horlogeSysteme.maintenant()),
+        precedent: precedentDuBattement(prisma),
+      }),
+    // SEC-14 (REQ-SEC-017) : les détecteurs de sincérité, en traitement DISTINCT et DIFFÉRÉ du dépôt.
+    // Le réglage vit hors du dépôt ; absent, rien n'est jugé.
+    sincerite_ouvrir: () =>
+      ouvrirLesAnomaliesDeSincerite(prisma, {
+        maintenant: new Date(horlogeSysteme.maintenant()),
+        reglage: lireReglageDeSincerite(process.env.PARTNERS_SINCERITE_REGLAGE),
+        cles: clesPii(process.env),
+      }),
     // DM-62 (REQ-DM-033, REQ-DM-043) : les anomalies, les contestations et le démenti d'un contact,
     // chacun à son échéance, à l'heure du système. Le passage des anomalies ne rend qu'un NOMBRE de
     // mesures ouvertes : les anomalies en cause ne sont nommées qu'en console.
@@ -218,9 +289,47 @@ export function inscriptions(
     contestations_purger: () =>
       purgerLesContestations(prisma, new Date(horlogeSysteme.maintenant())),
     dementis_purger: () => purgerLesDementis(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-55 (REQ-SEC-003) : l'empreinte d'un appareil, effacée une durée de session après sa vue.
+    appareils_purger: () => purgerLesAppareils(prisma, new Date(horlogeSysteme.maintenant())),
     // SEC-58 : le journal des accès à la console, purgé à son échéance (la purge vide les identifiants).
     journal_acces_console_purger: () =>
       purgerLeJournalDesAccesConsole(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-65 (REQ-SEC-003, REQ-JUR-068) : les sessions finies, six mois après leur fin ; le nom et
+    // l'adresse d'un accès désactivé de la console, cinq ans après la désactivation.
+    sessions_purger: () => purgerLesSessions(prisma, new Date(horlogeSysteme.maintenant())),
+    utilisateurs_console_effacer: () =>
+      effacerLesComptesDesactives(prisma, new Date(horlogeSysteme.maintenant())),
+    // SEC-66 (REQ-JUR-015) : la résiliation par la Société, à sa date d'effet.
+    resiliations_a_date_effet: () =>
+      resilierALaDateDEffet(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-65 : la trace de la liste de la Société, effacée cinq ans après le retrait.
+    traces_liste_noire_purger: () =>
+      purgerLesTracesDeLaListe(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-70 (REQ-JUR-029) : le texte d'une décision de contrat, purgé le lendemain de son échéance.
+    decisions_contrat_purger: () =>
+      purgerLesTextesDesDecisions(prisma, new Date(horlogeSysteme.maintenant())),
+    // DM-51 (REQ-DM-027) : le rappel d'échéance de l'attestation rc_pro, par `notifier()` ; l'envoi
+    // est celui des notifications du processus (l'émetteur en production, le puits ailleurs).
+    rc_pro_rappeler: () =>
+      rappelerLesAttestationsRcPro(prisma, {
+        maintenant: () => new Date(horlogeSysteme.maintenant()),
+        cles: clesPii(env),
+        urlDeLEspace: new URL(`https://${domaines().servi}`),
+        envoyerCourriel: envoiDesNotifications(env, {
+          emetteur: () => ({
+            configuration: configurationDeLEmetteur(env, domaines().envoi),
+            relais: relaisZeptomail({
+              url: env.ZEPTOMAIL_API_URL,
+              jeton: env.ZEPTOMAIL_SEND_TOKEN,
+            }),
+            depot: depotDesCourriels(prisma),
+            cles: clesPii(env),
+            maintenant: () => new Date(horlogeSysteme.maintenant()),
+            nouvelId: randomUUID,
+          }),
+          notifieur: () => creerNotifieur({ env, journal: creerJournal(), transports: [] }),
+        }),
+      }),
     // DM-28 (REQ-DM-046) : la reprise des codes NAF nuls. Un disjoncteur par passage : le tiers en
     // panne interrompt la reprise, le passage suivant la relance.
     naf_completer: () =>
@@ -261,7 +370,7 @@ export function passageDeReconciliation(
   const passage = passageQuotidien({
     ...battementDeLaReconciliation(prisma),
     maintenant: () => new Date(horlogeSysteme.maintenant()),
-    reconcilier: () => {
+    reconcilier: async () => {
       const lu = lireEnvironnement(env);
       if (!lu.ok) throw new Error('environnement_refuse');
       const rotation = lireTrousseaux(env, horlogeSysteme.maintenant());
@@ -273,21 +382,47 @@ export function passageDeReconciliation(
         appeler: fetch,
         maintenantMs: () => horlogeSysteme.maintenant(),
       };
-      return reconcilier({
+      // Un signal ne porte qu'un genre, un motif fermé ou un NOMBRE : jamais un identifiant.
+      const signaler = async (
+        s: { genre: string; motif: string } | { genre: string; nombre: number }
+      ) => {
+        await alerteur?.alerter({
+          categorie: 'reconciliation',
+          id: randomUUID(),
+          reconciliation: {
+            genre: s.genre,
+            ...('motif' in s ? { motif: s.motif } : { nombre: s.nombre }),
+          },
+        });
+      };
+      const sequences = await reconcilier({
         ...portsDeReconciliation(prisma),
         lire: clientRelecture(canal),
         rejouer: clientRejeu(canal),
-        signaler: async (s) => {
-          await alerteur?.alerter({
-            categorie: 'reconciliation',
-            id: randomUUID(),
-            reconciliation: {
-              genre: s.genre,
-              ...('motif' in s ? { motif: s.motif } : { nombre: s.nombre }),
-            },
-          });
-        },
+        signaler,
       });
+      // INT-T73-P (REQ-INT-013) : la réconciliation des SOMMES, dans le même passage quotidien. Son
+      // échec est signalé et compté, sans faire échouer la réconciliation des séquences, déjà faite :
+      // un passage rejoué à la minute suivante redemanderait des rejeux pour rien. Les SIREN en écart
+      // restent au battement, dans Partners ; vers l'extérieur, seul leur nombre part.
+      try {
+        const r = await passageDesSommes(
+          portsDesSommesEnBase(prisma, {
+            maintenant: () => new Date(horlogeSysteme.maintenant()),
+            lire: clientRelecture(canal),
+            signaler,
+          })
+        );
+        return {
+          ...sequences,
+          sommesPages: r.pages,
+          sommesRelus: r.relus,
+          ecartsDeSommes: r.nombreDEcarts,
+          sirensEnEcart: [...new Set(r.ecartsParSiren.map((e) => e.siren))],
+        };
+      } catch {
+        return { ...sequences, sommesEchec: 1 };
+      }
     },
   });
   return passage as unknown as Passage;

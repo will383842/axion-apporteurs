@@ -12,15 +12,20 @@
  *   — aucune promotion depuis la file (REQ-DM-004) : `en_attente` ne mène qu'à `annulee` ou `expiree` ;
  *     la redéclaration au rang 1 fait NAÎTRE une autre attribution (`deposee`), dans la même
  *     transaction que le passage `redeclaree` ;
- *   — aucun devis signé pendant `provisoire` : la commande est gardée, et le module serveur enchaîne
- *     `confirmee` puis `devis_signe` à la confirmation (avis d'A07) ;
+ *   — aucun devis signé pendant `provisoire` : DM-73 (art. 3.2 du v2, juriste et A02, #824), la
+ *     commande ne se garde plus, elle CONFIRME. L'écrivain enchaîne `confirmee_par_la_commande`
+ *     (datée de la signature) puis `devis_signe`, dans la même transaction ;
  *   — aucune sortie `perdue` depuis `signee`, `convertie` ou `figee_resiliation` ;
+ *   — SEC-19 (A02, #703 ; juriste, art. 12) : la fin du contrat de l'apporteur porteur a DEUX
+ *     sorties exclusives — `figee` (vers `figee_resiliation`) depuis un état AVEC commande
+ *     (`signee`, `convertie`) seulement, `fin_de_contrat` depuis tout état sans commande ;
  *   — la caducité d'une commande (condition suspensive défaillie) a UN code par destination ; c'est
  *     `codeDeCaducite` qui le choisit selon la fenêtre, jamais l'appelant.
  *
  * W19 : le refus propre au porteur est jugé sur le triplet (état, transition, type de porteur) ; un
  * conseiller ne déclenche ni la confirmation tacite, ni `non_confirme`, ni le gel, ni la file.
  */
+import { ETATS_OCCUPANTS, type EtatOccupant } from './etats';
 import { SEUILS } from '../seuils/ssot';
 import { MS_PAR_JOUR, joursDeLaDate } from '../temps/calendrier-civil';
 import { depuisParis, versParis } from '../temps/paris';
@@ -43,6 +48,21 @@ export const ETATS_ATTRIBUTION = [
   'annulee',
 ] as const;
 export type EtatAttribution = (typeof ETATS_ATTRIBUTION)[number];
+
+/**
+ * EXT-T06 (conditions de la sécurité) — les états TERMINÉS : la liste FERMÉE, à côté de l'enum. Une
+ * attribution terminée n'occupe plus le SIREN et n'attend plus rien. Chaque état est d'une seule classe :
+ * occupant (`ETATS_OCCUPANTS`), en file (`en_attente`) ou terminé ; un témoin rougit sur un état neuf
+ * non classé.
+ */
+export const ETATS_TERMINES = [
+  'invalidee',
+  'perdue',
+  'perimee',
+  'expiree',
+  'annulee',
+] as const satisfies readonly EtatAttribution[];
+export type EtatTermine = (typeof ETATS_TERMINES)[number];
 
 /** Toutes les transitions : les naissances, puis les flèches. Égale à l'union des deux (test). */
 export const EVENEMENTS_ATTRIBUTION = [
@@ -74,6 +94,15 @@ export const EVENEMENTS_ATTRIBUTION = [
   // DM-67 (REQ-DM-006, art. 3.3) : l'antériorité de la Société établie après l'enregistrement, par
   // des faits datés avant le dépôt. Depuis tout état OCCUPANT ; les commissions acquises restent.
   'anteriorite_etablie',
+  // SEC-19 (REQ-DM-011, art. 12) : la résiliation du contrat de l'apporteur porteur, dans sa
+  // transaction. Une transition, pas un état : ses arrivées sont `annulee` et `expiree`.
+  'fin_de_contrat',
+  // DM-71 (art. 3.3 du v2) : après la confirmation, seul un geste HUMAIN annule, pour erreur
+  // d'identification de l'entreprise ou pour fraude de l'apporteur (forme d'A02, #806 6039768837).
+  'annulee_erreur_identification',
+  'fraude_etablie',
+  // DM-73 (art. 3.2 du v2) : une commande signée est un échange avec la Société ; elle confirme.
+  'confirmee_par_la_commande',
 ] as const;
 export type TransitionAttribution = (typeof EVENEMENTS_ATTRIBUTION)[number];
 
@@ -90,8 +119,10 @@ const SUITES_SANS_PERTE = {
   perdue: 'perdue',
   expiree: 'expiree',
   anomalie_confirmee: 'invalidee',
-  figee: 'figee_resiliation',
-  anteriorite_etablie: 'annulee',
+  fin_de_contrat: 'expiree',
+  // DM-71 : l'antériorité n'annule plus après la confirmation ; seules les deux exceptions humaines.
+  annulee_erreur_identification: 'annulee',
+  fraude_etablie: 'annulee',
 } as const;
 
 /** La matrice : pour chaque état, les seules transitions acceptées et leur état d'arrivée. */
@@ -100,18 +131,24 @@ export const TRANSITIONS_ATTRIBUTION: {
     Partial<Record<TransitionAttribution, EtatAttribution>>
   >;
 } = {
-  en_attente: { retiree: 'annulee', file_expiree: 'expiree', redeclaree: 'expiree' },
+  en_attente: {
+    retiree: 'annulee',
+    file_expiree: 'expiree',
+    redeclaree: 'expiree',
+    fin_de_contrat: 'annulee',
+  },
   provisoire: {
     confirmee: 'active',
     confirmee_par_courriel: 'active',
     confirmee_tacitement: 'active',
+    confirmee_par_la_commande: 'active',
     non_confirmee: 'invalidee',
     non_confirmee_par_courriel: 'invalidee',
     anomalie_confirmee: 'invalidee',
     annulee_par_apporteur: 'annulee',
     annulee_par_la_console: 'annulee',
     liberee_sans_confirmation: 'perimee',
-    figee: 'figee_resiliation',
+    fin_de_contrat: 'annulee',
     anteriorite_etablie: 'annulee',
   },
   active: { rdv_pris: 'rdv_pris', perimee: 'perimee', ...SUITES_SANS_PERTE },
@@ -121,8 +158,9 @@ export const TRANSITIONS_ATTRIBUTION: {
     perdue: 'perdue',
     expiree: 'expiree',
     anomalie_confirmee: 'invalidee',
-    figee: 'figee_resiliation',
-    anteriorite_etablie: 'annulee',
+    fin_de_contrat: 'expiree',
+    annulee_erreur_identification: 'annulee',
+    fraude_etablie: 'annulee',
   },
   signee: {
     paiement_recu: 'convertie',
@@ -130,16 +168,67 @@ export const TRANSITIONS_ATTRIBUTION: {
     figee: 'figee_resiliation',
     commande_caduque: 'active',
     commande_caduque_hors_fenetre: 'expiree',
-    anteriorite_etablie: 'annulee',
+    annulee_erreur_identification: 'annulee',
+    fraude_etablie: 'annulee',
   },
-  convertie: { expiree: 'expiree', figee: 'figee_resiliation', anteriorite_etablie: 'annulee' },
-  figee_resiliation: { expiree: 'expiree', anteriorite_etablie: 'annulee' },
+  convertie: {
+    expiree: 'expiree',
+    figee: 'figee_resiliation',
+    annulee_erreur_identification: 'annulee',
+    fraude_etablie: 'annulee',
+  },
+  figee_resiliation: {
+    expiree: 'expiree',
+    annulee_erreur_identification: 'annulee',
+    fraude_etablie: 'annulee',
+  },
   invalidee: {},
   perdue: {},
   perimee: {},
   expiree: {},
   annulee: {},
 };
+
+/**
+ * DM-71 (art. 3.3 du v2) : les états CONFIRMÉS. Depuis eux, l'antériorité n'annule plus ; seules les
+ * deux exceptions humaines le font. La base tient la même règle par `confirmee_at`
+ * (garde `attributions_annulation_apres_confirmation`).
+ */
+export type EtatConfirme = Exclude<EtatOccupant, 'provisoire'>;
+export const ETATS_CONFIRMES: readonly EtatConfirme[] = ETATS_OCCUPANTS.filter(
+  (e): e is EtatConfirme => e !== 'provisoire'
+);
+
+/**
+ * DM-71 : la liste FERMÉE des exceptions d'annulation, celle de l'enum `exception_annulation` en base.
+ * `retablissement_apporteur` est posée au rétablissement d'un apporteur (UX-P1-61), par sa propre
+ * transition.
+ */
+export const EXCEPTIONS_ANNULATION = [
+  'erreur_identification',
+  'fraude',
+  'retablissement_apporteur',
+] as const;
+export type ExceptionAnnulation = (typeof EXCEPTIONS_ANNULATION)[number];
+
+/**
+ * Les transitions FONDÉES SUR UNE ANOMALIE CONFIRMÉE : elles exigent son identifiant, qui va à la
+ * notification (jamais à la charge, DM-12 (d)), et leur motif rend les faits de cette anomalie, purge
+ * comprise. DM-71 : la fraude de l'apporteur après la confirmation en est une.
+ */
+export const TRANSITIONS_FONDEES_SUR_UNE_ANOMALIE = [
+  'anomalie_confirmee',
+  'fraude_etablie',
+] as const satisfies readonly TransitionAttribution[];
+
+export const fondeeSurUneAnomalie = (t: unknown): boolean =>
+  (TRANSITIONS_FONDEES_SUR_UNE_ANOMALIE as readonly unknown[]).includes(t);
+
+/** L'exception que porte chaque transition humaine de l'art. 3.3, dans la charge et en base. */
+export const EXCEPTION_DE_LA_TRANSITION = {
+  annulee_erreur_identification: 'erreur_identification',
+  fraude_etablie: 'fraude',
+} as const satisfies Partial<Record<TransitionAttribution, ExceptionAnnulation>>;
 
 /** Le type de porteur, DÉRIVÉ de la population de l'attribution (W19 (1)). */
 export type TypePorteur = 'apporteur' | 'conseiller';
@@ -157,6 +246,13 @@ export const REFUSEES_AU_CONSEILLER = [
   'non_confirmee_par_courriel',
   'anomalie_confirmee',
   'figee',
+  // SEC-19 : la résiliation est celle d'un contrat d'apporteur ; un conseiller n'en a pas.
+  'fin_de_contrat',
+  // DM-71 : les deux exceptions de l'art. 3.3 visent l'attribution d'un APPORTEUR.
+  'annulee_erreur_identification',
+  'fraude_etablie',
+  // DM-73 (A02) : refusée au conseiller, comme les autres confirmations.
+  'confirmee_par_la_commande',
 ] as const satisfies readonly TransitionAttribution[];
 
 /** La prise en charge est la naissance du conseiller, et de lui seul. */
@@ -167,6 +263,33 @@ const REFUSEES_A_L_APPORTEUR: readonly TransitionAttribution[] = ['prise_en_char
  * `anteriorite_etablie` ; il n'apparaît jamais dans une notification.
  */
 export const CRITERES_D_ANTERIORITE = ['cliente', 'devis', 'devis_signe'] as const;
+
+/**
+ * DM-55 (forme d'A02, valeurs de la juriste, rattrapage 98) : le motif FERMÉ d'une annulation par la
+ * console, sans « autre ». Il ne vaut que depuis `provisoire` (seule flèche de la matrice) ;
+ * `erreur_de_saisie_de_la_societe` est réservé à la prise en charge d'un conseiller, et ne notifie rien.
+ * Pas de colonne : l'événement est la trace, le motif est dans sa charge.
+ */
+export const MOTIFS_ANNULATION_CONSOLE = [
+  'demande_de_l_apporteur',
+  'declaration_en_double',
+  'entreprise_relevant_de_l_article_3_3_bis',
+  'erreur_de_saisie_de_la_societe',
+] as const;
+export type MotifAnnulationConsole = (typeof MOTIFS_ANNULATION_CONSOLE)[number];
+
+/**
+ * DM-55 (forme d'A02) : la catégorie d'une entreprise relevant de l'article 3.3 bis — le MÊME
+ * vocabulaire que l'enum `MotifListeNoire` de la base, confronté à elle par un témoin. Elle accompagne
+ * le motif `entreprise_relevant_de_l_article_3_3_bis`, et lui seul.
+ */
+export const MOTIFS_LISTE_NOIRE = [
+  'administration',
+  'financeur_public',
+  'financeur_paritaire',
+  'organisme_de_formation_partenaire',
+] as const;
+export type MotifListeNoire = (typeof MOTIFS_LISTE_NOIRE)[number];
 export type CritereDAnteriorite = (typeof CRITERES_D_ANTERIORITE)[number];
 
 export type CodeTransitionAttribution =
@@ -178,7 +301,14 @@ export type CodeTransitionAttribution =
   | 'refusee_au_porteur'
   | 'autre_commande_valable'
   | 'critere_incoherent'
-  | 'acteur_refuse';
+  | 'acteur_refuse'
+  | 'motif_incoherent'
+  | 'porteur_refuse'
+  | 'anomalie_refusee'
+  | 'fait_posterieur_au_depot'
+  | 'reference_du_fait_invalide'
+  // DM-73 (art. 4.4) : une commande signée avant le dépôt ne profite pas à cette attribution.
+  | 'commande_anterieure_a_l_occupation';
 
 export class ErreurTransitionAttribution extends Error {
   readonly code: CodeTransitionAttribution;
@@ -256,6 +386,7 @@ const CONFIRMATIONS: readonly TransitionAttribution[] = [
   'confirmee',
   'confirmee_par_courriel',
   'confirmee_tacitement',
+  'confirmee_par_la_commande',
 ];
 
 /** Le calendrier, pas un délai : les mois d'une année civile. */
@@ -294,7 +425,8 @@ export interface TempsRecalcules {
  * Les colonnes de temps RECALCULÉES à chaque transition (REQ-DM-007), en instants (le domaine ne lit
  * pas l'heure : l'appelant la lui passe) :
  *   — une confirmation pose `confirmeeAt` et `fenetreFinAt` (+ `FENETRE_MOIS` mois) ; rien d'autre
- *     ne les touche, la caducité d'une commande comprise ;
+ *     ne les touche, la caducité d'une commande comprise. Elles courent de `confirmeeLe`, qui vaut
+ *     `maintenant` sauf pour la confirmation par la commande, datée de sa signature (DM-73) ;
  *   — `peremptionAt` n'existe qu'en `active`, à `premierContactAt` + `PEREMPTION_JOURS` ; nulle tant
  *     que ce contact n'a pas eu lieu, nulle sous le marqueur, nulle dès qu'une suite existe — et
  *     nulle après une caducité, puisqu'un devis a existé.
@@ -303,12 +435,13 @@ export function effetsDeTransition(
   avant: TempsDeLAttribution,
   transition: TransitionAttribution,
   vers: EtatAttribution,
-  maintenant: Instant
+  maintenant: Instant,
+  confirmeeLe: Instant = maintenant
 ): TempsRecalcules {
   const confirme = CONFIRMATIONS.includes(transition);
-  const confirmeeAt = confirme ? maintenant : avant.confirmeeAt;
+  const confirmeeAt = confirme ? confirmeeLe : avant.confirmeeAt;
   const fenetreFinAt = confirme
-    ? ajouterMoisParis(maintenant, SEUILS.FENETRE_MOIS.valeur)
+    ? ajouterMoisParis(confirmeeLe, SEUILS.FENETRE_MOIS.valeur)
     : avant.fenetreFinAt;
   const chrono =
     vers === 'active' &&

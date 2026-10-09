@@ -44,7 +44,9 @@ export type MotifPii =
   | 'iban_invalide'
   | 'siret_invalide'
   | 'nom_personne_invalide'
-  | 'agent_invalide';
+  | 'agent_invalide'
+  | 'faits_invalides'
+  | 'reference_gel_invalide';
 
 export class ErreurPii extends Error {
   constructor(
@@ -312,6 +314,48 @@ const normaliserAgent = (valeur: string): string => {
   return normalise;
 };
 
+/**
+ * La référence d'un incident ou d'un litige qui gèle le journal des accès (SEC-61) : opaque, en
+ * capitales, la forme du CHECK `journal_acces_console_gels_reference_forme` ; bords retirés.
+ */
+const normaliserReferenceGel = (valeur: string): string => {
+  const normalise = valeur.trim().toUpperCase();
+  if (!/^[A-Z0-9][A-Z0-9-]{2,39}$/.test(normalise))
+    throw refus('reference_gel_invalide', 'la référence du gel');
+  return normalise;
+};
+
+/**
+ * Un caractère de contrôle (sous 0x20, de 0x7f à 0x9f), un séparateur de ligne ou de paragraphe, ou un
+ * caractère de FORMAT (catégorie Cf : U+202E retourne un texte, U+200B le cache).
+ */
+const FORMAT = /^\p{Cf}$/u;
+function estUnControle(ch: string): boolean {
+  const c = ch.codePointAt(0)!;
+  return c < 0x20 || (c >= 0x7f && c <= 0x9f) || c === 0x2028 || c === 0x2029 || FORMAT.test(ch);
+}
+
+/**
+ * LE NETTOYAGE d'un texte saisi par une personne (DM-55, puis SEC-19) : les caractères de contrôle et
+ * les retours à la ligne forcés deviennent une espace, les espaces se resserrent, les bords tombent.
+ * UNE écriture : l'envoi (`faitsPourLeCourriel`), le juge des faits et l'empreinte des faits d'une mise
+ * en demeure le partagent, si bien que l'empreinte et le texte chiffré décrivent le même clair.
+ */
+export function nettoyerUnTexteSaisi(brut: string): string {
+  return [...brut]
+    .map((ch) => (estUnControle(ch) ? ' ' : ch))
+    .join('')
+    .replace(/ {2,}/g, ' ')
+    .trim();
+}
+
+/** SEC-19 (forme d'A02, #703, 5982552283) : les faits d'une mise en demeure, nettoyés ; jamais vides. */
+const normaliserFaitsDeMiseEnDemeure = (valeur: string): string => {
+  const normalise = nettoyerUnTexteSaisi(valeur);
+  if (normalise === '') throw refus('faits_invalides', 'les faits');
+  return normalise;
+};
+
 /** La SOURCE des types d'empreinte : le type se dérive de ses clés, jamais d'une liste tapée. */
 const NORMALISATIONS = {
   courriel: normaliserCourriel,
@@ -320,6 +364,11 @@ const NORMALISATIONS = {
   siret: normaliserSiret,
   nom_personne: normaliserNomPersonne,
   agent: normaliserAgent,
+  reference_gel: normaliserReferenceGel,
+  // SEC-19 : un domaine dédié, `partners.empreinte.v1 ␟ faits_mise_en_demeure ␟ normalisé`.
+  faits_mise_en_demeure: normaliserFaitsDeMiseEnDemeure,
+  // SEC-15 : les faits d'une suspension, dans leur PROPRE domaine (même normalisation, empreinte distincte).
+  faits_suspension: normaliserFaitsDeMiseEnDemeure,
 } satisfies Record<string, (valeur: string) => string>;
 
 export type TypeEmpreinte = keyof typeof NORMALISATIONS;

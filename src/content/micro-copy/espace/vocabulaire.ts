@@ -61,11 +61,24 @@ export const FORMULES = {
  * Les actions que plusieurs écrans partagent : leur libellé s'écrit ICI, une fois. Un écran qui
  * mène ailleurs avec le même libellé reprend l'action et ne change que sa route.
  */
+/**
+ * EXT-T06 (REQ-EXT-006) — le signal « Déjà déposée par le passé » de la vérification d'une entreprise
+ * disponible : texte FIXE de la juriste (#474, 6036611999, rectifié en 6036797355), MOT POUR MOT, sans porteur, date, durée,
+ * nombre ni issue. Il ne s'affiche qu'avec l'état « disponible ».
+ */
+export const DEJA_DEPOSEE = {
+  titre: 'Déjà déposée par le passé',
+  phrase:
+    "Cette entreprise a déjà fait l'objet d'un dépôt, aujourd'hui terminé. Elle est disponible : vous pouvez la déposer.",
+} as const;
+
 export const ACTIONS_COMMUNES = {
   retourAccueil: { libelle: "Retour à l'accueil", route: '/' },
   envoyerLeDepot: { libelle: 'Envoyer le dépôt', route: null },
   deposerUneEntreprise: { libelle: 'Déposer une entreprise', route: '/deposer' },
   ecrireAAxionIA: { libelle: 'Écrire à Axion-IA', route: '/aide' },
+  // Le retour à ses entreprises : l'issue d'un dépôt (UX-P1-02) et « Ma contestation » (UX-P1-51).
+  voirMesEntreprises: { libelle: 'Voir Mes entreprises', route: '/mes-entreprises' },
 } as const satisfies Readonly<Record<string, ActionEcran>>;
 
 /** Les deux seules entrées de l'espace avant la signature du contrat. */
@@ -177,5 +190,48 @@ export const CONFIDENTIALITE = {
   horsLigne: {
     titre: 'Vous êtes hors ligne',
     phrase: 'La politique de confidentialité s’affichera dès le retour du réseau.',
+  },
+} as const;
+
+/**
+ * UX-P1-51 (REQ-DM-043) — « Ma contestation » : l'apporteur relit SA contestation et la réponse
+ * d'Axion-IA (maquette `contestation.html`, validée par Williams le 2026-10-07, #319, 6032238671).
+ * L'interface dit « Axion-IA », jamais « la Société » (juriste, #761, 5988000399). Les textes de la
+ * juriste sont MOT POUR MOT : la réponse et l'attente (5988000399), le contenu purgé (#619,
+ * 5987225083), que le serveur choisit et que l'écran ne recompose jamais. Le délai vient de la SSOT.
+ */
+export const CONTESTATION = {
+  titre: 'Ma contestation',
+  retour: '← Mes entreprises',
+  objets: {
+    refus_depot: 'Refus d’un dépôt',
+    annulation_attribution: 'Annulation d’un dépôt',
+    demande_rattachement: 'Demande de rattachement',
+  },
+  votreEcrit: 'Votre écrit, reçu le {date}',
+  // Juriste, #761, 5988000399, MOT POUR MOT.
+  reponse: 'Réponse d’Axion-IA, le {date}',
+  attente: {
+    titre: 'La réponse n’est pas encore arrivée',
+    // Juriste, #761, 5988000399, MOT POUR MOT.
+    phrase:
+      'Axion-IA vous répond de façon motivée dans les {delaiReponse} qui suivent la réception de votre écrit, au plus tard le {dateLimite}.',
+    action: ACTIONS_COMMUNES.voirMesEntreprises,
+  },
+  contestationRecue: 'Contestation reçue le {date}',
+  statut: { repondue: 'réponse donnée', enAttente: 'en attente de réponse' },
+  // Juriste, #619, 5987225083, MOT POUR MOT : le texte d'une contestation dont le contenu est purgé.
+  purgee:
+    "Le texte de cette contestation et la réponse d'Axion-IA ne sont plus conservés, leur durée de conservation ayant pris fin.",
+  indisponible: {
+    titre: 'Cette contestation n’est pas disponible',
+    phrase: 'Vos contestations se retrouvent depuis Mes entreprises.',
+    action: ACTIONS_COMMUNES.voirMesEntreprises,
+  },
+  chargement: 'Chargement…',
+  erreur: {
+    titre: 'Votre contestation ne s’affiche pas',
+    phrase: 'Rien n’est perdu : elle s’affichera au prochain essai.',
+    action: 'Réessayer',
   },
 } as const;

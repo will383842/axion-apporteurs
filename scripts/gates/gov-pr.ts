@@ -60,6 +60,7 @@ import {
   resoudreLeLot,
   risqueDeLaPr,
   tachesDeLaBase,
+  tachesDeLaBaseDeFusion,
   segmentsNommesTouches,
   ZONES_SENSIBLES,
   touche,
@@ -130,6 +131,21 @@ const CHAMPS = [
 ];
 
 const NB_CASES = 8;
+/**
+ * LA CASE QUI SE DÉRIVE DES REVUES (GOV-145, point 5) — reconnue par son LIBELLÉ, jamais par son
+ * rang : réordonner le gabarit ne doit pas faire dériver une autre case que celle-ci.
+ */
+const CASE_DERIVEE_DES_REVUES = /^- \[ \] Relecteur ≠ auteur\b/;
+
+/**
+ * LES CASES VIDES parmi les lignes de case données, la case « Relecteur ≠ auteur » comptant remplie
+ * quand le lecteur unique la coche (GOV-145, point 5). Pure : c'est elle que le témoin exerce.
+ */
+export function casesVidesDeLaDod(lignes: readonly string[], revuesCochent: boolean): number {
+  return lignes.filter(
+    (l) => l.startsWith('- [ ]') && !(revuesCochent && CASE_DERIVEE_DES_REVUES.test(l))
+  ).length;
+}
 /** Les avis qui ne comptent pour rien, et POURQUOI — dits en sortie, jamais comptés en fautes. */
 const AVIS_ECARTES: string[] = [];
 /** Les avis postés en commentaire d'issue (GOV-077) — dits, jamais comptés. */
@@ -190,6 +206,102 @@ export function empreinteDeLEntree(entree: unknown): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * ═══ CE QU'UNE PR D'AUTEUR PEUT RÉÉCRIRE DU REGISTRE (GOV-145, décision orale de Williams du 2026-10-04, #319, 6032352874,
+ * point 2) ═════════════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 LE DÉFAUT MESURÉ : une branche d'auteur qui touche UN fichier de plus que sa tâche ne le
+ * déclare attendait un rattrapage entier pour un seul chemin (INT-T73-P et SEC-30, rattrapages 96 et
+ * 97). `fichier_hors_paths_des_taches` lit les `paths` À LA TÊTE : la PR pouvait déjà se les
+ * déclarer, mais RIEN ne bornait ce qu'elle réécrivait d'autre du registre.
+ *
+ * LA RÈGLE. Une PR d'AUTEUR — celle dont la tâche du titre n'est pas de la zone `gouvernance` — qui
+ * touche `docs/tasks.json` n'y fait qu'UNE chose : AJOUTER à `paths` d'une de SES tâches un chemin
+ * qui couvre un fichier qu'elle touche. Depuis la décision de Williams du 2026-10-05 (#319, point 3), le
+ * label `role:gardien-spec` n'est plus exigé dans ce seul cas (`cheminsDAuteurSeuls`), et l'ajout est jugé par la lentille `exactitude` dans la même
+ * relecture (docs/CHARTE-AGENTS.md §7). Tout le reste est un écart NOMMÉ : une tâche versée ou
+ * supprimée, la tâche d'une autre PR, un autre champ que `paths`, un chemin retiré, un chemin qui ne
+ * couvre aucun fichier de la PR.
+ *
+ * ÉCHEC FERMÉ : registre de base illisible, ou une empreinte incalculable d'un côté — c'est un écart.
+ * Les PR de la zone `gouvernance` (rattrapages GOV-012, tâches GOV-…) ne sont pas bornées ici : elles
+ * écrivent le registre par les outils, sous les mêmes labels, comme avant.
+ */
+/**
+ * LA FIN DES RATTRAPAGES DE CHEMINS (décision de Williams du 2026-10-05, #319, 5988252245, point 3).
+ * Vrai seulement quand la PR touche `docs/tasks.json`, que la tâche de son titre EXISTE et n'est pas de
+ * la zone `gouvernance`, et que `ecartsDuRegistreDUnePrDAuteur` n'y trouve AUCUN écart : la seule
+ * écriture du registre est alors l'ajout, à ses propres tâches, des chemins qu'elle touche.
+ */
+export function cheminsDAuteurSeuls(
+  depot: Depot,
+  pr: Pr,
+  idDuTitre: string | null,
+  ecarts: readonly string[]
+): boolean {
+  if (!pr.fichiers.includes(CHEMIN_TACHES) || ecarts.length > 0 || idDuTitre === null) return false;
+  const duTitre = depot.taches.find((t) => t.id === idDuTitre);
+  return duTitre !== undefined && duTitre.zone !== 'gouvernance';
+}
+
+export function ecartsDuRegistreDUnePrDAuteur(
+  depot: Depot,
+  pr: Pr,
+  idDuTitre: string | null,
+  tachesDeLaPr: readonly Tache[]
+): string[] {
+  if (!pr.fichiers.includes(CHEMIN_TACHES)) return [];
+  const duTitre = idDuTitre === null ? undefined : depot.taches.find((t) => t.id === idDuTitre);
+  if (duTitre?.zone === 'gouvernance') return [];
+  const base = pr.tachesBase ?? null;
+  if (base === null) {
+    return [
+      `La PR d'auteur modifie ${CHEMIN_TACHES} et le registre de sa BASE est illisible : ce qu'elle ` +
+        `y réécrit ne peut pas être borné, et la garde ne déclare pas propre ce qu'elle n'a pas lu.`,
+    ];
+  }
+  const siennes = new Set(tachesDeLaPr.map((t) => t.id));
+  const parIdBase = new Map(base.map((t) => [t.id, t]));
+  const idsTete = new Set(depot.taches.map((t) => t.id));
+  const ecarts: string[] = [];
+  for (const t of depot.taches) {
+    const avant = parIdBase.get(t.id);
+    if (avant === undefined) {
+      ecarts.push(`${t.id} est VERSÉE au registre`);
+      continue;
+    }
+    if (t.empreinte !== null && t.empreinte === avant.empreinte) continue;
+    if (!siennes.has(t.id)) {
+      ecarts.push(`${t.id} est réécrite, et ce n'est pas une tâche de cette PR`);
+      continue;
+    }
+    const hors = t.empreinteHorsPaths ?? null;
+    if (hors === null || hors !== (avant.empreinteHorsPaths ?? null)) {
+      ecarts.push(
+        `${t.id} : un autre champ que \`paths\` est réécrit (ou son empreinte est incalculable)`
+      );
+      continue;
+    }
+    const retires = avant.paths.filter((p) => !t.paths.includes(p));
+    if (retires.length > 0) ecarts.push(`${t.id} : chemin(s) RETIRÉ(S) — ${retires.join(', ')}`);
+    const orphelins = t.paths
+      .filter((p) => !avant.paths.includes(p))
+      .filter((p) => !pr.fichiers.some((f) => touche(p, [f])));
+    if (orphelins.length > 0) {
+      ecarts.push(
+        `${t.id} : chemin(s) ajouté(s) qui ne couvrent aucun fichier de la PR — ${orphelins.join(', ')}`
+      );
+    }
+  }
+  for (const t of base) if (!idsTete.has(t.id)) ecarts.push(`${t.id} est SUPPRIMÉE du registre`);
+  if (ecarts.length === 0) return [];
+  return [
+    `La PR d'auteur réécrit ${CHEMIN_TACHES} au-delà de ce que GOV-145 lui permet — ajouter à SES ` +
+      `\`paths\` un chemin qui couvre un fichier qu'elle touche, rien d'autre : ${ecarts.join(' ; ')}. ` +
+      `Le reste passe par un rattrapage (GOV-012).`,
+  ];
 }
 
 /**
@@ -309,6 +421,15 @@ export type Pr = {
    * fixture.
    */
   tachesBase?: Tache[] | null;
+  /** GOV-152 : le registre de la base COURANTE, pour le seul risque (union monotone). */
+  tachesBaseCourante?: Tache[] | null;
+  /**
+   * GOV-153 : le registre de la PR lu à SA TÊTE (`head.sha`). En CI, `actions/checkout` sert le
+   * commit de FUSION (main courante + PR) : le disque mêle à la PR ce que main a changé depuis son
+   * départ, alors que `tachesBase` est la base de FUSION. `null` : tête illisible (échec fermé).
+   * Absent : le disque EST la tête (lecture locale).
+   */
+  tachesTete?: Tache[] | null;
   /** Les commentaires d'issue de la PR, sous `--pr <n>` : un avis posté là ne compte pour rien. */
   commentaires?: CommentaireBrut[] | null;
   /**
@@ -446,6 +567,11 @@ export type Tache = {
    * `null` = l'empreinte n'a pas pu être calculée. Elle n'est alors jamais lue comme « inchangée ».
    */
   empreinte: string | null;
+  /**
+   * L'EMPREINTE DE L'ENTRÉE SANS SES `paths` (GOV-145) : de quoi dire qu'une PR d'auteur n'a
+   * réécrit QUE ses chemins. Absente ou `null` : jamais lue comme « inchangée ».
+   */
+  empreinteHorsPaths?: string | null;
   /** `null` si le champ manque — GOV-096 : on ne déduit pas « livrée » d'une absence. */
   statut: string | null;
 };
@@ -500,6 +626,8 @@ const FAMILLES = [
   'attaque_absente',
   'fichier_reserve_sans_label',
   'fichier_hors_paths_des_taches',
+  // GOV-145 (point 2) : ce qu'une PR d'auteur peut réécrire du registre — ses chemins, rien d'autre.
+  'registre_reecrit_par_une_pr_d_auteur',
   'schema_sans_label',
   // le champ `Lot:` (GOV-096) — trois refus qui le bornent, plus sa forme
   'lot_mal_forme',
@@ -598,6 +726,7 @@ function risqueDePr(depot: Depot, pr: Pr): Risque {
     pr: pr.numero ?? null,
     taches: depot.taches,
     tachesBase: pr.tachesBase ?? null,
+    ...(pr.tachesBaseCourante === undefined ? {} : { tachesBaseCourante: pr.tachesBaseCourante }),
     liste: pr.liste ?? null,
     fichiers: pr.fichiers,
     labels: pr.labels,
@@ -787,6 +916,8 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
   }
 
   const blocDodPr = bloc(pr.corps, 'dod');
+  /** Les sept premières lignes de case, texte compris — jugées après les revues (GOV-145). */
+  let casesAvantFusion: string[] | null = null;
   const cochees = blocDodPr === null ? 0 : occurrences(blocDodPr, '- [x]');
   const vides = blocDodPr === null ? 0 : occurrences(blocDodPr, '- [ ]');
   if (blocDodPr === null || cochees + vides !== NB_CASES) {
@@ -809,16 +940,9 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
     // Les sept premières se jugent avant la fusion ; la huitième sous `--apres-fusion <n>`.
     // On lit les cases DANS L'ORDRE : un compte de sept ne dit pas LESQUELLES sont cochées.
     const cases = blocDodPr.match(/^- \[[ x]\]/gm) ?? [];
-    const avantFusion = cases.slice(0, NB_CASES - 1);
-    const videsAvant = avantFusion.filter((c) => c === '- [ ]').length;
-    if (videsAvant > 0) {
-      ajouter(
-        'dod_non_cochee',
-        `Corps de la PR — ${videsAvant} case(s) vide(s) parmi les ${NB_CASES - 1} premières entre les ` +
-          `marqueurs dod ; REQ-GOV-013 les exige avant la fusion. A04 refuse la PR. ` +
-          `(La ${NB_CASES}ᵉ atteste la fusion : elle se contrôle par \`--apres-fusion\`.)`
-      );
-    }
+    // GOV-145 (décision orale de Williams du 2026-10-04, #319, 6032352874, point 5) : les sept premières cases se jugent APRÈS
+    // la lecture des revues, plus bas, parce que la case « Relecteur ≠ auteur » se DÉRIVE d'elles.
+    casesAvantFusion = (blocDodPr.match(/^- \[[ x]\].*$/gm) ?? []).slice(0, NB_CASES - 1);
     if (pr.apresFusion === true && cases[NB_CASES - 1] !== '- [x]') {
       ajouter(
         'dod_atterrissage_non_atteste',
@@ -925,17 +1049,6 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
     }
   }
 
-  for (const reserve of cheminsReserves(depot.charte)) {
-    const touches = reserve.chemins.filter((c) => touche(c, pr.fichiers));
-    if (touches.length > 0 && !pr.labels.includes(reserve.label)) {
-      ajouter(
-        'fichier_reserve_sans_label',
-        `La PR modifie ${touches.join(', ')} sans le label \`${reserve.label}\` (REQ-GOV-010, ` +
-          `docs/CHARTE-AGENTS.md §7). Labels portés : ${pr.labels.join(', ') || '(aucun)'}.`
-      );
-    }
-  }
-
   // ---- les fichiers de la PR contre les `paths` de ses tâches (GOV-056, livrable 2) ----------
   // `tachesDeLaPr` est le MÊME lecteur que celui de la section Attaque et du discriminant `schema` :
   // l'union des tâches portant `pr: <n>`, de celle que le titre nomme, et de celles que le champ
@@ -989,6 +1102,34 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
             `disjonction ne veut plus rien dire.`
         );
       }
+    }
+  }
+
+  // ── GOV-145 (décision orale de Williams du 2026-10-04, #319, 6032352874, point 2) : L'AUTEUR DÉCLARE SES CHEMINS DANS SA PR ──
+  const ecartsDeLAuteur = ecartsDuRegistreDUnePrDAuteur(
+    depot,
+    pr,
+    titre ? titre[2]! : null,
+    tachesCitees
+  );
+  for (const m of ecartsDeLAuteur) ajouter('registre_reecrit_par_une_pr_d_auteur', m);
+
+  // ── Décision de Williams du 2026-10-05 (#319, 5988252245), point 3 : LA FIN DES RATTRAPAGES DE
+  // CHEMINS. Une PR d'auteur dont la seule écriture du registre est d'ajouter à SES tâches les
+  // chemins qu'elle touche (aucun écart ci-dessus) n'a plus besoin du label `role:gardien-spec` pour
+  // `docs/tasks.json` : l'exactitude juge l'ajout dans la même relecture. Toute autre écriture du
+  // registre, et tout autre chemin réservé, gardent leur label.
+  const cheminsSeuls = cheminsDAuteurSeuls(depot, pr, titre ? titre[2]! : null, ecartsDeLAuteur);
+  for (const reserve of cheminsReserves(depot.charte)) {
+    const touches = reserve.chemins.filter(
+      (c) => touche(c, pr.fichiers) && !(cheminsSeuls && c === CHEMIN_TACHES)
+    );
+    if (touches.length > 0 && !pr.labels.includes(reserve.label)) {
+      ajouter(
+        'fichier_reserve_sans_label',
+        `La PR modifie ${touches.join(', ')} sans le label \`${reserve.label}\` (REQ-GOV-010, ` +
+          `docs/CHARTE-AGENTS.md §7). Labels portés : ${pr.labels.join(', ') || '(aucun)'}.`
+      );
     }
   }
 
@@ -1099,6 +1240,28 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
     ...(pr.mesures ?? {}),
   });
   const lues = lecture.verdicts.filter((v) => v.verdict === 'accepte');
+  /**
+   * LES SEPT PREMIÈRES CASES DE DoD, et la troisième se DÉRIVE (GOV-145, décision orale de Williams du
+   * 2026-10-04, #319, 6032352874, point 5). « Relecteur ≠ auteur » est jugée remplie dès que le lecteur unique la
+   * coche — chaque lentille exigée a accepté sur la tête exacte ou y survit, aucune n'est en refus
+   * ni périmée, aucune n'est rendue par l'auteur : `lecture.coche`, le MÊME prédicat que celui de
+   * `scripts/lot/corps-de-pr.ts` (RM-01). Le `[x]` tapé n'est plus exigé : il demandait une
+   * édition du corps qui relançait les runs, ou un geste de Will à la main (mesuré le 2026-10-04 sur
+   * #572, #601, #636, #654 et #645). Une case TAPÉE `[x]` sans revues qui la justifient ne passe pas
+   * pour autant : les familles des revues ci-dessous rougissent d'elles-mêmes.
+   */
+  if (casesAvantFusion !== null) {
+    const vides = casesVidesDeLaDod(casesAvantFusion, lecture.coche);
+    if (vides > 0) {
+      ajouter(
+        'dod_non_cochee',
+        `Corps de la PR — ${vides} case(s) vide(s) parmi les ${NB_CASES - 1} premières entre les ` +
+          `marqueurs dod ; REQ-GOV-013 les exige avant la fusion. A04 refuse la PR. ` +
+          `(La ${NB_CASES}ᵉ atteste la fusion : elle se contrôle par \`--apres-fusion\`. La case ` +
+          `« Relecteur ≠ auteur » se dérive des revues : elle compte remplie dès qu'elles la justifient.)`
+      );
+    }
+  }
   // Les lentilles EXIGÉES : deux partout, trois sur une PR de schéma (GOV-101, `W16`).
   const exigees = [...lentillesExigees(risque).toutes];
 
@@ -1198,6 +1361,7 @@ export function projeter(brutes: readonly TacheBrute[] | null): Tache[] | null {
     paths: t.paths ?? [],
     tests: t.tests ?? null,
     empreinte: empreinteDeLEntree(t),
+    empreinteHorsPaths: empreinteDeLEntree({ ...t, paths: undefined }),
     // ⚠️ `statut` FAIT PARTIE DE LA PROJECTION (GOV-096) : sans lui, le refus « une PR ne rouvre
     // pas une tâche livrée » lirait `undefined` sur chaque tâche et ne tirerait JAMAIS — le même
     // défaut, exactement, que l'absence de `pr` a produit deux fois (voir `lireDepot()`).
@@ -1376,10 +1540,17 @@ function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant
     annoncees,
     revues,
     commentaires,
-    // Le registre de la BASE — `origin/<base>`, la même référence que le pas 8. Illisible (ref
-    // absente en local) → `null` → risque ÉLEVÉ : le sens de défaillance reste fermé.
-    tachesBase: projeter(tachesDeLaBase(refBase)),
+    // Le registre de la BASE — avant fusion, celui de la BASE DE FUSION de la tête et de
+    // `origin/<base>` (GOV-152) : la PR ne se juge que sur ce qu'elle change, pas sur ce que `main` a
+    // changé depuis son départ ; après fusion, `origin/<base>`, la référence du pas 8. Illisible →
+    // `null` → risque ÉLEVÉ : le sens de défaillance reste fermé.
+    tachesBase: projeter(
+      moment === 'apres-fusion' ? tachesDeLaBase(refBase) : tachesDeLaBaseDeFusion(refBase, 'HEAD')
+    ),
   });
+  // GOV-152, condition de la sécurité (6036322341) : le risque lit AUSSI la base courante (union
+  // monotone) ; seuls les écarts du registre se jugent sur la base de fusion.
+  pr.tachesBaseCourante = projeter(tachesDeLaBase(refBase));
   // LE JOURNAL DE LA TÊTE (GOV-052, RM-15). Avant fusion, `HEAD` vient d'être confrontée à la tête de
   // la forge : c'est la branche de la PR. Après fusion, c'est le commit de fusion qui porte le
   // journal atterri. Illisible → `null` → la famille rougit (échec fermé).
@@ -1544,11 +1715,32 @@ function prParEvenement(): Pr | null {
     process.exit(1);
   }
   // La base de l'événement est un sha : `fetch-depth: 0` le rend lisible (voir ci-dessus).
-  return prDepuisLEvenement(
+  const pr = prDepuisLEvenement(
     ev.pull_request,
     sortieDuDiff,
-    projeter(tachesDeLaBase(ev.pull_request.base.sha))
+    // GOV-152 : la base de FUSION de la tête et de la base de l'événement, pas la base courante.
+    projeter(tachesDeLaBaseDeFusion(ev.pull_request.base.sha, ev.pull_request.head.sha))
   );
+  // GOV-152, condition de la sécurité (6036322341) : le risque lit AUSSI la base courante.
+  pr.tachesBaseCourante = projeter(tachesDeLaBase(ev.pull_request.base.sha));
+  // GOV-153 (#319, 6042120798) : le disque est le commit de FUSION ; le registre de la PR se lit à
+  // sa tête, pour s'apparier à la base de fusion.
+  pr.tachesTete = projeter(tachesDeLaBase(ev.pull_request.head.sha));
+  return pr;
+}
+
+/**
+ * GOV-153 : le dépôt que juge `controler`. Quand la PR porte le registre de SA TÊTE (CI), c'est lui
+ * qui fait foi, et non le disque. Une tête illisible arrête la garde (échec fermé).
+ */
+export function depotDeLaTete(depot: Depot, pr: Pr | null): Depot {
+  if (!pr || pr.tachesTete === undefined) return depot;
+  if (pr.tachesTete === null) {
+    throw new Error(
+      'gov:pr — le registre de la tête de la PR est illisible (`git show <head.sha>:docs/tasks.json`) : la garde refuse plutôt que de juger le commit de fusion.'
+    );
+  }
+  return { ...depot, taches: pr.tachesTete };
 }
 
 /** La PR telle que l'événement `pull_request` la sert. */
@@ -1763,6 +1955,40 @@ if (LANCE_EN_SCRIPT) {
       return l.join(SAUT);
     };
     const copieDepot = (): Depot => ({ ...depot, fiches: [...depot.fiches] });
+    /** Vide la case « Relecteur ≠ auteur » du corps — celle qui se dérive des revues (GOV-145). */
+    const videLaCaseDesRevues = (corps: string): string => {
+      const avant = corps.replace('- [x] Relecteur ≠ auteur', '- [ ] Relecteur ≠ auteur');
+      if (avant === corps) {
+        throw new Error(
+          'gov:pr --prove — le corps témoin ne porte plus de case « Relecteur ≠ auteur » cochée : ' +
+            'le témoin de GOV-145 (point 5) ne mesure rien.'
+        );
+      }
+      return avant;
+    };
+    /**
+     * GOV-145 (point 2) — la PR ORDINAIRE (QA-T01, zone `qualite` : une PR d'AUTEUR) qui touche le
+     * registre. Sa base est le registre courant ; la TÊTE est réécrite par `reecrire`. Le fichier
+     * neuf vit à côté d'un chemin que QA-T01 déclare déjà, et se dérive de lui (RM-03).
+     */
+    const FICHIER_NEUF_DE_QA_T01 = (() => {
+      const voisin = cheminsDe('QA-T01').find((f) => f.startsWith('tests/unit/gouvernance/'));
+      if (voisin === undefined) {
+        throw new Error(
+          'gov:pr --prove — QA-T01 ne déclare plus de test de gouvernance : le témoin de GOV-145 ne mesure rien.'
+        );
+      }
+      return voisin.replace(/[^/]+$/, 'gov-145-temoin.spec.ts');
+    })();
+    const PR_D_AUTEUR_QUI_TOUCHE_LE_REGISTRE = (reecrire: (t: Tache) => Tache): [Depot, Pr] => {
+      const d = copieDepot();
+      const base = d.taches;
+      d.taches = base.map(reecrire);
+      const p = copiePr(PR_ORDINAIRE);
+      p.fichiers = [...p.fichiers, CHEMIN_TACHES, FICHIER_NEUF_DE_QA_T01];
+      p.tachesBase = base;
+      return [d, p];
+    };
 
     const PR_SCHEMA: Pr = {
       ...copiePr(PR_TEMOIN),
@@ -2301,6 +2527,37 @@ if (LANCE_EN_SCRIPT) {
         },
       },
       {
+        // GOV-145 (point 5), LA FACE QUI DOIT ROUGIR : la case « Relecteur ≠ auteur » vide, et une
+        // lentille qui MANQUE. Le lecteur ne la coche pas : la dérivation ne remplit rien.
+        famille: 'dod_non_cochee',
+        defaut: () => {
+          const p = copiePr(PR_TEMOIN);
+          p.corps = videLaCaseDesRevues(p.corps);
+          p.revues = p.revues!.slice(0, 1);
+          return [copieDepot(), p];
+        },
+      },
+      {
+        // GOV-145 (point 2) : la PR d'auteur réécrit l'entrée d'une tâche qui n'est pas la sienne.
+        famille: 'registre_reecrit_par_une_pr_d_auteur',
+        defaut: () =>
+          PR_D_AUTEUR_QUI_TOUCHE_LE_REGISTRE((t) =>
+            t.id === 'GOV-011'
+              ? { ...t, empreinte: 'f'.repeat(64), empreinteHorsPaths: 'f'.repeat(64) }
+              : t
+          ),
+      },
+      {
+        // GOV-145 (point 2) : elle ajoute à SA tâche un chemin qui ne couvre aucun de ses fichiers.
+        famille: 'registre_reecrit_par_une_pr_d_auteur',
+        defaut: () =>
+          PR_D_AUTEUR_QUI_TOUCHE_LE_REGISTRE((t) =>
+            t.id === 'QA-T01'
+              ? { ...t, paths: [...t.paths, 'scripts/nulle-part.ts'], empreinte: 'f'.repeat(64) }
+              : t
+          ),
+      },
+      {
         // GOV-101 : deux lentilles partout. La PR conforme privée de son avis `securite` n'en
         // porte plus qu'une — c'est la lentille manquante qui doit rougir, sur toute PR.
         famille: 'lentilles_manquantes',
@@ -2606,6 +2863,28 @@ if (LANCE_EN_SCRIPT) {
         },
       },
       {
+        // GOV-145 (point 5), LA FACE QUI DOIT PASSER : la case « Relecteur ≠ auteur » laissée vide
+        // dans le corps, et les revues qui la justifient sur la tête exacte. Sans ce contre-témoin,
+        // la dérivation serait une intention écrite en commentaire.
+        quoi: 'une PR dont la case « Relecteur ≠ auteur » est vide, et que ses revues justifient',
+        cas: () => {
+          const p = copiePr(PR_TEMOIN);
+          p.corps = videLaCaseDesRevues(p.corps);
+          return [depot, p];
+        },
+      },
+      {
+        // GOV-145 (point 2), LA FACE QUI DOIT PASSER : la PR d'auteur ajoute à SA tâche le chemin
+        // du fichier neuf qu'elle touche, et rien d'autre du registre.
+        quoi: "une PR d'auteur qui ajoute à SES paths le chemin d'un fichier qu'elle touche",
+        cas: () =>
+          PR_D_AUTEUR_QUI_TOUCHE_LE_REGISTRE((t) =>
+            t.id === 'QA-T01'
+              ? { ...t, paths: [...t.paths, FICHIER_NEUF_DE_QA_T01], empreinte: 'f'.repeat(64) }
+              : t
+          ),
+      },
+      {
         // Une PR de la phase COURANTE porte son label et doit passer. Sans ce contre-témoin, une
         // garde qui refuserait tout label `phase:` serait « prouvée » par son seul témoin.
         quoi: 'une PR étiquetée de la phase courante',
@@ -2829,7 +3108,7 @@ if (LANCE_EN_SCRIPT) {
 
   // ── mode normal ──────────────────────────────────────────────────────────────
 
-  const depot = lireDepot();
+  let depot = lireDepot();
   const iPr = process.argv.indexOf('--pr');
   const iApres = process.argv.indexOf('--apres-fusion');
   let pr: Pr | null = null;
@@ -2875,6 +3154,8 @@ if (LANCE_EN_SCRIPT) {
     pr = prParEvenement();
     if (pr)
       portee += ', puis la PR de l’événement GitHub — SANS les revues, qui n’existent pas encore';
+    // Une tête illisible LÈVE : la garde s'arrête en erreur (échec fermé), sans sortie nommée de plus.
+    depot = depotDeLaTete(depot, pr);
   }
 
   // LE RISQUE EST IMPRIMÉ DÈS QU'UNE PR EST CONNUE (GOV-077) : c'est cette ligne que l'orchestrateur

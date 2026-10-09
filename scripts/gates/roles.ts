@@ -127,7 +127,7 @@
 import ts from 'typescript';
 import { readFileSync } from 'node:fs';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
-import { MATRICE_DES_ROLES, ROLES_CONSOLE } from '../../src/server/roles/matrice';
+import { MATRICE_DES_ROLES, ROLES_CONSOLE, ROLES_PAR_DROIT } from '../../src/server/roles/matrice';
 
 /** L'identifiant du registre : c'est aussi la commande, et le nom que le verdict imprime. */
 export const ID_REGISTRE = 'securite:roles';
@@ -1824,7 +1824,7 @@ function prouver(): { code: 0 | 1; lignes: string[] } {
 function juger(): { code: 0 | 1; lignes: string[] } {
   const chemins = fichiersSuivisOuRefus(ID_REGISTRE).filter(estDansLePerimetre);
   const fichiers = chemins.map((chemin) => ({ chemin, source: readFileSync(chemin, 'utf8') }));
-  const j = jugerLaConsole(fichiers, MATRICE_DES_ROLES, ROLES_CONSOLE);
+  const j = jugerLaConsole(fichiers, ROLES_PAR_DROIT, ROLES_CONSOLE);
   return rendreLeVerdict(j, Object.keys(MATRICE_DES_ROLES).length, ROLES_CONSOLE.length);
 }
 

@@ -65,6 +65,7 @@
         "DM-08",
         "DM-13",
         "DM-55",
+        "DM-72",
         "JUR-T49"
       ]
     },
@@ -100,7 +101,9 @@
         "DM-24",
         "DM-41",
         "DM-55",
-        "DM-67"
+        "DM-67",
+        "DM-73",
+        "UX-P1-54"
       ]
     },
     {
@@ -115,7 +118,8 @@
       "phase": 1,
       "taches": [
         "DM-08",
-        "DM-13"
+        "DM-13",
+        "UX-P1-61"
       ]
     },
     {
@@ -187,7 +191,8 @@
         "DM-18",
         "DM-63",
         "DM-64",
-        "SEC-19"
+        "SEC-19",
+        "SEC-70"
       ]
     },
     {
@@ -277,8 +282,8 @@
     {
       "id": "REQ-DM-017",
       "domaine": "domaine-donnees",
-      "texte": "🔴 **Prorata — formule unique du dossier, en entiers, numérateur et dénominateur de MÊME nature.** La part acquise au ième encaissement vaut `floor(commissionTotaleCents × cumulEncaisseTtcCents_i / factureTtcNetCents) − Σ parts déjà acquises` ; aucune part n'est négative ; aucune part ne dépasse la commission totale ; à facture soldée, Σ des parts = `commissionTotaleCents` exactement (le dernier encaissement absorbe le reliquat d'arrondi par construction, sans traitement particulier). ⚠️ **Trois formules coexistaient dans le dossier** (contrat art. 4.3 « HT sur TTC », `REQ-ARG-004` « floor cumul TTC/TTC », l'ancien corps de cette exigence « round HT/HT ») ; le contrat a été corrigé le 2026-09-03 (A-1) et **cette formule est désormais la seule**, identique mot pour mot à `REQ-ARG-004` et à l'article 4.3. Un ratio dont le numérateur est HT et le dénominateur TTC ampute chaque part d'un sixième à 20 % de TVA et empêche la somme d'atteindre le total : un test frontière (facture 14 400 TTC / 12 000 HT en 3 × 4 800) le voit rougir avant correction.",
-      "source": "tableaux-de-bord §2.4, B1 ; arbitrage de contradiction l. 411 ; contrat art. 4.3 ; synthèse des cinq examens du 2026-09-03, A-1",
+      "texte": "🔴 **Commission acquise au paiement INTÉGRAL, sans prorata** (contrat v2, art. 4.2 et 4.3, MOT POUR MOT) : art. 4.2 « La commission est acquise lorsque la Société a encaissé l'intégralité du prix facturé au client au titre de la commande, tous payeurs confondus, y compris un opérateur de compétences ou tout autre financeur — jamais à la signature, jamais à l'émission de la facture. » ; art. 4.3 « Aucune part de commission n'est due au titre d'un paiement partiel. La commission est facturée et versée dans les conditions de l'article 5, à compter de l'encaissement complet. » Une ligne ne devient `acquise` qu'au jour où le cumul encaissé, tous payeurs confondus, atteint le prix facturé de la commande, net des avoirs (art. 4.0), les deux termes de MÊME nature, TTC — prix facturé TTC net des avoirs et cumul encaissé TTC ; un prix HT comparé à des encaissements TTC est une faute (auditeur argent, revue de #815, 5446397763) ; aucune part n'est acquise sur un paiement partiel. [gouvernance : RÉÉCRITE dans la PR de T-ARG-044 (#815), comme son acceptance le prévoit ; elle REMPLACE le texte du prorata, retiré par le v2, dont le début était « 🔴 **Prorata — formule unique du dossier, en entiers, numérateur et dé » ; citations du v2 extraites de la fiche ALN-02 de la juriste, #474, commentaire 6032703119.]",
+      "source": "tableaux-de-bord §2.4, B1 ; arbitrage de contradiction l. 411 ; contrat art. 4.3 ; synthèse des cinq examens du 2026-09-03, A-1 ; réécrite sur le contrat v2, art. 4.2 et 4.3, dans la PR de T-ARG-044 (#815 ; juriste, #474, 6032703119, ALN-02)",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -286,7 +291,8 @@
       "phase": 0,
       "taches": [
         "DM-04",
-        "DM-15"
+        "DM-15",
+        "T-ARG-044"
       ]
     },
     {
@@ -321,8 +327,8 @@
     {
       "id": "REQ-DM-020",
       "domaine": "domaine-donnees",
-      "texte": "LigneCommission sépare `type` enum {commission, reprise, parrainage, bonus_filleul} et `statut` enum {prevue, acquise, bloquee, a_payer, payee, annulee} — **6 valeurs ; `dechue` est retirée de l'enum le 2026-09-03 (décision D11), aucun chemin de code ne peut la produire (REQ-JUR-007)** ; `motifBlocage` enum nullable non null ssi statut = bloquee (CHECK) ; une ligne `prevue` ne peut jamais entrer dans un relevé (CHECK releveId IS NULL OR statut IN ('a_payer','payee')).",
-      "source": "tableaux-de-bord §2.6 ; outil §6.3 ; nouvelle (F-DM-10)",
+      "texte": "LigneCommission sépare `type` enum {commission, reprise, parrainage, bonus_filleul} et `statut` enum {prevue, acquise, bloquee, a_payer, payee, annulee} — **6 valeurs ; `dechue` est retirée de l'enum le 2026-09-03 (décision D11), aucun chemin de code ne peut la produire (REQ-JUR-007)** ; `motifBlocage` enum nullable non null ssi statut = bloquee (CHECK) ; une ligne `prevue` ou `bloquee` ne peut jamais entrer dans une autofacture (CHECK autofactureId IS NULL OR statut IN ('a_payer','payee')) — contrat v2, art. 4.2 et 5.4 : seule une commission acquise, dont le versement n'est pas différé, est facturée.",
+      "source": "tableaux-de-bord §2.6 ; outil §6.3 ; nouvelle (F-DM-10) ; réalignée sur le contrat v2, art. 4.2, 5.1 et 5.4 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 14,
@@ -369,8 +375,8 @@
     {
       "id": "REQ-DM-023",
       "domaine": "domaine-donnees",
-      "texte": "Parrainage {parrainId, filleulId unique, codeUtilise, captureAt, contratFilleulSigneAt, finAt = contratFilleulSigneAt + 12 mois, tauxPct versionné} avec CHECK parrainId <> filleulId ; chaque ligne `commission` ou `reprise` du filleul acquise avant finAt engendre une ligne `parrainage` avec sourceLigneId ; aucune ligne n'est jamais créée pour le parrain du parrain (test). Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : un conseiller n'est ni parrain ni filleul.",
-      "source": "plan §4.1 ; fonctionnement R8, §6 ; anti-abus F14 ; outil §12.1",
+      "texte": "Parrainage {parrainId, filleulId unique, codeUtilise, captureAt, contratFilleulSigneAt, finAt = contratFilleulSigneAt + 12 mois, tauxPct versionné} avec CHECK parrainId <> filleulId ; chaque ligne `commission` ou `reprise` du filleul **née d'une commande signée avant finAt** (`dateRef`, REQ-DM-022), quelle que soit la date de son encaissement (contrat v2, art. 4.6 al. 1, `HYP-E1-19`), engendre une ligne `parrainage` avec sourceLigneId ; aucune ligne n'est jamais créée pour le parrain du parrain (test). Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : un conseiller n'est ni parrain ni filleul.",
+      "source": "plan §4.1 ; fonctionnement R8, §6 ; anti-abus F14 ; outil §12.1 ; réalignée sur le contrat v2, art. 4.6 al. 1 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 14,
@@ -383,8 +389,8 @@
     {
       "id": "REQ-DM-024",
       "domaine": "domaine-donnees",
-      "texte": "Le journal Evenement est append-only et chaîné (prevHash, selfHash = SHA-256(prevHash + payload canonique)) ; un trigger Postgres refuse UPDATE et DELETE ; toute transition d'agrégat (attribution, apporteur, ligne, relevé, KYC, contrat) écrit son événement dans la même transaction.",
-      "source": "audit-attribution P9 ; outil §9.1 ; nouvelle (F-DM-14)",
+      "texte": "Le journal Evenement est append-only et chaîné (prevHash, selfHash = SHA-256(prevHash + payload canonique)) ; un trigger Postgres refuse UPDATE et DELETE ; toute transition d'agrégat (attribution, apporteur, ligne, autofacture, KYC, contrat) écrit son événement dans la même transaction.",
+      "source": "audit-attribution P9 ; outil §9.1 ; nouvelle (F-DM-14) ; réalignée sur le contrat v2, art. 5.1 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 4,
@@ -403,8 +409,8 @@
     {
       "id": "REQ-DM-025",
       "domaine": "domaine-donnees",
-      "texte": "Un Relevé fige ses lignes (LigneCommission.releveId, une ligne dans au plus un relevé), est unique par (apporteurId, periode), porte un `numeroAutofacture` séquentiel sans trou par année (compteur par exercice verrouillé dans la transaction d'approbation, `compteurs_autofacture`, UNIQUE `(annee, numero)`) et devient immuable au statut `approuve`.",
-      "source": "tableaux-de-bord §2.7, B3 ; outil §6.3 ; nouvelle (F-DM-22)",
+      "texte": "Une Autofacture fige ses lignes (LigneCommission.autofactureId, une ligne dans au plus une autofacture), regroupe les lignes acquises le même jour et facturables au même passage (contrat v2, art. 5.1), avec une unicité PAR LIGNE : une ligne de commission entre dans au plus une autofacture (`autofactureId` unique par ligne, REQ-ARG-021), jamais une unicité par jour — une ligne régularisée (art. 5.4, REQ-ARG-016, REQ-ARG-025) ou constatée tard (art. 5.1) a toujours son autofacture, datée de la régularisation ou du constat, même si une autre autofacture porte déjà le même jour d'acquisition, porte un numéro d'une séquence chronologique unique et continue **propre à l'apporteur**, sans trou, avoirs d'autofacture compris (annexe 2, 2.1 bis ; compteur par apporteur verrouillé dans la transaction d'émission, `compteurs_autofacture`, UNIQUE `(apporteurId, numero)`), et est immuable dès son émission : sa correction passe par un avoir d'autofacture ou une facture complémentaire (art. 4.5, 5.7). Il n'existe pas d'entité Relevé unique par (apporteurId, periode). 🔴 **Garantie EN BASE, pas seulement applicative** (lentille sécurité, revue de #873) : la ligne porte une contrainte qui lui interdit d'appartenir à deux autofactures, et l'émission l'affecte par une mise à jour conditionnelle `WHERE autofactureId IS NULL` dans la même transaction que la création de l'autofacture ; une affectation qui ne touche pas toutes les lignes attendues annule la transaction, sans autofacture ni numéro consommé. Témoin de concurrence : deux passages d'émission lancés en parallèle sur les mêmes lignes → une seule autofacture, chaque ligne dans une seule, séquence sans trou (vu rougir sans la condition).",
+      "source": "tableaux-de-bord §2.7, B3 ; outil §6.3 ; nouvelle (F-DM-22) ; réalignée sur le contrat v2, art. 4.5, 5.1, 5.7 et annexe 2, 2.1 bis (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617), les conditions de la sécurité sur ALN-03 (#474, 6032838727), condition 1 — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -432,8 +438,8 @@
     {
       "id": "REQ-DM-027",
       "domaine": "domaine-donnees",
-      "texte": "PieceKyc {apporteurId, type enum {siret, tva, rib, identite, vigilance, rc_pro}, statut enum {manquante, a_verifier, valide, perimee, refusee}, verifieeAt, expireAt (**NOT NULL si type = vigilance OU rc_pro**), fichierRef, fichierPurgeAt, remplaceeAt} ; au plus une pièce COURANTE par (apporteurId, type) — index unique partiel `WHERE remplacee_at IS NULL AND statut <> 'a_verifier'` — et au plus une pièce EN VÉRIFICATION — index unique partiel `WHERE statut = 'a_verifier'` : un changement de RIB crée une pièce `a_verifier` pendant que l'ancienne reste active (REQ-UX-027) ; la fonction pure `piecesBloquantPaiement(pieces, cumulContratHtCents, seuilCents)` décide du blocage. 🔴 **`rc_pro` porte une échéance et un rappel, et ne bloque AUCUN versement** (corrigé le 2026-09-03, A-10) : l'attestation de responsabilité civile professionnelle est exigée à la signature puis à chaque échéance annuelle (contrat art. 6.4), avec rappel J-30 et alerte console à l'expiration, mais elle **n'entre pas dans `piecesBloquantPaiement()` ni dans `controlesVersement()`** — l'art. 5.4 réécrit ferme la liste des pièces pouvant différer un versement à SIREN valide, coordonnées bancaires au nom de l'apporteur, et attestation de vigilance **au seul seuil légal**. Tests : `rc_pro` périmée → alerte console, relevé **payé** ; ajouter `rc_pro` à la liste bloquante → gate rouge (test-cliquet nominatif sur le contenu de la liste).",
-      "source": "outil §6.1, §3.3, D6, D7 ; contrat art. 5.4 et 6.4 ; synthèse du 2026-09-03, A-5 et A-10",
+      "texte": "PieceKyc {apporteurId, type enum {siret, tva, rib, identite, vigilance, rc_pro}, statut enum {manquante, a_verifier, valide, perimee, refusee}, verifieeAt, expireAt (**NOT NULL si type = vigilance OU rc_pro**), fichierRef, fichierPurgeAt, remplaceeAt} ; au plus une pièce COURANTE par (apporteurId, type) — index unique partiel `WHERE remplacee_at IS NULL AND statut <> 'a_verifier'` — et au plus une pièce EN VÉRIFICATION — index unique partiel `WHERE statut = 'a_verifier'` : un changement de RIB crée une pièce `a_verifier` pendant que l'ancienne reste active (REQ-UX-027) ; la fonction pure `piecesBloquantPaiement(pieces, cumulContratTtcCents, seuilCents)` décide du blocage (cumul apprécié TTC, contrat v2, art. 6.2, REQ-ARG-025). 🔴 **`rc_pro` est FACULTATIVE et ne bloque AUCUN versement** (contrat v2, art. 6.4 : l'apporteur « est libre de souscrire une assurance de responsabilité civile professionnelle et d'en remettre l'attestation à la Société ; aucune n'est exigée au titre du présent contrat ») : déposée, elle porte son échéance, mais elle **n'entre pas dans `piecesBloquantPaiement()` ni dans `controlesVersement()`** — l'art. 5.4 ferme la liste des conditions du versement à SIREN valide, régime de TVA déclaré et coordonnées bancaires au nom de l'apporteur, et, **au seul seuil légal**, attestation de vigilance et extrait d'immatriculation (art. 6.2). Tests : `rc_pro` absente ou périmée → **versé** ; ajouter `rc_pro` à la liste bloquante → gate rouge (test-cliquet nominatif sur le contenu de la liste).",
+      "source": "outil §6.1, §3.3, D6, D7 ; contrat art. 5.4 et 6.4 ; synthèse du 2026-09-03, A-5 et A-10 ; réalignée sur le contrat v2, art. 5.4, 6.2 et 6.4 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 4,
@@ -441,6 +447,8 @@
       "phase": 1,
       "taches": [
         "CPL-T07",
+        "CPL-T07b",
+        "CPL-T24",
         "DM-11",
         "DM-19",
         "DM-51",
@@ -549,7 +557,8 @@
       "taches": [
         "DM-12",
         "DM-62",
-        "SEC-14"
+        "SEC-14",
+        "UX-P1-56"
       ]
     },
     {
@@ -666,8 +675,8 @@
     {
       "id": "REQ-DM-042",
       "domaine": "domaine-donnees",
-      "texte": "🔴 **Confirmation tacite à trente jours — le porteur manquant.** Le contrat promet depuis toujours qu'« à défaut de contact tenté dans les trente jours, l'attribution est réputée confirmée » (art. 3.2 al. 4) ; **aucune REQ, aucune tâche et aucun cron ne portaient cette promesse** — REQ-DM-006 ne promeut que sur qualification humaine, et une attribution `injoignable` n'avait alors ni terme ni horloge (constaté le 2026-09-03, M-7). Un cron quotidien, horloge injectée, promeut en `active` toute attribution `provisoire` dont la demande de confirmation a été **reçue** depuis plus de `CONFIRMATION_TACITE_JOURS` (= 30, SSOT), sans confirmation ni `non_confirme`, par appel ou par courriel ; il écrit l'événement `attribution_etat_modifie` avec `evenement: 'confirmee_tacitement'` (un type de journal par genre de transition, partners/ADR-0022) dans la même transaction et fait courir `fenetreFinAt` **à compter de cette date**. La promotion s'applique aussi aux attributions `injoignable` et `ne_se_souvient_pas` (REQ-DM-008). La réception est l'envoi effectif d'une demande à laquelle aucun rebond n'est rattaché (`recueAt`). **Le délai ne commence pas tant que la demande est en rebond non corrigé** ; la correction de l'adresse par l'apporteur fait repartir l'e-mail, et le délai court de ce nouvel envoi s'il ne rebondit pas ; un rebond rattaché après coup retire à l'envoi sa qualité de réception. **Une demande qui porte une raison de vérification (REQ-SEC-060) à l'échéance n'est jamais promue par le silence** : elle reste `provisoire` jusqu'à une Qualification concluante, puis suit le régime ordinaire ; sans Qualification concluante, elle est libérée selon REQ-DM-063. Pour une demande non signalée, la promotion est la seule conséquence attachée au silence ; pour une demande signalée, c'est la libération, sans sanction. Tests frontière : J+29 aucune promotion, J+30 promotion unique ; deux passages du cron → une seule promotion et un seul événement ; une Qualification `non_confirme` posée à J+29 empêche la promotion. Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : règle tranchée par Williams le 2026-09-29 (HYP-W20-TACITE, réponses aux questions 18 et 19) ; la condition de promotion et la phrase « C'est la seule conséquence attachée au défaut ou au retard de contact » sont remplacées par le texte ci-dessus. La motivation devient l'art. 3.2 amendé (JUR-T40). Tests frontière ajoutés : réception à J, J+29 aucune promotion, J+30 une seule ; rebond à J+1 non corrigé, J+90 aucune promotion (la demande en rebond est signalée, libérée à J+45, REQ-DM-063) ; correction à J+10 puis envoi sans rebond, promotion à J+40 et pas avant ; clic « Oui » retenu ou appel `confirme` avant l'échéance, aucune promotion tacite ; demande signalée silencieuse, J+30 aucune promotion et, à J+45, libération et jamais de promotion ; demande signalée puis appel `confirme` à J+35, `active` à J+35. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2) : la confirmation tacite est réservée à l'apporteur ; le passage visible d'une prise en charge à `active` suit le même délai.",
-      "source": "contrat art. 3.2 al. 3 et 4 ; synthèse du 2026-09-03, M-7",
+      "texte": "🔴 **Confirmation tacite selon le contrat v2, art. 3.2 — pour TOUTE attribution, sans régime de vérification.** L'attribution `provisoire` devient définitive dès que l'entreprise répond à la Société, prend rendez-vous avec elle ou échange avec elle, quel qu'en soit le moyen, sans indiquer n'avoir eu aucun échange avec l'apporteur (art. 3.2, art. 3.4 al. 2) ; un démenti exprès fait lors d'un échange l'éteint (art. 3.7 al. 2), et aucune confirmation tacite ne suit. À défaut, un passage « tout ce qui est dû à l'instant t » (REQ-QA-027), horloge injectée, promeut en `active` l'attribution `provisoire` à l'expiration de `CONFIRMATION_TACITE_JOURS` (SSOT) jours civils comptés de la **prise de contact**, c'est-à-dire de l'envoi du **premier message de la Société non retourné en erreur** ; il écrit l'événement `attribution_etat_modifie` avec `evenement: 'confirmee_tacitement'` (un type de journal par genre de transition, partners/ADR-0022) dans la même transaction et fait courir `fenetreFinAt` à compter de cette date. La promotion vaut aussi pour les attributions `injoignable` et `ne_se_souvient_pas` (REQ-DM-008). **Aucune raison de vérification, aucune demande « signalée », aucune réponse exigée sous une forme particulière ne retarde ni n'empêche la promotion.** (1) **Défaut de prise de contact** : si la Société n'a envoyé aucun message dans les `PRISE_DE_CONTACT_SOCIETE_JOURS` (SSOT) jours de l'enregistrement de la déclaration, le délai court de l'expiration de ce délai, même sans message. (2) **Message retourné en erreur** : tant que le message revient en erreur et que l'apporteur n'a pas communiqué une adresse corrigée, le délai ne court pas ; dès la communication d'une adresse corrigée, il court **de cette communication**, même si la Société tarde à écrire à la nouvelle adresse ; une nouvelle erreur le suspend de nouveau, jusqu'à une nouvelle correction ; sans adresse valide dans `LIBERATION_SIGNALEE_JOURS` (SSOT) jours de la **déclaration**, l'attribution prend fin, suivie d'une carence unique (REQ-DM-004, DM-72), et aucune confirmation tacite n'a lieu. (3) La confirmation réputée acquise et la fin faute d'adresse valide sont les **seules** conséquences attachées au silence de l'entreprise ; le silence n'éteint jamais rien ; la promotion réserve l'entreprise et ne crée aucune commission. Aucun nombre en clair : les délais se lisent dans la SSOT (RM-10). Tests frontière, horloge figée : premier message non retourné en erreur à J, J+30 moins une minute aucune promotion, J+30 une seule ; deux passages, un seul événement ; une réponse ou un démenti avant l'échéance, aucune promotion tacite ; aucun message de la Société, promotion à `PRISE_DE_CONTACT_SOCIETE_JOURS` + `CONFIRMATION_TACITE_JOURS` jours de l'enregistrement ; message en erreur sans correction, aucune promotion à J+30 et fin à J+45 de la déclaration ; correction à J+10, promotion à J+40 même sans nouvel envoi ; correction puis nouvelle erreur, délai suspendu ; attribution qui aurait porté une raison de vérification sous W20, promue comme toute autre. Amendement W19 (décision de Will du 2026-09-29, docs/chantiers/W19-conseillers-salaries.md §4.2), maintenu : la confirmation tacite est réservée à l'apporteur ; le passage visible d'une prise en charge à `active` suit le même délai. Le texte W20 antérieur (délai compté de `recueAt`, réception d'une demande de confirmation par jeton ; demande signalée jamais promue par le silence) est remplacé : il n'a plus d'effet.",
+      "source": "contrat art. 3.2 al. 3 et 4 ; synthèse du 2026-09-03, M-7 ; réécrite sur le contrat v2, art. 3.2, 3.4 al. 2 et 3.7 al. 2 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617), l'arbitrage de la coordination (#319, 6035632726, point 2, recopié à l'acceptance de DM-24) et la juriste (#319, 6035645682 et 6036770037)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
@@ -677,6 +686,7 @@
         "DM-13",
         "DM-24",
         "DM-41",
+        "DM-72",
         "JUR-T40"
       ]
     },
@@ -695,7 +705,10 @@
         "DM-31",
         "DM-53",
         "DM-62",
-        "UX-P1-51"
+        "DM-69",
+        "DM-71",
+        "UX-P1-51",
+        "UX-P1-62"
       ]
     },
     {
@@ -746,6 +759,9 @@
         "SEC-30",
         "SEC-45",
         "SEC-55",
+        "SEC-62",
+        "SEC-65",
+        "SEC-71",
         "UX-P1-04"
       ]
     },
@@ -931,8 +947,8 @@
     {
       "id": "REQ-SEC-016",
       "domaine": "anti-abus-securite",
-      "texte": "Le dépôt est en outre limité à 20 / 10 min par hash IP (`surPanne: laisser-passer`) ; le compteur par identité déclare `surPanne: refuser` ; tout compteur sous préfixe `magic:`, `depot:`, `verif:`, `webhook:`, `auth:` déclare sa conduite sur panne.",
-      "source": "nouvelle (patron `rate-limit.spec.ts` garde de famille)",
+      "texte": "Le dépôt est limité par DEUX compteurs : un compteur de SESSION, OBLIGATOIRE (clé : l'empreinte de la session ou du jetonDepotId, jamais l'apporteurId), et un compteur d'IP (hash IP) ; la fenêtre et les plafonds sont lus en SSOT, avec leur source ; `surPanne: refuser` ; tout compteur sous préfixe `magic:`, `depot:`, `verif:`, `webhook:`, `auth:`, `ecrit:` déclare sa conduite sur panne ; l'écrit de l'apporteur est limité par session (`ecrit:session`) et par apporteur (`ecrit:apporteur`), limites et fenêtres lues en configuration privée, surPanne: refuser. [AMENDÉE au rattrapage 122 (coordination, #319, commentaire 6038679021, point 1).] [Amendée au rattrapage 108, arbitrage de la coordination du 2026-10-04 (sécurité, juriste) : remplace « limité à 20 / 10 min par hash IP (`surPanne: laisser-passer`) ; le compteur par identité déclare `surPanne: refuser` ».]",
+      "source": "nouvelle (patron `rate-limit.spec.ts` garde de famille) ; rattrapage 108 (arbitrage de la coordination du 2026-10-04, sécurité et juriste) ; famille `ecrit:` ajoutée au rattrapage 122 (coordination, #319, 6038679021)",
       "statut": "active",
       "remplaceePar": null,
       "module": 9,
@@ -940,9 +956,12 @@
       "phase": 0,
       "taches": [
         "DM-31",
+        "GOV-149",
         "QA-T68",
         "SEC-03",
-        "SEC-10"
+        "SEC-10",
+        "SEC-12",
+        "UX-P1-62"
       ]
     },
     {
@@ -981,8 +1000,8 @@
     {
       "id": "REQ-SEC-019",
       "domaine": "anti-abus-securite",
-      "texte": "🔴 **Le gel est un enum à TROIS valeurs — `libre`, `gele_non_confirmation`, `gele_fraude`** — avec motif, date et auteur (réécrite le 2026-09-03, A-3 (c) : `gele_anomalie` est renommée `gele_fraude` pour porter le mot du contrat, et `gele_manuel` **est supprimée** — un gel « manuel » sans motif écrit est exactement le pouvoir discrétionnaire que l'article 3.7 exclut ; la valeur `gele_strikes` avait déjà été renommée, « strike » étant un synonyme interdit au glossaire). **Tous les chemins de gel passent par une fonction unique** dont l'entrée est typée sur ces deux motifs et que garde `jur:suspension-motifs-fermes` (REQ-SEC-038). 🔴 **Portée strictement limitée** (contrat art. 3.7 al. 3 réécrit) : le gel porte **exclusivement sur l'enregistrement de nouvelles déclarations**. Il est **sans effet** sur les attributions en cours, provisoires ou définitives, sur les commandes signées, sur les commissions acquises ou à venir, et **sur l'accès de l'apporteur à son espace** — aucun jeton n'est révoqué, `sessionVersion` n'est pas incrémenté, aucune attribution n'est annulée (c'est REQ-SEC-032 qui réserve ces effets à la **résiliation**). Les attributions `provisoire` non qualifiées **restent `provisoire`** (la valeur `suspendue` n'existe pas dans l'enum fermé de REQ-DM-006) et libèrent la file M2. La suspension de l'enregistrement des déclarations d'un apporteur ne change rien à ses attributions en cours : aucune n'est mise en vérification de ce seul fait. La Société peut placer leurs demandes de confirmation en tête de son ordre d'appel, sans effet sur elles. Une demande n'est mise en vérification que sur des éléments objectifs qui lui sont propres (art. 3.2 al. 4). 🔴 **Durée maximale de quinze jours** (`SUSPENSION_MAX_JOURS`, SSOT, contrat art. 3.7) : un cron quotidien **lève de plein droit** tout gel de plus de quinze jours à compter de sa notification, écrit l'événement et notifie l'apporteur ; la Société demeure libre de résilier selon l'article 11. Une levée avant terme reste réservée à un rôle habilité et journalisée. Tests : gel posé à J0 → levé par le cron à J+15, jamais avant ; **un gel qui survit à J+16 → rouge** ; gel posé → jeton toujours valide, session vivante, attributions inchangées, lignes de commission inchangées (quatre assertions, **vues rougir** sur l'ancien comportement) ; `gele_manuel` ou `gele_anomalie` présent dans l'enum → gate rouge.",
-      "source": "audit-outil §1.1 ; contrat art. 3.7 al. 3 ; synthèse du 2026-09-03, A-3 (c) et (e) ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
+      "texte": "🔴 **Le gel est un enum à TROIS valeurs — `libre`, `gele_non_confirmation`, `gele_fraude`** — avec motif, date et auteur (réécrite le 2026-09-03, A-3 (c) : `gele_anomalie` est renommée `gele_fraude` pour porter le mot du contrat, et `gele_manuel` **est supprimée** — un gel « manuel » sans motif écrit est exactement le pouvoir discrétionnaire que l'article 3.7 exclut ; la valeur `gele_strikes` avait déjà été renommée, « strike » étant un synonyme interdit au glossaire). **Tous les chemins de gel passent par une fonction unique** dont l'entrée est typée sur ces deux motifs et que garde `jur:suspension-motifs-fermes` (REQ-SEC-038). 🔴 **Portée strictement limitée** (contrat art. 3.7 al. 3 réécrit) : le gel porte **exclusivement sur l'enregistrement de nouvelles déclarations**. Il est **sans effet** sur les attributions en cours, provisoires ou définitives, sur les commandes signées, sur les commissions acquises ou à venir, et **sur l'accès de l'apporteur à son espace** — aucun jeton n'est révoqué, `sessionVersion` n'est pas incrémenté, aucune attribution n'est annulée (c'est REQ-SEC-032 qui réserve ces effets à la **résiliation**). Les attributions `provisoire` non qualifiées **restent `provisoire`** (la valeur `suspendue` n'existe pas dans l'enum fermé de REQ-DM-006) et libèrent la file M2. [RETIRÉ au rattrapage 122 (coordination, #319, commentaire 6039223511, point 1) : les phrases de « mise en vérification », caduques avec le contrat v2.] 🔴 **Durée maximale de quinze jours** (`SUSPENSION_MAX_JOURS`, SSOT, contrat art. 3.7) : un cron quotidien **lève de plein droit** tout gel de plus de quinze jours à compter de sa notification, écrit l'événement et notifie l'apporteur ; la Société demeure libre de résilier selon l'article 11. Une levée avant terme reste réservée à un rôle habilité et journalisée. Tests : gel posé à J0 → levé par le cron à J+15, jamais avant ; **un gel qui survit à J+16 → rouge** ; gel posé → jeton toujours valide, session vivante, attributions inchangées, lignes de commission inchangées (quatre assertions, **vues rougir** sur l'ancien comportement) ; `gele_manuel` ou `gele_anomalie` présent dans l'enum → gate rouge.",
+      "source": "audit-outil §1.1 ; contrat art. 3.7 al. 3 ; synthèse du 2026-09-03, A-3 (c) et (e) ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84) ; phrases de mise en vérification retirées au rattrapage 122 (coordination, #319, 6039223511, point 1)",
       "statut": "active",
       "remplaceePar": null,
       "module": 21,
@@ -1005,14 +1024,15 @@
       "phase": 1,
       "taches": [
         "SEC-12",
-        "SEC-14"
+        "SEC-14",
+        "SEC-73"
       ]
     },
     {
       "id": "REQ-SEC-021",
       "domaine": "anti-abus-securite",
-      "texte": "« Vérifier une entreprise » n'est accessible qu'en session authentifiée, limité par identité et par hash IP selon la configuration, journalisé (`verification_events` [REMPLACÉ au rattrapage 95 : la table s'appelle `verifications`, livrée par DM-12]) ; aucun rythme de dépôt ne pose de signal d'anomalie (REQ-SEC-017, REQ-JUR-031 : `TypeAnomalie` n'a pas de valeur de rythme) ; la date de libération est arrondie au mois [SUSPENDU au rattrapage 96, remarque de la juriste : aucune date n'est rendue, dans aucun état, tant que Williams n'a pas tranché (juriste : non ; sécurité : oui ; décision W19), voir SEC-16] ; l'identité de l'autre apporteur n'est jamais révélée.",
-      "source": "audit-outil §1.3 D5 (précisé) ; nom de la table aligné sur `verifications` (DM-12), rattrapage 95 ; date suspendue jusqu'à la décision de Williams, rattrapage 96",
+      "texte": "« Vérifier une entreprise » n'est accessible qu'en session authentifiée, limité par identité, sur deux fenêtres (`verif:identite-jour`, `verif:identite-court`), et par hash IP (`verif:ip-jour`), limites et fenêtres lues en configuration privée, surPanne: refuser [AMENDÉE au rattrapage 120 (coordination, #319, commentaire 6036979782, point 1, qui complète la sécurité, 6036696268, et la juriste, 6036671294), remplaçant « par identité et par hash IP selon la configuration » ; aucune valeur n'est écrite au registre (SEC-72) ; au rattrapage 122, le segment passe de la note au texte en vigueur, que lit `securite:rate-famille`], journalisé (`verification_events` [REMPLACÉ au rattrapage 95 : la table s'appelle `verifications`, livrée par DM-12]) ; aucun rythme de dépôt ne pose de signal d'anomalie (REQ-SEC-017, REQ-JUR-031 : `TypeAnomalie` n'a pas de valeur de rythme) ; la date de libération est arrondie au mois [SUSPENDU au rattrapage 96, remarque de la juriste : aucune date n'est rendue, dans aucun état, tant que Williams n'a pas tranché (juriste : non ; sécurité : oui ; décision W19), voir SEC-16] ; l'identité de l'autre apporteur n'est jamais révélée.",
+      "source": "audit-outil §1.3 D5 (précisé) ; nom de la table aligné sur `verifications` (DM-12), rattrapage 95 ; date suspendue jusqu'à la décision de Williams, rattrapage 96 ; amendée au rattrapage 120 (coordination, #319, 6036979782, point 1 ; sécurité 6036696268 ; juriste 6036671294)",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -1020,7 +1040,9 @@
       "phase": 1,
       "taches": [
         "SEC-16",
-        "SEC-41"
+        "SEC-41",
+        "SEC-72",
+        "SEC-73"
       ]
     },
     {
@@ -1058,6 +1080,9 @@
         "SEC-31",
         "SEC-58",
         "SEC-60",
+        "UX-P1-53",
+        "UX-P1-56",
+        "UX-P1-63",
         "UX-P2-03",
         "UX-P3-05"
       ]
@@ -1106,6 +1131,7 @@
       "phase": 1,
       "taches": [
         "CPL-T07",
+        "CPL-T07b",
         "DM-58",
         "UX-P1-09"
       ]
@@ -1135,7 +1161,8 @@
       "etape": 5,
       "phase": 0,
       "taches": [
-        "SEC-01"
+        "SEC-01",
+        "SEC-63"
       ]
     },
     {
@@ -1186,8 +1213,8 @@
     {
       "id": "REQ-SEC-032",
       "domaine": "anti-abus-securite",
-      "texte": "🔴 **La coupure est réservée à la RÉSILIATION ; la suspension n'en produit AUCUN effet** (réécrite le 2026-09-03, A-3 (e) : cette exigence faisait exécuter suspension **et** résiliation dans la même transaction, ce qui révoquait les jetons, coupait l'accès à l'espace et annulait des attributions ayant une valeur pécuniaire pour une simple mesure de vérification — la spécification se contredisait d'ailleurs elle-même, l'arbitrage l. 416 et REQ-SEC-019 disant que ces attributions **restent `provisoire`**). **Résiliation** : une transaction unique révoque les jetons de dépôt, incrémente `sessionVersion`, annule `provisoire`/`en_attente`, libère `active` non converties et laisse `convertie` intactes. **Suspension** : aucun de ces effets — cf. REQ-SEC-019. 🔴 **Après résiliation, une session en LECTURE SEULE survit** (contrat art. 12.3, A-4) : l'apporteur conserve l'accès en lecture à son espace — relevés, factures, motif de tout blocage, journal de ses propres déclarations — **jusqu'à l'extinction de ses droits**, ou les reçoit par courrier électronique à sa dernière adresse déclarée (REQ-UX-016). Sans cette réserve, la Société pourrait notifier valablement dans un espace fermé et devrait payer des commissions que l'apporteur ne peut plus lire. La session résiliée n'ouvre **aucune** écriture : aucun dépôt, aucune modification de profil, aucun jeton. La Server Action de dépôt relit le statut de l'apporteur dans sa transaction. Tests : après suspension → jeton valide, session vivante, attributions inchangées (**vu rougir**) ; après résiliation → dépôt refusé, écriture refusée, **lecture des relevés et factures accessible**, `/deposer` en 404 ; extinction des droits → accès clos, notifications par e-mail.",
-      "source": "audit-outil §5 étape 12 ; audit-anti-abus §4 « Effets de la résiliation » ; contrat art. 3.7 al. 3 et 12.3 ; synthèse du 2026-09-03, A-3 (e) et A-4",
+      "texte": "🔴 **La coupure est réservée à la RÉSILIATION ; la suspension n'en produit AUCUN effet** (réécrite le 2026-09-03, A-3 (e) : cette exigence faisait exécuter suspension **et** résiliation dans la même transaction, ce qui révoquait les jetons, coupait l'accès à l'espace et annulait des attributions ayant une valeur pécuniaire pour une simple mesure de vérification — la spécification se contredisait d'ailleurs elle-même, l'arbitrage l. 416 et REQ-SEC-019 disant que ces attributions **restent `provisoire`**). **Résiliation** : une transaction unique révoque les jetons de dépôt, incrémente `sessionVersion`, annule `provisoire`/`en_attente`, fait prendre fin à `active`, `rdv_pris` et `proposition` (`expiree`, SIREN libéré, art. 12.1) et fait passer `signee` et `convertie` en `figee_resiliation` (art. 12.3) [REMPLACÉ au rattrapage 110 : « libère `active` non converties et laisse `convertie` intactes » ; juriste #703, 5980974823 (active, rdv_pris, proposition) et 5981011150 (signee, convertie, d'accord avec A02 5980982895)]. **Suspension** : aucun de ces effets — cf. REQ-SEC-019. 🔴 **Après résiliation, l'accès à l'espace prend fin ; les documents partent par courrier électronique** (contrat v2, art. 12.3 ; SEC-70) : l'apporteur reçoit, à sa dernière adresse déclarée, ses autofactures, ses avoirs, leurs décomptes et le motif de tout blocage, **jusqu'à l'extinction de ses droits** (REQ-UX-016, REQ-ARG-035), et peut obtenir sur simple demande écrite la copie de son contrat signé et de ses autofactures. La Société ne notifie jamais dans un espace fermé : toute notification après la fin du contrat part par courrier électronique. Aucune session ne survit : aucun dépôt, aucune lecture, aucune modification de profil, aucun jeton. La Server Action de dépôt relit le statut de l'apporteur dans sa transaction. Tests : après suspension → jeton valide, session vivante, attributions inchangées (**vu rougir**) ; après résiliation → dépôt refusé, session close, `/deposer` en 404, autofactures et décomptes envoyés par e-mail ; extinction des droits → plus aucun envoi.",
+      "source": "audit-outil §5 étape 12 ; audit-anti-abus §4 « Effets de la résiliation » ; contrat art. 3.7 al. 3 et 12.3 ; synthèse du 2026-09-03, A-3 (e) et A-4 ; rattrapage 110 (#703 : juriste 5980974823 et 5981011150, A02 5980982895) ; réalignée sur le contrat v2, art. 12.3 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617), la tâche SEC-70 qui l'a codée — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 21,
@@ -1197,6 +1224,7 @@
         "SEC-12",
         "SEC-19",
         "SEC-43",
+        "SEC-70",
         "T-ARG-038"
       ]
     },
@@ -1212,6 +1240,7 @@
       "phase": 1,
       "taches": [
         "SEC-26",
+        "SEC-64",
         "UX-P1-03"
       ]
     },
@@ -1362,8 +1391,8 @@
     {
       "id": "REQ-SEC-060",
       "domaine": "anti-abus-securite",
-      "texte": "**Les raisons de vérification suggérée.** Les raisons forment un enum fermé (HYP-W20-VERIFICATION). Elles ne sont lues que par la liste d'appels et la fiche de qualification de la console, et par les trois règles de la demande signalée : aucun clic « Oui » retenu (REQ-DM-061), aucune confirmation tacite (REQ-DM-042 amendée, question 18, tranchée le 2026-09-29) et la libération sans appel concluant (REQ-DM-063, question 19). Seuls l'état « appel attendu » du badge de REQ-UX-062 et, après libération, l'état « Réservation terminée » en sont dérivés côté serveur, jamais la raison ; la libération n'est pas un effet défavorable au sens de REQ-SEC-017 (décision de Williams du 2026-09-29 : aucune sanction, aucune Anomalie, aucune suspension ; redépôt aux règles ordinaires après la carence de -d7, qui ne vise que le même apporteur et la même entreprise) ; garde AST : aucune raison n'atteint un DTO de l'espace, le score de SEC-14, une Anomalie, une notification ou une alerte ; le rythme et le nombre de dépôts n'entrent dans aucune raison (REQ-SEC-017, REQ-SEC-021, REQ-JUR-031). Comparaisons par empreintes HMAC seulement (REQ-SEC-024). Tests : un témoin positif et un négatif par raison ; une raison lue depuis `src/app/(espace)/` → rouge ; une raison « rafale » dans l'enum → rouge ; une raison dans le texte ou la charge de la notification de libération → rouge.",
-      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-DM-008",
+      "texte": "**Les raisons de vérification suggérée : un tri de la liste d'appels, sans effet sur la confirmation.** Les raisons forment un enum fermé (HYP-W20-VERIFICATION) et servent la seule revue humaine : elles ne sont lues que par la liste d'appels, qu'elles trient, et par la fiche de qualification de la console. (a) **Aucune raison ne retarde, ne conditionne ni n'empêche la confirmation** (contrat v2, art. 3.2 ; REQ-DM-042) : il n'existe plus de prédicat « demande signalée », ni aucun de ses consommateurs (exclusion de la confirmation tacite, libération après des tentatives, réponse écartée pour une raison). (b) **Le tri n'a aucun effet sur l'apporteur** : ni suspension, ni score de SEC-14, ni Anomalie ; il ne déclenche pas la suspension de nouvelles déclarations de l'art. 3.7 al. 3, qui garde son propre régime. (c) **Les raisons restent internes** : ni l'entreprise ni l'apporteur ne les voient ; garde AST : aucune raison n'atteint un DTO de l'espace, le score de SEC-14, une Anomalie, une notification ou une alerte. Le rythme et le nombre de dépôts n'entrent dans aucune raison (REQ-SEC-017, REQ-SEC-021, REQ-JUR-031). Comparaisons par empreintes HMAC seulement (REQ-SEC-024). Tests : un témoin positif et un négatif par raison ; une raison lue depuis `src/app/(espace)/` → rouge ; une raison « rafale » dans l'enum → rouge ; une attribution qui porte une raison est promue tacitement à l'échéance de REQ-DM-042, comme toute autre ; une raison qui atteint le score, une Anomalie ou une suspension → rouge ; une raison dans le texte ou la charge d'une notification, dont celle de la fin de REQ-DM-063 → rouge.",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-DM-008 ; réduite à un tri de la liste d'appels sur le contrat v2, art. 3.2 (décision de Williams du 2026-10-07, #474, 6032680253 ; #319, 6032680617), d'après l'arbitrage de la coordination recopié à l'acceptance de SEC-41 (#319, 6035632726, point 1) et les conditions (a) à (c) de la juriste (#319, 6035645682)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
@@ -1415,7 +1444,9 @@
         "SEC-58",
         "SEC-59",
         "SEC-60",
-        "SEC-61"
+        "SEC-61",
+        "SEC-67",
+        "SEC-68"
       ]
     },
     {
@@ -1471,8 +1502,8 @@
     {
       "id": "REQ-ARG-004",
       "domaine": "argent",
-      "texte": "Prorata : part acquise sur l'encaissement i = floor(commissionTotaleCents × cumulEncaisséTTC_i / factureTTCNetCents) − Σ parts précédentes ; à facture soldée, Σ parts = commissionTotaleCents exactement ; aucune part négative ; aucune part ne dépasse la commission totale.",
-      "source": "tableaux-de-bord §2.1, §2.4 ; nouvelle (ARG-02, ARG-03)",
+      "texte": "🔴 **Commission acquise au paiement INTÉGRAL, sans prorata** (contrat v2, art. 4.2 et 4.3, MOT POUR MOT) : art. 4.2 « La commission est acquise lorsque la Société a encaissé l'intégralité du prix facturé au client au titre de la commande, tous payeurs confondus, y compris un opérateur de compétences ou tout autre financeur — jamais à la signature, jamais à l'émission de la facture. » ; art. 4.3 « Aucune part de commission n'est due au titre d'un paiement partiel. La commission est facturée et versée dans les conditions de l'article 5, à compter de l'encaissement complet. » Une ligne ne devient `acquise` qu'au jour où le cumul encaissé, tous payeurs confondus, atteint le prix facturé de la commande, net des avoirs (art. 4.0), les deux termes de MÊME nature, TTC — prix facturé TTC net des avoirs et cumul encaissé TTC ; un prix HT comparé à des encaissements TTC est une faute (auditeur argent, revue de #815, 5446397763) ; aucune part n'est acquise sur un paiement partiel. [gouvernance : RÉÉCRITE dans la PR de T-ARG-044 (#815), comme son acceptance le prévoit ; elle REMPLACE le texte du prorata, retiré par le v2, dont le début était « Prorata : part acquise sur l'encaissement i = floor(commissionTotaleCe » ; citations du v2 extraites de la fiche ALN-02 de la juriste, #474, commentaire 6032703119.]",
+      "source": "tableaux-de-bord §2.1, §2.4 ; nouvelle (ARG-02, ARG-03) ; réécrite sur le contrat v2, art. 4.2 et 4.3, dans la PR de T-ARG-044 (#815 ; juriste, #474, 6032703119, ALN-02)",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -1481,14 +1512,16 @@
       "taches": [
         "DM-04",
         "T-ARG-036",
-        "T-ARG-037"
+        "T-ARG-037",
+        "T-ARG-044",
+        "T-ARG-047"
       ]
     },
     {
       "id": "REQ-ARG-005",
       "domaine": "argent",
-      "texte": "Multi-payeurs : les encaissements de plusieurs payeurs (OPCO subrogé, entreprise, France Travail) sur les factures d'une même prestation sont proratisés sans cas particulier ; la résolution passe par le `clientId` bénéficiaire résolu par axionia (facture ?? session ?? enrollment ?? dossier), jamais par `destinataireSiret` ; la commission porte sur le HT total de la prestation.",
-      "source": "tableaux-de-bord §2.9, R13, R15, B10, B11 ; ARG-08",
+      "texte": "Multi-payeurs : les encaissements de plusieurs payeurs (OPCO subrogé, entreprise, France Travail) sur les factures d'une même prestation **se cumulent**, sans cas particulier, pour atteindre le prix facturé de la commande, net des avoirs (contrat v2, art. 4.2 « tous payeurs confondus », REQ-ARG-004) ; aucun encaissement n'est proratisé ; la résolution passe par le `clientId` bénéficiaire résolu par axionia (facture ?? session ?? enrollment ?? dossier), jamais par `destinataireSiret` ; la commission porte sur le HT total de la prestation, quel que soit le payeur (art. 4.4).",
+      "source": "tableaux-de-bord §2.9, R13, R15, B10, B11 ; ARG-08 ; réalignée sur le contrat v2, art. 4.2 et 4.4 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -1559,8 +1592,8 @@
     {
       "id": "REQ-ARG-010",
       "domaine": "argent",
-      "texte": "Reprise : `paiement.rembourse` crée une ligne `reprise` négative = −min(Σ acquis sur la facture, floor(commissionTotale × rembourséTTC / factureTTC)) ; `avoir.emis` et `facture.annulee` recalculent l'attendu sans créer de reprise ; la ligne d'origine n'est jamais modifiée ni supprimée.",
-      "source": "tableaux-de-bord §2.5, B5 ; ARG-01, ARG-06",
+      "texte": "Reprise (contrat v2, art. 4.5) : un avoir ou un remboursement partiel diminue le prix facturé, et la commission est recalculée sur le prix net — selon la formule de l'art. 4.1 bis pour un forfait, arrondie au centime inférieur, sur le montant HT net pour un pourcentage. **Avant l'acquisition** (REQ-ARG-004), il n'y a rien à reprendre : un avoir, `facture.annulee` ou un remboursement partiel ne font que recalculer l'attendu et le prix net que l'encaissement intégral doit atteindre. **Après l'acquisition**, toute annulation, rétractation ou restitution d'un encaissement, quelle qu'en soit la cause (`paiement.rembourse` et son `motif`, REQ-DM-019, REQ-INT-032), crée une ligne `reprise` négative égale à la différence entre la commission acquise et la commission recalculée sur le prix net, en centimes entiers, jamais supérieure en valeur absolue à Σ acquis sur la commande ; les deux motifs exclus par l'art. 4.5 (`geste_commercial`, `inexecution_societe`) n'en créent aucune (REQ-DM-019). La reprise est constatée, **dès que la Société constate l'annulation**, par un avoir d'autofacture (« Autofacturation — avoir », référence de l'autofacture d'origine, commission corrigée, TVA correspondante, somme reprise ; REQ-ARG-018) ; elle ne peut intervenir que dans les `REPRISE_MOIS` mois suivant la date de l'annulation ; elle s'impute par compensation conventionnelle sur la prochaine somme à verser et, à défaut de commissions à venir suffisantes, le solde négatif suit l'art. 12.4 (REQ-ARG-026). La ligne d'origine et l'autofacture d'origine ne sont jamais modifiées ni supprimées, et aucune autofacture n'est émise pour un montant diminué d'une reprise. Tests : remboursement partiel avant l'encaissement intégral → aucune ligne `reprise` ; remboursement partiel après → une `reprise` égale à l'écart des deux commissions et un avoir d'autofacture (vu rougir sur la formule au prorata du TTC remboursé) ; motif `geste_commercial` → aucune reprise ; annulation constatée au-delà de `REPRISE_MOIS` → aucune reprise.",
+      "source": "tableaux-de-bord §2.5, B5 ; ARG-01, ARG-06 ; réalignée sur le contrat v2, art. 4.1 bis, 4.5 et 12.4 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -1594,7 +1627,8 @@
       "phase": 1,
       "taches": [
         "DM-16",
-        "SEC-18"
+        "SEC-18",
+        "T-ARG-046"
       ]
     },
     {
@@ -1614,8 +1648,8 @@
     {
       "id": "REQ-ARG-014",
       "domaine": "argent",
-      "texte": "Gel mensuel : le job `statement-YYYY-MM` (jobId BullMQ unique) relève toutes les lignes `acquise`/`reprise`/`bonus` avec `statementId IS NULL` à l'instant T, quelle que soit leur date ; un second run du même mois ne crée aucun relevé ; un relevé émis n'est jamais réouvert.",
-      "source": "tableaux-de-bord §2.7, B3 ; audit-outil §6.3 ; ARG-14",
+      "texte": "Émission à chaque encaissement intégral, sans gel mensuel (contrat v2, art. 5.1 ; annexe 2, 2.1 bis) : un passage « tout ce qui est dû à l'instant t » (REQ-QA-027), horloge injectée, établit pour chaque apporteur une autofacture regroupant les lignes `commission` et `parrainage` (et `bonus_filleul`, REQ-ARG-013) devenues acquises ce jour et non encore facturées — le jour même ou, si l'encaissement intégral intervient un jour non ouvré ou n'est constaté que plus tard, le premier jour ouvré où la Société le constate. Une ligne entre dans au plus une autofacture ; un second passage le même jour ne crée aucune autofacture, puisque ses lignes sont déjà facturées (unicité PAR LIGNE : une ligne de commission entre dans au plus une autofacture (`autofactureId` unique par ligne, garanti EN BASE par affectation conditionnelle `WHERE autofactureId IS NULL` dans la transaction d'émission, REQ-ARG-021, REQ-DM-025), jamais une unicité par jour — une ligne régularisée (art. 5.4, REQ-ARG-016, REQ-ARG-025) ou constatée tard (art. 5.1) a toujours son autofacture, datée de la régularisation ou du constat, même si une autre autofacture porte déjà le même jour d'acquisition) ; le rattrapage d'un passage manqué produit une autofacture par jour d'acquisition, jamais une fusion de plusieurs jours ; une autofacture émise n'est jamais réouverte. Les lignes `reprise` ne sont pas facturées : elles sont constatées par un avoir d'autofacture (REQ-ARG-010). Les lignes dont le versement est différé (art. 5.4, REQ-ARG-016) ne sont ni facturées ni versées avant la régularisation. Il n'existe ni job `statement-YYYY-MM`, ni relevé mensuel.",
+      "source": "tableaux-de-bord §2.7, B3 ; audit-outil §6.3 ; ARG-14 ; réalignée sur le contrat v2, art. 5.1 et annexe 2, 2.1 bis (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617), la fiche ALN-03 de la juriste (#474, 6032703119) et les conditions de la sécurité sur ALN-03 (#474, 6032838727), condition 1 — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -1628,24 +1662,25 @@
     {
       "id": "REQ-ARG-015",
       "domaine": "argent",
-      "texte": "Seuil : si le solde d'un apporteur (Σ lignes relevables) < `SEUIL_VERSEMENT` (5 000 cents, SSOT), y compris négatif, **aucun relevé n'est établi et aucune facture n'est émise** — les lignes restent relevables le mois suivant (report). ✅ **Le seuil est au stade de la FACTURATION, jamais du paiement** : c'est le code qui avait raison et le contrat qui a été corrigé (art. 5.1, A-5). Écrit au stade du paiement, il reportait jusqu'à onze mois une créance **déjà facturée** et exposait au plafond de 60 jours de l'article L.441-10, I C. com. ; écrit ainsi, aucune facture n'est émise, donc aucun délai ne court, donc il n'y a **aucun manquement** (arbitrage C-5). 🔴 **Deux exceptions, à écrire dans le code** (contrat art. 5.3 et 5.4) : au relevé du mois de **janvier**, le seuil n'est pas appliqué et **tout solde positif reporté est versé** ; il ne s'applique pas davantage au **dernier relevé établi après la fin du contrat** (REQ-ARG-026, HYP-E1-17). Tests frontière : 4 999 cents en novembre → report ; 4 999 cents en janvier → **versé** (vu rougir) ; 4 999 cents au dernier relevé d'un résilié → versé ; solde négatif → jamais de facture.",
-      "source": "tableaux-de-bord §2.7, B4 ; ARG-15 ; contrat art. 5.1 et 5.3 ; synthèse du 2026-09-03, A-5 et arbitrage C-5",
+      "texte": "🔴 **Aucun montant minimum : toute commission acquise est facturée et versée, quel que soit son montant** (contrat v2, art. 5.1, MOT POUR MOT : « L'autofacture est émise pour le montant intégral de la commission : elle n'est jamais diminuée d'une reprise. Toute commission acquise est facturée et versée, quel que soit son montant : aucun montant minimum n'est appliqué. » ; art. 5.3 : « Aucun montant minimum ne s'applique, y compris après la fin du contrat. »). Il n'existe ni relevé mensuel, ni seuil de versement, ni report au mois suivant, ni exception de janvier ou de dernier relevé : `SEUIL_VERSEMENT` est retiré de la SSOT et du gabarit, et aucun motif ne diffère une commission parce qu'elle est faible (REQ-ARG-017). Une reprise ne diminue jamais une autofacture : elle est constatée par un avoir d'autofacture (art. 4.5, REQ-ARG-010) qui s'impute par compensation sur la prochaine somme à verser ; la somme virée est le montant de l'autofacture diminué des avoirs imputés, jamais négative, le reliquat s'imputant sur les sommes suivantes, puis suivant l'art. 12.4 (REQ-ARG-026). Le versement reste gardé par les conditions de l'art. 5.4 (REQ-ARG-016), par `exigerUnRibVersable` (CPL-T24) et, avant le premier versement, par SEC-68 : retirer le seuil ne retire aucune de ces gardes. Tests : une commission minime (un centime) est facturée et versée (vu rougir sur l'ancien seuil) ; une autofacture sur laquelle un avoir est imputé garde son montant intégral, et son décompte indique l'avoir imputé et la somme virée ; aucune constante `SEUIL_VERSEMENT` dans la SSOT.",
+      "source": "tableaux-de-bord §2.7, B4 ; ARG-15 ; contrat art. 5.1 et 5.3 ; synthèse du 2026-09-03, A-5 et arbitrage C-5 ; réalignée sur le contrat v2, art. 4.5, 5.1, 5.3 et 12.4 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617), la fiche ALN-03 de la juriste (#474, 6032703119) et les conditions de la sécurité sur ALN-03 (#474, 6032838727), condition 3 — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
       "etape": 12,
-      "phase": 2,
+      "phase": 1,
       "taches": [
         "T-ARG-015",
         "T-ARG-033",
-        "T-ARG-038"
+        "T-ARG-038",
+        "T-ARG-045"
       ]
     },
     {
       "id": "REQ-ARG-016",
       "domaine": "argent",
-      "texte": "🔴 **Trois contrôles bloquants, et TROIS SEULEMENT** (réécrite le 2026-09-03, A-4 et A-5, sur l'article 5.4 réécrit) : SIREN vérifié valide et actif, coordonnées bancaires valides **au nom de l'apporteur** (IBAN checksum + titulaire), et attestation de vigilance **lorsque le cumul atteint le seuil légal** des articles L.8222-1 et D.8222-5 C. trav. (`SEUIL_VIGILANCE`, 500 000 cents HT, SSOT). **Aucune autre pièce et aucun autre motif ne peuvent différer un versement** : ni l'absence d'attestation RC pro (REQ-DM-027), ni un défaut de rattachement d'un encaissement, ni l'absence de palier à la grille (annexe 1, A1.7 / REQ-EXT-025) ne le diffèrent au-delà de soixante jours (REQ-ARG-034). 🔴 **L'absence de mandat d'autofacturation ne bloque plus rien** : elle produit un relevé **payable sur facture de l'apporteur**, jamais un relevé `bloque` motif `mandat_non_signe` (REQ-ARG-018, REQ-ARG-035) — ce blocage se déclenchait à la fin de **chaque** contrat, avec une créance impayée d'un côté et une TVA non déductible de l'autre. Le régime TVA déclaré reste requis pour **émettre** une autofacture (REQ-ARG-018) et non pour payer. Les trois contrôles sont rendus par la fonction pure `piecesBloquantPaiement` (REQ-DM-027) ; tout échec produit un relevé `bloque` avec un motif de l'enum `MotifBlocage` (REQ-ARG-017), visible par l'apporteur avec l'action qui le lève, aucune ligne ne passe `a_payer` et aucun virement n'est émis. Tests : mandat absent → relevé **`a_payer` sur facture de l'apporteur** (vu rougir sur `bloque`) ; RC pro périmée → payé ; vigilance absente sous le seuil → payé ; vigilance absente au seuil → bloqué.",
-      "source": "audit-outil §6.1, §6.3 ; tableaux-de-bord §2.8 ; R10 ; ARG-19 ; contrat art. 5.4 et annexe 2.5 ; synthèse du 2026-09-03, A-4 et A-5 ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
+      "texte": "🔴 **Conditions du versement, et CELLES-LÀ SEULEMENT** (contrat v2, art. 5.4 et 6.2) : numéro SIREN valide, régime de taxe sur la valeur ajoutée déclaré (art. 6.3) et coordonnées bancaires au nom de l'apporteur (IBAN checksum + titulaire) ; en outre, l'attestation de vigilance et l'extrait d'immatriculation de l'art. 6.2 conditionnent le versement des sommes qui portent le cumul des sommes dues au titre du contrat au seuil de l'art. R.8222-1 C. trav., et au-delà (REQ-ARG-025). **Aucune autre pièce et aucun autre motif ne peuvent différer un versement** : l'absence d'attestation RC pro ne diffère RIEN (art. 6.4 : aucune n'est exigée ; REQ-DM-027) ; ni un défaut de rattachement d'un encaissement, ni l'absence de palier à la grille (annexe 1, A1.7 / REQ-EXT-025) ne le diffèrent au-delà de `PALIER_HORS_GRILLE_JOURS` jours (REQ-ARG-034). 🔴 **Une somme différée n'est ni facturée ni versée avant la régularisation, et demeure acquise** (art. 5.4 al. 2) : à la réception de la dernière pièce ou information manquante, l'autofacture est établie et transmise, datée de la régularisation comme date d'émission et portant la date de l'encaissement intégral comme date de la prestation ; le délai indicatif (`VERSEMENT_JOURS_OUVRES`) et l'échéance (`VERSEMENT_PLAFOND_JOURS`) courent de la régularisation, sans montant minimum ; le motif du blocage est indiqué à l'apporteur par courrier électronique ou dans son espace, avec l'action qui le lève. Les sommes suspendues faute de pièces de vigilance le restent après la fin du contrat, sans limite de délai, sans pénalité et sans relance obligée (HYP-E1-22). 🔴 **La fin du mandat de facturation ne bloque rien** : elle fait passer en mode « facture de l'apporteur » (annexe 2, 2.5 ; REQ-ARG-018, REQ-ARG-035), jamais en blocage `mandat_non_signe`. Les conditions sont rendues par la fonction pure `piecesBloquantPaiement` (REQ-DM-027) ; tout échec produit une ligne `bloquee` avec un motif de l'enum `MotifBlocage` (REQ-ARG-017) : aucune autofacture n'est établie pour elle, aucune ligne ne passe `a_payer` et aucun virement n'est émis ; le versement reste gardé par `exigerUnRibVersable` (CPL-T24) et, avant le premier versement, par SEC-68. Tests : mandat terminé → décompte transmis en mode facture de l'apporteur (vu rougir sur `bloque`) ; RC pro absente ou périmée → versé ; vigilance absente sous le seuil → versé ; vigilance absente au seuil → ni facturé ni versé, puis autofacture datée de la régularisation à la réception de l'attestation (vu rougir sur une autofacture émise puis bloquée) ; régime de TVA non déclaré → ni facturé ni versé.",
+      "source": "audit-outil §6.1, §6.3 ; tableaux-de-bord §2.8 ; R10 ; ARG-19 ; contrat art. 5.4 et annexe 2.5 ; synthèse du 2026-09-03, A-4 et A-5 ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will) ; réalignée sur le contrat v2, art. 5.4, 6.2, 6.3 et annexe 2, 2.5 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617), les conditions de la sécurité sur ALN-03 (#474, 6032838727) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 4,
@@ -1661,8 +1696,8 @@
     {
       "id": "REQ-ARG-017",
       "domaine": "argent",
-      "texte": "Motif de blocage = enum Prisma `MotifBlocage` (`rib_manquant`, `rib_a_verifier`, `siret_invalide`, `tva_non_declaree`, `vigilance_perimee`, `sous_seuil`, `commission_sup_ht`, `a_qualifier`, `non_resolue`) ; aucune colonne de statut ou de motif en chaîne libre. 🔴 **`mandat_non_signe` est RETIRÉ de l'enum** (2026-09-03, A-4) : l'absence de mandat change le **mode d'émission** de la facture, pas le droit au paiement (REQ-ARG-016, REQ-ARG-035). 🔴 **Trois motifs cessent de pouvoir bloquer un versement et deviennent des ALERTES console** — `commission_sup_ht`, `a_qualifier`, `non_resolue` (A-5) : ils signalent un chiffre à vérifier, jamais un droit à suspendre, et **ne peuvent différer un versement au-delà de soixante jours** (REQ-ARG-034) ; la ligne concernée est payée au montant établi, l'écart éventuel se corrige par une `LigneAjustement` (REQ-CPL-010). ⚠️ **`bareme_indefini` n'est PAS une valeur de cet enum** : c'est un **libellé de cas** (REQ-DM-015, REQ-EXT-025), porté en base par `motifBlocage = a_qualifier` et rendu à l'apporteur « **Prestation hors grille de commissions** » (REQ-UX-011) — l'arbitrage l. 410 l'a tranché, et les textes qui écrivent encore « motif `bareme_indefini` » désignent ce cas, jamais une valeur d'enum. Tests : `Object.values(MotifBlocage)` = les neuf valeurs exactement, **vu rougir** sur `mandat_non_signe` ; ligne `commission_sup_ht` non payée à J+61 → rouge.",
-      "source": "nouvelle (règle maison « une colonne de vocabulaire = un enum ») ; arbitrage l. 410 ; contrat art. 5.4 ; synthèse du 2026-09-03, A-4, A-5 et A-11",
+      "texte": "Motif de blocage = enum Prisma `MotifBlocage` (`rib_manquant`, `rib_a_verifier`, `siret_invalide`, `tva_non_declaree`, `vigilance_perimee`, `commission_sup_ht`, `a_qualifier`, `non_resolue`) ; aucune colonne de statut ou de motif en chaîne libre. 🔴 **`sous_seuil` est RETIRÉ de l'enum** (contrat v2, art. 5.1 et 5.3 : aucun montant minimum, REQ-ARG-015). 🔴 **`mandat_non_signe` est RETIRÉ de l'enum** (2026-09-03, A-4) : l'absence de mandat change le **mode d'émission** de la facture, pas le droit au paiement (REQ-ARG-016, REQ-ARG-035). 🔴 **Trois motifs cessent de pouvoir bloquer un versement et deviennent des ALERTES console** — `commission_sup_ht`, `a_qualifier`, `non_resolue` (A-5) : ils signalent un chiffre à vérifier, jamais un droit à suspendre, et **ne peuvent différer le versement d'une autofacture au-delà de son échéance, `VERSEMENT_PLAFOND_JOURS`** (REQ-ARG-034) ; la ligne concernée est payée au montant établi, l'écart éventuel se corrige par une `LigneAjustement` (REQ-CPL-010). ⚠️ **`bareme_indefini` n'est PAS une valeur de cet enum** : c'est un **libellé de cas** (REQ-DM-015, REQ-EXT-025), porté en base par `motifBlocage = a_qualifier` et rendu à l'apporteur « **Prestation hors grille de commissions** » (REQ-UX-011) — l'arbitrage l. 410 l'a tranché, et les textes qui écrivent encore « motif `bareme_indefini` » désignent ce cas, jamais une valeur d'enum. Tests : `Object.values(MotifBlocage)` = les huit valeurs exactement, **vu rougir** sur `mandat_non_signe` et sur `sous_seuil` ; ligne `commission_sup_ht` non versée au lendemain de l'échéance `VERSEMENT_PLAFOND_JOURS` → rouge.",
+      "source": "nouvelle (règle maison « une colonne de vocabulaire = un enum ») ; arbitrage l. 410 ; contrat art. 5.4 ; synthèse du 2026-09-03, A-4, A-5 et A-11 ; réalignée sur le contrat v2, art. 5.1 et 5.3 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 17,
@@ -1680,8 +1715,8 @@
     {
       "id": "REQ-ARG-018",
       "domaine": "argent",
-      "texte": "Autofacture : produite **si et seulement si** `mandat.signeAt` < date du relevé ; mention « Autofacturation » ; émetteur = apporteur (raison sociale, SIREN, adresse, n° TVA si assujetti), destinataire = Axion-IA ; TVA selon `regimeTva` figé (mention art. 293 B si franchise) ; numéro de série par apporteur sans trou ; PDF et XML CII EN 16931 stockés avec hash SHA-256 ; immuable (correction = avoir). 🔴 **Sans mandat, le relevé n'est pas bloqué : il bascule en mode « facture de l'apporteur »** (2026-09-03, A-4 — annexe 2.5 réécrite) : la Société met le relevé à disposition, l'apporteur établit lui-même sa facture, le paiement intervient dans les trente jours de sa réception conforme, et le lot de paiement l'accepte à ce titre (REQ-ARG-035). 🔴 **Deux mentions obligatoires supplémentaires, sur le PDF ET sur le XML CII EN 16931** (art. L.441-9, I C. com., contrat art. 5.3 et annexe 2.2, A-5) : le **taux des pénalités de retard** (taux BCE de refinancement le plus récent majoré de dix points) et l'**indemnité forfaitaire de recouvrement de 40 euros** (art. D.441-5 C. com.). Sur ~3 600 autofactures par an que la Société rédige elle-même, leur absence est un manquement répété et documenté. Tests : mandat absent → aucune autofacture **et** relevé `a_payer` en mode facture de l'apporteur (vu rougir) ; les deux mentions présentes dans le PDF **et** dans le XML (assertion sur le nœud CII, pas seulement sur le rendu).",
-      "source": "audit-outil §3.3, §6.3 ; ARG-16, ARG-17, ARG-18 ; contrat art. 5.2, 5.3, annexe 2.2 et 2.5 ; synthèse du 2026-09-03, A-4 et A-5",
+      "texte": "Autofacture (contrat v2, art. 4.7, 5.1, 5.2, 5.3 ; annexe 2, 2.1 bis et 2.2) : **une autofacture par encaissement intégral**, établie le jour de l'encaissement intégral qui rend la commission acquise (REQ-ARG-004) ou, s'il intervient un jour non ouvré ou n'est constaté que plus tard, le premier jour ouvré où la Société le constate ; **lorsque plusieurs commissions de l'apporteur, sommes de parrainage comprises, deviennent acquises le même jour, une seule autofacture les regroupe** — émission idempotente, unicité PAR LIGNE : une ligne de commission entre dans au plus une autofacture (`autofactureId` unique par ligne, garanti EN BASE par affectation conditionnelle `WHERE autofactureId IS NULL` dans la transaction d'émission, REQ-ARG-021, REQ-DM-025), jamais une unicité par jour — une ligne régularisée (art. 5.4, REQ-ARG-016, REQ-ARG-025) ou constatée tard (art. 5.1) a toujours son autofacture, datée de la régularisation ou du constat, même si une autre autofacture porte déjà le même jour d'acquisition (REQ-ARG-014, REQ-DM-025). Elle est établie si et seulement si le mandat de facturation est en vigueur à sa date — `mandat.signeAt` antérieur à l'établissement, mandat non terminé (art. 5.2 ; annexe 2, 2.5) —, transmise le jour même par courrier électronique (REQ-UX-016) et accompagnée d'un **décompte** qui indique, pour chaque commande, le prix facturé, le prix public, la commission et la date de l'encaissement intégral, ainsi que, le cas échéant, l'avoir imputé et la somme virée ; les sommes de parrainage y figurent sur une ligne unique « Parrainage (article 4.6) », sans identité du filleul, ni commande, ni somme du filleul. Mention « Autofacturation » ; émetteur = apporteur (raison sociale, SIREN, adresse, n° TVA si assujetti), destinataire = Axion-IA ; TVA selon le `regimeTva` déclaré à la date d'établissement, figé sur l'autofacture (art. 4.7 ; mention art. 293 B si franchise ; mention de l'option pour le paiement de la taxe d'après les débits le cas échéant) ; date d'émission = jour d'établissement, date de la prestation = date de l'encaissement intégral ; numéro d'une séquence chronologique unique et continue propre à l'apporteur, sans trou, avoirs d'autofacture compris ; PDF et XML CII EN 16931 stockés avec hash SHA-256 ; immuable : jamais diminuée d'une reprise, toute correction passe par un avoir d'autofacture ou une facture complémentaire faisant référence à l'autofacture d'origine, numéro et date (art. 4.5, 5.6, 5.7). 🔴 **Mentions obligatoires, sur le PDF ET sur le XML CII EN 16931** (art. L.441-9, I C. com. ; annexe 2, 2.2) : la **date d'échéance**, au terme de `VERSEMENT_PLAFOND_JOURS` jours après l'émission (art. 5.3, REQ-ARG-034), le **taux des pénalités de retard** (taux BCE de refinancement le plus récent majoré de dix points, sans pouvoir être inférieur à trois fois le taux d'intérêt légal), l'**indemnité forfaitaire de recouvrement** de l'art. D.441-5 C. com. et « pas d'escompte pour paiement anticipé ». 🔴 **Après la fin du mandat, quelle qu'en soit la cause, rien n'est bloqué** (annexe 2, 2.5) : la Société transmet le décompte de la commission ou de la reprise, l'apporteur établit lui-même sa facture ou son avoir, et le paiement intervient dans les trente jours de la réception de la facture conforme et au plus tard soixante jours après sa date d'émission (REQ-ARG-035). Ni le décompte ni le courriel ne portent l'IBAN en clair (au plus ses quatre derniers caractères), aucune donnée d'un autre apporteur n'y figure, et rien du contenu de l'autofacture n'entre dans un log, Sentry ni une trace. Tests : deux commissions acquises le même jour → UNE autofacture (vu rougir sur le relevé mensuel) ; passage rejoué → aucune seconde autofacture ; encaissement intégral un samedi → autofacture le premier jour ouvré ; reprise → avoir d'autofacture, autofacture d'origine inchangée ; mandat terminé → aucune autofacture et décompte transmis en mode facture de l'apporteur ; les mentions présentes dans le PDF **et** dans le XML (assertion sur le nœud CII, pas seulement sur le rendu).",
+      "source": "audit-outil §3.3, §6.3 ; ARG-16, ARG-17, ARG-18 ; contrat art. 5.2, 5.3, annexe 2.2 et 2.5 ; synthèse du 2026-09-03, A-4 et A-5 ; réalignée sur le contrat v2, art. 4.5, 4.6, 4.7, 5.1 à 5.3, 5.6, 5.7 et annexe 2, 2.1 bis, 2.2 et 2.5 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617), la fiche ALN-03 de la juriste (#474, 6032703119) et les conditions de la sécurité sur ALN-03 (#474, 6032838727), conditions 1, 2 et 4 — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
@@ -1691,7 +1726,8 @@
         "JUR-T01c",
         "T-ARG-016",
         "T-ARG-038",
-        "T-ARG-039"
+        "T-ARG-039",
+        "T-ARG-045"
       ]
     },
     {
@@ -1712,8 +1748,8 @@
     {
       "id": "REQ-ARG-020",
       "domaine": "argent",
-      "texte": "SEPA : fichier pain.001 (version documentée par la banque, XSD validé en CI), un `PmtInf`, N `CdtTrfTxInf`, `EndToEndId = AP{statementId}` (≤ 35 caractères), `Ustrd` = numéro d'autofacture, montants = solde TTC du relevé, IBAN normalisés, jeu de caractères SEPA ; le fichier est généré une fois, son hash stocké, et tout ré-export renvoie les mêmes octets.",
-      "source": "audit-outil §6.3 ; ARG-21, ARG-22",
+      "texte": "SEPA : fichier pain.001 (version documentée par la banque, XSD validé en CI), un `PmtInf`, N `CdtTrfTxInf`, un `CdtTrfTxInf` par autofacture, `EndToEndId = AP{autofactureId}` (≤ 35 caractères), `Ustrd` = numéro d'autofacture, montant = somme virée du décompte (montant TTC de l'autofacture diminué des avoirs imputés, contrat v2, art. 4.5 et 5.1), IBAN normalisés, jeu de caractères SEPA ; le fichier est généré une fois, son hash stocké, et tout ré-export renvoie les mêmes octets.",
+      "source": "audit-outil §6.3 ; ARG-21, ARG-22 ; réalignée sur le contrat v2, art. 4.5 et 5.1 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
@@ -1726,8 +1762,8 @@
     {
       "id": "REQ-ARG-021",
       "domaine": "argent",
-      "texte": "Non-double-paiement : une ligne relevée appartient à exactement un relevé (`statementId` non null, unique par ligne) et un relevé à exactement un lot ; une ligne `payee` ne peut jamais être relevée à nouveau ; contrainte en base, pas seulement applicative.",
-      "source": "nouvelle (ARG-22)",
+      "texte": "Non-double-paiement : une ligne facturée appartient à exactement une autofacture (`autofactureId` non null, unique par ligne) et une autofacture à exactement un lot de paiement ; une ligne `payee` ne peut jamais être facturée à nouveau ; contrainte en base, pas seulement applicative (contrat v2, art. 5.1 : une autofacture par encaissement intégral). 🔴 **Garantie EN BASE, pas seulement applicative** (lentille sécurité, revue de #873) : la ligne porte une contrainte qui lui interdit d'appartenir à deux autofactures, et l'émission l'affecte par une mise à jour conditionnelle `WHERE autofactureId IS NULL` dans la même transaction que la création de l'autofacture ; une affectation qui ne touche pas toutes les lignes attendues annule la transaction, sans autofacture ni numéro consommé. Témoin de concurrence : deux passages d'émission lancés en parallèle sur les mêmes lignes → une seule autofacture, chaque ligne dans une seule, séquence sans trou (vu rougir sans la condition).",
+      "source": "nouvelle (ARG-22) ; réalignée sur le contrat v2, art. 5.1 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
@@ -1742,8 +1778,8 @@
     {
       "id": "REQ-ARG-022",
       "domaine": "argent",
-      "texte": "Rapprochement : l'import du relevé bancaire rapproche d'abord par `EndToEndId`, sinon par (montant exact, IBAN, date ±3 j) avec confirmation ; un débit rapproché passe le relevé `rapproche` et ses lignes `payee` avec `paidAt` = date banque ; un retour de virement passe le relevé `rejete`, les lignes redeviennent relevables sans nouvelle autofacture, et le RIB passe `rib_a_verifier`.",
-      "source": "audit-outil §6.3 ; ARG-23",
+      "texte": "Rapprochement : l'import du relevé bancaire rapproche d'abord par `EndToEndId`, sinon par (montant exact, IBAN, date ±3 j) avec confirmation ; un débit rapproché marque rapproché le versement de l'autofacture et passe ses lignes `payee` avec `paidAt` = date banque ; un retour de virement marque ce versement rejeté, les lignes redeviennent à verser sans nouvelle autofacture et l'échéance n'est pas modifiée (contrat v2, art. 5.3), et le RIB passe `rib_a_verifier`.",
+      "source": "audit-outil §6.3 ; ARG-23 ; réalignée sur le contrat v2, art. 5.1 et 5.3 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
@@ -1784,8 +1820,8 @@
     {
       "id": "REQ-ARG-025",
       "domaine": "argent",
-      "texte": "🔴 **Vigilance au SEUIL LÉGAL — contradiction interne levée le 2026-09-03 (A-5).** Cette exigence disait à la fois « quel que soit le cumul (HYP-D7) » dans son corps et « si cumul ≥ 500 000 cents » dans son texte fusionné : **deux règles opposées pour le même contrôle**. La règle en vigueur est celle de l'article 5.4 réécrit, alignée sur la loi : le cumul = Σ HT des autofactures émises du contrat + solde HT du relevé en cours ; le relevé passe `bloque` motif `vigilance_perimee` avant numérotation **lorsque ce cumul atteint le seuil des articles L.8222-1 et D.8222-5 C. trav.** (`SEUIL_VIGILANCE` = 500 000 cents HT, SSOT avec source et date) **et qu'il n'existe aucune attestation valide** ; sous le seuil, l'absence d'attestation **ne bloque aucun versement** et lève une alerte console. `valideJusquAu` = date d'attestation + 6 mois ; code de vérification URSSAF stocké ; rappel J-15 avant l'échéance et J-15 avant l'atteinte prévisible du seuil. ⚠️ `HYP-D7` est **tranchée** en faveur du seuil légal : le marqueur devient un test de non-régression (une comparaison qui bloque sous le seuil → rouge), et REQ-JUR-014 (absorbée) y renvoie sans le contredire. Tests frontière : cumul 499 999 sans attestation → **versé** (vu rougir sur l'ancienne règle) ; 500 000 sans attestation → bloqué ; attestation à J+181 → périmée.",
-      "source": "audit-outil §3.3, §6.1, D7 ; ARG-19 ; contrat art. 5.4 et 6.2 ; L.8222-1, D.8222-5 C. trav. ; synthèse du 2026-09-03, A-5",
+      "texte": "🔴 **Vigilance au seuil légal, cumul apprécié TOUTES TAXES COMPRISES** (contrat v2, art. 5.4 et 6.2 ; L.8222-1, R.8222-1, D.8222-5 C. trav.). Le cumul = Σ TTC des sommes dues au titre du contrat (autofactures émises et commissions acquises non encore facturées) : la Société l'apprécie TTC par prudence, ce qui est plus strict que le seuil légal, apprécié HT (art. 6.2), et le compare à `SEUIL_VIGILANCE` (SSOT, avec source et date). (a) **Demande** : lorsque le cumul **approche** le seuil — approche appréciée au vu des commissions acquises et des commandes signées —, la Société demande l'attestation de vigilance URSSAF de moins de six mois portant son code de vérification et l'extrait d'immatriculation de D.8222-5, puis une attestation actualisée tous les `VIGILANCE_PERIODICITE_MOIS` mois tant que le contrat se poursuit ou que des sommes restent dues. (b) **Effet** : seules les sommes qui portent le cumul au seuil, et au-delà, sont différées — ni facturées ni versées avant la régularisation (REQ-ARG-016), ligne `bloquee` motif `vigilance_perimee` — tant que ces deux pièces ne sont pas valides ; sous le seuil, leur absence **ne diffère aucun versement** et lève une alerte console ; elle n'est pas une inexécution et n'a pas d'autre conséquence (art. 6.2). `valideJusquAu` = date d'attestation + `VIGILANCE_PERIODICITE_MOIS` ; code de vérification URSSAF stocké ; rappel J-15 avant l'échéance de l'attestation. ⚠️ `HYP-D7` est **tranchée** en faveur du seuil légal : le marqueur devient un test de non-régression (une comparaison qui bloque sous le seuil → rouge), et REQ-JUR-014 (absorbée) y renvoie sans le contredire. Tests frontière : cumul TTC sous le seuil sans attestation → **versé** ; cumul TTC atteignant le seuil sans attestation → la somme qui l'atteint est différée, sans autofacture (vu rougir sur l'ancienne règle) ; cumul HT sous le seuil et cumul TTC au seuil → différé (vu rougir sur le cumul HT) ; attestation plus vieille que `VIGILANCE_PERIODICITE_MOIS` → périmée.",
+      "source": "audit-outil §3.3, §6.1, D7 ; ARG-19 ; contrat art. 5.4 et 6.2 ; L.8222-1, D.8222-5 C. trav. ; synthèse du 2026-09-03, A-5 ; réalignée sur le contrat v2, art. 5.4 et 6.2 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 16,
@@ -1799,15 +1835,16 @@
     {
       "id": "REQ-ARG-026",
       "domaine": "argent",
-      "texte": "Sortie : à `resilie`, **quel que soit le motif** : les lignes `acquise` sont portées au dernier relevé, produit au lot suivant **sans le seuil de versement minimal** (HYP-E1-17) ; les lignes `prevue` restent `prevue` et deviennent `acquise` si l'encaissement survient dans les conditions du contrat art. 12.3 ; un solde ≤ 0 devient une `creance_apporteur` exportée en compta, sans virement. Les attributions `signee` et `convertie` gardent leur état ; la commande signée avant la fin du contrat continue d'ouvrir droit à commission au fur et à mesure de ses encaissements, quelle qu'en soit la date (contrat art. 12.3). Aucune ligne `dechue` n'existe (REQ-DM-020, REQ-JUR-007).",
-      "source": "audit-outil §5 étape 12, D11 ; anti-abus §4 ; ARG-15, ARG-25 ; réécrite le 2026-09-03 — déchéance retirée du produit ; amendée le 2026-10-03, texte de la juriste (oubli de `signee`, et « jusqu'à leur expiration » contredisait l'art. 12.3), rattrapage 88",
+      "texte": "Sortie (contrat v2, art. 12.2 à 12.4) : à `resilie`, **quel que soit le motif** : les autofactures émises avant la fin du contrat restent payables à leur échéance ; les lignes `acquise` non encore facturées sont facturées et versées selon les art. 5.1 et 5.3, **sans montant minimum**, sous la seule réserve de l'art. 5.4 (art. 12.2) ; les lignes `prevue` restent `prevue` et deviennent `acquise` si l'encaissement intégral survient dans les conditions de l'art. 12.3, chacune facturée par l'autofacture de son jour d'acquisition, jusqu'à extinction complète des droits. Un solde négatif né de reprises ou d'avoirs de l'art. 5.7 s'impute par compensation sur les commissions à venir ; à défaut d'imputation dans `IMPUTATION_MOIS` mois, la Société peut en demander le remboursement par écrit, avec l'avoir d'autofacture et son décompte, dû dans les trente jours de la demande, dans la limite des commissions versées au cours des douze mois précédant l'annulation ou l'erreur à l'origine de la reprise ; le solde non recouvré devient une `creance_apporteur` exportée en compta, sans virement et sans autre conséquence (art. 12.4). Les attributions `signee` et `convertie` passent en `figee_resiliation` ; la commande signée avant la fin du contrat continue d'ouvrir droit à commission au fur et à mesure de ses encaissements, quelle qu'en soit la date (contrat art. 12.3) ; aucune commande signée après n'en ouvre. [REMPLACÉ au rattrapage 110, juriste #703, 5981011150 : « gardent leur état »] Aucune ligne `dechue` n'existe (REQ-DM-020, REQ-JUR-007).",
+      "source": "audit-outil §5 étape 12, D11 ; anti-abus §4 ; ARG-15, ARG-25 ; réécrite le 2026-09-03 — déchéance retirée du produit ; amendée le 2026-10-03, texte de la juriste (oubli de `signee`, et « jusqu'à leur expiration » contredisait l'art. 12.3), rattrapage 88 ; rattrapage 110 (#703, juriste 5981011150) ; phase 2 → 1 au rattrapage 112 (gouvernance : SEC-19 et SEC-66, en phase 1, la mettent en œuvre) ; réalignée sur le contrat v2, art. 12.2, 12.3 et 12.4 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
       "etape": 11,
-      "phase": 2,
+      "phase": 1,
       "taches": [
         "DM-18",
+        "SEC-66",
         "T-ARG-033",
         "T-ARG-038"
       ]
@@ -1846,8 +1883,8 @@
     {
       "id": "REQ-ARG-029",
       "domaine": "argent",
-      "texte": "Cloisonnement : l'espace apporteur, `GET /apporteurs/:id/statement/:month` et les téléchargements (relevé, autofacture) ne renvoient jamais une ligne, un relevé ou un document d'un autre apporteur, y compris par manipulation d'URL : **404 strictement identique à un identifiant inexistant** (même statut, même corps), PDF inclus — jamais 403, qui révélerait l'existence.",
-      "source": "tableaux-de-bord §6.1 ; audit-outil §7",
+      "texte": "Cloisonnement : l'espace apporteur, toute route de lecture d'une autofacture, d'un avoir d'autofacture ou d'un décompte, et leurs téléchargements, ne renvoient jamais une ligne, une autofacture, un décompte ou un document d'un autre apporteur, y compris par manipulation d'URL : **404 strictement identique à un identifiant inexistant** (même statut, même corps), PDF inclus — jamais 403, qui révélerait l'existence.",
+      "source": "tableaux-de-bord §6.1 ; audit-outil §7 ; réalignée sur le contrat v2, art. 5.1 (le relevé mensuel n'existe plus ; la protection est inchangée) (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 8,
@@ -1899,14 +1936,15 @@
       "etape": 10,
       "phase": 2,
       "taches": [
+        "T-ARG-043",
         "UX-P2-01"
       ]
     },
     {
       "id": "REQ-ARG-033",
       "domaine": "argent",
-      "texte": "Régime TVA de l'apporteur : `regimeTva` enum (`assujetti` | `franchise_293b`) avec historique daté ; l'autofacture fige le régime et le taux à sa date ; un changement de régime n'affecte que les autofactures postérieures. 🔴 **Lorsque la mention de la taxe résulte d'une erreur imputable à la Société ou à son système de facturation** (la facture est matériellement établie par le logiciel de la Société à partir d'un régime qu'elle a figé), **la Société en fait son affaire** : elle émet sans délai une facture rectificative et garantit l'apporteur de toute conséquence — écran de correction en console, motivé et journalisé, sans reprise sur le relevé de l'apporteur (annexe 2.3 complétée, M-30). Tests : régime `franchise_293b` et TVA portée → écran de correction disponible, facture rectificative émise, aucune ligne négative pour l'apporteur.",
-      "source": "audit-outil §3.3, §6.1 ; tva.ts RegimeTva ; ARG-16 ; contrat annexe 2.3 ; synthèse du 2026-09-03, M-30",
+      "texte": "Régime TVA de l'apporteur : `regimeTva` enum (`assujetti` | `franchise_293b`) avec historique daté ; l'autofacture fige le régime et le taux à sa date ; un changement de régime n'affecte que les autofactures postérieures. 🔴 **Lorsque la mention de la taxe résulte d'une erreur imputable à la Société ou à son système de facturation** (la facture est matériellement établie par le logiciel de la Société à partir d'un régime qu'elle a figé), **la Société en fait son affaire** : elle émet sans délai une facture rectificative et garantit l'apporteur de toute conséquence — écran de correction en console, motivé et journalisé, sans reprise sur les sommes de l'apporteur (annexe 2.3 complétée, M-30). Tests : régime `franchise_293b` et TVA portée → écran de correction disponible, facture rectificative émise, aucune ligne négative pour l'apporteur.",
+      "source": "audit-outil §3.3, §6.1 ; tva.ts RegimeTva ; ARG-16 ; contrat annexe 2.3 ; synthèse du 2026-09-03, M-30 ; réalignée sur le contrat v2, annexe 2, 2.3 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 16,
@@ -1920,8 +1958,8 @@
     {
       "id": "REQ-ARG-034",
       "domaine": "argent",
-      "texte": "🔴 **Délai de versement et plafond de 60 jours — la chaîne réelle est mesurée, pas promise.** Le contrat s'engage désormais (art. 5.3 réécrit, A-5) sur **dix jours ouvrés** suivant l'établissement du relevé — et non cinq, qui ignoraient la chaîne réelle : contrôles bloquants → autofacture → lot `brouillon` → **approbation humaine** (REQ-ARG-019) → export pain.001 → exécution bancaire, avec `SEPA_EXPORT_ENABLED` fermé par défaut et un mois « à blanc » préalable (REQ-CPL-011) — **et en tout état de cause dans les soixante jours de l'émission de la facture** (art. L.441-10, I C. com.). Le produit porte les deux : un indicateur de console **par relevé** affiche l'âge depuis l'établissement et depuis l'émission de la facture ; une **alerte bloquante de console** se lève à J+45 depuis l'émission, et tout relevé encore non payé à **J+60** est une anomalie de premier rang, nommée, quel que soit son motif de blocage. Aucun motif de la liste « alertes » de REQ-ARG-017 ne peut porter un relevé au-delà de ce plafond. **Pénalités de retard et indemnité de 40 €** sont dues de plein droit et portées aux mentions de REQ-ARG-018. Tests : relevé établi le 1er, payé le 15e jour ouvré → alerte ; relevé à J+61 depuis l'émission de la facture → **rouge**, avec le motif nommé ; `SEPA_EXPORT_ENABLED` fermé → l'indicateur mesure quand même et l'alerte se lève.",
-      "source": "contrat art. 5.3 et 5.4 ; L.441-10, I et D.441-5 C. com. ; REQ-CPL-011 ; synthèse du 2026-09-03, A-5 et arbitrage C-5",
+      "texte": "🔴 **Échéance au terme de `VERSEMENT_PLAFOND_JOURS` jours après l'émission, délai indicatif de `VERSEMENT_JOURS_OUVRES` jours ouvrés — la chaîne réelle est mesurée, pas promise** (contrat v2, art. 5.3 ; L.441-10 et D.441-5 C. com.). L'échéance de chaque autofacture est le trentième jour suivant son émission, laquelle a lieu le jour de l'encaissement intégral (art. 5.1) ou de la régularisation (art. 5.4) ; elle n'en connaît pas d'autre et figure sur l'autofacture ; elle ne court jamais de la signature de la commande ni de l'émission de la facture au client, et le retour en erreur de la transmission ne la modifie pas ; une facture complémentaire a la même échéance, comptée de son émission. La Société s'efforce de verser dans les `VERSEMENT_JOURS_OUVRES` jours ouvrés (du lundi au vendredi, hors jours fériés en France métropolitaine) suivant l'encaissement intégral : **ce délai est indicatif**, ni échéance ni engagement, et un virement effectué après lui, au plus tard à l'échéance, ne donne lieu à aucun frais, aucune pénalité ni indemnité. La chaîne réelle — conditions du versement → autofacture → lot `brouillon` → **approbation humaine** (REQ-ARG-019) → export pain.001 → exécution bancaire, avec `SEPA_EXPORT_ENABLED` fermé par défaut et un mois « à blanc » préalable (REQ-CPL-011) — est mesurée : un indicateur de console **par autofacture** affiche l'âge depuis l'encaissement intégral et depuis l'émission ; une alerte de console se lève au dépassement du délai indicatif, et toute autofacture non versée à son échéance est une anomalie de premier rang, nommée, quel que soit son motif. Aucun motif ne retarde au-delà de son échéance le versement d'une autofacture émise : les sommes différées par l'art. 5.4 ne sont pas facturées (REQ-ARG-016). Tout retard au-delà de l'échéance fait courir de plein droit, dès le lendemain et sans rappel préalable, les pénalités et l'indemnité forfaitaire portées aux mentions de REQ-ARG-018. En mode facture de l'apporteur (annexe 2, 2.5), le paiement intervient dans les trente jours de la réception de la facture conforme et au plus tard soixante jours après sa date d'émission, sans délai indicatif (REQ-ARG-035). Tests : autofacture émise le jour J → échéance à J + `VERSEMENT_PLAFOND_JOURS`, en jours civils de Paris, borne exclusive au minuit qui suit (règle des délais de la juriste, rattrapage 111) ; versement au-delà du délai indicatif et avant l'échéance → alerte, aucune pénalité (vu rougir sur l'ancien délai de dix jours ouvrés) ; autofacture non versée le lendemain de l'échéance → **rouge**, avec le motif nommé ; `SEPA_EXPORT_ENABLED` fermé → l'indicateur mesure quand même et l'alerte se lève.",
+      "source": "contrat art. 5.3 et 5.4 ; L.441-10, I et D.441-5 C. com. ; REQ-CPL-011 ; synthèse du 2026-09-03, A-5 et arbitrage C-5 ; réalignée sur le contrat v2, art. 5.1, 5.3, 5.4 et annexe 2, 2.5 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617), la fiche ALN-03 de la juriste (#474, 6032703119) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
@@ -1936,8 +1974,8 @@
     {
       "id": "REQ-ARG-035",
       "domaine": "argent",
-      "texte": "🔴 **Après la fin du contrat, quelqu'un peut encore payer — la chaîne survit.** L'annexe 2.5 faisait cesser le mandat d'autofacturation « en même temps que le contrat », l'art. 12.3 oblige la Société à établir des relevés « jusqu'à extinction complète » des droits nés avant le terme, et l'art. 5.2 faisait de l'autofacturation le **seul** mode d'émission : après résiliation, la Société devait payer des commissions qu'elle n'avait plus le droit de facturer, et le produit ne connaissait **aucun chemin de paiement au-delà** (REQ-ARG-018 ne produisait d'autofacture que sous mandat `signe`, REQ-ARG-016 passait le relevé `bloque` sinon — aucune ligne `a_payer`, aucun virement, **à la sortie de chaque apporteur**). Trois règles, alignées sur l'annexe 2.5 et l'article 21 réécrits (A-4) : (1) le mandat **survit de plein droit** pour les seules commissions restant à acquérir au titre de l'art. 12.3, jusqu'à leur extinction complète — `Mandat.surviePostContrat = true` tant qu'il reste une ligne `prevue` ou `acquise` non payée ; (2) **la fin du mandat, quelle qu'en soit la cause, ne fait obstacle ni à l'acquisition ni au paiement** : le relevé bascule en mode « facture de l'apporteur » (REQ-ARG-018), payable dans les trente jours de la réception conforme, et le lot de paiement l'accepte à ce titre ; (3) le dernier relevé est produit **sans le seuil** (REQ-ARG-015, REQ-ARG-026) et l'apporteur conserve un **accès en lecture** ou reçoit ses relevés, factures et motifs de blocage par e-mail (REQ-SEC-032, REQ-UX-016). Tests : apporteur résilié, encaissement à M+8 → ligne `acquise`, relevé produit, **virement émis** (vu rougir : l'ancienne règle produisait `bloque` motif `mandat_non_signe`) ; mandat dénoncé avec préavis de 30 jours → mode facture de l'apporteur, paiement à J+30 ; extinction des droits → mandat clos, accès clos.",
-      "source": "contrat art. 5.2, 12.3, 21 et annexe 2.5 ; synthèse du 2026-09-03, A-4 — l'une des trois corrections les plus importantes du dossier",
+      "texte": "🔴 **Après la fin du contrat, quelqu'un peut encore payer — la chaîne survit** (contrat v2, art. 12.2, 12.3, 12.5, 21 et annexe 2, 2.5). Trois règles : (1) le mandat de facturation **survit de plein droit** pour les seules commissions restant à acquérir au titre de l'art. 12.3 et les reprises de l'art. 4.5, jusqu'à leur extinction complète — `Mandat.surviePostContrat = true` tant qu'il reste une ligne `prevue` ou `acquise` non payée, ou une reprise possible —, sauf décès de l'apporteur, ouverture d'une procédure collective à son égard ou cessation de son activité, cas dans lesquels le mandat prend fin ; il peut aussi être dénoncé par écrit avec un préavis de `MANDAT_DENONCIATION_JOURS` jours ; (2) **la fin du mandat, quelle qu'en soit la cause, ne fait obstacle ni à l'acquisition ni au paiement** : la Société transmet à l'apporteur — ou à ses ayants droit, ou au mandataire désigné — le décompte de la commission ou de la reprise, qu'il facture lui-même par une facture ou un avoir conforme à l'annexe 2, 2.2, faisant référence, le cas échéant, à l'autofacture d'origine ; le paiement intervient dans les trente jours de la réception de la facture conforme et au plus tard soixante jours après sa date d'émission, aux conditions de l'art. 5.3, sans délai indicatif ; la Société indique dans un délai raisonnable ce qui rend une facture non conforme, et le délai court de la réception de la facture corrigée ; le lot de paiement accepte cette facture à ce titre ; (3) **aucun montant minimum, y compris après la fin du contrat** (art. 5.3, 12.2 ; REQ-ARG-015, REQ-ARG-026) ; l'apporteur reçoit par courrier électronique ses autofactures, ses avoirs, leurs décomptes et le motif de tout blocage jusqu'à l'extinction de ses droits, son accès à l'espace prenant fin à la fin du contrat (art. 12.3 ; REQ-SEC-032, REQ-UX-016). Tests : apporteur résilié, encaissement intégral à M+8 → ligne `acquise`, autofacture sous le mandat survivant, **virement émis** (vu rougir : l'ancienne règle produisait `bloque` motif `mandat_non_signe`) ; mandat dénoncé → décompte transmis, paiement dans les trente jours de la facture conforme ; procédure collective ouverte → mandat clos, contrat inchangé (REQ-CPL-025), décompte transmis au mandataire ; extinction des droits → mandat clos, plus aucun envoi.",
+      "source": "contrat art. 5.2, 12.3, 21 et annexe 2.5 ; synthèse du 2026-09-03, A-4 — l'une des trois corrections les plus importantes du dossier ; réalignée sur le contrat v2, art. 4.5, 5.3, 12.2, 12.3, 12.5, 21 et annexe 2, 2.2 et 2.5 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
@@ -1953,8 +1991,8 @@
     {
       "id": "REQ-ARG-036",
       "domaine": "argent",
-      "texte": "La part variable vit dans des tables propres, avec une FK vers `utilisateurs_console` seulement : `plans_part_variable`, `lignes_part_variable`, `exports_paie`, et `matricule_chiffre` sur `utilisateurs_console`. LigneCommission, Relevé, Autofacture, LotPaiement, pain.001, DAS2, parrainage, repli à 60 jours et seuils de versement n'acceptent qu'un apporteur. Le plan de part variable ne dérive jamais de `COMMERCIAL_COMMISSIONS` et n'entre pas dans le dépôt. Ni plan, ni montant, ni matricule dans pino.",
-      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; transverse : l'argent des salariés n'appartient à aucun module de l'audit des apporteurs",
+      "texte": "La part variable vit dans des tables propres, avec une FK vers `utilisateurs_console` seulement : `plans_part_variable`, `lignes_part_variable`, `exports_paie`, et `matricule_chiffre` sur `utilisateurs_console`. LigneCommission, Autofacture et son décompte, avoir d'autofacture, LotPaiement, pain.001, DAS2, parrainage et repli à 60 jours n'acceptent qu'un apporteur. Le plan de part variable ne dérive jamais de `COMMERCIAL_COMMISSIONS` et n'entre pas dans le dépôt. Ni plan, ni montant, ni matricule dans pino.",
+      "source": "décision de Will du 2026-09-29, W19 (docs/chantiers/W19-conseillers-salaries.md §4.1) ; transverse : l'argent des salariés n'appartient à aucun module de l'audit des apporteurs ; réalignée sur le contrat v2, art. 5.1 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent : plus de relevé ni de seuil de versement",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
@@ -2048,7 +2086,7 @@
     {
       "id": "REQ-INT-004",
       "domaine": "integration",
-      "texte": "Les types d'événements sont : `client.cree`, `client.mis_a_jour`, `devis.signe`, `facture.emise`, `avoir.emis`, `paiement.recu`, `paiement.rembourse`, `candidature.recue`, `financement.mis_a_jour`, `facture.annulee`, `client.fusionne`, `devis.emis` — nommés sur les modèles réels (Client, Devis, FactureFormation, Payment, Submission, DossierPayeur) ; aucun événement ne référence `Invoice` ni `Refund`. La liste est fermée et portée par le contrat en `schema_version` 3 : `financement.mis_a_jour`, `facture.annulee`, `client.fusionne` et `candidature.recue` y sont entrés ensemble en version 2, publiés des deux côtés dans la même fenêtre (partners/ADR-0008, partners/ADR-0023) ; `devis.emis` y entre en version 3 (décision de Williams du 2026-10-01, option A ; INT-T46-P).",
+      "texte": "Les types d'événements sont : `client.cree`, `client.mis_a_jour`, `devis.signe`, `facture.emise`, `avoir.emis`, `paiement.recu`, `paiement.rembourse`, `candidature.recue`, `financement.mis_a_jour`, `facture.annulee`, `client.fusionne`, `devis.emis`, `financement.etape` — nommés sur les modèles réels (Client, Devis, FactureFormation, Payment, Submission, DossierPayeur) ; aucun événement ne référence `Invoice` ni `Refund`. La liste est fermée et portée par le contrat en `schema_version` 4 : `financement.mis_a_jour`, `facture.annulee`, `client.fusionne` et `candidature.recue` y sont entrés ensemble en version 2, publiés des deux côtés dans la même fenêtre (partners/ADR-0008, partners/ADR-0023) ; `devis.emis` y entre en version 3 (décision de Williams du 2026-10-01, option A ; INT-T46-P) ; `financement.etape` y entre en version 4 (lot OPCO, forme d'A02, #656 et #737 ; INT-T76-P).",
       "source": "audit-outil §2.3 corrigé par INT-F02/INT-F24",
       "statut": "active",
       "remplaceePar": null,
@@ -2190,7 +2228,9 @@
         "INT-T51",
         "INT-T70-A",
         "INT-T70-P",
-        "INT-T74-P"
+        "INT-T74-P",
+        "INT-T76-A",
+        "INT-T76-P"
       ]
     },
     {
@@ -2206,7 +2246,8 @@
       "taches": [
         "INT-T08-A",
         "INT-T08-P",
-        "INT-T73-P"
+        "INT-T73-P",
+        "INT-T74-P"
       ]
     },
     {
@@ -2238,15 +2279,14 @@
       "phase": 0,
       "taches": [
         "INT-T03",
-        "INT-T07-A",
-        "INT-T07-P"
+        "INT-T07-A"
       ]
     },
     {
       "id": "REQ-INT-016",
       "domaine": "integration",
-      "texte": "API 2 `GET /api/integrations/axionia/apporteurs/:ref/releve/:mois` rend un relevé JSON signé (lignes, HT, TVA selon régime déclaré, total, hash) et son PDF ; le format d'export comptable vers TIIME est décrit dans `docs/tiers/tiime.md` (URL officielle, date de lecture, extrait, exemple officiel) et chaque fixture d'export porte `Source:` vers cette fiche (gate REQ-GOV-022) ; un test valide l'export contre l'exemple officiel de la fiche.",
-      "source": "audit-outil §2.3, §6.3 ; INT-F12 ; reformulation d'annexe appliquée le 2026-09-03",
+      "texte": "L'API 2 rend, pour un apporteur, ses autofactures et avoirs d'autofacture en JSON signé (lignes, HT, TVA selon le régime déclaré à leur date, total, hash) et leurs PDF — il n'existe plus de relevé mensuel (contrat v2, art. 5.1), et la route, qui ne porte plus de mois, est arrêtée par INT-T17 ; le format d'export comptable vers TIIME est décrit dans `docs/tiers/tiime.md` (URL officielle, date de lecture, extrait, exemple officiel) et chaque fixture d'export porte `Source:` vers cette fiche (gate REQ-GOV-022) ; un test valide l'export contre l'exemple officiel de la fiche.",
+      "source": "audit-outil §2.3, §6.3 ; INT-F12 ; reformulation d'annexe appliquée le 2026-09-03 ; réalignée sur le contrat v2, art. 4.7 et 5.1 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
@@ -2374,7 +2414,8 @@
       "etape": null,
       "phase": 0,
       "taches": [
-        "INT-T14"
+        "INT-T14",
+        "SEC-64"
       ]
     },
     {
@@ -2529,7 +2570,9 @@
         "JUR-T31",
         "JUR-T40",
         "JUR-T46",
-        "JUR-T48"
+        "JUR-T48",
+        "JUR-T66",
+        "JUR-T67"
       ]
     },
     {
@@ -2573,14 +2616,17 @@
       "phase": 1,
       "taches": [
         "JUR-T28",
-        "SEC-15"
+        "SEC-15",
+        "SEC-19",
+        "UX-P1-57",
+        "UX-P1-59"
       ]
     },
     {
       "id": "REQ-JUR-007",
       "domaine": "juridique",
-      "texte": "Aucune ligne de commission ne peut prendre le statut `dechue` : la valeur est retirée de l'enum. À la fin du contrat, quel qu'en soit le motif, les lignes `acquise` sont payées au dernier relevé sans le seuil de versement minimal (HYP-E1-17) et les lignes `prevue` suivent la règle ordinaire — payées si l'encaissement correspondant survient dans les conditions du contrat art. 12.3. Un test prouve qu'aucun chemin de code ne produit `dechue`.",
-      "source": "note interne (hors dépôt) §6.1 D11, décision du 2026-09-03",
+      "texte": "Aucune ligne de commission ne peut prendre le statut `dechue` : la valeur est retirée de l'enum. À la fin du contrat, quel qu'en soit le motif, les lignes `acquise` non encore facturées sont facturées et versées selon les art. 5.1 et 5.3, sans montant minimum (contrat v2, art. 12.2) et les lignes `prevue` suivent la règle ordinaire — payées si l'encaissement correspondant survient dans les conditions du contrat art. 12.3. Un test prouve qu'aucun chemin de code ne produit `dechue`.",
+      "source": "note interne (hors dépôt) §6.1 D11, décision du 2026-09-03 ; réalignée sur le contrat v2, art. 12.2 et 12.3 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
@@ -2588,6 +2634,7 @@
       "phase": 0,
       "taches": [
         "DM-25",
+        "DM-71",
         "JUR-T01",
         "JUR-T01b",
         "T-ARG-033"
@@ -2699,8 +2746,8 @@
     {
       "id": "REQ-JUR-015",
       "domaine": "juridique",
-      "texte": "Les seuils légaux (DAS2 2 400 €, vigilance 5 000 € HT, périodicité 6 mois, seuil de versement minimal, **préavis de résiliation ordinaire 30 j (`PREAVIS_JOURS`, contrat art. 11.1)**, fenêtres `FENETRE_MOIS` attribution (6 mois depuis la décision de Williams du 2026-09-30) et 12 mois parrainage, péremption 90 j) vivent dans une seule SSOT avec source et date ; aucun littéral ailleurs ; un test échoue si une constante n'a pas de source. **La SSOT ne contient AUCUNE constante de gradation ni de délai de contradictoire : un test échoue si `CONTRADICTOIRE_JOURS` ou un seuil de strikes y apparaît** (décision du 2026-09-03). 🔴 **La SSOT ne portait que six littéraux quand le contrat en crée une vingtaine** (P-3) : chacun serait exécuté en dur par un cron et divergerait du contrat à la première modification. Elle est **étendue à TOUS les délais du contrat**, chaque constante nommée d'après son article — `PRISE_DE_CONTACT_JOURS_OUVRES = 2 // art. 3.2`, `CONFIRMATION_TACITE_JOURS = 30 // art. 3.2`, `FILE_FENETRE_REDECLARATION_JOURS = 15 // art. 3.5`, `FILE_EXPIRATION_MOIS = 12 // art. 3.5`, `SUSPENSION_MAX_JOURS = 15 // art. 3.7`, `ANTERIORITE_CLIENT_MOIS = 24` et `ANTERIORITE_DEVIS_MOIS = 6 // art. 3.3`, `PROLONGATION_DEVIS_MOIS = 3 // art. 3.4 (W9)`, `MISE_EN_DEMEURE_JOURS = 15 // art. 11.2`, `REPONSE_CONTESTATION_JOURS = 15 // art. 5.6 et 3.3`, `FORCLUSION_CONTESTATION_MOIS = 12 // art. 5.5`, `CONTESTATION_FACTURE_JOURS = 30 // art. 5.2`, `REPRISE_MOIS = 12 // art. 4.5`, `IMPUTATION_MOIS = 12`, `VERSEMENT_JOURS_OUVRES = 10` et `VERSEMENT_PLAFOND_JOURS = 60 // art. 5.3`, `PALIER_HORS_GRILLE_JOURS = 60 // annexe A1.7`, `MANDAT_DENONCIATION_JOURS = 30 // annexe 2.5`, `CONFIDENTIALITE_ANS = 2 // art. 9`, `FORCE_MAJEURE_MOIS = 3 // art. 15`. Le grep-test est **élargi aux valeurs 2, 3, 6, 15, 24 et 60** hors SSOT, et un **test de cohérence gabarit ↔ SSOT** (sur le modèle de REQ-EXT-028 a) rougit si une valeur rendue dans le contrat diffère de la constante. 🔴 **`PREAVIS_JOURS` est une constante UNIQUE, jamais indexée sur l'ancienneté** (M-16) : le contrat prévoyait « 30 jours la première année, augmenté d'un mois par année complète, plafond six mois » — la **structure exacte de L.134-11**, poussée au-delà de son maximum légal de trois mois, qui écrivait noir sur blanc que la relation est durable et prend de la valeur avec le temps ; et la SSOT ne portant qu'une valeur, la console aurait notifié 30 jours à un apporteur qui en avait six, mettant Axion-IA en rupture brutale **avec sa propre clause pour preuve**. Le préavis est désormais fixe quelle que soit l'ancienneté, stipulé au titre de L.442-1, II C. com. à l'exclusion de L.134-11 et suivants. Test : **toute fonction calculant un préavis à partir d'une ancienneté, d'une date d'entrée ou d'un nombre d'années → gate rouge**, vue rougir sur un témoin.",
-      "source": "nouvelle (règle maison SSOT) · BOFiP ACTU-2024-00154 · contrat V1 · synthèse du 2026-09-03, P-3",
+      "texte": "Les seuils légaux (DAS2 2 400 €, vigilance 5 000 € HT, périodicité 6 mois, **préavis de résiliation ordinaire 30 j (`PREAVIS_JOURS`, contrat art. 11.1)**, fenêtres `FENETRE_MOIS` attribution (6 mois depuis la décision de Williams du 2026-09-30) et 12 mois parrainage, péremption 90 j) vivent dans une seule SSOT avec source et date ; aucun littéral ailleurs ; un test échoue si une constante n'a pas de source. **La SSOT ne contient AUCUNE constante de gradation ni de délai de contradictoire : un test échoue si `CONTRADICTOIRE_JOURS` ou un seuil de strikes y apparaît** (décision du 2026-09-03). 🔴 **La SSOT ne portait que six littéraux quand le contrat en crée une vingtaine** (P-3) : chacun serait exécuté en dur par un cron et divergerait du contrat à la première modification. Elle est **étendue à TOUS les délais du contrat**, chaque constante nommée d'après son article — `PRISE_DE_CONTACT_JOURS_OUVRES = 2 // art. 3.2`, `CONFIRMATION_TACITE_JOURS = 30 // art. 3.2`, `FILE_FENETRE_REDECLARATION_JOURS = 15 // art. 3.5`, `FILE_EXPIRATION_MOIS = 12 // art. 3.5`, `SUSPENSION_MAX_JOURS = 15 // art. 3.7`, `ANTERIORITE_CLIENT_MOIS = 24` et `ANTERIORITE_DEVIS_MOIS = 6 // art. 3.3`, `PROLONGATION_DEVIS_MOIS = 3 // art. 3.4 (W9)`, `MISE_EN_DEMEURE_JOURS = 15 // art. 11.2`, `REPONSE_CONTESTATION_JOURS = 30 // art. 5.6 et 3.3`, `FORCLUSION_CONTESTATION_MOIS = 12 // art. 5.5`, `CONTESTATION_FACTURE_JOURS = 30 // art. 5.2`, `REPRISE_MOIS = 12 // art. 4.5`, `IMPUTATION_MOIS = 12`, `VERSEMENT_JOURS_OUVRES = 2` (délai indicatif) et `VERSEMENT_PLAFOND_JOURS = 30` (échéance de l'autofacture) `// art. 5.3` — aucune constante de seuil de versement (contrat v2, art. 5.1 et 5.3 : aucun montant minimum), `PALIER_HORS_GRILLE_JOURS = 60 // annexe A1.7`, `MANDAT_DENONCIATION_JOURS = 30 // annexe 2.5`, `CONFIDENTIALITE_ANS = 2 // art. 9`, `FORCE_MAJEURE_MOIS = 3 // art. 15`. Le grep-test est **élargi aux valeurs 2, 3, 6, 15, 24 et 60** hors SSOT, et un **test de cohérence gabarit ↔ SSOT** (sur le modèle de REQ-EXT-028 a) rougit si une valeur rendue dans le contrat diffère de la constante. 🔴 **`PREAVIS_JOURS` est une constante UNIQUE, jamais indexée sur l'ancienneté** (M-16) : le contrat prévoyait « 30 jours la première année, augmenté d'un mois par année complète, plafond six mois » — la **structure exacte de L.134-11**, poussée au-delà de son maximum légal de trois mois, qui écrivait noir sur blanc que la relation est durable et prend de la valeur avec le temps ; et la SSOT ne portant qu'une valeur, la console aurait notifié 30 jours à un apporteur qui en avait six, mettant Axion-IA en rupture brutale **avec sa propre clause pour preuve**. Le préavis est désormais fixe quelle que soit l'ancienneté, stipulé au titre de L.442-1, II C. com. à l'exclusion de L.134-11 et suivants. Test : **toute fonction calculant un préavis à partir d'une ancienneté, d'une date d'entrée ou d'un nombre d'années → gate rouge**, vue rougir sur un témoin.",
+      "source": "nouvelle (règle maison SSOT) · BOFiP ACTU-2024-00154 · contrat V1 · synthèse du 2026-09-03, P-3 ; réalignée sur le contrat v2, art. 5.1, 5.3 et 5.6 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 14,
@@ -2708,7 +2755,8 @@
       "phase": 0,
       "taches": [
         "GOV-129",
-        "JUR-T02"
+        "JUR-T02",
+        "SEC-66"
       ]
     },
     {
@@ -2899,18 +2947,23 @@
     {
       "id": "REQ-JUR-029",
       "domaine": "juridique",
-      "texte": "Les contrats, autofactures, relevés et preuves de paiement sont conservés 10 ans ; la pièce d'identité est purgée dès validation (seule la date de validation reste) ; ces durées sont dans `retention.ts`.",
-      "source": "audit bout-en-bout §6.1, étape 12 · L.123-22 C. com.",
+      "texte": "Les contrats, autofactures, avoirs d'autofacture, décomptes et preuves de paiement sont conservés 10 ans ; la pièce d'identité est purgée dès validation (seule la date de validation reste) ; ces durées sont dans `retention.ts`.",
+      "source": "audit bout-en-bout §6.1, étape 12 · L.123-22 C. com. ; réalignée sur le contrat v2, art. 5.1 et annexe 2, 2.1 bis (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 16,
       "etape": 11,
       "phase": 0,
       "taches": [
+        "DM-70",
         "INT-T44",
         "INT-T56",
         "JUR-T02",
-        "T-ARG-033"
+        "JUR-T64",
+        "T-ARG-033",
+        "UX-P1-65",
+        "UX-P2-20",
+        "UX-P2-21"
       ]
     },
     {
@@ -2948,7 +3001,7 @@
     {
       "id": "REQ-UX-002",
       "domaine": "produit-ux",
-      "texte": "Chaque issue possible d'un dépôt (enum `IssueDepot`) affiche un titre, un « pourquoi » et un « quoi faire », et dit explicitement si le dépôt est horodaté à son nom. 🔴 **L'enum est aligné un pour un sur les catégories des articles 3.3 et 3.3 bis** (réécrite le 2026-09-03, A-12, en miroir de `MotifRefusDepot` / REQ-SEC-022) : `enregistree`, `prioritaire`, `en_attente` (rang 1 ou 2), `file_complete` (art. 3.3 bis c), `anteriorite_client` et `anteriorite_devis` (art. 3.3, rendus à l'apporteur sous le libellé unique « déjà connue de la Société »), `etablissement_cesse` (a), `entreprise_hors_perimetre` (b), `opposition_demarchage` (d), `gele`, `captcha`, `brouillon_hors_ligne`. Les valeurs `fermee`, `financeur` et `deja_connue` sont **renommées** sur ces catégories : elles refusaient un droit pour un motif que le contrat n'écrivait pas. Le refus est notifié **avec sa catégorie**, sans révéler ni qui ni quand, et le texte dit qu'il **n'emporte aucune autre conséquence et n'est pas un manquement** ; chaque issue de refus porte en outre le lien vers la contestation écrite de REQ-DM-043. Tests : `Object.values(IssueDepot)` exhaustivement rendu ; une valeur sans base contractuelle → **gate rouge** ; snapshot des libellés sans date, sans nom, sans UUID.",
+      "texte": "Chaque issue possible d'un dépôt (enum `IssueDepot`) affiche un titre, un « pourquoi » et un « quoi faire », et dit explicitement si le dépôt est horodaté à son nom. 🔴 **L'enum est aligné un pour un sur les catégories des articles 3.3 et 3.3 bis** (réécrite le 2026-09-03, A-12, en miroir de `MotifRefusDepot` / REQ-SEC-022) : `enregistree`, `prioritaire`, `en_attente` (rang 1 ou 2), `file_complete` (art. 3.3 bis c), `anteriorite_client` et `anteriorite_devis` (art. 3.3, rendus à l'apporteur sous le libellé unique « déjà connue de la Société »), `etablissement_cesse` (a), `entreprise_hors_perimetre` (b), `opposition_demarchage` (d), `gele`, `captcha`, `brouillon_hors_ligne`. Les valeurs `fermee`, `financeur` et `deja_connue` sont **renommées** sur ces catégories : elles refusaient un droit pour un motif que le contrat n'écrivait pas. Le refus est notifié **avec sa catégorie**, sans révéler ni qui ni quand, et le texte dit qu'il **n'emporte aucune autre conséquence et n'est pas un manquement** ; chaque issue de refus porte en outre le lien vers la contestation écrite de REQ-DM-043. Tests : `Object.values(IssueDepot)` exhaustivement rendu ; une valeur sans base contractuelle → **gate rouge** ; snapshot des libellés sans date, sans nom, sans UUID. [AMENDÉE au rattrapage 121 (DM-13 ; juriste, #319, commentaire 6037169174) : l'issue de refus SANS ÉCRITURE de l'art. 3.4 bis, `nouveau_contact_requis`, ENTRE dans cette liste DANS LA PR DE DM-13, en même temps que le code (lockstep : `vocabulaire-et-micro-copy.spec.ts` compare la liste et `ISSUES_DEPOT` un pour un). Elle n'entre ni dans `MotifRefusDepot` ni dans REQ-SEC-022, puisqu'aucun refus n'est enregistré, et aucune migration n'est faite. Ces avis sont ceux d'A02 (#319, commentaire 6037259553).]",
       "source": "audit-outil §1.1, §1.3 ; anti-abus M2, M5 ; contrat art. 3.3 et 3.3 bis ; synthèse du 2026-09-03, A-12",
       "statut": "active",
       "remplaceePar": null,
@@ -3066,8 +3119,8 @@
     {
       "id": "REQ-UX-009",
       "domaine": "produit-ux",
-      "texte": "La tuile « à verser » a 4 états (a_verser avec date, bloque avec le premier motif et un lien direct vers la pièce manquante, reporte sous le seuil de versement, rien) ; un motif de blocage est toujours accompagné de l'action qui le lève.",
-      "source": "audit-outil §6.3 et §7 Ma conformité ; tableaux-de-bord §2.7 B4",
+      "texte": "La tuile « à verser » a 3 états (a_verser avec la date d'échéance de l'autofacture, bloque avec le premier motif et un lien direct vers la pièce manquante, rien) — aucun état « reporté sous le seuil » (contrat v2, art. 5.1 : aucun montant minimum) ; un motif de blocage est toujours accompagné de l'action qui le lève.",
+      "source": "audit-outil §6.3 et §7 Ma conformité ; tableaux-de-bord §2.7 B4 ; réalignée sur le contrat v2, art. 5.1, 5.3 et 5.4 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
@@ -3086,8 +3139,9 @@
       "remplaceePar": null,
       "module": 8,
       "etape": 10,
-      "phase": 2,
+      "phase": 1,
       "taches": [
+        "UX-P1-55",
         "UX-P2-01"
       ]
     },
@@ -3166,8 +3220,8 @@
     {
       "id": "REQ-UX-016",
       "domaine": "produit-ux",
-      "texte": "Les événements de notification sont déclarés dans une table unique (événement → destinataire, canaux, défaut, opt-out possible, lien profond, gabarit, **`faitCourirUnDelai: boolean`**) ; l'écran de préférences est dérivé de cette table ; relevé disponible et paiement bloqué sont toujours envoyés par e-mail. 🔴 **Toute notification qui fait courir un délai part par COURRIER ÉLECTRONIQUE, et le délai court à compter de cet envoi** (contrat art. 20 complété, M-23) — mise à disposition d'une facture (art. 5.2), mise en demeure et résiliation (art. 11), réponse à contestation, décisions relatives aux attributions : trois délais couraient depuis un dépôt en ligne que l'apporteur pouvait n'avoir jamais vu, ce qui est une **obligation implicite de consultation régulière de l'outil de la Société assortie de la perte de droits** — et, après résiliation, `sessionVersion` coupait l'accès (REQ-SEC-032), de sorte que la Société aurait pu notifier valablement dans un espace fermé. 🔴 **Le dépôt d'un message dans l'espace ne fait courir AUCUN délai** : toute entrée de la table portant `faitCourirUnDelai: true` et n'ayant pas le canal e-mail obligatoire → **gate rouge**. La **date d'envoi est journalisée** et c'est elle que lisent les calculs de délai (jamais `lu_le`, jamais `dernierUsageAt` — REQ-JUR-039). **Après la fin du contrat**, les notifications sont faites par e-mail à la **dernière adresse déclarée** (REQ-ARG-035, REQ-SEC-032). Tests : chaque entrée `faitCourirUnDelai` a le canal e-mail ; le calcul du délai de contestation lit `envoyeAt`, jamais une date de consultation (vu rougir) ; apporteur résilié → e-mail envoyé, délai courant.",
-      "source": "audit-outil §7 Notifications, §9.3, §12.3 ; D12 ; contrat art. 5.2, 11, 12.3, 20 et annexe 2.4 ; synthèse du 2026-09-03, M-22 et M-23",
+      "texte": "Les événements de notification sont déclarés dans une table unique (événement → destinataire, canaux, défaut, opt-out possible, lien profond, gabarit, **`faitCourirUnDelai: boolean`**) ; l'écran de préférences est dérivé de cette table ; l'autofacture émise avec son décompte, l'avoir d'autofacture et le versement différé, avec son motif, sont toujours envoyés par e-mail (contrat v2, art. 4.5, 5.1, 5.4 et 12.3). 🔴 **Toute notification qui fait courir un délai part par COURRIER ÉLECTRONIQUE, et le délai court à compter de cet envoi** (contrat art. 20 complété, M-23) — mise à disposition d'une facture (art. 5.2), mise en demeure et résiliation (art. 11), réponse à contestation, décisions relatives aux attributions : trois délais couraient depuis un dépôt en ligne que l'apporteur pouvait n'avoir jamais vu, ce qui est une **obligation implicite de consultation régulière de l'outil de la Société assortie de la perte de droits** — et, après résiliation, `sessionVersion` coupait l'accès (REQ-SEC-032), de sorte que la Société aurait pu notifier valablement dans un espace fermé. 🔴 **Le dépôt d'un message dans l'espace ne fait courir AUCUN délai** : toute entrée de la table portant `faitCourirUnDelai: true` et n'ayant pas le canal e-mail obligatoire → **gate rouge**. La **date d'envoi est journalisée** et c'est elle que lisent les calculs de délai (jamais `lu_le`, jamais `dernierUsageAt` — REQ-JUR-039). **Après la fin du contrat**, les notifications sont faites par e-mail à la **dernière adresse déclarée** (REQ-ARG-035, REQ-SEC-032). Tests : chaque entrée `faitCourirUnDelai` a le canal e-mail ; le calcul du délai de contestation lit `envoyeAt`, jamais une date de consultation (vu rougir) ; apporteur résilié → e-mail envoyé, délai courant.",
+      "source": "audit-outil §7 Notifications, §9.3, §12.3 ; D12 ; contrat art. 5.2, 11, 12.3, 20 et annexe 2.4 ; synthèse du 2026-09-03, M-22 et M-23 ; réalignée sur le contrat v2, art. 4.5, 5.1, 5.4 et 12.3 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 21,
@@ -3180,6 +3234,9 @@
         "UX-P1-09",
         "UX-P1-10",
         "UX-P1-11",
+        "UX-P1-54",
+        "UX-P1-58",
+        "UX-P1-59",
         "UX-P3-01",
         "UX-P3-06"
       ]
@@ -3359,8 +3416,10 @@
       "etape": 4,
       "phase": 1,
       "taches": [
+        "CPL-T24",
         "SEC-22",
         "SEC-49",
+        "SEC-69",
         "UX-P1-09"
       ]
     },
@@ -3396,8 +3455,8 @@
     {
       "id": "REQ-UX-030",
       "domaine": "produit-ux",
-      "texte": "Mes documents contient chaque version du contrat, les avenants, les relevés, les autofactures, l'attestation annuelle, l'attestation de vigilance déposée avec son échéance, et un export RGPD de ses propres données ; Mon profil affiche les dernières connexions.",
-      "source": "audit-outil §7 Mes documents ; nouvelle (UX-26)",
+      "texte": "Mes documents contient chaque version du contrat, les avenants, les autofactures avec leurs décomptes, les avoirs d'autofacture, l'attestation annuelle, l'attestation de vigilance déposée avec son échéance, et un export RGPD de ses propres données ; Mon profil affiche les dernières connexions.",
+      "source": "audit-outil §7 Mes documents ; nouvelle (UX-26) ; réalignée sur le contrat v2, art. 5.1 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 4,
@@ -3517,8 +3576,8 @@
     {
       "id": "REQ-QA-003",
       "domaine": "qualite-ci-devops",
-      "texte": "Pour toute facture découpée en 1..12 encaissements et tout taux de TVA ∈ {0, 5.5, 10, 20}, la somme des commissions acquises par encaissement est exactement égale à la commission totale (property-based, ≥ 500 cas générés).",
-      "source": "tableaux-de-bord §2.4 + QA-F03",
+      "texte": "Pour toute commande dont le prix est encaissé en 1..12 encaissements, tous payeurs confondus, et tout taux de TVA ∈ {0, 5.5, 10, 20}, la commission est acquise une seule fois, en entier, sur l'encaissement qui porte le cumul encaissé au prix facturé net des avoirs (contrat v2, art. 4.2 et 4.3 ; REQ-ARG-004), et aucune part n'est acquise avant ; elle est égale à la commission totale, en centimes entiers (property-based, ≥ 500 cas générés).",
+      "source": "tableaux-de-bord §2.4 + QA-F03 ; réalignée sur le contrat v2, art. 4.2 et 4.3 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
@@ -3553,7 +3612,6 @@
       "etape": 7,
       "phase": 2,
       "taches": [
-        "QA-T28",
         "QA-T29"
       ]
     },
@@ -3681,6 +3739,7 @@
         "GOV-083",
         "GOV-140",
         "GOV-142",
+        "GOV-155",
         "QA-T00",
         "QA-T01",
         "QA-T07",
@@ -3737,6 +3796,7 @@
         "QA-T16",
         "QA-T33",
         "QA-T59",
+        "QA-T74",
         "UX-P0-03"
       ]
     },
@@ -3868,7 +3928,7 @@
       "remplaceePar": null,
       "module": 9,
       "etape": 7,
-      "phase": 1,
+      "phase": 2,
       "taches": [
         "QA-T19"
       ]
@@ -3876,8 +3936,8 @@
     {
       "id": "REQ-QA-026",
       "domaine": "qualite-ci-devops",
-      "texte": "Chaque cron et la réception de webhook écrivent un Heartbeat(job, lastOkAt) ; un check nightly alerte si le relevé du 1er n'a pas tourné le 2 à 08:00 ou si aucun événement n'a été reçu sur 7 j alors que l'API 1 a été appelée ; une réconciliation hebdomadaire axionia↔Partners (compte et somme des Payment paid attribués du mois) alerte sur écart.",
-      "source": "QA-F18 · règle mémoire « une veille muette »",
+      "texte": "Chaque cron et la réception de webhook écrivent un Heartbeat(job, lastOkAt) ; un check nightly alerte si une commission acquise un jour ouvré n'a pas son autofacture à la fin de ce jour, heure de Paris (contrat v2, art. 5.1), ou si aucun événement n'a été reçu sur 7 j alors que l'API 1 a été appelée ; une réconciliation hebdomadaire axionia↔Partners (compte et somme des Payment paid attribués du mois) alerte sur écart.",
+      "source": "QA-F18 · règle mémoire « une veille muette » ; réalignée sur le contrat v2, art. 5.1 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
@@ -3892,8 +3952,8 @@
     {
       "id": "REQ-QA-027",
       "domaine": "qualite-ci-devops",
-      "texte": "Le domaine reçoit une Clock injectée ; les crons traitent « tout ce qui est dû à l'instant t » ; Releve(apporteurId, mois) et LotPaiement(mois) sont uniques ; un test prouve que le cron du 1er exécuté deux fois ne produit qu'un relevé et qu'un worker arrêté trois jours rattrape tout.",
-      "source": "tableaux-de-bord §2.7 · audit-outil-bout-en-bout §6.3 + QA-F15",
+      "texte": "Le domaine reçoit une Clock injectée ; les crons traitent « tout ce qui est dû à l'instant t » ; une ligne de commission entre dans au plus une autofacture (unicité par ligne, jamais par jour : une ligne régularisée ou constatée tard a toujours son autofacture, contrat v2, art. 5.1 et 5.4) et une autofacture n'entre jamais dans deux lots de paiement (REQ-ARG-021) ; un test prouve que le passage d'émission exécuté deux fois le même jour ne produit qu'une autofacture par apporteur, et qu'un worker arrêté trois jours rattrape tout, à raison d'une autofacture par jour d'acquisition, et qu'une ligne régularisée après l'émission de l'autofacture de son jour reçoit sa propre autofacture, et que deux passages concurrents sur les mêmes lignes ne produisent qu'une autofacture (garantie en base, REQ-DM-025, REQ-ARG-021).",
+      "source": "tableaux-de-bord §2.7 · audit-outil-bout-en-bout §6.3 + QA-F15 ; réalignée sur le contrat v2, art. 5.1 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
@@ -4003,8 +4063,8 @@
     {
       "id": "REQ-QA-034",
       "domaine": "qualite-ci-devops",
-      "texte": "Cinq runbooks existent dans `docs/runbooks/` (rollback, migration échouée, webhook gave_up / secret désynchronisé, commission manquante, lot mensuel bloqué) ; chacun porte un bloc « Exécuté le : <date> · environnement : preview · SHA · résultat » ; gate : runbook sans bloc d'exécution daté → rouge ; le bloc est renouvelé à chaque modification du runbook.",
-      "source": "nouvelle (prompt : runbooks) · audit-outil-bout-en-bout §6.3 ; reformulation d'annexe appliquée le 2026-09-03",
+      "texte": "Cinq runbooks existent dans `docs/runbooks/` (rollback, migration échouée, webhook gave_up / secret désynchronisé, commission manquante, lot de paiement bloqué) ; chacun porte un bloc « Exécuté le : <date> · environnement : preview · SHA · résultat » ; gate : runbook sans bloc d'exécution daté → rouge ; le bloc est renouvelé à chaque modification du runbook.",
+      "source": "nouvelle (prompt : runbooks) · audit-outil-bout-en-bout §6.3 ; reformulation d'annexe appliquée le 2026-09-03 ; réalignée sur le contrat v2, art. 5.1 (plus de lot mensuel) (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
@@ -4171,7 +4231,7 @@
     {
       "id": "REQ-GOV-010",
       "domaine": "gouvernance-agents",
-      "texte": "`docs/CHARTE-AGENTS.md` définit neuf droits exclusifs portés par les quinze postes de `docs/CHARTE-AGENTS.md` §4 : l'attribution des tâches et l'écriture de `docs/tasks.json` et de la vue `docs/PLAN-STATE.md` reviennent à A01 avec l'outillage de lot (`pnpm lot:cloture`, seul écrivain des LIVRAISONS — `statut`, `pr`, `branch`, `owner` — et le verbe hors dépôt `lever-attente` (outils de reprise, relu par les lentilles securite et exactitude le 2026-10-01), seul écrivain des LEVÉES d'attente — `attente_externe` → `a_faire` sur décision citée, jamais une livraison ; `pnpm plan-state:build`) — il n'existe pas de poste « orchestrateur » ; architecte (seul à accepter un ADR), gardien du spec (seul à modifier REQUIREMENTS/PRESEANCE/DECISIONS/GLOSSAIRE), leads de domaine (découpent, valident l'acceptation), développeurs (une tâche revendiquée à la fois), relecteurs adversariaux, vérificateurs de tests, release manager (seul à fusionner), documentaliste (LECONS.md). Gate : PR modifiant un fichier réservé sans le label du rôle → rouge.",
+      "texte": "`docs/CHARTE-AGENTS.md` définit neuf droits exclusifs portés par les quinze postes de `docs/CHARTE-AGENTS.md` §4 : l'attribution des tâches et l'écriture de `docs/tasks.json` et de la vue `docs/PLAN-STATE.md` reviennent à A01 avec l'outillage de lot (`pnpm lot:cloture`, seul écrivain des LIVRAISONS — `statut`, `pr`, `branch`, `owner` — et le verbe hors dépôt `lever-attente` (outils de reprise, relu par les lentilles securite et exactitude le 2026-10-01), seul écrivain des LEVÉES d'attente — `attente_externe` → `a_faire` sur décision citée, jamais une livraison ; `pnpm plan-state:build`); SAUF l'ajout, par la PR d'une tâche hors de la zone gouvernance, aux `paths` de ses propres tâches du chemin d'un fichier qu'elle touche, jugé par la lentille exactitude, sans label `role:gardien-spec` quand c'est sa seule écriture du registre (GOV-145 ; décision orale de Williams du 2026-10-04, confirmée sous délégation, #319, 6032352874 ; décision du 2026-10-05, #319, 5988252245, point 3) — il n'existe pas de poste « orchestrateur » ; architecte (seul à accepter un ADR), gardien du spec (seul à modifier REQUIREMENTS/PRESEANCE/DECISIONS/GLOSSAIRE), leads de domaine (découpent, valident l'acceptation), développeurs (une tâche revendiquée à la fois), relecteurs adversariaux, vérificateurs de tests, release manager (seul à fusionner), documentaliste (LECONS.md). Gate : PR modifiant un fichier réservé sans le label du rôle → rouge.",
       "source": "nouvelle",
       "statut": "active",
       "remplaceePar": null,
@@ -4184,7 +4244,12 @@
         "GOV-024",
         "GOV-062",
         "GOV-090",
-        "GOV-116"
+        "GOV-116",
+        "GOV-145",
+        "GOV-152",
+        "GOV-153",
+        "GOV-156",
+        "GOV-159"
       ]
     },
     {
@@ -4209,6 +4274,9 @@
         "GOV-101",
         "GOV-124",
         "GOV-126",
+        "GOV-145",
+        "GOV-157",
+        "GOV-160",
         "QA-T60"
       ]
     },
@@ -4232,7 +4300,8 @@
         "GOV-063",
         "GOV-067",
         "GOV-082",
-        "GOV-083"
+        "GOV-083",
+        "GOV-160"
       ]
     },
     {
@@ -4253,7 +4322,8 @@
         "GOV-093",
         "GOV-095",
         "GOV-101",
-        "GOV-124"
+        "GOV-124",
+        "GOV-145"
       ]
     },
     {
@@ -4270,6 +4340,8 @@
         "GOV-000",
         "GOV-012",
         "GOV-057",
+        "GOV-151",
+        "GOV-158",
         "QA-T54",
         "QA-T55",
         "QA-T65",
@@ -4413,7 +4485,8 @@
         "GOV-118",
         "GOV-120",
         "GOV-121",
-        "GOV-134"
+        "GOV-134",
+        "GOV-154"
       ]
     },
     {
@@ -4537,7 +4610,9 @@
         "GOV-022",
         "GOV-131",
         "GOV-132",
-        "GOV-133"
+        "GOV-133",
+        "GOV-150",
+        "GOV-156"
       ]
     },
     {
@@ -4650,8 +4725,8 @@
     {
       "id": "REQ-CPL-005",
       "domaine": "complétude (REQ-CPL)",
-      "texte": "`Apporteur.IdentitesFacturation[]` datées (SIREN, régime TVA `RegimeTva`, validFrom/To), **créées par DM-06 sans aucune colonne de RIB ni d'IBAN** ; la **référence à la pièce RIB** du KYC (`PieceKyc` de type `rib`) et sa relation sont **posées par DM-11**, dans sa migration, parce que `PieceKyc` n'existe qu'avec DM-11 — jamais l'IBAN lui-même. L'IBAN appartient à la pièce `rib` du KYC (`HYP-E1-14`, DM-11), chiffré selon SEC-08 (`encryptPii` avec AAD, recherche par `ibanHash`) ; aucune autre table ne le porte (décision du 2026-09-25, par délégation de Will, `HYP-DM06-IBAN`) ; un relevé chevauchant deux identités produit deux autofactures.",
-      "source": "critique de complétude (2026-09-03)",
+      "texte": "`Apporteur.IdentitesFacturation[]` datées (SIREN, régime TVA `RegimeTva`, validFrom/To), **créées par DM-06 sans aucune colonne de RIB ni d'IBAN** ; la **référence à la pièce RIB** du KYC (`PieceKyc` de type `rib`) et sa relation sont **posées par DM-11**, dans sa migration, parce que `PieceKyc` n'existe qu'avec DM-11 — jamais l'IBAN lui-même. L'IBAN appartient à la pièce `rib` du KYC (`HYP-E1-14`, DM-11), chiffré selon SEC-08 (`encryptPii` avec AAD, recherche par `ibanHash`) ; aucune autre table ne le porte (décision du 2026-09-25, par délégation de Will, `HYP-DM06-IBAN`) ; chaque autofacture porte l'identité de facturation et le régime de TVA déclarés à la date de son établissement (contrat v2, art. 4.7).",
+      "source": "critique de complétude (2026-09-03) ; réalignée sur le contrat v2, art. 4.7 et 5.1 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 4,
@@ -4726,8 +4801,8 @@
     {
       "id": "REQ-CPL-010",
       "domaine": "complétude (REQ-CPL)",
-      "texte": "`LigneAjustement` : montant signé, motif obligatoire, auteur, **référence de la ligne corrigée (FK non nulle)**, double approbation au-delà d'un seuil, journalisée, comptée en DAS2 ; apparaît sur le relevé avec son propre libellé. 🔴 **Un montant signé est un débit unilatéral, et aucune clause ne l'autorisait** (M-13) : l'ajustement est désormais borné par l'article 5.7 du contrat — il **corrige une erreur matérielle de calcul**, dans un sens comme dans l'autre, **dans le délai de l'article 5.5** (`FORCLUSION_CONTESTATION_MOIS` = 12 mois à compter de la mise à disposition du relevé qui aurait dû porter la commission), avec l'indication de son motif et de la ligne corrigée. **Aucun autre ajustement ne peut réduire un relevé** : hors erreur matérielle et hors délai, la seule voie de réduction est la `reprise` de REQ-DM-019, adossée à une annulation d'encaissement réelle. Tests : ajustement négatif sans `ligneCorrigeeId` → refus ; ajustement au-delà de 12 mois → refus (vu rougir) ; ajustement positif hors erreur matérielle → refus ; le libellé apparaît distinctement sur le relevé.",
-      "source": "critique de complétude (2026-09-03)",
+      "texte": "`LigneAjustement` : montant signé, motif obligatoire, auteur, **référence de la ligne corrigée (FK non nulle)**, double approbation au-delà d'un seuil, journalisée, comptée en DAS2 ; constatée par une facture complémentaire (commission insuffisante) ou un avoir d'autofacture (commission excessive), qui font référence à l'autofacture d'origine (numéro et date) et indiquent leur motif et la ligne corrigée (contrat v2, art. 5.7). 🔴 **Un montant signé est un débit unilatéral, et aucune clause ne l'autorisait** (M-13) : l'ajustement est désormais borné par l'article 5.7 du contrat — il **corrige une erreur matérielle de calcul**, dans un sens comme dans l'autre, **dans le délai de l'article 5.5** (`FORCLUSION_CONTESTATION_MOIS` mois à compter de l'envoi de l'autofacture qui aurait dû porter la commission), avec l'indication de son motif et de la ligne corrigée. **Aucun autre ajustement ne peut réduire une commission** : hors erreur matérielle et hors délai, la seule voie de réduction est la `reprise` de REQ-DM-019, adossée à une annulation d'encaissement réelle. Tests : ajustement négatif sans `ligneCorrigeeId` → refus ; ajustement au-delà de 12 mois → refus (vu rougir) ; ajustement positif hors erreur matérielle → refus ; la facture complémentaire ou l'avoir porte le motif, la ligne corrigée et la référence de l'autofacture d'origine.",
+      "source": "critique de complétude (2026-09-03) ; réalignée sur le contrat v2, art. 5.5 et 5.7 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 16,
@@ -4758,8 +4833,8 @@
     {
       "id": "REQ-CPL-012",
       "domaine": "complétude (REQ-CPL)",
-      "texte": "État `contestee` sur une ligne de commission et sur une attribution invalidée, délai de réponse (15 j), sortie `maintenue | ajustee` (→ LigneAjustement) ; clause compétence/loi au contrat. 🔴 **Ce mécanisme n'avait AUCUNE base contractuelle** (M-13) ; il en a une désormais, et le produit s'aligne sur **deux délais distincts** que le contrat confondait (trente jours à un endroit, douze mois à un autre, sur la même matière) : (a) **la FORME et les mentions de la facture** se contestent dans les **trente jours** de l'**envoi du courrier électronique signalant sa mise à disposition** (`CONTESTATION_FACTURE_JOURS`, art. 5.2 et annexe 2.4 — jamais depuis un dépôt dans l'espace, REQ-UX-016) ; à défaut elle est réputée acceptée, **sauf erreur matérielle ou preuve contraire** — sans cette réserve, la présomption serait irréfragable au profit du rédacteur, ce que l'art. 1356 al. 2 C. civ. prohibe ; (b) **l'existence, l'assiette ou le CALCUL de la commission** se contestent dans les **douze mois** de la mise à disposition du relevé qui aurait dû la porter (`FORCLUSION_CONTESTATION_MOIS`, art. 5.5) — ce délai **organise la contestation des relevés et n'abrège pas la prescription de l'action en paiement** ; toute référence à l'article 2254 C. civ. est retirée (arbitrage C-2). La Société **répond de façon motivée dans les quinze jours** (`REPONSE_CONTESTATION_JOURS`, art. 5.6) ; l'ajustement figure sur le relevé suivant sous son propre libellé (REQ-CPL-010). Tests : contestation de forme à J+31 → forclose sur la forme, **recevable sur le calcul** (vu rougir sur l'ancien délai unique) ; contestation de calcul à M+13 → forclose ; absence de réponse à J+16 → alerte console.",
-      "source": "critique de complétude (2026-09-03)",
+      "texte": "État `contestee` sur une ligne de commission et sur une attribution invalidée, délai de réponse (`REPONSE_CONTESTATION_JOURS`, art. 5.6), sortie `maintenue | ajustee` (→ LigneAjustement) ; clause compétence/loi au contrat. 🔴 **Ce mécanisme n'avait AUCUNE base contractuelle** (M-13) ; il en a une désormais, et le produit s'aligne sur **deux délais distincts** que le contrat confondait (trente jours à un endroit, douze mois à un autre, sur la même matière) : (a) **la FORME et les mentions de la facture** se contestent dans les **trente jours** de l'**envoi du courrier électronique signalant sa mise à disposition** (`CONTESTATION_FACTURE_JOURS`, art. 5.2 et annexe 2.4 — jamais depuis un dépôt dans l'espace, REQ-UX-016) ; à défaut elle est réputée acceptée, **sauf erreur matérielle ou preuve contraire** — sans cette réserve, la présomption serait irréfragable au profit du rédacteur, ce que l'art. 1356 al. 2 C. civ. prohibe ; (b) **l'existence, l'assiette ou le CALCUL de la commission** se contestent dans les **douze mois** de l'envoi de l'autofacture qui aurait dû la porter (`FORCLUSION_CONTESTATION_MOIS`, art. 5.5) — ce délai **organise la contestation de la commission et n'abrège pas la prescription de l'action en paiement** ; toute référence à l'article 2254 C. civ. est retirée (arbitrage C-2). La Société **répond de façon motivée dans les `REPONSE_CONTESTATION_JOURS` jours** (art. 5.6) et justifie, à la demande de l'apporteur, la date de l'encaissement intégral par un extrait de son compte bancaire dont les mentions étrangères à l'opération sont masquées (pour une somme de parrainage, par une attestation qui n'identifie pas le filleul) ; l'ajustement donne lieu à une facture complémentaire ou à un avoir d'autofacture établis avec la réponse, faisant référence à l'autofacture d'origine (REQ-CPL-010). Tests : contestation de forme à J+31 → forclose sur la forme, **recevable sur le calcul** (vu rougir sur l'ancien délai unique) ; contestation de calcul à M+13 → forclose ; absence de réponse au lendemain de l'échéance de `REPONSE_CONTESTATION_JOURS` → alerte console (vu rougir sur l'ancien délai de quinze jours).",
+      "source": "critique de complétude (2026-09-03) ; réalignée sur le contrat v2, art. 5.2, 5.5, 5.6 et annexe 2, 2.4 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 17,
@@ -4949,8 +5024,8 @@
     {
       "id": "REQ-CPL-025",
       "domaine": "complétude (REQ-CPL)",
-      "texte": "État terminal `decede` + clause + procédure manuelle (commissions acquises dues à la succession, attributions, accès), versées sur justification de la qualité et de coordonnées bancaires au nom des ayants droit ou du mandataire, **l'exigence de SIREN étant écartée pour ce seul cas** (art. 12.5). 🔴 **Une procédure collective ouverte à l'égard de l'apporteur est SANS EFFET sur le contrat** (M-19) : la clause qui prévoyait sa fin de plein droit était **réputée non écrite** (art. L.641-11-1, III, 1° C. com. ; même règle à L.622-13, I) — en pratique, la Société aurait cru le contrat éteint, cessé les relevés, et se serait vu opposer par le liquidateur un contrat toujours en cours et des commissions à payer avec intérêts. Le produit **ne connaît donc aucun état ni aucune transition déclenchée par une procédure collective** : la seule fin de plein droit est le **décès**, la cessation d'activité ou la radiation de l'immatriculation ; le sort du contrat en procédure collective est réglé par les articles L.622-13 et L.641-11-1 C. com. Tests : aucune valeur d'enum ni aucun chemin de code ne nomme « liquidation », « redressement » ou « procédure collective » comme cause de fin → **gate rouge** ; radiation d'immatriculation → fin de plein droit, commissions acquises versées aux ayants droit sans SIREN.",
-      "source": "critique de complétude (2026-09-03)",
+      "texte": "État terminal `decede` + clause + procédure manuelle (commissions acquises dues à la succession, attributions, accès), versées sur justification de la qualité et de coordonnées bancaires au nom des ayants droit ou du mandataire, **l'exigence de SIREN étant écartée pour ce seul cas** (art. 12.5). 🔴 **Une procédure collective ouverte à l'égard de l'apporteur est SANS EFFET sur le contrat** (M-19) : la clause qui prévoyait sa fin de plein droit était **réputée non écrite** (art. L.641-11-1, III, 1° C. com. ; même règle à L.622-13, I) — en pratique, la Société aurait cru le contrat éteint, cessé les autofactures, et se serait vu opposer par le liquidateur un contrat toujours en cours et des commissions à payer avec intérêts. Le produit **ne connaît donc aucun état ni aucune transition du CONTRAT déclenchée par une procédure collective** ; sa seule conséquence est la fin du mandat de facturation (contrat v2, art. 12.5 ; annexe 2, 2.5), qui fait passer en mode « facture de l'apporteur » (REQ-ARG-035) : la seule fin de plein droit est le **décès**, la cessation d'activité ou la radiation de l'immatriculation ; le sort du contrat en procédure collective est réglé par les articles L.622-13 et L.641-11-1 C. com. Tests : aucune valeur d'enum ni aucun chemin de code ne nomme « liquidation », « redressement » ou « procédure collective » comme cause de fin du contrat → **gate rouge** (comme cause de fin du mandat de facturation, elle est permise) ; radiation d'immatriculation → fin de plein droit, commissions acquises versées aux ayants droit sans SIREN.",
+      "source": "critique de complétude (2026-09-03) ; réalignée sur le contrat v2, art. 12.5 et annexe 2, 2.5 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": 15,
@@ -5053,6 +5128,9 @@
         "INT-T62-A",
         "INT-T64-A",
         "INT-T67-A",
+        "INT-T78-A",
+        "INT-T79-A",
+        "INT-T80-A",
         "UX-P2-17"
       ]
     },
@@ -5166,8 +5244,8 @@
     {
       "id": "REQ-UX-038",
       "domaine": "Annexe — passe de dédoublonnage (à appliquer par le Gardien du spec, GOV-001)",
-      "texte": "Tout dépôt reçoit un accusé immédiat ; à J+5 ouvrés sans qualification, un e-mail automatique non accusatoire part **une seule fois** (« nous n'avons pas encore pu joindre … »). Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : l'e-mail « nous n'avons pas encore pu joindre » part à J+5 ouvrés **sans confirmation**, par clic ou par appel, et non plus « sans qualification » (question 13).",
-      "source": "juges ; tableaux-de-bord §4.2 « le silence tue le réseau »",
+      "texte": "Tout dépôt reçoit un accusé immédiat ; à J+5 ouvrés sans qualification, un e-mail automatique non accusatoire part **une seule fois** (« nous n'avons pas encore pu joindre … »). Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : l'e-mail « nous n'avons pas encore pu joindre » part à J+5 ouvrés **sans confirmation**, par clic ou par appel, et non plus « sans qualification » (question 13). [RETIRÉ au rattrapage 121, sauf l'accusé immédiat : le courriel à J+5 ouvrés n'existe plus. Juriste, #319, commentaire 6037008645, point 2, MOT POUR MOT : **(2) Le courriel « J+5 ouvrés » (`depot_injoignable_j5`) : RETIRÉ, et non réécrit.** Il est défini par le régime du jeton (« sans confirmation par clic ou par appel »), que DM-72 supprime. Le v2 n'impose qu'une information : « Lorsque le message est retourné en erreur, la Société en informe l'Apporteur par courrier électronique, dès qu'elle le constate, afin qu'il puisse communiquer une adresse corrigée » (art. 3.2). C'est le courriel de DM-72, et lui seul. Il n'y a aucune relance à jour fixe : un rappel à J+5 ferait croire à une échéance que le contrat ne connaît pas.]",
+      "source": "juges ; tableaux-de-bord §4.2 « le silence tue le réseau » ; courriel J+5 retiré au rattrapage 121 (juriste, #319, 6037008645, point 2)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
@@ -5289,23 +5367,29 @@
       "phase": 1,
       "taches": [
         "CPL-T07",
+        "CPL-T07b",
         "EXT-T01",
         "EXT-T02a",
         "EXT-T02b",
         "EXT-T04",
         "EXT-T05",
+        "EXT-T06",
         "EXT-T07",
         "EXT-T09",
         "EXT-T10",
         "EXT-T11",
         "GOV-113",
+        "INT-T78-A",
+        "INT-T79-A",
         "JUR-T32",
         "JUR-T36",
         "JUR-T57",
+        "JUR-T58",
         "QA-T33",
         "QA-T58",
         "SEC-29",
         "SEC-30",
+        "SEC-71",
         "T-ARG-035",
         "UX-P1-01",
         "UX-P1-02",
@@ -5330,6 +5414,18 @@
         "UX-P1-46",
         "UX-P1-48",
         "UX-P1-51",
+        "UX-P1-53",
+        "UX-P1-54",
+        "UX-P1-55",
+        "UX-P1-56",
+        "UX-P1-57",
+        "UX-P1-58",
+        "UX-P1-59",
+        "UX-P1-60",
+        "UX-P1-61",
+        "UX-P1-62",
+        "UX-P1-63",
+        "UX-P1-65",
         "UX-P2-01",
         "UX-P2-02",
         "UX-P2-03",
@@ -5343,6 +5439,7 @@
         "UX-P2-12",
         "UX-P2-14",
         "UX-P2-15",
+        "UX-P2-20",
         "UX-P3-01",
         "UX-P3-02",
         "UX-P3-03",
@@ -5421,8 +5518,8 @@
     {
       "id": "REQ-UX-062",
       "domaine": "produit-ux",
-      "texte": "**Le badge d'état de la confirmation (exigence d'expérience de Williams, 2026-09-29).** L'apporteur n'a rien à retenir : dans « Mes entreprises » et sur la carte du dépôt, chaque dépôt en phase de confirmation porte **un seul** badge, avec sa date et au plus une action, dérivé serveur par une fonction pure exhaustive, horloge injectée (HYP-W20-BADGE) : 🟢 « Confirmée » ; 🟡 « En attente · confirmée automatiquement le <date> », date en toutes lettres dans le fuseau de l'apporteur, qui passe seul à 🟢 le jour affiché ; pour une demande signalée (REQ-SEC-060), 🟡 « En attente de confirmation — Axion-IA va appeler votre contact », sans date ni phrase d'aide, le dépôt étant appelé en priorité ; 🔴 « E-mail non reçu par le contact », action unique « Corriger l'adresse », après laquelle l'e-mail repart, le délai démarre et l'apporteur est notifié (UX-P1-10) ; ⚪ « Non confirmée par le contact » ; après une libération (REQ-DM-063), ⚪ « Réservation terminée · l'entreprise est de nouveau disponible », sans date, sans action ni phrase d'aide, qui ne dit ni la raison, ni la vérification, ni le nombre d'appels. Une seule phrase d'aide : « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » Textes dans la SSOT de micro-copy, garde lexicale verte (aucune consigne, aucun « obligatoire ») ; chaque badge a son libellé, la couleur n'est jamais seule porteuse du sens. Aucune raison de vérification, aucun tirage d'échantillon, aucun clic non retenu n'est lisible dans le badge : le libellé de la demande signalée dit seulement qu'un appel est attendu. Cinq états par écran. Tests : un cas par badge ; demande signalée → libellé d'appel attendu, sans date, et aucune bascule vers 🟢 à trente jours ; demande signalée libérée → ⚪ « Réservation terminée », sans date ni action ; bascule 🟡 → 🟢 à l'échéance, horloge figée, y compris une échéance à 23 h 59 ; date écrite identique au changement d'heure ; rebond → 🔴 ; correction → 🟡 avec la nouvelle date ; une valeur d'état sans badge fait échouer le typecheck. DÉCISION DE WILLIAMS (2026-10-01 soir, option A, REQ-UX-062 et HYP-W20-BADGE ; séquence hors dépôt `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISION-BADGE-W20-2026-10-01.md`) : « ok pour ca ▎ 🟡 En attente · confirmée automatiquement le 31 octobre. » Le badge jaune dit « En attente · confirmée automatiquement le <date> » (libellé choisi par Williams), PARTOUT : badge de « Mes entreprises » et carte du dépôt. La phrase d'aide « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » (le nombre lu dans la SSOT), sous 🟡 et sous 🔴, est PROPOSÉE et reste à valider par Williams en séance (point 7 de la séance du 2026-10-02) : elle ne lui a pas été montrée explicitement (note de la lentille exactitude). L'ancien libellé (« réservée pour vous jusqu'au… ») se lisait comme une fin de réservation, à contresens de l'art. 3.2 al. 5.",
-      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-UX-022",
+      "texte": "**Le badge d'état de la confirmation (exigence d'expérience de Williams, 2026-09-29).** L'apporteur n'a rien à retenir : dans « Mes entreprises » et sur la carte du dépôt, chaque dépôt en phase de confirmation porte **un seul** badge, avec sa date et au plus une action, dérivé serveur par une fonction pure exhaustive, horloge injectée (HYP-W20-BADGE) : 🟢 « Confirmée » ; 🟡 « En attente · confirmée automatiquement le <date> », date en toutes lettres dans le fuseau de l'apporteur, qui passe seul à 🟢 le jour affiché ; pour une demande signalée (REQ-SEC-060), 🟡 « En attente de confirmation — Axion-IA va appeler votre contact », sans date ni phrase d'aide, le dépôt étant appelé en priorité ; [RETIRÉ au rattrapage 120 : ce badge et ses tests sont retirés, puisque DM-72 retire l'appel de vérification annoncé ; voir l'amendement en fin de texte] 🔴 « E-mail non reçu par le contact », action unique « Corriger l'adresse », après laquelle l'e-mail repart, le délai démarre et l'apporteur est notifié (UX-P1-10) ; ⚪ « Non confirmée par le contact » ; après une libération (REQ-DM-063), ⚪ « Réservation terminée · l'entreprise est de nouveau disponible », sans date, sans action ni phrase d'aide, qui ne dit ni la raison, ni la vérification, ni le nombre d'appels. Une seule phrase d'aide : « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » Textes dans la SSOT de micro-copy, garde lexicale verte (aucune consigne, aucun « obligatoire ») ; chaque badge a son libellé, la couleur n'est jamais seule porteuse du sens. Aucune raison de vérification, aucun tirage d'échantillon, aucun clic non retenu n'est lisible dans le badge : le libellé de la demande signalée dit seulement qu'un appel est attendu. Cinq états par écran. Tests : un cas par badge ; demande signalée → libellé d'appel attendu, sans date, et aucune bascule vers 🟢 à trente jours ; demande signalée libérée → ⚪ « Réservation terminée », sans date ni action ; bascule 🟡 → 🟢 à l'échéance, horloge figée, y compris une échéance à 23 h 59 ; date écrite identique au changement d'heure ; rebond → 🔴 ; correction → 🟡 avec la nouvelle date ; une valeur d'état sans badge fait échouer le typecheck. DÉCISION DE WILLIAMS (2026-10-01 soir, option A, REQ-UX-062 et HYP-W20-BADGE ; séquence hors dépôt `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISION-BADGE-W20-2026-10-01.md`) : « ok pour ca ▎ 🟡 En attente · confirmée automatiquement le 31 octobre. » Le badge jaune dit « En attente · confirmée automatiquement le <date> » (libellé choisi par Williams), PARTOUT : badge de « Mes entreprises » et carte du dépôt. La phrase d'aide « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » (le nombre lu dans la SSOT), sous 🟡 et sous 🔴, est PROPOSÉE et reste à valider par Williams en séance (point 7 de la séance du 2026-10-02) : elle ne lui a pas été montrée explicitement (note de la lentille exactitude). L'ancien libellé (« réservée pour vous jusqu'au… ») se lisait comme une fin de réservation, à contresens de l'art. 3.2 al. 5. AMENDÉE le 2026-10-07 (rattrapage 120 ; coordination, #319, commentaire 6035962185, point 4), MOT POUR MOT : 4. **REQ-UX-062 est amendée.** Le badge « Axion-IA va appeler votre contact » est retiré de la liste des libellés du badge, puisque DM-72 retire du code l'appel de vérification annoncé. Les trois maquettes concernées (deposer, mes-entreprises, confirmation-contact) sont retouchées en conséquence, dans la PR de DM-72, et soumises à la validation de Williams.",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-UX-022 ; amendée au rattrapage 120 (coordination, #319, 6035962185, point 4)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
@@ -5430,6 +5527,20 @@
       "phase": 1,
       "taches": [
         "UX-P1-05"
+      ]
+    },
+    {
+      "id": "REQ-UX-063",
+      "domaine": "produit-ux",
+      "texte": "Tous les e-mails de Partners reprennent le gabarit commun d'axion-ia, sans second système visuel. Exigence de Williams (#786, commentaire 6039806330), MOT POUR MOT :\n**EXIGENCE DE WILLIAMS (07/10/2026) : e-mails d'Axion Partners = même gabarit que le site axion-ia.com.**\n\nTous les e-mails envoyés par Axion Partners (apporteurs, entreprises, console) doivent reprendre **le gabarit commun d'axion-ia**, pour que toute la plateforme soit harmonisée :\n- même châssis que `src/lib/email/templates/_layout.tsx` d'axion-ia : fond crème `#f6f1e8`, logo `https://axion-ia.com/email/axion-ia-logo-pill.png`, boutons terracotta `#c24a1b`, carte blanche arrondie, et même pied légal (AXION IA SAS, SIREN, TVA, NDA, contact) ;\n- charte TERRACOTTA, jamais le bleu du site, sauf pour les liens ;\n- vouvoiement, signature de Williams, et les mêmes familles d'e-mails (pied d'opposition pour la famille B) ;\n- pas de second système visuel. Si le gabarit doit évoluer, il évolue des deux côtés.\n\nÀ intégrer au registre des exigences (REQ) et aux revues UX/rédaction avant tout envoi réel.",
+      "source": "exigence de Williams du 2026-10-07 (#786, 6039806330, relayée par la session axion-ia-a1) ; versée au rattrapage 124",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 12,
+      "etape": 8,
+      "phase": 1,
+      "taches": [
+        "UX-P1-64"
       ]
     },
     {
@@ -5568,8 +5679,8 @@
     {
       "id": "REQ-DM-063",
       "domaine": "domaine-donnees",
-      "texte": "**La libération d'une demande signalée et la carence de redépôt (réponse de Williams du 2026-09-29 à la question 19, arbitrages de -d7 sur sa délégation le même jour).** Une attribution `provisoire` dont la demande de confirmation est signalée (REQ-SEC-060) et qui n'a reçu aucune Qualification `confirme` ni `non_confirme` est libérée, par le passage « tout ce qui est dû à l'instant t » (REQ-QA-027), horloge injectée, au premier des deux termes : la `LIBERATION_SIGNALEE_INJOIGNABLE_MAX`-ième Qualification `injoignable` (= 3, SSOT) ou `LIBERATION_SIGNALEE_JOURS` (= 45, SSOT) jours après l'envoi effectif de la première demande de l'attribution, qu'une correction d'adresse ne fait pas repartir. Dans la même transaction : attribution `perimee` par l'événement `liberee_sans_confirmation`, distinct de la péremption de REQ-DM-007 (`peremptionAt` reste null) ; demande `expiree`, jetons révoqués ; entreprise de nouveau disponible, file d'attente comprise ; notification neutre à l'apporteur (table SSOT des notifications, `faitCourirUnDelai: false`, garde lexicale). **Aucune sanction** : aucune suspension, aucune Anomalie, aucune entrée dans le score de SEC-14, rien d'imputé à personne ; la notification ne dit ni la raison ni la vérification. **Carence** (HYP-W20-CARENCE-REDEPOT) : pendant `CARENCE_REDEPOT_APRES_LIBERATION_JOURS` (= 30, SSOT) jours après la libération, ou `CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS` (= 90, SSOT) jours après une deuxième libération du même couple, le même apporteur ne peut pas déposer la même entreprise (SIREN) ; le serveur refuse sans rien écrire ni horodater, par un prédicat pur dérivé des libérations, sans valeur nouvelle d'`IssueDepot` ni de `MotifRefusDepot` (présentation : question 20, tranchée (arbitrage -d7 du 2026-09-29), portée par UX-P1-02 et UX-P1-01) ; les autres apporteurs ne sont pas concernés ; aucune sanction, texte neutre. Passé la carence, un nouveau dépôt suit les règles ordinaires. Tests, horloge figée : deux `injoignable` → rien ; le troisième → libérée au passage suivant, une seule fois ; envoi à J sans appel : J+45 moins une minute → rien, J+45 → libérée ; `ne_se_souvient_pas` ×3 → rien ; appel `confirme` à J+40 → `active`, aucune libération ; demande non signalée, trois `injoignable` → aucune libération ; correction d'adresse à J+30 → libération toujours à J+45 ; libération → aucune Anomalie, aucune suspension, aucun signal, une seule notification ; deux passages → un seul événement ; redépôt du même apporteur à J+29 après la libération → refusé, rien d'écrit, aucun horodatage ; à J+30 → nouvelle attribution `provisoire` et nouvelle demande ; deuxième libération du même couple → refus à J+89, dépôt à J+90 ; un autre apporteur dépose la même entreprise le jour de la libération → accepté ; même apporteur, autre SIREN → accepté ; même SIREN, autre établissement → refusé pendant la carence ; le refus n'ouvre ni Anomalie, ni suspension, ni signal.",
-      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-DM-042",
+      "texte": "**La fin faute d'adresse valide et la carence unique (contrat v2, art. 3.2).** Quand le premier message de la Société est retourné en erreur et que l'apporteur n'a communiqué aucune adresse corrigée, l'attribution `provisoire` prend fin à l'expiration de `LIBERATION_SIGNALEE_JOURS` (SSOT) jours civils comptés de la **déclaration** (`deposeeAt`), et non d'un envoi, par le passage « tout ce qui est dû à l'instant t » (REQ-QA-027), horloge injectée. La fin ne vaut que pour une attribution dont le message est encore en erreur sans adresse corrigée à cette échéance : une adresse corrigée communiquée avant l'échéance écarte la fin, et la confirmation tacite de REQ-DM-042 court de cette communication. Dans la même transaction : attribution `perimee` par l'événement `fin_sans_adresse_valide`, distinct de la péremption de REQ-DM-007 (`peremptionAt` reste null) ; **demande de confirmation close et jetons révoqués** : dès qu'une attribution prend fin, quel qu'en soit le motif (fin faute d'adresse valide, démenti de l'art. 3.7, péremption, expiration, annulation), toute demande de confirmation qui lui reste attachée passe `expiree` et chacun de ses jetons est révoqué, dans la même transaction, tant que DM-72 n'a pas retiré la demande par jeton ; entreprise de nouveau disponible, file d'attente comprise ; notification neutre à l'apporteur (table SSOT des notifications, `faitCourirUnDelai: false`, garde lexicale), qui ne dit ni la raison, ni la vérification, ni le nombre d'appels. **Aucune sanction** : « sans autre conséquence pour l'Apporteur » que la carence (art. 3.2) ; aucune suspension, aucune Anomalie, aucune entrée dans le score de SEC-14, rien d'imputé à personne. **Carence unique** : après une fin faute d'adresse valide, le même apporteur ne peut pas déclarer la même entreprise (SIREN, tous établissements) pendant `CARENCE_REDEPOT_APRES_LIBERATION_JOURS` (SSOT) jours ; elle se juge au dépôt, et le serveur refuse sans rien écrire ni horodater, par un prédicat pur dérivé des fins `fin_sans_adresse_valide`, sans valeur nouvelle d'`IssueDepot` ni de `MotifRefusDepot` (présentation : question 20, tranchée (arbitrage -d7 du 2026-09-29), portée par UX-P1-02 et UX-P1-01) ; les autres apporteurs ne sont pas concernés ; aucune sanction, texte neutre. Passé la carence, un nouveau dépôt suit les règles ordinaires. **Retirés** : la libération d'une demande signalée, la fin après des Qualifications `injoignable` et `LIBERATION_SIGNALEE_INJOIGNABLE_MAX`, la carence graduée (`CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS`), l'événement `liberee_sans_confirmation` et le courriel `depot_injoignable_j5` ; la seule information due est le courriel de DM-72 qui signale l'erreur à l'apporteur dès qu'elle est constatée (art. 3.2). Tests, horloge figée : message en erreur sans correction, déclaration à J : J+45 moins une minute → rien, J+45 → fin, une seule fois ; correction à J+30 → aucune fin, confirmation tacite à J+60 ; trois `injoignable` → aucune fin ; deux passages → un seul événement ; fin → aucune Anomalie, aucune suspension, aucun signal, une seule notification, demande `expiree` et jetons révoqués (un jeton présenté après la fin est refusé) ; démenti, péremption ou annulation → demande `expiree` et jetons révoqués de même ; réponse de l'entreprise à J+40 → attribution définitive, aucune fin ; redépôt du même apporteur à J+29 après la fin → refusé, rien d'écrit, aucun horodatage ; à J+30 → nouvelle attribution `provisoire` ; un autre apporteur dépose la même entreprise le jour de la fin → accepté ; même apporteur, autre SIREN → accepté ; même SIREN, autre établissement → refusé pendant la carence ; le refus n'ouvre ni Anomalie, ni suspension, ni signal.",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-DM-042 ; remplacée au rattrapage 121 (coordination, #319, 6036991499) ; réécrite sur le contrat v2, art. 3.2 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864 ; décision de Williams du 2026-10-07, #474, 6032680253), d'après l'arbitrage de la coordination recopié à l'acceptance de DM-13 (#319, 6036991499 : retirés, réécrits, carence unique), la réponse de la juriste (#319, 6037008645, points 1 et 2 : `fin_sans_adresse_valide`, retrait de `depot_injoignable_j5`) et la fiche de DM-72 (#474, 6033016552, point 4)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
@@ -5908,6 +6019,8 @@
       "phase": 1,
       "taches": [
         "EXT-T07",
+        "INT-T82-A",
+        "INT-T82-P",
         "JUR-T54",
         "UX-P2-18",
         "UX-P2-19"
@@ -6313,8 +6426,8 @@
     {
       "id": "REQ-JUR-061",
       "domaine": "juridique",
-      "texte": "**La commande sous condition suspensive (LOT OPCO, D-OPCO-8).** Une commande conclue sous condition suspensive (accord de financement de l'OPCO) est datée de sa SIGNATURE ; elle est réputée n'avoir jamais existé si la condition défaille (C. civ. art. 1304 et 1304-6), ce qui vaut annulation au sens de l'art. 3.3. La RENONCIATION du client à la condition avant la date limite (art. 1304-4) garde la convention et la date de la commande ; un accord APRÈS un refus de l'OPCO forme une NOUVELLE convention, datée de sa signature. L'avenant de l'art. 4.4 qui l'écrit est validé par Williams avant tout premier envoi en signature.",
-      "source": "Cahier OPCO du 2026-10-02 (§6.4) ; avis d'A07 (2026-10-02) ; D-OPCO-8",
+      "texte": "**La commande sous condition suspensive (LOT OPCO, D-OPCO-8).** Une commande conclue sous condition suspensive (accord de financement de l'OPCO) est datée de sa SIGNATURE ; elle est réputée n'avoir jamais existé si la condition défaille (C. civ. art. 1304 et 1304-6), ce qui vaut annulation au sens de l'art. 3.3. La RENONCIATION du client à la condition avant la date limite (art. 1304-4) garde la convention et la date de la commande ; un accord APRÈS un refus de l'OPCO forme une NOUVELLE convention, datée de sa signature. L'avenant de l'art. 4.4 qui l'écrit est validé par Williams avant tout premier envoi en signature. Depuis les CGV et conventions v4 d'axion-ia, une convention n'est pas subordonnée par défaut à l'accord de l'OPCO : le client reste débiteur du prix convenu, sous réserve de la clause de dédit et sauf manquement de l'organisme. Le refus, la prise en charge partielle ou la caducité de l'accord ne changent donc ni la date de la commande ni le droit à commission : ils ne changent que le payeur et l'échéance des encaissements. L'alinéa de l'art. 4.4 sur la condition suspensive ne vaut que pour une convention expressément conclue sous condition.",
+      "source": "Cahier OPCO du 2026-10-02 (§6.4) ; avis d'A07 (2026-10-02) ; D-OPCO-8 ; #656 (lot OPCO, avis A07 du 2026-10-04) ; CGV et conventions v4 d'axion-ia (#1278)",
       "statut": "active",
       "remplaceePar": null,
       "module": 11,
@@ -6323,6 +6436,10 @@
       "taches": [
         "INT-T65-A",
         "INT-T66-A",
+        "INT-T76-A",
+        "INT-T76-P",
+        "INT-T77-A",
+        "INT-T81-A",
         "JUR-T47"
       ]
     },
@@ -6383,6 +6500,7 @@
       "taches": [
         "DM-59",
         "DM-60",
+        "DM-68",
         "JUR-T59",
         "UX-P1-48"
       ]
@@ -6396,7 +6514,7 @@
       "remplaceePar": null,
       "module": null,
       "etape": null,
-      "phase": 1,
+      "phase": 2,
       "taches": [
         "INT-T71-A"
       ]
@@ -6404,8 +6522,8 @@
     {
       "id": "REQ-JUR-067",
       "domaine": "juridique",
-      "texte": "Aucun contrat d'apporteur n'est envoyé en signature tant que la chaîne des commissions n'est pas opérationnelle de bout en bout : le calcul des commissions (DM-15), leur acquisition à l'encaissement et les reprises (art. 4.2 à 4.5), le relevé et l'autofacturation (art. 5 et annexe 2), le paiement (T-ARG-033, REQ-ARG-026), et les effets de la fin du contrat sur les commissions (DM-18). Décision de Williams du 2026-10-03 : « non il n'y aura pas de contrats avant que cet outil sont fonctionnelet opérationnel ».",
-      "source": "texte de la juriste (2026-10-03), sur la décision de Williams du 2026-10-03 citée mot pour mot ; rattrapage 88",
+      "texte": "Aucun contrat d'apporteur n'est envoyé en signature tant que la chaîne des commissions n'est pas opérationnelle de bout en bout : le calcul des commissions (DM-15), leur acquisition à l'encaissement et les reprises (art. 4.2 à 4.5), l'autofacturation à chaque encaissement intégral (art. 5 et annexe 2), le paiement (T-ARG-033, REQ-ARG-026), et les effets de la fin du contrat sur les commissions (DM-18). Décision de Williams du 2026-10-03 : « non il n'y aura pas de contrats avant que cet outil sont fonctionnelet opérationnel ».",
+      "source": "texte de la juriste (2026-10-03), sur la décision de Williams du 2026-10-03 citée mot pour mot ; rattrapage 88 ; réalignée sur le contrat v2, art. 5.1 (gabarit `docs/contrat/CONTRAT-APPORTEUR-V1.md`, version 2.1, #864), d'après la décision de Williams du 2026-10-07 « le v2 fait foi partout » (#474, 6032680253 ; #319, 6032680617) — balayage de la zone argent",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
@@ -6426,7 +6544,25 @@
       "etape": 10,
       "phase": 1,
       "taches": [
-        "JUR-T61"
+        "JUR-T61",
+        "JUR-T62",
+        "JUR-T63",
+        "JUR-T65",
+        "SEC-65"
+      ]
+    },
+    {
+      "id": "REQ-JUR-069",
+      "domaine": "juridique",
+      "texte": "La Société révoque l'accès d'un apporteur, sans délai, sur son signalement d'un usage qu'il n'a pas autorisé, et peut révoquer et renouveler un moyen d'accès pour un motif de sécurité, sans effet sur les attributions ni sur les commissions (contrat v2, art. 3.8).",
+      "source": "nouvelle (rattrapage 119, coordination) ; contrat v2, art. 3.8, cité par la juriste (#474, 6034003544)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 21,
+      "etape": 12,
+      "phase": 1,
+      "taches": [
+        "SEC-71"
       ]
     },
     {
@@ -6493,6 +6629,21 @@
       "phase": -1,
       "taches": [
         "GOV-029"
+      ]
+    },
+    {
+      "id": "REQ-GOV-034",
+      "domaine": "gouvernance-agents",
+      "texte": "Porte de mise en service : aucune mise en production tant qu'une tâche marquée « BLOQUANTE AVANT LA MISE EN SERVICE » n'est pas fusionnée. La porte (GOV-146) tient ces tâches en dépendances ; une garde de `gov:tasks` (GOV-147) rougit si une tâche OUVERTE porte le marqueur sans figurer dans ses dépendances.",
+      "source": "rattrapage 108 (coordination, par délégation de Williams, 2026-10-04 ; refus de la lentille exactitude sur #701)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": 1,
+      "taches": [
+        "GOV-146",
+        "GOV-147"
       ]
     }
   ]

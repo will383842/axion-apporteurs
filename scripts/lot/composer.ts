@@ -3,9 +3,10 @@
  *
  * USAGE   : pnpm lot:composer -- --phase <n> --repo <partners|axionia> --max 8 --now <ISO du jour>
  *           (le `--` de pnpm est OBLIGATOIRE : sans lui, pnpm avale les options)
- * ENTRÉES : docs/tasks.json, docs/DECISIONS.md (lu par `./registre-decisions`, le lecteur UNIQUE),
+ * ENTRÉES : docs/tasks.json, docs/requirements.json (texte des REQ citées), docs/DECISIONS.md (lu par `./registre-decisions`, le lecteur UNIQUE),
  *           docs/maquettes/VALIDATION.md (gate des écrans), `gh issue list`, `git worktree list`
- * SORTIE  : docs/lots/L<phase>-<seq>/lot.json = { id, phase, repo, taches: Tache[], ecartees: [{id, raison}] }
+ * SORTIE  : docs/lots/L<phase>-<seq>/lot.json = { id, phase, repo, taches: Tache[], ecartees: [{id, raison}],
+ *           exigences: { <REQ citée>: texte | null } } — lu dans docs/requirements.json, jamais écrit
  *
  * INVARIANTS (les mêmes que la gate `gov:tasks` — au sens fort : le MÊME code les lit, GOV-027)
  *   - éligible = statut a_faire ∧ phase == phase courante ∧ repo == repo demandé ∧ externe == null
@@ -46,6 +47,7 @@ import {
   type Registre,
 } from './registre-decisions';
 import { prochainIdentifiantDeLot, lotsDuBacklog } from './identifiant-de-lot';
+import { livreesParLesPr, prFusionnees } from './avancement-par-les-pr';
 // Le lecteur UNIQUE de `docs/maquettes/VALIDATION.md` : celui de la garde, jamais une seconde copie.
 import { tachesAEcarterParLeComposeur } from '../gates/maquettes-validees';
 // LE lecteur unique des chemins d'une tache : `paths` ∪ `tests{}`, moins les registres
@@ -160,6 +162,8 @@ export type OptionsDeComposition = {
   registre: Pick<Registre, 'estBloquante' | 'estCodable' | 'canonique'>;
   /** Les tâches d'écran dont la ligne de `docs/maquettes/VALIDATION.md` n'est pas validée. */
   maquettesNonValidees?: ReadonlySet<string>;
+  /** GOV-160 : les identifiants livrés par des PR fusionnées (`scripts/lot/avancement-par-les-pr.ts`). */
+  livrees?: ReadonlySet<string>;
 };
 
 export function composerLeLot(
@@ -169,8 +173,17 @@ export function composerLeLot(
   const index = new Map(taches.map((t) => [t.id, t]));
   const maquettesNonValidees = o.maquettesNonValidees ?? new Set<string>();
   const ecartees: EcartDeLot[] = [];
+  const livrees = o.livrees ?? new Set<string>();
   const eligibles = taches.filter((t) => {
     if (t.phase !== o.phase || t.repo !== o.repo) return false;
+    // GOV-160 (#319, 6077512137) : plus aucune tâche de gouvernance n'est composée ; une garde
+    // nouvelle exige une décision de Williams citée, pas une tâche du registre.
+    if (/^GOV-/.test(t.id)) {
+      ecartees.push({ id: t.id, raison: 'tâche de gouvernance : plus composée (GOV-160)' });
+      return false;
+    }
+    // GOV-160 : l'avancement se DÉRIVE des PR fusionnées (`pnpm avancement`), pas du statut écrit.
+    if (livrees.has(t.id)) return false;
     // Les deux statuts d'attente sont imprimés AVEC leur raison : c'est la seule chose que la
     // session a à remonter à Will quand aucun lot n'est composable. Ils passent AVANT le filtre.
     if (t.statut === 'attente_externe') {
@@ -195,7 +208,7 @@ export function composerLeLot(
       return false;
     }
     const depsBloquantes = t.deps.filter(
-      (d) => !STATUTS_TERMINES.has(index.get(d)?.statut ?? 'inconnu')
+      (d) => !livrees.has(d) && !STATUTS_TERMINES.has(index.get(d)?.statut ?? 'inconnu')
     );
     if (depsBloquantes.length) {
       ecartees.push({ id: t.id, raison: `dépend de ${depsBloquantes.join(', ')}` });
@@ -262,6 +275,21 @@ const LANCE_EN_SCRIPT = /[\\/]lot[\\/]composer\.ts$/.test(process.argv[1] ?? '')
  */
 export function maquettesNonValideesDepuis(texte: string): Set<string> {
   return tachesAEcarterParLeComposeur(texte);
+}
+
+/**
+ * Le texte des SEULES exigences citées par les tâches du lot, lu dans `docs/requirements.json`.
+ * Le workflow le colle dans le prompt de chaque agent : sans lui, chaque agent ouvrait le registre
+ * entier pour y chercher deux ou trois lignes. Une REQ citée mais absente du registre rend `null`,
+ * jamais un silence : l'agent doit voir qu'elle manque, et `gov:tasks` le dira de son côté.
+ */
+export function exigencesDuLot(
+  retenues: readonly { reqs: readonly string[] }[],
+  exigences: readonly { id: string; texte: string }[]
+): Record<string, string | null> {
+  const parId = new Map(exigences.map((e) => [e.id, e.texte]));
+  const citees = [...new Set(retenues.flatMap((t) => t.reqs))].sort();
+  return Object.fromEntries(citees.map((id) => [id, parId.get(id) ?? null]));
 }
 
 function principal(): void {
@@ -343,6 +371,7 @@ function principal(): void {
     max,
     registre,
     maquettesNonValidees,
+    livrees: new Set(livreesParLesPr(prFusionnees()).keys()),
   });
 
   // --- écriture du lot ----------------------------------------------------------------------------
@@ -361,7 +390,15 @@ function principal(): void {
     );
   }
   mkdirSync(join('docs/lots', id), { recursive: true });
-  const lot = { id, phase, repo, taches: retenues, ecartees };
+  // Registre absent (dépôt jetable d'un témoin) : chaque REQ citée vaut `null`, et le workflow donne
+  // alors à l'agent la commande qui la filtre. On ne compose pas moins pour autant.
+  const registreDesExigences = (
+    existsSync('docs/requirements.json')
+      ? JSON.parse(readFileSync('docs/requirements.json', 'utf8'))
+      : { exigences: [] }
+  ) as { exigences: { id: string; texte: string }[] };
+  const exigences = exigencesDuLot(retenues, registreDesExigences.exigences);
+  const lot = { id, phase, repo, taches: retenues, ecartees, exigences };
   writeFileSync(chemin, JSON.stringify(lot, null, 2) + '\n');
 
   console.log(

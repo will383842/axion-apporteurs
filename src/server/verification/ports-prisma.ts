@@ -8,26 +8,43 @@ import type { PrismaClient } from '@prisma/client';
 import { ETATS_OCCUPANTS } from '../../domain/attribution/etats';
 import { horlogeSysteme } from '../../lib/horloge';
 import { anterioriteDe } from '../entreprise-connue/projection';
+import { derniereFinSurLeSiren } from '../evenement/journal';
+import { limiter } from '../securite/rate-limit';
 import type { PortsDeVerification } from './verifier';
 
 /**
- * Les compteurs de la vérification, tant qu'ils ne sont pas au registre : REFUS (rattrapage 96).
- * Aucun chiffre n'est posé avant la décision de Williams, et « aucun chiffre » ne devient jamais
- * « pas de limite ». Le jour où `verif:identite` et `verif:ip` entrent au registre, ce port appelle
- * `limiter` par leurs noms LITTÉRAUX (garde `securite:rate-famille`).
+ * SEC-72 (REQ-SEC-021) — les compteurs de la vérification, au registre, par leurs noms LITTÉRAUX
+ * (garde `securite:rate-famille`). Leurs plafonds sont HORS DÉPÔT, dans le secret des plafonds (`rate-limit.ts`) :
+ * absents, illisibles ou incohérents, chaque compteur REFUSE — « aucun chiffre » ne devient jamais
+ * « pas de limite ». L'identité est comptée sur la rafale d'abord, puis sur la fenêtre longue : une
+ * rafale refusée n'use pas la fenêtre longue. Le port ne rend qu'un booléen : ni motif, ni fenêtre,
+ * ni reste — le refus est le même pour les trois.
  */
-export const compterAvantLaDecision: PortsDeVerification['compter'] = async () => ({
-  autorise: false,
-});
+export const compterAuRegistre: PortsDeVerification['compter'] = async (quoi, sujet) => {
+  const maintenant = horlogeSysteme.maintenant();
+  if (quoi === 'ip') {
+    return { autorise: (await limiter('verif:ip-jour', sujet, maintenant)).autorise };
+  }
+  if (!(await limiter('verif:identite-court', sujet, maintenant)).autorise) {
+    return { autorise: false };
+  }
+  return { autorise: (await limiter('verif:identite-jour', sujet, maintenant)).autorise };
+};
 
 export function portsDeLaBase(
   prisma: PrismaClient
 ): Pick<
   PortsDeVerification,
-  'compter' | 'anteriorite' | 'surLaListe' | 'occupation' | 'journaliser'
+  | 'compter'
+  | 'anteriorite'
+  | 'surLaListe'
+  | 'occupation'
+  | 'derniereFin'
+  | 'maintenant'
+  | 'journaliser'
 > {
   return {
-    compter: compterAvantLaDecision,
+    compter: compterAuRegistre,
     anteriorite: async (siren) => {
       const a = await anterioriteDe(prisma, siren, new Date(horlogeSysteme.maintenant()));
       return a.connue && a.origine !== 'financeur';
@@ -43,6 +60,9 @@ export function portsDeLaBase(
       ]);
       return { occupee: occupants > 0, enFile };
     },
+    // EXT-T06 : la dernière fin, par le lecteur RÉSERVÉ du journal ; une date ou null, rien d'autre.
+    derniereFin: (siren) => derniereFinSurLeSiren(prisma, siren),
+    maintenant: () => new Date(horlogeSysteme.maintenant()),
     journaliser: async (l) => {
       await prisma.verification.create({ data: l });
     },

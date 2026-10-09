@@ -86,6 +86,21 @@ function chargeDuProducteur(type: string): Record<string, unknown> {
   // porte qu'à l'arrivée d'INT-T46-A (exemption nommée `SANS_FIXTURE_V3` de `contrat-hash.spec.ts`) :
   // une facture SANS devis, forme v3 permise ; une valeur de la fixture, dès qu'elle existe, l'emporte.
   if (type === FACTURE) return { devisId: null, ...e.payload };
+  // INT-T76-P : la v4 exige `opco` (nullable) sur la fiche du client, que la fixture du producteur ne
+  // porte qu'à l'arrivée d'INT-T76-A (exemption nommée `SANS_FIXTURE_V4` de `contrat-hash.spec.ts`) :
+  // un OPCO inconnu, forme v4 permise ; une valeur de la fixture, dès qu'elle existe, l'emporte.
+  if (type === 'client.cree' || type === 'client.mis_a_jour') return { opco: null, ...e.payload };
+  // INT-T48-P : la v3 exige `prixReferenceHtCents` (nullable) sur chaque ligne du devis signé, que la
+  // fixture du producteur ne porte pas encore (même exemption nommée) : une ligne SANS prix de
+  // référence, forme v3 permise ; une valeur de la fixture, dès qu'elle existe, l'emporte.
+  if (Array.isArray(e.payload['lignes']))
+    return {
+      ...e.payload,
+      lignes: (e.payload['lignes'] as Record<string, unknown>[]).map((l) => ({
+        prixReferenceHtCents: null,
+        ...l,
+      })),
+    };
   if (type !== 'paiement.recu') return { ...e.payload };
   const { amountHtCents, ...reste } = e.payload;
   return { ...reste, montantHtCents: amountHtCents };

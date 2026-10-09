@@ -9,8 +9,9 @@
  *   (b) l'art. 4.4 garde la commission des commandes signées pendant la durée de l'attribution, et
  *       l'absence de droit pour une commande signée après son expiration ;
  *   (c) l'art. 3.4 n'est pas modifié : la durée court « à compter de sa confirmation » ;
- *   (d) la commande signée pendant la vérification d'une demande : la Société demande à
- *       l'entreprise de confirmer l'échange, phrase mot pour mot dans l'unité 4.4.
+ *   (d) contrat v2 d'axion-ia : à la signature d'une commande, la Société ne demande à
+ *       l'entreprise de confirmer aucun échange ; l'attribution suit les seules règles de l'art. 3.2.
+ *       La phrase de la vérification du brouillon n'est plus dans le gabarit.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -20,8 +21,12 @@ const GABARIT = readFileSync('docs/contrat/CONTRAT-APPORTEUR-V1.md', 'utf8');
 const PHRASE =
   "Une commande signée entre la déclaration et la confirmation de l'attribution est commissionnée si l'attribution est ensuite confirmée, y compris tacitement ; elle est réputée signée pendant la durée de l'attribution.";
 
-const VERIFICATION =
-  "Lorsqu'une commande est signée alors que la demande de confirmation fait l'objet d'une vérification, la Société demande à l'entreprise, à cette occasion, de confirmer l'échange.";
+const SANS_CONFIRMATION =
+  "La Société ne demande à l'entreprise de confirmer aucun échange à cette occasion : l'attribution suit les seules règles de l'article 3.2.";
+
+/** La phrase du brouillon, retirée par le v2. */
+const VERIFICATION_DU_BROUILLON =
+  "Lorsqu'une commande est signée alors que la demande de confirmation fait l'objet d'une vérification";
 
 /** Le texte normalisé d'une unité, tous alinéas joints : indépendant de leur compte. */
 function texteDe(numero: string): string {
@@ -47,7 +52,8 @@ describe('REQ-DM-022 — la commande signée avant la confirmation (art. 4.4)', 
     expect(texteDe('3.4')).toContain(normaliser('à compter de sa confirmation'));
   });
 
-  it('REQ-DM-022 : (d) la commande signée pendant une vérification fait demander la confirmation de l’échange, mot pour mot', () => {
-    expect(texteDe('4.4')).toContain(normaliser(VERIFICATION));
+  it('REQ-DM-022 : (d) à la signature, aucune confirmation d’échange n’est demandée à l’entreprise, mot pour mot', () => {
+    expect(texteDe('4.4')).toContain(normaliser(SANS_CONFIRMATION));
+    expect(normaliser(GABARIT)).not.toContain(normaliser(VERIFICATION_DU_BROUILLON));
   });
 });

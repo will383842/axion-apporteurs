@@ -43,6 +43,7 @@
 | `/profil/personnes` | Personnes qui agissent pour l'apporteur : liste déclarative, sans compte ni session ; proposée au dépôt | REQ-UX-039 | `personnes.html` | UX-P1-15 | non |
 | `/mon-contrat` | Mon contrat : version à signer, annexe générée de la grille avec ses écarts justifiés, signature, état de l'enveloppe ; atteignable en ouverture limitée (SEC-43) | REQ-UX-047, REQ-CPL-006 | `mon-contrat.html` | UX-P1-44 | oui |
 | `/notifications` | Notifications de l'espace ; leur ouverture ne fait courir aucun délai | REQ-UX-016, REQ-JUR-039 | `notifications.html` | UX-P1-08 | non |
+| `/contestations/[id]` | Ma contestation : relire son écrit et la réponse d'Axion-IA, et seulement les siens ; en ouverture pleine seulement (un résilié reçoit la réponse d'une contestation inconnue), sans aucune action | REQ-DM-043, REQ-UX-047 | `contestation.html` | UX-P1-51 | non |
 | `/activite` | Mon activité — ses chiffres, son palier, **aucun objectif, aucun classement** | REQ-UX-029 | — | UX-P3-02 | non |
 | `/ressources` | Kit, grille de sa version de contrat, FAQ, replay, argumentaires par palier | REQ-CPL-023 | — | UX-P3-02 | non |
 | `/aide` | Fil de conversation avec Axion-IA, FAQ d'abord, engagement 2 jours ouvrés | REQ-UX-028 | — | UX-P3-03 | non |
@@ -64,9 +65,10 @@
 
 ## Ouverture — qui atteint quoi (SEC-43)
 
-décision de Williams du 2026-10-01 ; forme à plat, décision A02 du 2026-10-02. Trois niveaux, un
+décision de Williams du 2026-10-01 ; forme à plat, décision A02 du 2026-10-02. Quatre niveaux, un
 seul verdict (`src/domain/apporteur/acces-espace.ts`) : **pleine** pour `signe` et `suspendu`,
-**limitée** pour `kyc_en_cours` et `pret_a_signer`, **fermée** pour tout autre statut. Le segment est
+**limitée** pour `kyc_en_cours` et `pret_a_signer`, **lecture** pour `resilie` tant que ses droits
+courent (SEC-19 : au moins une attribution `figee_resiliation`), **fermée** pour tout autre statut. Le segment est
 le premier dossier sous `src/app/(espace)/` (l'accueil s'appelle `accueil`), et ses listes sont
 fermées dans le domaine : cette table les RAPPORTE, elle n'en est pas la source.
 
@@ -76,6 +78,12 @@ fermées dans le domaine : cette table les RAPPORTE, elle n'en est pas la source
 | `confidentialite` | page publique ; l'action d'acceptation, limitée (et pleine) | `SEGMENT_DE_L_ACCEPTATION` |
 | `accueil`, `mes-entreprises`, `mes-commissions`, `plus`, `entreprise`, `deposer`, `documents`, `filleuls`, `profil`, `notifications`, `activite`, `ressources`, `aide` | pleine seulement | `SEGMENTS_PLEINS` |
 | `connexion`, `d`, `confirmer` | publique, sans session | `SEGMENTS_PUBLICS` |
+
+En **lecture** (SEC-19, liste blanche de la sécurité, #703) : `accueil`, `mes-commissions`,
+`mes-entreprises`, `notifications`, `documents`, `mon-contrat` et l'acceptation de la politique
+répondent, et eux seuls (`SEGMENTS_LECTURE`, défaut fermé : un segment ajouté plus tard aux autres
+listes n'y entre que par décision). Aucune écriture : `actionEspace`, `exigerSessionRelevee` et la
+garde de l'appareil refusent la lecture (`lecture_seule`), sauf l'acceptation de la politique.
 
 Chaque page et chaque route appellent `exigerSessionPour(<son segment>)`, et chaque action serveur
 `actionEspace(<son segment>, …)`, comme **premier acte** ; un layout ne protège jamais. Un segment

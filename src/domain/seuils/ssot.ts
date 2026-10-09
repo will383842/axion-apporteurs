@@ -83,23 +83,25 @@ export const SEUILS = {
     renvois: [],
     verifieLe: '2026-10-01',
   },
-  // JUR-T40 — la fin d'une demande vérifiée sans prise de contact concluante (HYP-W20-LIBERATION,
-  // tranchée par Williams le 2026-09-29) et la carence avant une nouvelle déclaration
-  // (HYP-W20-CARENCE-REDEPOT, arbitrage de -d7 sur délégation, même jour). L'art. 3.2 en est la
-  // source, et il les écrit par variables.
-  LIBERATION_SIGNALEE_INJOIGNABLE_MAX: {
-    valeur: 3,
-    unite: 'tentatives',
-    source: 'contrat art. 3.2 (HYP-W20-LIBERATION)',
-    renvois: art('3.2'),
-    verifieLe: '2026-10-01',
-  },
+  // JUR-T66 — la fin de l'attribution faute d'adresse valide et la carence unique qui la suit (art. 3.2
+  // du contrat v2, qui fait foi). La libération après N tentatives et la carence graduée de JUR-T40
+  // sont retirées : le contrat ne les connaît plus.
   LIBERATION_SIGNALEE_JOURS: {
     valeur: 45,
     unite: 'jours',
-    source: 'contrat art. 3.2 (HYP-W20-LIBERATION)',
+    source:
+      "contrat art. 3.2 (JUR-T66) : à défaut d'adresse valide dans ce délai à compter de la déclaration, l'attribution prend fin (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi, décision du 2026-10-07, #474, 6032680253) ; HYP-W20-LIBERATION",
     renvois: art('3.2'),
-    verifieLe: '2026-10-01',
+    verifieLe: '2026-10-07',
+  },
+  // JUR-T66 — le délai dans lequel la Société prend contact avec la personne déclarée (art. 3.2, v2).
+  PRISE_DE_CONTACT_SOCIETE_JOURS: {
+    valeur: 30,
+    unite: 'jours',
+    source:
+      "contrat art. 3.2 (JUR-T66) : la Société prend contact avec la personne déclarée dans ce délai à compter de l'enregistrement de la déclaration (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi, décision du 2026-10-07, #474, 6032680253)",
+    renvois: art('3.2'),
+    verifieLe: '2026-10-07',
   },
   CARENCE_REDEPOT_APRES_LIBERATION_JOURS: {
     valeur: 30,
@@ -119,19 +121,38 @@ export const SEUILS = {
     renvois: art('3.5'),
     verifieLe: '2026-10-03',
   },
-  CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS: {
-    valeur: 90,
-    unite: 'jours',
-    source: 'contrat art. 3.2 (HYP-W20-CARENCE-REDEPOT)',
-    renvois: art('3.2'),
-    verifieLe: '2026-10-01',
-  },
   ANTERIORITE_CLIENT_MOIS: {
     valeur: 24,
     unite: 'mois',
     source: 'contrat art. 3.3',
     renvois: art('3.3'),
     verifieLe: LE,
+  },
+  // SEC-11 : le jeton de dépôt privé expire douze mois après son émission ; aucune colonne ne porte
+  // l'échéance, elle se dérive de `cree_at` (cadrage d'A02 du 2026-09-26, partners/ADR-0022).
+  JETON_DEPOT_DUREE_MOIS: {
+    valeur: 12,
+    unite: 'mois',
+    source: 'REQ-SEC-005 (jeton de dépôt privé, expirant à 12 mois)',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
+  // SEC-18 : la tâche différée qui ouvre les anomalies d'auto-parrainage (forme d'A02, PR 601). Sa
+  // cadence, et la fenêtre qui borne ce qu'elle relit en arrière au premier passage ou après une
+  // panne. Valeurs proposées par l'auteur, à confirmer par la coordination.
+  AUTO_PARRAINAGE_CADENCE_MINUTES: {
+    valeur: 60,
+    unite: 'minutes',
+    source: 'REQ-SEC-031 (contrôle différé, forme d’A02 du 2026-10-03), valeur proposée par A05',
+    renvois: [],
+    verifieLe: '2026-10-03',
+  },
+  AUTO_PARRAINAGE_FENETRE_JOURS: {
+    valeur: 7,
+    unite: 'jours',
+    source: 'REQ-SEC-031 (contrôle différé, forme d’A02 du 2026-10-03), valeur proposée par A05',
+    renvois: [],
+    verifieLe: '2026-10-03',
   },
   ANTERIORITE_DEVIS_MOIS: {
     valeur: 6,
@@ -160,6 +181,16 @@ export const SEUILS = {
     source: 'contrat art. 3.4 al. 3 (W9)',
     renvois: art('3.4'),
     verifieLe: LE,
+  },
+  // JUR-T54 — la condition (b) de la prolongation : un rendez-vous tenu ou un échange de la Société
+  // avec l'entreprise au cours de ces derniers jours (art. 3.4 al. 3, recopié du contrat v2 d'axion-ia).
+  PROLONGATION_FAITS_RECENTS_JOURS: {
+    valeur: 30,
+    unite: 'jours',
+    source:
+      "contrat art. 3.4 al. 3 ; contrat apporteur v2 d'axion-ia validé par Williams le 2026-10-05, recopié sur sa décision du 2026-10-07 (#474, 6032423244)",
+    renvois: art('3.4'),
+    verifieLe: '2026-10-07',
   },
   FILE_FENETRE_REDECLARATION_JOURS: {
     valeur: 15,
@@ -192,8 +223,9 @@ export const SEUILS = {
   SEUIL_VERSEMENT: {
     valeur: 5_000,
     unite: 'centimes',
-    source: 'contrat art. 5.1 ; REQ-ARG-015',
-    renvois: art('5.1'),
+    source:
+      "REQ-ARG-015 — RÈGLE ABSENTE du contrat depuis JUR-T66 : art. 5.1, « aucun montant minimum n'est appliqué » (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi, décision du 2026-10-07, #474, 6032680253) ; à retirer du code avec T-ARG-045, qui n'a encore rien émis",
+    renvois: [],
     verifieLe: LE,
   },
   CONTESTATION_FACTURE_JOURS: {
@@ -204,18 +236,19 @@ export const SEUILS = {
     verifieLe: LE,
   },
   VERSEMENT_JOURS_OUVRES: {
-    valeur: 10,
+    valeur: 2,
     unite: 'jours_ouvres',
-    source: 'contrat art. 5.3',
-    renvois: art('5.3'),
+    source:
+      "contrat art. 5.3 (JUR-T66) : délai INDICATIF, ni échéance ni engagement (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi (décision du 2026-10-07, #474, 6032680253))",
+    renvois: art('5.3', '5.4'),
     verifieLe: LE,
   },
   VERSEMENT_PLAFOND_JOURS: {
-    valeur: 60,
+    valeur: 30,
     unite: 'jours',
     source:
-      'contrat art. 5.3 (valeur confrontée, renvoi vérifié) — À RELIRE, non encore confronté : C. com. L.441-10, I',
-    renvois: art('5.3'),
+      "contrat art. 5.3 (JUR-T66) : l'échéance de chaque autofacture est le trentième jour suivant son émission (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi (décision du 2026-10-07, #474, 6032680253)) — À RELIRE, non encore confronté : C. com. L.441-10, I",
+    renvois: art('5.3', '5.4'),
     verifieLe: LE,
   },
   FORCLUSION_CONTESTATION_MOIS: {
@@ -226,9 +259,10 @@ export const SEUILS = {
     verifieLe: LE,
   },
   REPONSE_CONTESTATION_JOURS: {
-    valeur: 15,
+    valeur: 30,
     unite: 'jours',
-    source: 'contrat art. 3.3 et 5.6',
+    source:
+      "contrat art. 3.3 et 5.6 (JUR-T66, contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi (décision du 2026-10-07, #474, 6032680253))",
     renvois: art('3.3', '5.6'),
     verifieLe: LE,
   },
@@ -319,6 +353,23 @@ export const SEUILS = {
     renvois: [{ document: 'annexe-2', unite: '2.5' }],
     verifieLe: LE,
   },
+  // SEC-19 (juriste, #703, 5982101876) : le texte chiffré d'une décision de contrat (decisions_de_contrat).
+  DECISION_CONTRAT_TEXTE_CONSERVATION_ANS: {
+    valeur: 5,
+    unite: 'ans',
+    source:
+      "code civil art. 2224 (prescription de l'action, cinq ans) ; RGPD art. 5.1.e ; décision de la juriste (SEC-19, #703) — À RELIRE, non encore confronté : code civil art. 2224",
+    renvois: [],
+    verifieLe: LE,
+  },
+  LITIGE_DECISION_OUVERT_ALERTE_JOURS: {
+    valeur: 180,
+    unite: 'jours',
+    source:
+      'RGPD art. 5.1 e) (limitation de la conservation) et 5.2 (responsabilité) : revue périodique d’un gel de conservation ; périodicité de la juriste, #703 6042136542',
+    renvois: [],
+    verifieLe: LE,
+  },
   CONSERVATION_PIECES_ANS: {
     valeur: 10,
     unite: 'ans',
@@ -377,6 +428,32 @@ export const SEUILS = {
   },
   // DM-40 (REQ-DM-060, HYP-W20-REBOND) : au-delà, le dépôt reste dans la liste d'appels et l'action
   // « Corriger l'adresse » disparaît.
+  // SEC-12 (REQ-DM-009) : la limite de débit du dépôt, technique et identique pour tous, sur DEUX
+  // compteurs — l'empreinte réseau (`depot:ip`) et l'empreinte de la session (`depot:session`) —, sur
+  // une fenêtre « de l'ordre de la minute » (texte de la juriste, rattrapage 84). Les valeurs sont
+  // celles de l'arbitrage : le plafond réseau tient compte d'une adresse partagée ; la session est
+  // obligatoire, et dix dépôts à quinze secondes d'intervalle passent tous.
+  DEPOT_FENETRE_MINUTES: {
+    valeur: 1,
+    unite: 'minutes',
+    source: 'arbitrage coordination du 2026-10-04, juriste et sécurité ; REQ-DM-009',
+    renvois: [],
+    verifieLe: '2026-10-04',
+  },
+  DEPOT_PAR_IP_PAR_FENETRE: {
+    valeur: 10,
+    unite: 'tentatives',
+    source: 'arbitrage coordination du 2026-10-04, juriste et sécurité ; REQ-DM-009',
+    renvois: [],
+    verifieLe: '2026-10-04',
+  },
+  DEPOT_PAR_SESSION_PAR_FENETRE: {
+    valeur: 5,
+    unite: 'tentatives',
+    source: 'arbitrage coordination du 2026-10-04, juriste et sécurité ; REQ-DM-009',
+    renvois: [],
+    verifieLe: '2026-10-04',
+  },
   CORRECTIONS_ADRESSE_MAX: {
     valeur: 2,
     unite: 'tentatives',
@@ -393,6 +470,26 @@ export const SEUILS = {
     source: 'REQ-DM-033, demande de la juriste au rattrapage 85 (DM-62)',
     renvois: [],
     verifieLe: '2026-10-03',
+  },
+  // DM-51 : le rappel d'échéance de l'attestation `rc_pro`, un service (art. 6.4 : aucune n'est
+  // exigée) ; la fenêtre court de `expire_at - délai` (incluse) à `expire_at` (exclue).
+  RC_PRO_RAPPEL_AVANT_ECHEANCE_JOURS: {
+    valeur: 30,
+    unite: 'jours',
+    source: 'REQ-DM-027 (rappel J-30)',
+    renvois: [],
+    verifieLe: '2026-10-09',
+  },
+  // INT-T76-P (forme d'A02, #737) : la fenêtre où la réception TRAITE encore la v3 du contrat, en
+  // jours civils de Paris, comptée du `received_at` du premier événement v4 reçu et accepté ; borne
+  // EXCLUSIVE au minuit de Paris qui suit le dernier jour. Au-delà, une v3 est inscrite `held`.
+  BASCULE_CONTRAT_V3_V4_JOURS: {
+    valeur: 7,
+    unite: 'jours',
+    source:
+      "arbitrage A02 (INT-T76-P, #737), par délégation : couvre le déploiement en lockstep des deux dépôts et les rejeux de l'outbox d'axion-ia ; au-delà, la v3 est `held` et rejouable, rien n'est perdu",
+    renvois: [],
+    verifieLe: '2026-10-05',
   },
 } as const satisfies Record<string, Seuil>;
 
@@ -415,13 +512,21 @@ export const PARAMETRES_HORS_DEPOT_CONFIRMATION = {
 export type NomDeSeuil = keyof typeof SEUILS;
 
 /**
+ * Le fuseau dans lequel les délais du contrat se comptent en jours civils — notamment la fenêtre de
+ * redéclaration (`FILE_FENETRE_REDECLARATION_JOURS`, DM-55 : fin à minuit, heure de Paris, du jour qui
+ * suit envoi + la durée). Le domaine le tient par `src/domain/temps/paris.ts`, qui n'en connaît pas
+ * d'autre ; la valeur est nommée ici, à côté des durées (forme d'A02).
+ */
+export const FUSEAU_DES_DELAIS = 'Europe/Paris' as const;
+
+/**
  * Les PARAMÈTRES du calcul qui ne sont ni un délai ni un montant — sourcés et datés comme les seuils
  * (RM-10), mais hors de `SEUILS` : la garde des seuils ne connaît que les durées et les montants, et
  * un ratio n'est ni l'un ni l'autre. L'étendre aux ratios est une suite, pas un détour.
  */
 export type Parametre = {
   readonly valeur: number;
-  readonly unite: 'points_de_base';
+  readonly unite: 'points_de_base' | 'pages' | 'traces';
   readonly source: string;
   readonly verifieLe: string;
 };
@@ -435,7 +540,45 @@ export const PARAMETRES = {
     source: 'REQ-ARG-007 (paramètre, défaut 100 %) ; avenant A01 du 2026-09-29 sur DM-04',
     verifieLe: '2026-09-29',
   },
+  // INT-T73-P (REQ-INT-013) : la borne d'une relecture des sommes avec axion-ia, en pages de la file.
+  // Au-delà, le passage s'arrête, le signale (`relecture_bornee`) et ne compare rien.
+  RELECTURE_DES_SOMMES_PAGES_MAX: {
+    valeur: 50,
+    unite: 'pages',
+    source: 'INT-T73-P, borne acceptée par la lentille schema (A02) le 2026-10-04',
+    verifieLe: '2026-10-04',
+  },
+  // SEC-67 (REQ-SEC-058) : la borne d'une page du journal des accès à la console, lue par
+  // `lireLeJournalDesAcces`. Un PLAFOND du serveur : l'appelant ne choisit pas la taille de la page.
+  JOURNAL_DES_ACCES_PAGE_MAX: {
+    valeur: 50,
+    unite: 'traces',
+    source: 'SEC-67 ; sécurité, #707, commentaire 5981305490 ; valeur : sécurité, #563',
+    verifieLe: '2026-10-05',
+  },
 } as const satisfies Record<string, Parametre>;
+
+/**
+ * Les TAILLES DE LOT des passages planifiés — ni un délai, ni un montant : la borne d'un travail par
+ * lots, sourcée et datée comme les seuils (RM-10), hors de `SEUILS` pour la même raison que les
+ * paramètres.
+ */
+export type TailleDeLot = {
+  readonly valeur: number;
+  readonly unite: 'notifications';
+  readonly source: string;
+  readonly verifieLe: string;
+};
+
+export const TAILLES_DE_LOT = {
+  // DM-55 : le passage d'envoi des notifications de l'espace prend ses notifications par lots bornés.
+  NOTIFICATIONS_ENVOI_LOT: {
+    valeur: 100,
+    unite: 'notifications',
+    source: "DM-55, forme d'A02 (rattrapage 98) : le passage d'envoi, en lots bornés par la SSOT",
+    verifieLe: '2026-10-04',
+  },
+} as const satisfies Record<string, TailleDeLot>;
 
 /**
  * Les BUDGETS D'EXPÉRIENCE de REQ-UX-047 (QA-T58, sorti du point 4 de GOV-113) — une seule source,
@@ -523,6 +666,33 @@ export function budgetUx(nom: string): BudgetUx {
 }
 
 /**
+ * DM-55 (arbitrage de la sécurité et de la juriste, 2026-10-04) — la longueur maximale des faits retenus
+ * contre un dépôt (`{faits}` de `anomalie_confirmee`), comptée en POINTS DE CODE après retrait des
+ * caractères de contrôle. Elle se juge à la SAISIE dans la console (tâche à venir) ; à l'ENVOI, elle
+ * n'est qu'un filet : au-delà, aucun courriel, jamais une troncature.
+ */
+/**
+ * EXT-T06 (REQ-EXT-006) — l'ancienneté minimale du signal « Déjà déposée par le passé » : il n'apparaît
+ * que si la DERNIÈRE attribution terminée sur le SIREN l'est depuis PLUS de ce nombre de jours civils de
+ * Paris ; avant, l'état « disponible » est rendu tel quel (juriste, à la demande de la sécurité).
+ */
+export const SIGNAL_DEJA_DECLAREE_ANCIENNETE_JOURS = {
+  valeur: 30,
+  unite: 'jours',
+  source:
+    'juriste, à la demande de la sécurité (#319, 6036622439) : la dernière fin, en jours civils de Paris',
+  verifieLe: '2026-10-07',
+} as const;
+
+export const FAITS_ANOMALIE_CARACTERES_MAX = {
+  valeur: 1000,
+  unite: 'points_de_code',
+  source:
+    'proposée par A05, 1 000 fixé par la juriste (art. 3.7), comptage en points de code par la sécurité, arbitrage DM-55 du 04/10',
+  verifieLe: '2026-10-04',
+} as const;
+
+/**
  * W20 (UX-P1-41, HYP-W20-CONTEXTE) — la longueur maximale du contexte d'un dépôt, seule saisie libre
  * de l'apporteur reprise dans l'e-mail au contact. Entrée isolée : ni un délai du contrat, ni un
  * montant, ni un budget d'expérience. Condition (a) de la lentille sécurité (2026-10-02) : la ligne de
@@ -533,4 +703,16 @@ export const CONTEXTE_DEPOT_CARACTERES_MAX = {
   unite: 'caracteres',
   source: 'docs/chantiers/W20-confirmation-par-email.md §2, HYP-W20-CONTEXTE',
   verifieLe: '2026-10-02',
+} as const;
+
+/**
+ * UX-P1-53 — le PLAFOND d'une page de la liste des gels du journal des accès, fixé par le serveur.
+ * Une taille demandée est ramenée sous ce plafond, jamais au-dessus ; la liste se pagine par curseur
+ * (keyset), jamais par décalage (condition de la sécurité).
+ */
+export const GELS_JOURNAL_ACCES_PAGE_MAX = {
+  valeur: 50,
+  unite: 'lignes',
+  source: 'décision de la coordination, avis conforme de la sécurité (#620)',
+  verifieLe: '2026-10-05',
 } as const;

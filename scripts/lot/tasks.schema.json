@@ -122,7 +122,8 @@
             "verifiee",
             "bloquee",
             "attente_externe",
-            "proposee"
+            "proposee",
+            "annulee"
           ]
         },
         "issue": {
@@ -228,7 +229,8 @@
           "then": { "properties": { "statut": { "const": "attente_externe" } } }
         },
         {
-          "if": { "properties": { "statut": { "const": "bloquee" } } },
+          "_commentaire": "Une tâche bloquée, ou annulée (GOV-160, #319, 6077512137), nomme son motif.",
+          "if": { "properties": { "statut": { "enum": ["bloquee", "annulee"] } } },
           "then": {
             "required": ["motif"],
             "properties": { "motif": { "type": "string", "minLength": 10 } }

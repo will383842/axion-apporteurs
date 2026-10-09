@@ -398,6 +398,8 @@ describe('REQ-SEC-003 — le juge de session nomme chaque refus', () => {
       'statut_ferme',
       'releve_requis',
       'hors_ouverture_limitee',
+      // SEC-19 : un résilié en lecture tente une écriture.
+      'lecture_seule',
     ]);
   });
 
@@ -647,6 +649,8 @@ describe('REQ-SEC-003 — l’adaptateur Prisma des sessions', () => {
             expireAt: true,
             revoqueAt: true,
             sessionVersion: true,
+            // SEC-70 : le statut et la version seuls ; aucun droit en cours n'est plus lu (un résilié
+            // est fermé, quels que soient ses droits).
             apporteur: { select: { statut: true, sessionVersion: true } },
             lienMagique: { select: { consommeAt: true } },
           },

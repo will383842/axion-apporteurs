@@ -27,13 +27,19 @@
 import { z } from 'zod';
 import { ALGORITHME } from './journal';
 import { EVENEMENTS_APPORTEUR, MOTIFS_RESILIATION, STATUTS_APPORTEUR } from '../apporteur/statut';
+import { ARTICLES_MISE_EN_DEMEURE } from '../apporteur/resiliation';
+import { ETATS_DE_GEL } from '../apporteur/suspension';
 import {
   CRITERES_D_ANTERIORITE,
   ETATS_ATTRIBUTION,
+  MOTIFS_ANNULATION_CONSOLE,
+  MOTIFS_LISTE_NOIRE,
+  EXCEPTIONS_ANNULATION,
+  EXCEPTION_DE_LA_TRANSITION,
   EVENEMENTS_ATTRIBUTION,
   NAISSANCES_ATTRIBUTION,
 } from '../attribution/machine';
-import { STATUTS_PIECE_KYC, TYPES_PIECE_KYC } from '../kyc/pieces';
+import { MOTIFS_REFUS_PIECE, STATUTS_PIECE_KYC, TYPES_PIECE_KYC } from '../kyc/pieces';
 import { ETATS_DEMANDE_CONFIRMATION } from '../confirmation/demande';
 import {
   ETATS_CONTESTATION,
@@ -41,6 +47,7 @@ import {
   GESTES_RATTACHEMENT,
   STATUTS_ANOMALIE,
 } from '../anomalie/regles';
+import { GESTES_UTILISATEUR_CONSOLE, ROLES_CONSOLE } from '../console/roles';
 
 /**
  * Les codes d'événement que porte `apporteur_statut_modifie` : la NAISSANCE (`creer`, `de` nul), puis
@@ -102,7 +109,42 @@ export type TypeEvenementJournal =
   | 'anomalie_statut_modifie'
   | 'contestation_modifiee'
   | 'rattachement_manuel_modifie'
-  | 'anomalie_gel_modifie';
+  | 'anomalie_gel_modifie'
+  | 'utilisateur_console_modifie'
+  | 'journal_acces_gel_modifie'
+  | 'apporteur_mis_en_demeure'
+  | 'apporteur_gel_modifie'
+  | 'acces_coordonnees_reservee'
+  | 'piece_kyc_rib_verifie'
+  | 'apporteur_resiliation_notifiee'
+  | 'decision_contrat_litige_modifie';
+
+/**
+ * SEC-61 : le gel du journal des accès à la console — ses gestes, ses motifs (les valeurs de
+ * `MotifGelJournal`, confrontées au schéma par la garde des énumérations) et le TYPE de sa portée.
+ */
+export const GESTES_GEL_JOURNAL = ['poser', 'lever'] as const;
+export const MOTIFS_GEL_JOURNAL = ['incident', 'litige'] as const;
+export const PORTEES_GEL_JOURNAL = ['utilisateur', 'cible'] as const;
+
+/**
+ * JUR-T64 (juriste, #703 6041829569 ; forme d'A02, #703 6041868006) : les gestes d'un litige sur une
+ * décision de contrat et leurs motifs FERMÉS — les valeurs de `MotifOuvertureLitige` et
+ * `MotifClotureLitige`, confrontées au schéma par la garde des énumérations.
+ */
+export const GESTES_LITIGE = ['ouvrir', 'clore'] as const;
+export const MOTIFS_OUVERTURE_LITIGE = [
+  'contestation_ecrite',
+  'reclamation_formelle',
+  'mediation',
+  'action_en_justice',
+] as const;
+export const MOTIFS_CLOTURE_LITIGE = [
+  'reponse_donnee',
+  'accord',
+  'decision_definitive',
+  'desistement',
+] as const;
 
 /** DM-08 : le porteur d'une attribution, une forme UNIQUE — sa population et son identifiant. */
 const PORTEUR = () =>
@@ -129,16 +171,55 @@ export const CHARGES_PAR_TYPE = {
       vers: z.enum(STATUTS_APPORTEUR),
       transition: z.enum(TRANSITIONS_DU_JOURNAL_APPORTEUR),
       resiliationMotif: z.enum(MOTIFS_RESILIATION).optional(),
+      /**
+       * SEC-66 (A02, #561, 5988205180, voie 2) : l'UUID de la ligne `decisions_de_contrat` (geste
+       * `resiliation`) de la décision OPPOSABLE qui fonde le passage à `resilie` pour `ordinaire_axion`
+       * — et lui seul. Cette ligne est aussi permanente que le journal : il garde ainsi quelle décision
+       * a été opposée, après la purge de sa notification. Un UUID ne peut rien porter d'autre.
+       */
+      decisionContratId: FORMES.identifiant().optional(),
       acteur: FORMES.acteur(),
     })
     .strict()
-    .superRefine(({ de, transition }, ctx) => {
+    .superRefine(({ de, transition, vers, resiliationMotif, decisionContratId }, ctx) => {
       if ((de === null) !== (transition === 'creer')) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['de'],
           message: 'naissance_incoherente',
         });
+      }
+      const exigee = vers === 'resilie' && resiliationMotif === 'ordinaire_axion';
+      if (exigee !== (decisionContratId !== undefined)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['decisionContratId'],
+          message: 'citation_de_la_decision_incoherente',
+        });
+      }
+    }),
+  /**
+   * SEC-15 (REQ-SEC-019) : la pose et la levée du gel des dépôts (forme d'A02, #794, 6035951154). Un
+   * côté vaut `libre`, jamais les deux ; un rôle est une personne de la console, et le plein droit, le
+   * système, pour la seule levée. AUCUN identifiant d'anomalie (DM-12, décision (d) de la juriste) : le
+   * lien d'un gel pour fraude vit dans `apporteurs.gel_anomalie_id`, jamais au journal.
+   */
+  apporteur_gel_modifie: z
+    .object({
+      de: z.enum(ETATS_DE_GEL),
+      vers: z.enum(ETATS_DE_GEL),
+      par: z.enum(['role', 'plein_droit']),
+      acteur: FORMES.acteur(),
+    })
+    .strict()
+    .superRefine(({ de, vers, par, acteur }, ctx) => {
+      const faute = (path: string, message: string) =>
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+      if ((de === 'libre') === (vers === 'libre')) faute('vers', 'pose_ou_levee_seulement');
+      if (par === 'role' && acteur.par !== 'utilisateur_console')
+        faute('acteur', 'role_sans_personne');
+      if (par === 'plein_droit' && (acteur.par !== 'systeme' || vers !== 'libre')) {
+        faute('par', 'plein_droit_pour_la_seule_levee');
       }
     }),
   /**
@@ -187,33 +268,73 @@ export const CHARGES_PAR_TYPE = {
         .strict()
         .optional(),
     })
+    .extend({
+      /** DM-55 : le motif fermé d'une annulation par la console, exigé pour elle seule. */
+      motifAnnulation: z.enum(MOTIFS_ANNULATION_CONSOLE).optional(),
+      /** DM-55 : la catégorie de l'article 3.3 bis, exigée avec ce motif et lui seul. */
+      categorieRelation: z.enum(MOTIFS_LISTE_NOIRE).optional(),
+      /**
+       * DM-71 (art. 3.3 du v2) : l'exception d'une annulation après la confirmation, exigée pour les
+       * deux transitions humaines et elles seules, avec LEUR valeur. Ni texte ni anomalie (DM-12, (d)).
+       */
+      exception: z.enum(EXCEPTIONS_ANNULATION).optional(),
+    })
     .strict()
-    .superRefine(({ de, transition, critere, fait }, ctx) => {
-      if ((de === null) !== NAISSANCES.includes(transition)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['de'],
-          message: 'naissance_incoherente',
-        });
+    .superRefine(
+      ({ de, transition, critere, fait, motifAnnulation, categorieRelation, exception }, ctx) => {
+        if ((de === null) !== NAISSANCES.includes(transition)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['de'],
+            message: 'naissance_incoherente',
+          });
+        }
+        if ((transition === 'anteriorite_etablie') !== (critere !== undefined)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['critere'],
+            message: 'critere_incoherent',
+          });
+        }
+        // Le fait fondateur accompagne le critère, et sa nature est celle que le critère nomme.
+        const natureAttendue =
+          critere === undefined ? undefined : critere === 'cliente' ? 'facture' : 'devis';
+        const exceptionAttendue = (EXCEPTION_DE_LA_TRANSITION as Partial<Record<string, string>>)[
+          transition
+        ];
+        if (exception !== exceptionAttendue) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['exception'],
+            message: 'exception_incoherente',
+          });
+        }
+        if ((transition === 'annulee_par_la_console') !== (motifAnnulation !== undefined)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['motifAnnulation'],
+            message: 'motif_annulation_incoherent',
+          });
+        }
+        if (
+          (motifAnnulation === 'entreprise_relevant_de_l_article_3_3_bis') !==
+          (categorieRelation !== undefined)
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['categorieRelation'],
+            message: 'categorie_incoherente',
+          });
+        }
+        if (fait?.nature !== natureAttendue) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['fait'],
+            message: 'fait_incoherent',
+          });
+        }
       }
-      if ((transition === 'anteriorite_etablie') !== (critere !== undefined)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['critere'],
-          message: 'critere_incoherent',
-        });
-      }
-      // Le fait fondateur accompagne le critère, et sa nature est celle que le critère nomme.
-      const natureAttendue =
-        critere === undefined ? undefined : critere === 'cliente' ? 'facture' : 'devis';
-      if (fait?.nature !== natureAttendue) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['fait'],
-          message: 'fait_incoherent',
-        });
-      }
-    }),
+    ),
   /** DM-08 (REQ-DM-007) : le marqueur qui suspend la péremption, posé par un rôle habilité. */
   attribution_peremption_suspendue: z
     .object({ acteur: FORMES.acteur(), suspendueAt: FORMES.horodatage() })
@@ -248,15 +369,27 @@ export const CHARGES_PAR_TYPE = {
   /**
    * DM-11 (REQ-DM-027) : un changement de statut d'une pièce du KYC, sur l'agrégat `piece_kyc`.
    * `de` est nul à la naissance de la pièce. Ni fichier, ni IBAN, ni donnée de personne.
+   * CPL-T07 (forme d'A02) : le motif FERMÉ d'un refus, exigé si et seulement si `vers` vaut
+   * `refusee` ; l'espace le relit dans le dernier événement de l'agrégat de la pièce, sans colonne.
    */
   piece_kyc_statut_modifie: z
     .object({
       de: z.enum(STATUTS_PIECE_KYC).nullable(),
       vers: z.enum(STATUTS_PIECE_KYC),
       type: z.enum(TYPES_PIECE_KYC),
+      motifRefus: z.enum(MOTIFS_REFUS_PIECE).optional(),
       acteur: FORMES.acteur(),
     })
-    .strict(),
+    .strict()
+    .superRefine((c, ctx) => {
+      if ((c.vers === 'refusee') !== (c.motifRefus !== undefined)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['motifRefus'],
+          message: 'motif_refus_si_et_seulement_si_refusee',
+        });
+      }
+    }),
   /**
    * DM-40 (REQ-DM-060) : un changement d'état de la demande de confirmation, naissance comprise (`de`
    * nul, `planifiee`). Ni jeton, ni empreinte, ni donnée de personne : l'état seul.
@@ -315,6 +448,130 @@ export const CHARGES_PAR_TYPE = {
       acteur: FORMES.acteur(),
     })
     .strict(),
+  // SEC-30 (forme d'A02) : tout changement d'un utilisateur de la console, agrégat
+  // `utilisateur_console` (son id est `agregatId`), dans la MÊME transaction que lui. Le rôle avant
+  // et après, rien d'autre : ni adresse, ni nom. Pour `valider`, l'acteur EST le validateur.
+  utilisateur_console_modifie: z
+    .object({
+      geste: z.enum(GESTES_UTILISATEUR_CONSOLE),
+      de: z.enum(ROLES_CONSOLE).nullable(),
+      vers: z.enum(ROLES_CONSOLE).nullable(),
+      acteur: FORMES.acteur(),
+    })
+    .strict()
+    .superRefine((c, ctx) => {
+      const juste =
+        c.geste === 'changer_role'
+          ? c.de !== null && c.vers !== null && c.de !== c.vers
+          : c.geste === 'inviter'
+            ? c.de === null && c.vers !== null
+            : c.de === null && c.vers === null;
+      if (!juste)
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['vers'],
+          message: 'roles_incoherents_avec_le_geste',
+        });
+    }),
+  // SEC-61 (forme d'A02 et de la sécurité, mot pour mot) : la pose ou la levée d'un gel du journal des
+  // accès, sur l'agrégat `journal_acces_gel` (l'id du gel est `agregatId`). AUCUN identifiant
+  // d'employé : ni le poseur, ni celui qui lève, ni la personne visée, ni la cible ; la portée n'en
+  // dit que le TYPE, l'acteur que sa population, et la référence n'y est qu'en empreinte. Les
+  // identifiants vivent sur la ligne du gel et partent avec elle.
+  journal_acces_gel_modifie: z
+    .object({
+      geste: z.enum(GESTES_GEL_JOURNAL),
+      motif: z.enum(MOTIFS_GEL_JOURNAL),
+      portee: z.object({ type: z.enum(PORTEES_GEL_JOURNAL) }).strict(),
+      referenceEmpreinte: FORMES.empreinte(),
+      acteur: FORMES.acteurSansIdentite(),
+    })
+    .strict(),
+  /**
+   * SEC-19 (forme d'A02, #703, 5980982895 §2) : la mise en demeure datée d'un apporteur (art. 11.2),
+   * agrégat `apporteur`. L'article, de la liste FERMÉE, et l'acteur de la console : NI les faits NI
+   * aucun texte libre — ils ne vivent que dans le courriel `mise_en_demeure`, dont l'`envoye_at` fait
+   * courir le délai. Un fait daté, pas un antécédent : rien ne compte ces événements.
+   */
+  apporteur_mis_en_demeure: z
+    .object({
+      article: z.enum(ARTICLES_MISE_EN_DEMEURE),
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
+    })
+    .strict(),
+  /**
+   * SEC-52 (REQ-SEC-042, forme d'A02 sur #786) : un accès de la console aux coordonnées du contact d'une
+   * entreprise RÉSERVÉE, agrégat `attribution` (l'id de l'attribution est `agregatId`, la date celle de
+   * l'événement). Par identifiants SEULS : QUI a lu (un utilisateur de la console, HYP-A02-ACTEUR-JOURNAL),
+   * et rien d'autre — ni nom, ni adresse, ni téléphone, ni SIREN, ni apporteur, ni cause ni date de la
+   * réserve. C'est la seule trace qui permette de constater un démarchage hors outil pendant la réserve.
+   */
+  acces_coordonnees_reservee: z
+    .object({
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
+    })
+    .strict(),
+  /**
+   * SEC-69 (la sécurité, #747, 5986810177 §2) : le PREMIER regard d'un RIB — sa vérification hors bande —
+   * a son événement chaîné propre, sur l'agrégat `piece_kyc`. Le journal chaîné rend une réécriture
+   * visible ; avant lui, seule la garde de la base protégeait ce regard. Un fait daté, PAS un
+   * changement de statut (la pièce reste `a_verifier`) : `piece_kyc_statut_modifie` n'est pas touché.
+   * L'acteur est le vérificateur, un utilisateur de la console ; ni IBAN, ni empreinte, ni fichier.
+   */
+  piece_kyc_rib_verifie: z
+    .object({
+      type: z.literal('rib'),
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
+    })
+    .strict(),
+  /**
+   * SEC-66 (forme (b) d'A02, #703, 5983008261) : la DÉCISION de la Société de résilier le contrat
+   * (art. 11.1), agrégat `apporteur`. Ce n'est pas un changement de statut : l'apporteur reste `signe`
+   * pendant le préavis. Le motif, la date d'effet annoncée (jour civil de Paris de la décision plus
+   * `PREAVIS_JOURS`) et l'acteur de la console ; aucun texte libre.
+   */
+  apporteur_resiliation_notifiee: z
+    .object({
+      motif: z.literal('ordinaire_axion'),
+      /** Minuit, heure de Paris, du jour d'effet, en ISO 8601 UTC (A02, 5988205180). */
+      dateEffet: FORMES.horodatage(),
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
+    })
+    .strict(),
+  /**
+   * JUR-T64 (forme d'A02, #703 6041868006) : l'ouverture ou la clôture d'un litige sur une décision de
+   * contrat, agrégat `apporteur`. Le motif est celui de SON geste ; NI texte NI référence. La table
+   * `litiges_decisions_de_contrat` est l'ÉTAT, ce fait daté en est la trace.
+   */
+  decision_contrat_litige_modifie: z
+    .object({
+      geste: z.enum(GESTES_LITIGE),
+      litigeId: FORMES.identifiant(),
+      decisionContratId: FORMES.identifiant(),
+      motif: z.enum([...MOTIFS_OUVERTURE_LITIGE, ...MOTIFS_CLOTURE_LITIGE]),
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
+    })
+    .strict()
+    .superRefine((c, ctx) => {
+      const permis: readonly string[] =
+        c.geste === 'ouvrir' ? MOTIFS_OUVERTURE_LITIGE : MOTIFS_CLOTURE_LITIGE;
+      if (!permis.includes(c.motif))
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['motif'],
+          message: 'motif_hors_du_geste',
+        });
+    }),
 } satisfies Record<TypeEvenementJournal, z.ZodTypeAny>;
 
 /**

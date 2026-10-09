@@ -28,6 +28,7 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
+import { restreindreALaPr } from './fichiers-de-la-pr';
 
 /** (a) L'analyse du risque. Ces mots n'ont rien à faire ici, sauf dans le gabarit de contrat. */
 const DOCTRINE = [
@@ -268,7 +269,15 @@ if (process.argv.includes('--prove')) {
 }
 
 // ── mode normal ───────────────────────────────────────────────────────────────
-const fautes = analyser(fichiersSuivis());
+/**
+ * GOV-160 (#319, 6077512137) : sur une PR, la garde ne juge que les fichiers AJOUTÉS ou MODIFIÉS
+ * par la PR — un défaut déjà sur main ne bloque pas une PR sans rapport. Sur main (push) ou en
+ * local, elle balaie tout le dépôt suivi. Un diff illisible retombe sur le balayage complet.
+ */
+function fichiersAJuger(): string[] {
+  return restreindreALaPr(fichiersSuivis());
+}
+const fautes = analyser(fichiersAJuger());
 if (fautes.length === 0) {
   console.log('✅ gov:publication — aucun contenu non publiable dans les fichiers suivis.');
   process.exit(0);

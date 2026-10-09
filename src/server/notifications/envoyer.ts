@@ -17,14 +17,19 @@
  * `lueAt` n'est lu ici par rien, et aucun délai ne s'y appuie (garde `notifications-lue-at-inerte`).
  */
 import type { StatutCourriel } from '@prisma/client';
-import { SEUILS } from '../../domain/seuils/ssot';
+import { FAITS_ANOMALIE_CARACTERES_MAX, SEUILS } from '../../domain/seuils/ssot';
 import {
   CORPS_DE_LA_LIBERATION,
+  MOTIFS_DES_DECISIONS,
   TEXTES_DES_NOTIFICATIONS,
+  PARAGRAPHES_DE_LA_RESILIATION,
+  PARAGRAPHE_COMMUN_DE_LA_RESILIATION,
   type CauseDeLiberation,
 } from '../../content/micro-copy/courriels/notifications';
+import type { MotifResiliation } from '../../domain/apporteur/statut';
 import type { AccesApporteur } from '../acces/for-apporteur';
 import type { DemandeDEnvoi } from '../integrations/zeptomail/emetteur';
+import { adresseDeContact } from '../../config/entite';
 import {
   GABARITS,
   schemaGabarit,
@@ -62,7 +67,31 @@ const PARAMETRE = /\{([a-zA-Z]+)\}/g;
  * saut de ligne), ni caractère de FORMAT (catégorie Cf : U+202E et les isolats retournent un sujet,
  * U+200B le cachent).
  */
-const VALEUR = /^[^\p{Cc}\p{Cf}]{1,300}$/u;
+const VALEUR = /^[^\p{Cc}\p{Cf}]+$/u;
+
+/** La longueur d'une valeur, en points de code. */
+const LONGUEUR_DE_VALEUR_MAX = 300;
+
+/**
+ * DM-55 (arbitrage de la sécurité) : `{motif}` d'une décision porte les faits retenus, bornés par
+ * `FAITS_ANOMALIE_CARACTERES_MAX` ; sa borne est celle des faits plus le plus long gabarit de motif,
+ * dérivée de leurs sources. Toute autre valeur garde la borne commune.
+ */
+export const LONGUEUR_DU_MOTIF_MAX =
+  FAITS_ANOMALIE_CARACTERES_MAX.valeur +
+  Math.max(...Object.values(MOTIFS_DES_DECISIONS).map((t) => [...t].length));
+
+/**
+ * SEC-19 : les `{faits}` d'une mise en demeure suivent les règles de `{faits}` de DM-55 (A02, #703) —
+ * et, SEC-15, ceux d'une suspension —
+ * la même borne, `FAITS_ANOMALIE_CARACTERES_MAX`. Toute autre clé garde la borne commune.
+ */
+const borneDe = (cle: GabaritDeLApporteur, parametre: string): number =>
+  parametre === 'motif'
+    ? LONGUEUR_DU_MOTIF_MAX
+    : (cle === 'mise_en_demeure' || cle === 'suspension_declarations') && parametre === 'faits'
+      ? FAITS_ANOMALIE_CARACTERES_MAX.valeur
+      : LONGUEUR_DE_VALEUR_MAX;
 
 function cleDeLaTable(cle: string): GabaritDeLApporteur {
   const lue = schemaGabarit.safeParse(cle);
@@ -72,19 +101,65 @@ function cleDeLaTable(cle: string): GabaritDeLApporteur {
   return lue.data;
 }
 
+/** Un nombre de 1 à 69, en toutes lettres : les délais du contrat. Au-delà, refusé : à étendre. */
+function enToutesLettres(n: number): string {
+  const unites = [
+    '',
+    'un',
+    'deux',
+    'trois',
+    'quatre',
+    'cinq',
+    'six',
+    'sept',
+    'huit',
+    'neuf',
+    'dix',
+    'onze',
+    'douze',
+    'treize',
+    'quatorze',
+    'quinze',
+    'seize',
+  ];
+  const dizaines = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante'];
+  if (!Number.isInteger(n) || n < 1 || n > 69)
+    throw new RangeError(`hors des délais écrits : ${n}`);
+  if (n <= 16) return unites[n]!;
+  if (n < 20) return `dix-${unites[n - 10]!}`;
+  const d = Math.floor(n / 10);
+  const u = n % 10;
+  if (u === 0) return dizaines[d]!;
+  return u === 1 ? `${dizaines[d]!} et un` : `${dizaines[d]!}-${unites[u]!}`;
+}
+
 /**
  * Les paramètres qu'un délai du contrat remplit : posés ICI depuis la SSOT (RM-10), jamais fournis
  * par l'émetteur, qui ne pourrait que les retaper.
  */
 export const PARAMETRES_DE_LA_SSOT: Readonly<Record<string, string>> = {
   delaiReponse: `${SEUILS.REPONSE_CONTESTATION_JOURS.valeur} ${SEUILS.REPONSE_CONTESTATION_JOURS.unite}`,
+  // SEC-19 (juriste, #703) : le délai de la mise en demeure, rendu EN TOUTES LETTRES.
+  delaiMiseEnDemeure: `${enToutesLettres(SEUILS.MISE_EN_DEMEURE_JOURS.valeur)} ${SEUILS.MISE_EN_DEMEURE_JOURS.unite}`,
 };
 
 /**
- * Le corps d'une clé. Celui d'`attribution_liberee` dépend de la CAUSE de la fin (A07, 2026-10-02) :
- * l'émettrice la donne, faute de quoi la notification est refusée. Aucune autre clé n'en reçoit.
+ * Ce qui choisit un corps : la cause de la fin d'une attribution, ou le motif d'une résiliation.
+ */
+export type CauseDuCorps = CauseDeLiberation | MotifResiliation;
+
+/**
+ * Le corps d'une clé. Celui d'`attribution_liberee` dépend de la CAUSE de la fin (A07, 2026-10-02) ;
+ * celui de `resiliation`, du MOTIF de la résiliation (SEC-19, juriste) : le paragraphe du motif,
+ * puis le paragraphe commun. L'émettrice le donne, faute de quoi la notification est refusée.
+ * Aucune autre clé n'en reçoit.
  */
 function corpsDe(cle: GabaritDeLApporteur, cause: string | undefined): string | null {
+  if (cle === 'resiliation') {
+    if (cause === undefined || !Object.hasOwn(PARAGRAPHES_DE_LA_RESILIATION, cause))
+      throw new NotificationRefusee('cause_manquante', String(cause));
+    return `${PARAGRAPHES_DE_LA_RESILIATION[cause as MotifResiliation]} ${PARAGRAPHE_COMMUN_DE_LA_RESILIATION}`;
+  }
   if (cle !== 'attribution_liberee') {
     if (cause !== undefined) throw new NotificationRefusee('cause_en_trop', cause);
     return TEXTES_DES_NOTIFICATIONS[cle].corps;
@@ -95,7 +170,7 @@ function corpsDe(cle: GabaritDeLApporteur, cause: string | undefined): string | 
 }
 
 /** Les paramètres que l'ÉMETTEUR fournit pour une clé, triés : ceux des textes, hors SSOT. */
-export function parametresDe(cle: GabaritDeLApporteur, cause?: CauseDeLiberation): string[] {
+export function parametresDe(cle: GabaritDeLApporteur, cause?: CauseDuCorps): string[] {
   const t = TEXTES_DES_NOTIFICATIONS[cle];
   const noms = [t.titre, t.appel, corpsDe(cle, cause) ?? ''].flatMap((x) =>
     [...x.matchAll(PARAMETRE)].map((m) => m[1]!)
@@ -106,7 +181,7 @@ export function parametresDe(cle: GabaritDeLApporteur, cause?: CauseDeLiberation
 export function rendreLaNotification(
   cle: string,
   parametres: Readonly<Record<string, string>>,
-  cause?: CauseDeLiberation
+  cause?: CauseDuCorps
 ): TexteRendu {
   const c = cleDeLaTable(cle);
   const corps = corpsDe(c, cause);
@@ -118,7 +193,7 @@ export function rendreLaNotification(
   if (enTrop !== undefined) throw new NotificationRefusee('parametre_en_trop', enTrop);
   for (const p of attendus) {
     const v: unknown = parametres[p];
-    if (typeof v !== 'string' || !VALEUR.test(v))
+    if (typeof v !== 'string' || !VALEUR.test(v) || [...v].length > borneDe(c, p))
       throw new NotificationRefusee('parametre_invalide', p);
   }
   const valeurs: Readonly<Record<string, string>> = { ...parametres, ...PARAMETRES_DE_LA_SSOT };
@@ -157,8 +232,35 @@ export interface DemandeDeNotification {
   a: string;
   parametres: Readonly<Record<string, string>>;
   attributionId: string | null;
-  /** La cause de la fin, pour `attribution_liberee` seule (A07). */
-  cause?: CauseDeLiberation;
+  /** La cause de la fin, pour `attribution_liberee` (A07) ; le motif, pour `resiliation` (SEC-19). */
+  cause?: CauseDuCorps;
+}
+
+/**
+ * La composition d'un courriel de notification, UNE fois pour tous ses émetteurs (`notifier()` et
+ * le passage d'envoi de DM-55) : le titre en sujet ; le corps, puis l'appel à l'action suivi du lien
+ * de sa route quand elle existe. SEC-70 : un gabarit `lien: 'contact_entite'` mène au mailto: de
+ * l'adresse de contact de l'entité ; sans adresse renseignée, l'appel part SANS lien.
+ */
+export function composerLeCourriel(
+  cle: string,
+  texte: TexteRendu,
+  urlDeLEspace: URL,
+  contact: string | null = adresseDeContact()
+): { sujet: string; corps: string } {
+  const gabarit: LigneDeNotification = GABARITS[cleDeLaTable(cle)];
+  const lien =
+    gabarit.lien === 'contact_entite'
+      ? contact === null
+        ? null
+        : `mailto:${contact}`
+      : gabarit.route === null
+        ? null
+        : new URL(gabarit.route, urlDeLEspace).href;
+  const corps = [texte.corps, lien === null ? texte.appel : `${texte.appel} : ${lien}`]
+    .filter((x): x is string => x !== null)
+    .join('\n\n');
+  return { sujet: texte.titre, corps };
 }
 
 export async function notifier(
@@ -187,14 +289,11 @@ export async function notifier(
     if (preference?.active === false)
       return { notificationId, courriel: 'desactive_par_preference' };
   }
-  const lien = ligne.route === null ? null : new URL(ligne.route, d.urlDeLEspace).href;
-  const corps = [texte.corps, lien === null ? texte.appel : `${texte.appel} : ${lien}`]
-    .filter((x): x is string => x !== null)
-    .join('\n\n');
+  const { sujet, corps } = composerLeCourriel(cle, texte, d.urlDeLEspace);
   const courriel = await d.envoyerCourriel({
     gabarit: cle,
     a: demande.a,
-    sujet: texte.titre,
+    sujet,
     corps,
     apporteurId: d.acces.apporteurId,
   });

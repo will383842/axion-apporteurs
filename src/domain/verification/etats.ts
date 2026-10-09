@@ -12,6 +12,10 @@
  *
  * La cause INTERNE (`causeDuJournal`) est tenue au journal des vérifications ; elle ne sort jamais.
  */
+import { SIGNAL_DEJA_DECLAREE_ANCIENNETE_JOURS } from '../seuils/ssot';
+import { joursDepuisEpoque } from '../temps/calendrier-civil';
+import { type Instant } from '../temps/horloge';
+import { versParis } from '../temps/paris';
 
 export const ETATS_VERIFICATION = [
   'libre',
@@ -53,6 +57,24 @@ export function causeDuJournal(f: FaitsDeVerification): CauseDeVerification {
   if (f.anteriorite) return 'cliente';
   if (f.occupee || f.enFile > 0) return 'suivie';
   return 'libre';
+}
+
+/**
+ * EXT-T06 (REQ-EXT-006, REQ-EXT-007) — le signal « Déjà déposée par le passé » : un BOOLÉEN seul, au
+ * texte fixe (sécurité). Il n'est vrai que si l'entreprise est `libre` ET que la DERNIÈRE attribution
+ * terminée sur ce SIREN, quel qu'en soit le porteur (sa propre attribution comme celle d'un autre),
+ * l'est depuis PLUS de `SIGNAL_DEJA_DECLAREE_ANCIENNETE_JOURS` jours civils de Paris. Il ne porte ni
+ * porteur, ni date, ni durée, ni nombre, ni issue, et il n'a AUCUN effet : ni vérification, ni
+ * suspension, ni statut, ni anomalie (juriste, #474, 6036611999 ; REQ-EXT-007).
+ */
+export function dejaDeclareeParLePasse(
+  f: FaitsDeVerification,
+  derniereFin: Instant | null,
+  maintenant: Instant
+): boolean {
+  if (derniereFin === null || etatDeVerification(f) !== 'libre') return false;
+  const jour = (i: Instant) => joursDepuisEpoque(versParis(i));
+  return jour(maintenant) - jour(derniereFin) > SIGNAL_DEJA_DECLAREE_ANCIENNETE_JOURS.valeur;
 }
 
 /** L'état rendu : la cause, repliée sur les quatre états, sans rien de plus. */

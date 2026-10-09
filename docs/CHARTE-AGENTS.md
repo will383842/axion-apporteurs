@@ -411,7 +411,51 @@ qui lui est réservé — et un poste ne peut pas exercer un acte que son outill
 > sha fusionné, et `deploy:verify` le confronte à l'en-tête de build. Une suppléance qui déplacerait le diff
 > entre l'approbation et la fusion est un défaut, pas un raccourci.
 
+**La case « Relecteur ≠ auteur » et la tête neuve (GOV-145, décision orale de Williams du 2026-10-04, #319, 6032352874).** Deux règles,
+que `gov:pr` applique :
+
+- **La case se dérive des revues.** La case « Relecteur ≠ auteur » de la définition de « terminé » est jugée
+  remplie dès que chaque lentille exigée a accepté sur la tête exacte ou y survit, et qu'aucune n'est en refus,
+  périmée ou rendue par l'auteur. C'est le même prédicat que celui qui la coche dans le corps publié. Personne
+  n'a plus à la cocher à la main. Une case tapée `[x]` sans revues qui la justifient ne passe pas pour autant.
+- **Une ligne de journal ne périme plus les accords.** Un accord survit à une tête neuve quand l'empreinte du
+  diff propre à la PR est identique. L'empreinte exclut l'entrée de journal de la PR jugée
+  (`docs/journal/AAAA-MM-pr-<n>.md`), à condition que chacun de ses titres n'ouvre que son entrée. Une fusion de
+  `main` sans conflit garde aussi l'empreinte : le diff se mesure depuis la base de fusion. La prose de cette
+  entrée n'est plus relue après l'accord ; les gardes du journal la jugent à chaque tête.
+
+**La relecture proportionnée au risque (décision de Williams du 2026-10-05, #319, 5988252245, point 2, amendée
+le 2026-10-07, #319, 6032068586).** `risqueDeLaPr` et `lentillesExigees` (`scripts/lot/revues.ts`) l'appliquent :
+
+- **Toutes les lentilles** restent exigées pour l'argent, la sécurité, les données personnelles et le schéma ;
+  l'avis d'A02 reste exigé dès que `prisma/` est touché (label `schema`).
+- **Deux lentilles, l'exactitude et la sécurité, avec le veto de la sécurité,** pour tout écran de l'espace ou de
+  la console qui affiche ou modifie des données d'un apporteur ou de la console.
+- **Une seule lentille, l'exactitude,** pour ce qui n'affiche aucune donnée : une PR des zones `espace` ou
+  `console`, sans tâche `sensible`, dont TOUS les fichiers sont sous `docs/` (les maquettes) ou sous
+  `src/content/micro-copy/` (`RACINES_SANS_DONNEES`). C'est le critère mécanique ; une page statique hors de ces
+  racines reste à deux lentilles. `docs/maquettes/VALIDATION.md` reste à deux lentilles.
+- **La juriste** n'intervient que si un texte engage la Société.
+- Aucune garde « mobile first » n'est affaiblie : ses fichiers ne sont jamais à une lentille.
+
+**Le gel de la phase 1 (décision de Williams du 2026-10-05, #319, 5988252245, point 1 ; tri validé le
+2026-10-07, #319, 6032205185, et corrigé par la coordination sous délégation, 6032408699 et 6032997495).** Toute tâche neuve née d'une relecture part « après la mise en service »
+(phase 2), sauf si elle touche l'argent, la sécurité ou une obligation légale : son `sensible`, ou sa zone
+juridique ou sécurité, le dit. `config/gel-phase-1.json` porte la liste des tâches de phase 1 au jour du gel ;
+`gov:tasks` refuse une tâche de phase 1 qui n'y figure pas et ne remplit pas la condition (`gel_phase_1`).
+
 ## 7. Fichiers réservés et label exigé (gate de REQ-GOV-010)
+
+> **GOV-160 (décision de Williams du 2026-10-09, #319, commentaire 6077512137) — CE QUI CHANGE ICI.** La famille `fichier_reserve_sans_label` est **archivée**
+> avec l'ancienne garde de PR : un label de rôle n'est plus exigé. Les chemins ci-dessous disent
+> encore **qui répond** d'un fichier ; ce qui garde vraiment, c'est le **niveau** de la PR
+> (`scripts/gates/gov-pr-niveaux.ts`, Pas 2 de `docs/PROTOCOLE-FUSION.md`) : `prisma/**`,
+> `packages/contracts/**`, `.claude/**`, `.github/**`, `config/**`, `package.json`, `pnpm-lock.yaml`
+> et `docs/gates.json` rendent une PR **critique** (deux lentilles, veto de `securite`), et l'avis
+> `schema` d'A02 est exigé dès qu'une migration n'est pas purement additive. Labels d'une PR : aucun
+> n'est requis ; `schema` se pose sur une PR de schéma, par lisibilité. Aucune PR n'écrit plus de
+> statut dans `docs/tasks.json` (le paragraphe GOV-145 ci-dessous est sans objet) ; une garde
+> nouvelle exige une décision de Williams citée.
 
 Une PR qui modifie un chemin réservé **sans porter le label du poste** rougit (`gov:pr`, famille
 `fichier_reserve_sans_label`). Le label suit le nom de la fiche (`docs/CONVENTIONS.md` §5 : `role:<fiche>`) ;
@@ -457,11 +501,21 @@ doit passer devant un relecteur comme une décision, pas comme une ligne de conf
 | `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | A01 | `role:gardien-spec` | `docs/CONVENTIONS.md` §8, lot dédié du gardien-spec (`pnpm lot:gardien-spec`, GOV-116, `partners/ADR-0028`) |
 | `docs/requirements.json` (**source** — `docs/REQUIREMENTS.md` en est la VUE — non réservée) | A01 | `role:gardien-spec` | `partners/ADR-0019` ; `docs/CONVENTIONS.md` §8 |
 | `docs/gates.json` (**source** — `docs/GATES.md` en est la VUE — non réservée) | A01, par le verbe `hors-depot/ajouter-entree.mjs` | `role:gardien-spec` | `partners/ADR-0019` ; `.claude/settings.json` porte déjà `deny` sur `Write` et `Edit` de ce fichier |
-| `docs/tasks.json` | A01 (composition), jamais un développeur | `role:gardien-spec` | `docs/CONVENTIONS.md` §8 |
+| `docs/tasks.json` | A01 (composition) ; un développeur seulement pour AJOUTER à ses propres `paths` le chemin d'un fichier que sa PR touche (GOV-145) | `role:gardien-spec` | `docs/CONVENTIONS.md` §8 |
 | `prisma/**`, `packages/contracts/**` | A02, approbation bloquante | `schema` | `docs/CONVENTIONS.md` §5 et §8 ; `.github/CODEOWNERS` |
 | `docs/adr/**` | A02 accepte, A03 indexe | `role:architecte` | `docs/CONVENTIONS.md` §8 |
 | `.claude/settings.json`, `.claude/agents/**` | **aucun agent en session** : lot dédié GOV-000 / GOV-023, lancé avec `--settings` surchargé | — | `docs/CONVENTIONS.md` §8 ; `.claude/settings.json` porte lui-même `deny` sur `Write` et `Edit` de ce fichier |
 | `config/exemptions-corps-publie.json` | A01 commite. ⚠️ **Aucune approbation SUPPLÉMENTAIRE n'est exigée ici** : `securite` figure dans `DEUX_PREMIERES` et juge donc DÉJÀ toute PR — l'écrire dans cette colonne promettait un contrôle qui n'existe pas | — | `partners/ADR-0010` ; `.github/CODEOWNERS`. ⚠️ **Ce `—` ne veut PAS dire « aucun agent ne peut écrire », comme pour la ligne du dessus : A01 commite ce fichier. Il veut dire qu'AUCUN label ne l'arme — c'est une LACUNE, pas une protection** (`GOV-040` la ferme par le `deny`, seul lot `--settings` surchargé). ⚠️ Et `.github/CODEOWNERS` est **mécaniquement INERTE** ici : le fichier porte déjà un attrape-tout au même propriétaire. La protection réelle est que la lentille `securite` juge TOUTE PR. — **le seul fichier du dépôt qui puisse ABSOUDRE un rouge bloquant** : une ligne y transforme un échec de Gate A en vert. `config/entite.json` ne peut que CONTRAINDRE ; celui-ci absout. Le label est celui du poste qui commite, comme les autres registres ; l'approbation bloquante est portée par le protocole de revue et par CODEOWNERS, ce dépôt n'ayant pas de label de rôle pour cette lentille. |
+
+**Ce qu'une PR d'auteur peut écrire dans `docs/tasks.json` (GOV-145, décision orale de Williams du 2026-10-04, #319, 6032352874).** Une PR
+dont la tâche n'est pas de la zone `gouvernance` peut AJOUTER aux `paths` d'une de SES tâches le chemin d'un
+fichier qu'elle touche — par `hors-depot/ajouter-path.mjs` — et rien d'autre : ni un autre champ, ni la tâche
+d'une autre PR, ni un chemin retiré, ni une tâche versée ou supprimée. La lentille `exactitude` juge cet ajout
+dans la même relecture que le code. `gov:pr` refuse tout le reste (famille
+`registre_reecrit_par_une_pr_d_auteur`) ; le reste passe toujours par un rattrapage (GOV-012).
+**Il n'y a plus de rattrapage de chemins** (décision de Williams du 2026-10-05, #319, 5988252245, point 3) :
+quand c'est sa SEULE écriture du registre, la PR d'auteur n'a pas besoin du label `role:gardien-spec` pour
+`docs/tasks.json` (`cheminsDAuteurSeuls`). Le registre est remis en ordre après coup, par lot.
 
 Deux chemins de plus, qui ne viennent pas de `docs/CONVENTIONS.md` §8 mais des fiches — leur source est dite
 dans la dernière colonne, et c'est à ce titre qu'ils entrent ici (RM-01) :

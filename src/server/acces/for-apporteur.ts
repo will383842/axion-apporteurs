@@ -90,8 +90,19 @@ export type ModeleCloisonne = (typeof MODELES_CLOISONNES)[number];
  * coordination, sécurité et juriste, 2026-10-03). Une anomalie n'est jamais affichée à l'apporteur :
  * son EFFET l'est, par la vue qui le porte, et son existence l'est sur demande d'accès (art. 15).
  * Aucune relation de l'espace n'y mène : elles sont refusées sur chaque modèle qui les porte.
+ *
+ * SEC-55 : l'appareil connu non plus. Signal de sécurité du compte, il n'est inscrit ni au dossier
+ * de l'apporteur ni sur ses dépôts ; seule la garde de connexion le lit et l'écrit
+ * (`src/server/auth/appareil.ts`), sous le compte de la session.
+ *
+ * SEC-19 (forme d'A02, #703) : la décision de contrat non plus. Son texte chiffré et ses dates ne se
+ * lisent qu'au rendu de la notification, par le passage ; l'espace lit le texte rendu.
  */
-export const MODELES_SANS_VUE_APPORTEUR = ['anomalie'] as const;
+export const MODELES_SANS_VUE_APPORTEUR = [
+  'anomalie',
+  'appareilConnu',
+  'decisionDeContrat',
+] as const;
 
 /**
  * DM-07 : les modèles cloisonnés dont la table est en AJOUT SEUL — branchée sur le gabarit
@@ -129,6 +140,10 @@ export const CLES_REFUSEES = {
     'personneDeclaree',
     'peremptionSuspendueParId',
     'peremptionSuspenduePar',
+    // DM-71 : l'auteur de l'annulation après la confirmation, un employé de la console (le marqueur
+    // lui-même ne se pose qu'avec l'annulation, garde de la base).
+    'annulationParId',
+    'annulationPar',
     'courrielsEnvoyes',
     'demandeConfirmation',
     'demandesDroitsContact',
@@ -152,7 +167,8 @@ export const CLES_REFUSEES = {
     'repondueParId',
     'reponduePar',
   ],
-  courrielEnvoye: ['id', 'apporteurId', 'apporteur', 'attribution'],
+  // DM-55 (sécurité) : la notification qu'un courriel porte est HORS DE L'ESPACE, jamais écrite d'ici.
+  courrielEnvoye: ['id', 'apporteurId', 'apporteur', 'attribution', 'notificationEspace'],
   // CPL-T06 : une décision naît de la console, jamais de l'espace — son auteur est une clé refusée,
   // et la base l'exige : aucune création n'aboutit par cette couche.
   decisionCandidature: ['id', 'apporteurId', 'apporteur', 'auteurId', 'auteur'],
@@ -177,10 +193,35 @@ export const CLES_REFUSEES = {
     'lienMagique',
   ],
   personneDeclaree: ['id', 'apporteurId', 'apporteur', 'attributions'],
-  pieceKyc: ['id', 'apporteurId', 'apporteur', 'identitesFacturation'],
+  // Le RIB à quatre yeux (migration 004750) : les deux regards sont ceux de la console, jamais de l'espace.
+  pieceKyc: [
+    'id',
+    'apporteurId',
+    'apporteur',
+    'identitesFacturation',
+    'ribVerifieParId',
+    'ribVerifiePar',
+    'ribConfirmeParId',
+    'ribConfirmePar',
+  ],
   // UX-P1-10 : l'attribution d'une notification est une référence vérifiée ; la clé d'une
   // préférence s'écrit, et Zod la juge contre la table des notifications avant la couche.
-  notificationEspace: ['id', 'apporteurId', 'apporteur', 'attribution'],
+  // DM-55 (sécurité) : le fait du journal, l'anomalie et les courriels d'une notification sont HORS DE L'ESPACE :
+  // jamais écrits d'ici, et aucun chemin de lecture de l'espace ne les suit.
+  notificationEspace: [
+    'id',
+    'apporteurId',
+    'apporteur',
+    'attribution',
+    'evenementId',
+    'faitDuJournal',
+    'anomalieId',
+    'anomalie',
+    'courriels',
+    // SEC-19 : la décision de contrat, comme l'anomalie, est HORS DE L'ESPACE.
+    'decisionContratId',
+    'decisionContrat',
+  ],
   preferenceNotification: ['id', 'apporteurId', 'apporteur'],
   // DM-12 : le porteur console ne s'écrit jamais de l'espace.
   verification: ['id', 'apporteurId', 'apporteur', 'utilisateurConsoleId', 'utilisateurConsole'],
@@ -192,7 +233,9 @@ export const REFERENCES_CLOISONNEES: Partial<
 > = {
   sessionEspace: { lienMagiqueId: 'lienMagique' },
   attribution: { jetonDepotId: 'jetonDepot', personneDeclareeId: 'personneDeclaree' },
-  courrielEnvoye: { attributionId: 'attribution' },
+  // DM-55 (sécurité, option i') : la notification d'un courriel est une référence VÉRIFIÉE — elle doit être
+  // de la session ; sa colonne n'est jamais rendue, et aucun fichier de l'espace n'écrit de courriel.
+  courrielEnvoye: { attributionId: 'attribution', notificationEspaceId: 'notificationEspace' },
   // DM-11 : la pièce rib d'une identité de facturation est une pièce de la session.
   identiteFacturation: { pieceKycId: 'pieceKyc' },
   notificationEspace: { attributionId: 'attribution' },
@@ -227,6 +270,7 @@ export const RELATIONS = {
     'jetonDepot',
     'personneDeclaree',
     'peremptionSuspenduePar',
+    'annulationPar',
     'courrielsEnvoyes',
     'demandeConfirmation',
     'demandesDroitsContact',
@@ -239,16 +283,23 @@ export const RELATIONS = {
   alerteLiberation: ['apporteur'],
   changementCourriel: ['apporteur'],
   contestation: ['apporteur', 'depotRefuse', 'attribution', 'reponduePar'],
-  courrielEnvoye: ['apporteur', 'attribution'],
+  courrielEnvoye: ['apporteur', 'attribution', 'notificationEspace'],
   decisionCandidature: ['apporteur', 'auteur'],
   depotRefuse: ['apporteur', 'contestations'],
   identiteFacturation: ['apporteur', 'pieceKyc'],
   jetonDepot: ['apporteur', 'attributions'],
   lienMagique: ['apporteur', 'utilisateurConsole', 'session'],
   personneDeclaree: ['apporteur', 'attributions'],
-  pieceKyc: ['apporteur', 'identitesFacturation'],
+  pieceKyc: ['apporteur', 'identitesFacturation', 'ribVerifiePar', 'ribConfirmePar'],
   sessionEspace: ['apporteur', 'utilisateurConsole', 'lienMagique'],
-  notificationEspace: ['apporteur', 'attribution'],
+  notificationEspace: [
+    'apporteur',
+    'attribution',
+    'faitDuJournal',
+    'anomalie',
+    'courriels',
+    'decisionContrat',
+  ],
   preferenceNotification: ['apporteur'],
   verification: ['apporteur', 'utilisateurConsole'],
 } as const satisfies Record<ModeleCloisonne, readonly string[]>;
@@ -327,6 +378,8 @@ export const CHAMPS_RENDUS = {
     'region',
     'entrepriseAVerifier',
     'lienInteretDeclare',
+    // DM-49 : l'IDCC facultatif de l'entreprise, saisi par l'apporteur, rendu tel quel.
+    'idccSaisi',
     'aQualifierDepuisAt',
     'premierContactAt',
     'confirmeeAt',
@@ -420,9 +473,21 @@ export const CHAMPS_TUS = {
     'versionQualification',
     // DM-59 : l'empreinte du jeton de la page des droits du contact, jamais rendue à l'apporteur.
     'jetonDroitsHash',
+    // DM-71 : le marqueur de l'exception et son auteur (un employé de la console) ; l'apporteur
+    // apprend l'annulation et son motif par sa notification.
+    'annulationException',
+    'annulationParId',
   ],
   changementCourriel: ['apporteurId', 'emailChiffre', 'emailHash', 'tokenHash', 'kid'],
-  courrielEnvoye: ['apporteurId', 'emailHash', 'fournisseurMessageId', 'erreur', 'attributionId'],
+  courrielEnvoye: [
+    'apporteurId',
+    'emailHash',
+    'fournisseurMessageId',
+    'erreur',
+    'attributionId',
+    // DM-55 : le lien vers la notification, hors de l'espace.
+    'notificationEspaceId',
+  ],
   // CPL-T06 : le motif chiffré (interne, purgé à l'échéance) et sa purge, la sortie du lien à
   // l'apporteur, l'auteur de la console, et la présence au webinaire, déclarative et lue par rien
   // (REQ-JUR-013).
@@ -441,7 +506,19 @@ export const CHAMPS_TUS = {
   lienMagique: ['apporteurId', 'utilisateurConsoleId', 'tokenHash', 'kid', 'codeHash'],
   personneDeclaree: ['apporteurId', 'nomChiffre', 'prenomChiffre'],
   // DM-11 : le fichier (stockage privé, REQ-SEC-026), sa purge, et l'IBAN chiffré et empreint.
-  pieceKyc: ['apporteurId', 'fichierRef', 'fichierPurgeAt', 'ibanChiffre', 'ibanHash'],
+  // Le RIB à quatre yeux (migration 004750) : qui a vérifié et confirmé, et quand — un contrôle interne
+  // de la console, que l'espace ne rend pas.
+  pieceKyc: [
+    'apporteurId',
+    'fichierRef',
+    'fichierPurgeAt',
+    'ibanChiffre',
+    'ibanHash',
+    'ribVerifieParId',
+    'ribVerifieAt',
+    'ribConfirmeParId',
+    'ribConfirmeAt',
+  ],
   sessionEspace: [
     'apporteurId',
     'utilisateurConsoleId',
@@ -451,11 +528,27 @@ export const CHAMPS_TUS = {
     'ipHash',
   ],
   // UX-P1-10 : le propriétaire, et l'attribution dont la notification parle (comme un courriel).
-  notificationEspace: ['apporteurId', 'attributionId'],
+  // DM-55 (sécurité) : l'événement et l'anomalie ne se rendent jamais ; l'espace ne lit que le texte rendu.
+  notificationEspace: [
+    'apporteurId',
+    'attributionId',
+    'evenementId',
+    'anomalieId',
+    // SEC-19 : la décision de contrat ne se rend jamais.
+    'decisionContratId',
+  ],
   preferenceNotification: ['apporteurId'],
   // SEC-47 : les secrets, le jugement de la candidature (seuil, score, parts, réponses, barème),
   // les traces d'acquisition et de parrainage, le marqueur de test, la version de session.
   apporteur: [
+    // SEC-15 : le gel est une mesure de la console. L'apporteur voit son statut `suspendu`, et les
+    // faits et la date de levée lui arrivent par la notification ; la nature du gel, l'anomalie,
+    // l'auteur et la décision citée restent tus (échec fermé).
+    'etatGel',
+    'depotsGelesDepuis',
+    'gelAnomalieId',
+    'gelPoseParId',
+    'gelDecisionContratId',
     'isTest',
     'seuilVerificationPrioritaire',
     'seuilVerificationPrioritaireAt',

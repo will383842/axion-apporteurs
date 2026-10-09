@@ -6,8 +6,10 @@
  * sur des ports en mémoire (rattrapage 81 : le témoin que la mesure de mutation exécute ; le témoin
  * en base réelle est `tests/integration/reconciliation-quotidienne.spec.ts`).
  *
- * L'autre côté rejoue la sémantique des routes RÉELLES d'axion-ia : réponse signée sur `<t>.<corps>`
- * sous le secret d'émission, avec son kid ; NDJSON ; `X-Axionia-Derniere-Sequence`, `X-Axionia-Suite`.
+ * L'autre côté rejoue la sémantique des routes RÉELLES d'axion-ia, sous le secret d'émission, avec
+ * son kid : la page de relecture est signée sur la chaîne CANONIQUE que le `$comment` de la route
+ * déclare (INT-T74-P), `<t>.<after_sequence>.<limit>.<derniere>.<suite>.<corps>` ; la réponse de
+ * rejeu, sur `<t>.<corps>`. NDJSON ; `X-Axionia-Derniere-Sequence`, `X-Axionia-Suite`.
  */
 import { describe, it, expect } from 'vitest';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
@@ -46,8 +48,8 @@ const MAINTENANT_MS = Date.UTC(2026, 9, 3, 6, 0, 0);
 const SECRET_EMISSION = randomBytes(32).toString('hex');
 const TROUSSEAU: Trousseau = { courante: SECRET_EMISSION, precedente: null };
 const T = String(Math.floor(MAINTENANT_MS / 1000));
-const signe = (corps: string) =>
-  createHmac('sha256', SECRET_EMISSION).update(`${T}.${corps}`, 'utf8').digest('hex');
+const sous = (chaine: string) =>
+  createHmac('sha256', SECRET_EMISSION).update(chaine, 'utf8').digest('hex');
 
 type Reponse = { statut?: number; corps?: string; entetes?: Record<string, string | null> };
 
@@ -64,13 +66,30 @@ function canal(
     const corps = reponse.corps ?? '';
     const entetes: Record<string, string> = {
       'x-axionia-timestamp': T,
-      'x-axionia-signature': signe(corps),
       'x-axionia-kid': kidDe(SECRET_EMISSION),
     };
-    for (const [k, v] of Object.entries(reponse.entetes ?? {})) {
+    const { 'x-axionia-signature': signature, ...autres } = reponse.entetes ?? {};
+    for (const [k, v] of Object.entries(autres)) {
       if (v === null) delete entetes[k];
       else entetes[k] = v;
     }
+    // La relecture signe la chaîne canonique de la requête REÇUE et des en-têtes SERVIS ; le rejeu,
+    // `<t>.<corps>`. Une signature imposée par le cas remplace la calculée.
+    entetes['x-axionia-signature'] =
+      u.pathname === CHEMIN_RELECTURE
+        ? sous(
+            [
+              T,
+              u.searchParams.get('after_sequence'),
+              u.searchParams.get('limit'),
+              entetes['x-axionia-derniere-sequence'] ?? '',
+              entetes['x-axionia-suite'] ?? '',
+              corps,
+            ].join('.')
+          )
+        : sous(`${T}.${corps}`);
+    if (signature === null) delete entetes['x-axionia-signature'];
+    else if (signature !== undefined) entetes['x-axionia-signature'] = signature;
     return new Response(corps, { status: reponse.statut ?? 200, headers: entetes });
   }) as typeof fetch;
   const c: CanalAxionia = {
@@ -476,7 +495,14 @@ describe('REQ-QA-026 — la tâche quotidienne et son alerte', () => {
 
   it('REQ-QA-026 : les genres d’alerte sont ceux des signaux, et l’alerte ne montre qu’un genre, un motif fermé et un nombre', () => {
     expect([...GENRES_RECONCILIATION].sort()).toEqual(
-      ['relecture_bornee', 'relecture_echouee', 'rejeu_echoue', 'trou_rattrape'].sort()
+      [
+        'relecture_bornee',
+        'relecture_echouee',
+        'rejeu_echoue',
+        'trou_rattrape',
+        // INT-T73-P : le signal du passage des sommes, qui ne porte que son nombre.
+        'ecart_de_sommes',
+      ].sort()
     );
     const id = randomUUID();
     expect(

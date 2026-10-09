@@ -1,6 +1,7 @@
 // @req REQ-UX-016
 // @req REQ-JUR-039
 // @req REQ-JUR-033
+// @req REQ-SEC-003
 /**
  * UX-P1-10 — la table SSOT des notifications (REQ-UX-016, REQ-JUR-039, REQ-JUR-033). Liste arrêtée par
  * A02 le 2026-10-02, textes d'A07.
@@ -30,6 +31,7 @@ import {
 import { SEUILS } from '../../../src/domain/seuils/ssot';
 import { TEXTES_DES_NOTIFICATIONS } from '../../../src/content/micro-copy/courriels/notifications';
 import { CONNEXION_CONSOLE } from '../../../src/content/micro-copy/console/connexion';
+import { UTILISATEURS_CONSOLE } from '../../../src/content/micro-copy/console/utilisateurs';
 import {
   ecrirePreference,
   notifier,
@@ -56,29 +58,57 @@ const CONTEXTE = {
   textes: TEXTES_DES_NOTIFICATIONS,
   console: {
     routes: ROUTES_CONSOLE,
-    textes: { lien_magique_console: CONNEXION_CONSOLE.courriel },
+    textes: {
+      lien_magique_console: CONNEXION_CONSOLE.courriel,
+      // SEC-30 : l'invitation et la création d'un administrateur, textes de la juriste.
+      invitation_console: UTILISATEURS_CONSOLE.courriels.invitation,
+      admin_cree: UTILISATEURS_CONSOLE.courriels.adminCree,
+      // SEC-30 : la réactivation d'un administrateur, texte de la juriste (rattrapage 98).
+      admin_reactive: UTILISATEURS_CONSOLE.courriels.adminReactive,
+    },
   },
 };
 const table = (): Record<string, LigneDeNotification> =>
   structuredClone(GABARITS) as Record<string, LigneDeNotification>;
 
-describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs règles', () => {
-  it('REQ-UX-016 : la table porte EXACTEMENT les dix clés arrêtées — les neuf de l’apporteur, dont la micro-copie porte les mêmes, et le lien de la console', () => {
+describe('REQ-UX-016 — la table des notifications, ses clés et leurs règles', () => {
+  it('REQ-UX-016 : la table porte EXACTEMENT les clés arrêtées — celles de l’apporteur, dont la micro-copie porte les mêmes, et celles de la console', () => {
     const attendues = [
+      // DM-25 : l'annulation pour antériorité de la Société (art. 3.3), clé NEUVE (coordination).
+      'attribution_annulee_anteriorite',
       'attribution_liberee',
       'decision_attribution',
       'depot_injoignable_j5',
       'lien_magique',
+      // SEC-19 (A02, #703) : la mise en demeure et la fin du contrat.
+      'mise_en_demeure',
+      // SEC-62 (texte du rattrapage 102) : l'avis de sécurité du compte, texte de la juriste.
+      'nouvel_appareil',
       'premier_rang_libere',
       'rappel_rc_pro',
       'rattachement_decide',
       'refus_declaration',
+      'resiliation',
       'suspension_declarations',
     ];
-    // SEC-29 : la dixième, destinée à la console ; ses textes vivent avec la console.
-    expect(Object.keys(GABARITS).sort()).toEqual([...attendues, 'lien_magique_console'].sort());
+    // SEC-29 et SEC-30 : les clés destinées à la console ; leurs textes vivent avec la console.
+    expect(Object.keys(GABARITS).sort()).toEqual(
+      [
+        ...attendues,
+        'lien_magique_console',
+        'invitation_console',
+        'admin_cree',
+        'admin_reactive',
+      ].sort()
+    );
     expect(Object.keys(TEXTES_DES_NOTIFICATIONS).sort()).toEqual(attendues);
-    expect(GABARITS.lien_magique_console.destinataire).toBe('utilisateur_console');
+    for (const cle of [
+      'lien_magique_console',
+      'invitation_console',
+      'admin_cree',
+      'admin_reactive',
+    ] as const)
+      expect(GABARITS[cle].destinataire).toBe('utilisateur_console');
     for (const c of attendues) expect(schemaGabarit.safeParse(c).success).toBe(true);
     expect(schemaGabarit.safeParse('relance_dormance').success).toBe(false);
   });
@@ -108,14 +138,21 @@ describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs rè
     expect(lu).toEqual({
       lien_magique: 'T/F',
       lien_magique_console: 'T/F',
+      invitation_console: 'T/F',
+      admin_cree: 'T/F',
+      admin_reactive: 'T/F',
       depot_injoignable_j5: 'F/F',
       attribution_liberee: 'T/F',
+      attribution_annulee_anteriorite: 'T/F',
       decision_attribution: 'T/F',
       premier_rang_libere: 'T/T',
       refus_declaration: 'T/F',
       suspension_declarations: 'T/T',
       rappel_rc_pro: 'F/F',
       rattachement_decide: 'T/F',
+      nouvel_appareil: 'T/F',
+      mise_en_demeure: 'T/T',
+      resiliation: 'T/T',
     });
   });
 
@@ -147,6 +184,10 @@ describe('REQ-UX-016 — la table des notifications, ses neuf clés et leurs rè
     expect(casse('rappel_rc_pro', { route: null, routeEnAttente: null })).toContain(
       'route_absente_sans_tache'
     );
+    // SEC-70 : un appel qui mène au contact de l'entité (la demande écrite) n'a pas de route, et c'est juste.
+    expect(
+      casse('rappel_rc_pro', { route: null, routeEnAttente: null, lien: 'contact_entite' })
+    ).not.toContain('route_absente_sans_tache');
   });
 });
 
@@ -484,5 +525,183 @@ describe('REQ-UX-016 — la fin d’une réservation se dit selon sa cause (A07,
         )
       )
     ).toBe('parametre_en_trop');
+  });
+});
+
+describe('REQ-SEC-003 — l’avis « nouvel appareil » (SEC-62, texte de la juriste du rattrapage 102)', () => {
+  it('REQ-SEC-003 : le sujet et le corps de la juriste, MOT POUR MOT, et UN appel vers la page de connexion, sans jeton ni paramètre', () => {
+    expect(TEXTES_DES_NOTIFICATIONS.nouvel_appareil).toEqual({
+      titre: 'Connexion à votre espace depuis un nouvel appareil',
+      appel: 'Demander un nouveau lien de connexion',
+      corps:
+        "Votre lien de connexion a été utilisé le {dateHeure} sur un appareil que nous ne connaissions pas encore pour votre compte. Si c'est bien vous, vous n'avez rien à faire. Sinon, ne cliquez sur aucun lien reçu que vous n'avez pas demandé, demandez un nouveau lien de connexion depuis la page de connexion, et écrivez à Axion-IA.",
+    });
+    expect(GABARITS.nouvel_appareil.route).toBe('/connexion');
+    expect(GABARITS.nouvel_appareil.actions).toEqual([
+      {
+        libelle: 'Demander un nouveau lien de connexion',
+        source: 'src/content/micro-copy/courriels/notifications.ts',
+      },
+    ]);
+    const r = rendreLaNotification('nouvel_appareil', { dateHeure: '4 octobre 2026 à 10 h 37' });
+    expect(r.titre).toBe('Connexion à votre espace depuis un nouvel appareil');
+    expect(r.corps).toContain(
+      'Votre lien de connexion a été utilisé le 4 octobre 2026 à 10 h 37 sur un appareil'
+    );
+    expect(r.appel).toBe('Demander un nouveau lien de connexion');
+  });
+
+  it('REQ-SEC-003 : un avis de sécurité du COMPTE — émis par SEC-62 sur un événement, obligatoire, par courriel seul, jamais désactivable, sans délai', () => {
+    expect(GABARITS.nouvel_appareil).toMatchObject({
+      destinataire: 'apporteur',
+      req: 'REQ-SEC-003',
+      emetteur: 'SEC-62',
+      declencheur: 'evenement',
+      notificationObligatoire: true,
+      faitCourirUnDelai: false,
+      canaux: ['email'],
+      desactivable: false,
+      routeEnAttente: null,
+    });
+    expect(schemaGabarit.safeParse('nouvel_appareil').success).toBe(true);
+    expect(
+      schemaPreferenceNotification.safeParse({ cle: 'nouvel_appareil', active: true }).success
+    ).toBe(true);
+    expect(
+      schemaPreferenceNotification.safeParse({ cle: 'nouvel_appareil', active: false }).success
+    ).toBe(false);
+  });
+
+  it('REQ-SEC-003 : TÉMOIN — rien sur l’appareil : la date et l’heure sont le SEUL paramètre, ni lieu, ni navigateur, ni adresse réseau', () => {
+    expect(parametresDe('nouvel_appareil')).toEqual(['dateHeure']);
+    const texte = Object.values(TEXTES_DES_NOTIFICATIONS.nouvel_appareil).join(' ');
+    expect(texte).not.toMatch(/navigateur|adresse IP|adresse réseau|\blieu\b|ville|pays/i);
+    expect(() => rendreLaNotification('nouvel_appareil', {})).toThrow();
+    expect(() =>
+      rendreLaNotification('nouvel_appareil', { dateHeure: '4 octobre 2026', navigateur: 'x' })
+    ).toThrow();
+  });
+});
+
+// La passe de mutation (PR 667) a montré des fautes de la table jugées sans leur TEXTE, et des
+// branches jamais prises : chaque faute est ici rendue mot pour mot, sur une table cassée d'un geste.
+describe('REQ-UX-016 — chaque faute de la table, nommée mot pour mot', () => {
+  const ligneDe = (cle: Gabarit, extra: Partial<LigneDeNotification>) => ({
+    [cle]: { ...(GABARITS[cle] as LigneDeNotification), ...extra },
+  });
+  const fautes = (t: Record<string, LigneDeNotification>) => fautesDeLaTable(t, CONTEXTE);
+
+  it('REQ-UX-016 : TÉMOIN — le texte absent et la route non déclarée nomment LEUR source, espace ou console', () => {
+    const sansTextes = { ...CONTEXTE, textes: {}, console: { ...CONTEXTE.console, textes: {} } };
+    expect(fautesDeLaTable(ligneDe('lien_magique', {}), sansTextes)).toContain(
+      "texte_absent : lien_magique n'a pas de texte dans src/content/micro-copy/courriels/notifications.ts"
+    );
+    expect(fautesDeLaTable(ligneDe('admin_cree', {}), sansTextes)).toContain(
+      "texte_absent : admin_cree n'a pas de texte dans src/content/micro-copy/console/connexion.ts"
+    );
+    expect(fautes(ligneDe('lien_magique', { route: '/nulle-part' }))).toContain(
+      'route_non_declaree : lien_magique mène à /nulle-part, absente de docs/ESPACE-ROUTES.md'
+    );
+    expect(fautes(ligneDe('admin_cree', { route: '/console/nulle-part' }))).toContain(
+      'route_non_declaree : admin_cree mène à /console/nulle-part, absente de docs/CONSOLE-ROUTES.md'
+    );
+  });
+
+  it('REQ-UX-016 : TÉMOIN — l’action est UNE, et c’est l’appel de la micro-copie', () => {
+    const a = GABARITS.lien_magique.actions[0]!;
+    const faute = 'action_non_unique : lien_magique doit porter UN appel, celui de la micro-copie';
+    expect(fautes(ligneDe('lien_magique', {}))).toEqual([]);
+    expect(fautes(ligneDe('lien_magique', { actions: [] }))).toEqual([faute]);
+    expect(fautes(ligneDe('lien_magique', { actions: [a, a] }))).toEqual([faute]);
+    expect(fautes(ligneDe('lien_magique', { actions: [{ ...a, libelle: 'Autre' }] }))).toEqual([
+      faute,
+    ]);
+    // L'action d'une clé de l'apporteur vient de SA micro-copie, source nommée.
+    expect(GABARITS.lien_magique.actions).toEqual([
+      {
+        libelle: TEXTES_DES_NOTIFICATIONS.lien_magique.appel,
+        source: 'src/content/micro-copy/courriels/notifications.ts',
+      },
+    ]);
+  });
+
+  it('REQ-JUR-039 : TÉMOIN — une date fixe exige « art. » suivi d’un numéro, espace ou non', () => {
+    const fixe = (fondement: string) =>
+      fautes(ligneDe('rappel_rc_pro', { declencheur: 'calendrier_fixe', fondement }));
+    const faute =
+      'calendrier_sans_article : rappel_rc_pro part à date fixe sans article du contrat qui la fixe';
+    expect(fixe('contrat art. 6.4')).toEqual([]);
+    expect(fixe('contrat art.6')).toEqual([]);
+    expect(fixe('contrat art.  12')).toEqual([]);
+    expect(fixe('contrat art. six')).toEqual([faute]);
+    expect(fixe('contrat article 6')).toEqual([faute]);
+  });
+
+  it('REQ-UX-016 : TÉMOIN — l’émetteur cite l’exigence par ses REQ OU par son acceptance ; sinon, nommé', () => {
+    const l = GABARITS.lien_magique as LigneDeNotification;
+    const avec = (t: Tache) => fautesDeLaTable({ lien_magique: l }, { ...CONTEXTE, registre: [t] });
+    const faute = `emetteur_sans_exigence : ${l.emetteur} ne cite pas ${l.req} (lien_magique)`;
+    expect(avec({ id: l.emetteur, phase: 1, reqs: [l.req] })).toEqual([]);
+    expect(avec({ id: l.emetteur, phase: 1, acceptance: `… ${l.req} …` })).toEqual([]);
+    expect(avec({ id: l.emetteur, phase: 1 })).toEqual([faute]);
+    expect(avec({ id: l.emetteur, phase: 1, reqs: ['REQ-AUTRE-001'], acceptance: 'rien' })).toEqual(
+      [faute]
+    );
+  });
+
+  it('REQ-UX-016 : TÉMOIN À DEUX FACES — désactiver une clé obligatoire est refusé sur `active`, nommé ; une clé désactivable se désactive', () => {
+    const r = schemaPreferenceNotification.safeParse({ cle: 'lien_magique', active: false });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues.map((i) => [i.code, i.path.join('.')])).toEqual([['custom', 'active']]);
+    expect(r.error?.issues[0]?.message).toBe(
+      `notification obligatoire « lien_magique » : elle ne se désactive pas (${GABARITS.lien_magique.fondement})`
+    );
+    const libre = Object.entries(GABARITS).find(([, l]) => l.desactivable)?.[0];
+    expect(libre).toBeDefined();
+    expect(schemaPreferenceNotification.safeParse({ cle: libre, active: false }).success).toBe(
+      true
+    );
+    expect(
+      schemaPreferenceNotification.safeParse({ cle: 'lien_magique', active: true }).success
+    ).toBe(true);
+    expect(schemaPreferenceNotification.safeParse({ cle: 'lien_magique' }).success).toBe(false);
+  });
+});
+
+describe('REQ-JUR-007 — la notification de l’annulation pour antériorité (DM-25, juriste)', () => {
+  it('REQ-JUR-007 : la fiche de la clé neuve — art. 3.3, événement, courriel et espace, obligatoire, non désactivable, vers Mes entreprises', () => {
+    expect(GABARITS.attribution_annulee_anteriorite).toMatchObject({
+      destinataire: 'apporteur',
+      req: 'REQ-JUR-007',
+      emetteur: 'DM-25',
+      declencheur: 'evenement',
+      notificationObligatoire: true,
+      faitCourirUnDelai: false,
+      canaux: ['email', 'espace'],
+      desactivable: false,
+      route: '/mes-entreprises',
+      routeEnAttente: null,
+    });
+    expect(GABARITS.attribution_annulee_anteriorite.fondement).toMatch(/art. 3.3/);
+  });
+
+  it('REQ-JUR-007 : TÉMOIN — le texte de la juriste, MOT POUR MOT : le motif, les commissions acquises qui restent, le droit de contester', () => {
+    expect(TEXTES_DES_NOTIFICATIONS.attribution_annulee_anteriorite).toEqual({
+      titre: '{entreprise} : votre dépôt est annulé — antériorité de la Société',
+      appel: 'Voir Mes entreprises',
+      corps:
+        "Axion-IA connaissait déjà cette entreprise à la date de votre dépôt (contrat, article 3.3) : votre dépôt est annulé, et aucune commission nouvelle n'est due à son titre. Les commissions déjà acquises restent acquises. Vous pouvez contester cette décision par écrit ; Axion-IA vous répond de façon motivée dans les {delaiReponse}.",
+    });
+  });
+
+  it('REQ-JUR-007 : le délai de réponse vient de la SSOT, jamais écrit en clair ; l’entreprise est le seul paramètre de l’émettrice', () => {
+    expect(parametresDe('attribution_annulee_anteriorite')).toEqual(['entreprise']);
+    const r = rendreLaNotification('attribution_annulee_anteriorite', {
+      entreprise: 'Atelier Dupont',
+    });
+    expect(r.corps).toContain(
+      `${SEUILS.REPONSE_CONTESTATION_JOURS.valeur} ${SEUILS.REPONSE_CONTESTATION_JOURS.unite}`
+    );
+    expect(r.titre).toContain('Atelier Dupont');
   });
 });

@@ -203,6 +203,14 @@ describe('REQ-DM-029 — un montant absent ferme la protection, il ne l’ouvre 
   const charge = (type: string): Record<string, unknown> => {
     const p = { ...PRODUCTEUR.evenements.find((x) => x.event_type === type)!.payload };
     if (type === 'facture.emise') p.devisId = null;
+    // INT-T48-P : la v3 exige `prixReferenceHtCents` (nullable) sur chaque ligne du devis signé, que la
+    // fixture du producteur ne porte pas encore (exemption nommée de `contrat-hash.spec.ts`) : une
+    // ligne SANS prix de référence, forme v3 permise. Le montant total, lui, reste celui qu'on retire.
+    if (type === 'devis.signe' && Array.isArray(p.lignes))
+      p.lignes = (p.lignes as Record<string, unknown>[]).map((l) => ({
+        prixReferenceHtCents: null,
+        ...l,
+      }));
     return p;
   };
   const sansChamp = (c: Record<string, unknown>, champ: string) =>

@@ -12,7 +12,7 @@
 | Écran | Fichier | Tâche | Validé le | Par |
 | --- | --- | --- | --- | --- |
 | Accueil (3 chiffres, 1 alerte, 1 champ, 4 onglets) | `accueil.html` | UX-P1-08 | 2026-09-19 | Will |
-| Entreprise (recherche + carte 4 états + « Déposer ») — à revalider (« Personne ne suit… » devient « disponible », et l'attente porte la phrase de la juriste, après la validation du 19/09) | `entreprise.html` | UX-P1-01 | 2026-09-19 | Will |
+| Entreprise (recherche + carte 4 états + « Déposer ») — à revalider (« Personne ne suit… » devient « disponible », et l'attente porte la phrase de la juriste, après la validation du 19/09 ; EXT-T06 ajoute l'état « Carte : libre, déjà déposée par le passé ») | `entreprise.html` | UX-P1-01 | 2026-09-19 | Will |
 | Déposer un contact (W20 : quatre coordonnées, message, carte Annuler / Corriger) — à revalider (« Un autre apporteur suit… » devient « déjà réservée », après la validation du 03/10) | `deposer.html` | UX-P1-02 | 2026-10-03 | Will |
 | Mes entreprises (W20 : badges de la confirmation) — à revalider (libellé du rattrapage 70, après la validation du 03/10) | `mes-entreprises.html` | UX-P1-05 | 2026-10-03 | Will |
 | Réponse du contact (page publique /confirmer) | `confirmation-contact.html` | UX-P1-42 | 2026-10-03 | Will |
@@ -23,7 +23,8 @@
 | Fiche d'une entreprise (frise, échanges) | `mes-entreprises-fiche.html` | EXT-T01 | 2026-10-03 | Will |
 | Personnes qui agissent pour l'apporteur | `personnes.html` | UX-P1-15 | 2026-10-03 | Will |
 | Dépôt par lien privé | `depot-lien-prive.html` | UX-P1-03 | 2026-10-03 | Will |
-| Notifications | `notifications.html` | UX-P1-08 | 2026-10-03 | Will |
+| Notifications | `notifications.html` | UX-P1-08 · UX-P1-54 | 2026-10-03 | Will |
+| Ma contestation (relire son écrit et la réponse de la Société) | `contestation.html` | UX-P1-51 | 2026-10-07 | Will |
 
 ### Séance de validation W20 (confirmation par e-mail)
 
@@ -75,6 +76,8 @@ tableaux de l'annexe passent en cartes sous 640 px.
 | Fiche prospect | `fiche-prospect.html` | EXT-T02a | 2026-10-03 | Will |
 | Éditeur de grille (modèle, édition en masse, complétude) | `grille-console.html` | UX-P1-14 | 2026-10-03 | Will |
 | Saisie manuelle d'une candidature et CV | `saisie-manuelle-console.html` | EXT-T04 | 2026-10-03 | Will |
+| Mise en demeure (article, faits, envoi daté) | `mise-en-demeure.html` | UX-P1-57 | 2026-10-07 | Will |
+| Anomalies : les ouvertes, et confirmer avec les faits retenus — en attente de Williams | `anomalies.html` | UX-P1-56 |  |  |
 
 ### Refonte de la console en barre latérale (UX-P1-50)
 
@@ -133,6 +136,13 @@ Pour la console, Will regarde en plus :
    la qualification, le lecteur sans aucune écriture.)
 2. À 375 px, la barre du bas suffit-elle pour le geste principal du rôle, sans défilement horizontal ?
 3. Les deux thèmes, clair et sombre, se lisent-ils aussi bien l'un que l'autre ?
+
+### Séance du 2026-10-07 : la mise en demeure et la contestation
+
+Williams valide les deux maquettes qui attendaient sa validation, sa réponse TELLE QUELLE : « ok pour
+les deux maquettes » (#319, commentaire 6032238671, relayée par la juriste). Elle porte sur
+`mise-en-demeure.html` (UX-P1-57) et sur `contestation.html` (UX-P1-60, écran d'UX-P1-51), dans sa
+version à six états.
 
 ## Ce que Will regarde
 

@@ -3,13 +3,19 @@
  *
  * UN SEUL VERDICT, défaut FERMÉ : un statut absent de la liste blanche, inconnu ou mal orthographié
  * ne donne pas accès.
- *   — `plein` : `signe` et `suspendu` — la suspension déconnecte mais ne coupe pas l'accès
- *     (REQ-SEC-032) ;
+ *   — `plein` : `signe` et `suspendu` — la suspension ne gèle que l'enregistrement des nouvelles
+ *     déclarations : elle ne déconnecte pas et ne coupe pas l'accès (contrat v2, art. 3.7 al. 3 ;
+ *     REQ-SEC-032) ;
  *   — `limite` : `kyc_en_cours` et `pret_a_signer` — l'apporteur entre, mais ne voit que « Ma
  *     conformité » et « Mon contrat » (décision de Williams du 2026-10-01, qui amende
  *     HYP-SEC03-ACCES) ;
- *   — `ferme` : tout le reste. `resilie` y est : la lecture seule après résiliation est un autre
- *     niveau, que sa tâche ajoutera.
+ *   — `ferme` : tout le reste, `resilie` COMPRIS. SEC-70 (contrat v2, art. 12.3 : « son lien
+ *     personnel est révoqué à la fin du contrat » ; décision de Williams, art. 2.8) : l'ACCÈS À
+ *     L'ESPACE est coupé à la fin du contrat, quels que soient ses droits en cours. Les autofactures,
+ *     les décomptes et les motifs de blocage partent par courrier électronique.
+ *   — `lecture` (SEC-19) n'est plus RENDU par `niveauDAcces` depuis SEC-70 : le niveau, sa liste de
+ *     segments et le refus `lecture_seule` des gardes restent en DÉFENSE, inatteignables (condition
+ *     3 de la sécurité, #474 6032838727).
  *
  * LES SEGMENTS SONT UNE UNION FERMÉE (décision A02, SEC-43) : le premier segment de chaque route de
  * l'espace (`docs/ESPACE-ROUTES.md`, l'accueil `/` s'appelle `accueil`) est dans exactement une des
@@ -24,6 +30,20 @@
 
 /** Ce que l'ouverture LIMITÉE atteint : « Ma conformité » et « Mon contrat ». */
 export const SEGMENTS_LIMITES = ['conformite', 'mon-contrat'] as const;
+
+/**
+ * SEC-19 (critères de la sécurité, #703) : ce que la LECTURE d'un résilié atteint — un sous-ensemble
+ * EXPLICITE des segments protégés, défaut fermé : un segment ajouté plus tard à `SEGMENTS_PLEINS`
+ * n'y entre que par décision. Ni dépôt, ni entreprise, ni filleuls, ni profil, ni conformité.
+ */
+export const SEGMENTS_LECTURE = [
+  'accueil',
+  'mes-commissions',
+  'mes-entreprises',
+  'notifications',
+  'documents',
+  'mon-contrat',
+] as const;
 
 /** Ce que seule l'ouverture PLEINE atteint. */
 export const SEGMENTS_PLEINS = [
@@ -40,6 +60,10 @@ export const SEGMENTS_PLEINS = [
   'activite',
   'ressources',
   'aide',
+  // UX-P1-51 : l'apporteur relit sa contestation et la réponse d'Axion-IA (REQ-DM-043). En PLEIN
+  // seulement (arbitrage de la coordination sur #775 : le contrat v2 fait foi, art. 12.3, SEC-70) :
+  // un résilié n'y a pas accès.
+  'contestations',
 ] as const;
 
 /**
@@ -58,8 +82,9 @@ export type SegmentProtege =
   | typeof SEGMENT_DE_L_ACCEPTATION;
 
 /** Le niveau d'accès à l'espace. */
-export type NiveauDAcces = 'plein' | 'limite' | 'ferme';
+export type NiveauDAcces = 'plein' | 'limite' | 'lecture' | 'ferme';
 
+/** Le niveau d'un statut. SEC-70 : un résilié est FERMÉ, sans exception. */
 export function niveauDAcces(statut: string | null): NiveauDAcces {
   if (statut === 'signe' || statut === 'suspendu') return 'plein';
   if (statut === 'kyc_en_cours' || statut === 'pret_a_signer') return 'limite';
@@ -78,6 +103,10 @@ export function peutOuvrirLEspace(statut: string | null): boolean {
  */
 export function routeOuverte(niveau: NiveauDAcces, segment: string): boolean {
   if (niveau === 'ferme') return false;
+  if (niveau === 'lecture') {
+    const lus: readonly string[] = SEGMENTS_LECTURE;
+    return lus.includes(segment) || segment === SEGMENT_DE_L_ACCEPTATION;
+  }
   const limites: readonly string[] = SEGMENTS_LIMITES;
   if (limites.includes(segment) || segment === SEGMENT_DE_L_ACCEPTATION) return true;
   const pleins: readonly string[] = SEGMENTS_PLEINS;
