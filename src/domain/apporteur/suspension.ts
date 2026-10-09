@@ -43,6 +43,7 @@ export type FaitsDeSuspension =
     };
 
 export type CodeDeSuspension =
+  | 'motif_hors_liste'
   | 'statut_non_suspendable'
   | 'deja_suspendu'
   | 'anomalie_non_confirmee'
@@ -65,6 +66,10 @@ export function jugerLaPose(
   e: { statut: StatutApporteur; etatGel: EtatDeGel; faits: FaitsDeSuspension },
   maintenant?: Instant
 ): void {
+  // JUR-T24 (REQ-JUR-031) : le type est fermé, l'exécution aussi — un motif forcé hors de la liste est refusé.
+  if (!(MOTIFS_DE_SUSPENSION as readonly string[]).includes(e.faits.motif)) {
+    throw new ErreurDeSuspension('motif_hors_liste');
+  }
   if (e.etatGel !== 'libre') throw new ErreurDeSuspension('deja_suspendu');
   if (e.statut !== 'signe') throw new ErreurDeSuspension('statut_non_suspendable');
   if (e.faits.motif === 'gele_fraude') {
