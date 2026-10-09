@@ -93,6 +93,10 @@ export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction
   'tache:suspensions_lever': 'sans_contact',
   // DM-71 (sécurité) : une décision notifiée à l'apporteur, et aucune entreprise n'est contactée.
   'action:annuler_apres_confirmation': 'sans_contact',
+  // UX-P1-56 : confirmer une anomalie de sincérité est un geste interne sur un dépôt, pas une prise de
+  // contact d'une entreprise.
+  'ecran:anomalies': 'sans_contact',
+  'action:confirmer_anomalie': 'sans_contact',
 };
 
 /** Les actions et tâches qui doivent appeler la garde de la réserve. */

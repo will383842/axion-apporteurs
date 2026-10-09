@@ -132,6 +132,10 @@ export default defineConfig({
       // processus sur des doubles — sans eux, les 94 mutants de `mise-en-demeure/actions.ts` sortaient
       // « sans couverture » (porte A de la PR 748 : 30,99 %).
       'tests/unit/console/mise-en-demeure.spec.ts',
+      // UX-P1-56 : les témoins de la confirmation d'une anomalie (droit relu, clôture chiffrée, transition
+      // selon l'état), en processus sur des doubles ; sans eux, `anomalies/confirmer.ts` sortirait
+      // « sans couverture ».
+      'tests/unit/console/confirmer-anomalie.spec.ts',
     ],
     exclude: [
       ...(base.test?.exclude ?? []),

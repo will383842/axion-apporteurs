@@ -654,6 +654,19 @@ export function budgetUx(nom: string): BudgetUx {
  * caractères de contrôle. Elle se juge à la SAISIE dans la console (tâche à venir) ; à l'ENVOI, elle
  * n'est qu'un filet : au-delà, aucun courriel, jamais une troncature.
  */
+/**
+ * EXT-T06 (REQ-EXT-006) — l'ancienneté minimale du signal « Déjà déposée par le passé » : il n'apparaît
+ * que si la DERNIÈRE attribution terminée sur le SIREN l'est depuis PLUS de ce nombre de jours civils de
+ * Paris ; avant, l'état « disponible » est rendu tel quel (juriste, à la demande de la sécurité).
+ */
+export const SIGNAL_DEJA_DECLAREE_ANCIENNETE_JOURS = {
+  valeur: 30,
+  unite: 'jours',
+  source:
+    'juriste, à la demande de la sécurité (#319, 6036622439) : la dernière fin, en jours civils de Paris',
+  verifieLe: '2026-10-07',
+} as const;
+
 export const FAITS_ANOMALIE_CARACTERES_MAX = {
   valeur: 1000,
   unite: 'points_de_code',

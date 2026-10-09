@@ -37,6 +37,7 @@
  */
 import type { Prisma, PrismaClient, TypeEvenementJournal, AgregatJournal } from '@prisma/client';
 import { CHARGES_PAR_TYPE, TRANSITIONS_DU_JOURNAL_APPORTEUR } from '../../domain/evenement/charges';
+import { ETATS_TERMINES } from '../../domain/attribution/machine';
 import { calculerSelfHash, type LigneJournal } from '../../domain/evenement/journal';
 
 /**
@@ -303,4 +304,49 @@ export async function acteursDUneTransition(
     if (!lu.success) throw new Error('lecture_du_journal_refusee : charge hors schéma');
     return lu.data.acteur.id ?? null;
   });
+}
+
+/**
+ * EXT-T06 — LECTEUR RÉSERVÉ du signal « Déjà déposée par le passé » (conditions de la sécurité, relayées
+ * par la coordination). Il rend la date de fin de la DERNIÈRE attribution terminée sur ce SIREN, quel
+ * qu'en soit le porteur, ou `null` ; RIEN d'autre : ni porteur, ni identifiant, ni charge, ni nombre.
+ *   — Les événements se trouvent par les ATTRIBUTIONS du SIREN (`agregat_id` parmi leurs ids), jamais
+ *     en lisant un SIREN dans une charge.
+ *   — UNE seule requête, agrégée en base (le dernier événement de chaque attribution, par une jointure
+ *     latérale) : le temps de réponse ne dépend pas du nombre d'attributions terminées (note de la
+ *     sécurité sur #812).
+ *   — Une attribution compte si son état est dans la liste FERMÉE `ETATS_TERMINES`, et si son DERNIER
+ *     `attribution_etat_modifie` dit, lisiblement, qu'elle y est passée ; la fin est son `survenuAt`.
+ *   — ÉCHEC FERMÉ : une charge illisible, un événement absent ou discordant, une erreur de lecture
+ *     rendent `null`, donc AUCUN signal : échouer ne rend rien de différent de « jamais déposée ».
+ * Seul le service de la vérification l'appelle ; le booléen se calcule en mémoire, jamais stocké ni
+ * journalisé.
+ */
+export async function derniereFinSurLeSiren(
+  client: Pick<PrismaClient, '$queryRaw'> | Prisma.TransactionClient,
+  siren: string
+): Promise<Date | null> {
+  try {
+    const terminees = await client.$queryRaw<
+      { statut: string; survenu_at: Date | null; charge: unknown }[]
+    >`
+      SELECT a.statut::text AS statut, d.survenu_at, d.charge
+      FROM attributions a
+      LEFT JOIN LATERAL (
+        SELECT e.survenu_at, e.charge FROM evenements e
+        WHERE e.type = 'attribution_etat_modifie' AND e.agregat = 'attribution' AND e.agregat_id = a.id
+        ORDER BY e.survenu_at DESC, e.id DESC
+        LIMIT 1
+      ) d ON true
+      WHERE a.siren = ${siren} AND a.statut::text = ANY(${[...ETATS_TERMINES]}::text[])`;
+    let fin: Date | null = null;
+    for (const a of terminees) {
+      const lue = CHARGES_PAR_TYPE.attribution_etat_modifie.safeParse(a.charge);
+      if (a.survenu_at === null || !lue.success || lue.data.vers !== a.statut) return null;
+      if (fin === null || a.survenu_at > fin) fin = a.survenu_at;
+    }
+    return fin;
+  } catch {
+    return null;
+  }
 }

@@ -110,6 +110,11 @@ export const MATRICE_DES_ROLES = {
   // relèvement est exigé par le geste, que l'action rejuge.
   'ecran:mise_en_demeure': { roles: ['admin'], stepUp: false },
   'action:mettre_en_demeure': { roles: ['admin'], stepUp: true },
+  // UX-P1-56 (coordination, conditions de la sécurité) : confirmer une anomalie de sincérité, seul
+  // fondement d'un gel pour fraude (SEC-15), à l'admin SEUL, sous step-up ; le droit est relu en base par
+  // le geste. Son écran, à l'admin seul : le relèvement est exigé par le geste, que l'action rejuge.
+  'ecran:anomalies': { roles: ['admin'], stepUp: false },
+  'action:confirmer_anomalie': { roles: ['admin'], stepUp: true },
   // DM-71 (art. 3.3 du v2) : l'annulation après la confirmation, pour erreur d'identification ou pour
   // fraude, est un geste humain de l'administrateur, sous step-up (sécurité, rattrapage 119).
   'action:annuler_apres_confirmation': { roles: ['admin'], stepUp: true },
