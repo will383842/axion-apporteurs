@@ -64,6 +64,8 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
       // SEC-61 : la pose et la levée d'un gel du journal des accès à la console.
       'journal_acces_gel_modifie',
       'journal_ouvert',
+      // SEC-69 : le premier regard d'un RIB, sa vérification hors bande.
+      'piece_kyc_rib_verifie',
       'piece_kyc_statut_modifie',
       'rattachement_manuel_modifie',
       // SEC-30 : tout changement d'un utilisateur de la console, dans la transaction du geste.

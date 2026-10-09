@@ -115,6 +115,7 @@ export type TypeEvenementJournal =
   | 'apporteur_mis_en_demeure'
   | 'apporteur_gel_modifie'
   | 'acces_coordonnees_reservee'
+  | 'piece_kyc_rib_verifie'
   | 'apporteur_resiliation_notifiee';
 
 /**
@@ -489,6 +490,21 @@ export const CHARGES_PAR_TYPE = {
    */
   acces_coordonnees_reservee: z
     .object({
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
+    })
+    .strict(),
+  /**
+   * SEC-69 (la sécurité, #747, 5986810177 §2) : le PREMIER regard d'un RIB — sa vérification hors bande —
+   * a son événement chaîné propre, sur l'agrégat `piece_kyc`. Le journal chaîné rend une réécriture
+   * visible ; avant lui, seule la garde de la base protégeait ce regard. Un fait daté, PAS un
+   * changement de statut (la pièce reste `a_verifier`) : `piece_kyc_statut_modifie` n'est pas touché.
+   * L'acteur est le vérificateur, un utilisateur de la console ; ni IBAN, ni empreinte, ni fichier.
+   */
+  piece_kyc_rib_verifie: z
+    .object({
+      type: z.literal('rib'),
       acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
         message: 'acteur_console_attendu',
       }),

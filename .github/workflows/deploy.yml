@@ -35,7 +35,9 @@ name: Image
 
 on:
   pull_request:
-  push: { branches: [main] }
+  # GOV-160 (#319, 6077512137) : plus declenche sur push de main. La production n est pas demarree
+  # (secrets absents) et le job deployer y echouait 111 fois sur 131. Les jobs publier, deployer et
+  # alerter restent ecrits, gardes par `push` : ils se rearment en remettant ce declencheur.
 
 concurrency:
   group: image-${{ github.ref }}

@@ -33,11 +33,15 @@
  * entre dans la liste fermée, `facture.emise` gagne `devisId`, et les montants en centimes portent
  * `minimum: 0` hors de l'avoir, négatif par conception. Une seule montée pour les trois.
  *
+ * QUATRE depuis INT-T76-P (lot OPCO ; forme d'A02, #656 et #737) : le type `financement.etape`
+ * entre dans la liste fermée, et la fiche du client gagne `opco`. Une seule montée pour les deux ;
+ * la bascule est en lockstep avec axion-ia, et la réception tient une fenêtre où la v3 reste traitée.
+ *
  * C'EST LA SEULE DÉFINITION. `events.zod.ts` en porte une copie, mais GÉNÉRÉE par
  * `scripts/contracts/export.ts` depuis celle-ci, et tenue par `pnpm contracts:hash` ; `events.ts`
  * la ré-exporte sans la redéfinir.
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** Un fragment de JSON Schema — assez pour décrire un champ, sans dépendre d'une bibliothèque. */
 export type FragmentSchema = Record<string, unknown>;

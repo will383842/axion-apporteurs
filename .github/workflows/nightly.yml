@@ -27,53 +27,21 @@ on:
     # 03:17 UTC — hors des heures de fusion, et décalé de l'heure ronde où tout le monde planifie.
     - cron: "17 3 * * *"
   workflow_dispatch:
-    inputs:
-      phase:
-        description: "Niveau de phase à juger (-1 = socle). C'est la phase à la SORTIE de laquelle les gates doivent être armées."
-        required: false
-        default: "-1"
 jobs:
-  gates-prouvees:
-    name: Sortie de phase — les gates sont-elles armées
+  # GOV-160 (#319, 6077512137) : le decompte des gates prouvees et la fraicheur des lecons sont
+  # ARCHIVES. Reste la protection de main, seule garde de ce job qui protege la fusion.
+  depot:
+    name: Visibilite du depot et protection de main
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      # La preuve d'abord : si la garde ne sait plus rougir, son verdict de la ligne suivante ne
-      # vaut rien, et on veut le savoir AVANT de lire le décompte.
-      - name: La garde des gates prouvees sait rougir
-        run: pnpm gates:prouvees:prove
-      - name: Les gates de la phase sont armees
-        run: pnpm gates:prouvees --phase ${{ inputs.phase || '-1' }}
-      # Sort en 2 (INDETERMINE) tant qu aucun jeton ne peut lire la protection de `main` :
-      # le jeton d Actions ne le peut pas. Un 2 n est PAS un vert : c est l aveu que le
-      # controle n a pas ete joue. Le jour ou un secret d administration existe, il passe.
+      # Sort en 2 (INDETERMINE) tant qu aucun jeton ne peut lire la protection de main.
       - name: Visibilite du depot et protection de main
         run: pnpm gov:depot-visibilite
-
-  # GOV-018, REQ-GOV-023 — la fraicheur du journal des lecons. JOB SEPARE, et c est
-  # NECESSAIRE : le job ci-dessus est rouge par construction tant que la phase -1 n est pas
-  # sortie, donc une etape ajoutee a sa suite ne s executerait JAMAIS.
-  lecons-fraiches:
-    name: Journal des lecons — consolide depuis moins de 7 jours
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      # La preuve d abord : si la garde ne sait plus rougir, le verdict suivant ne vaut rien.
-      - name: La garde des lecons sait rougir
-        run: pnpm gov:lecons:prove
-      # `--now` est FOURNI, en UTC. La garde ne lit pas l horloge : c est la convention de
-      # `lot:composer --now`, et un rouge qui depend de l heure du lancement ne se rejoue pas.
-      - name: Les lecons sont consolidees depuis moins de 7 jours
-        run: pnpm gov:lecons --now $(date -u +%F)
 
   # INT-T09, REQ-QA-028 — le contrat de l API publique de recherche d entreprises, rejoue
   # contre l API REELLE : les memes saisies que les fixtures enregistrees, par la meme fabrique

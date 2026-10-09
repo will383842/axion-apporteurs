@@ -95,9 +95,15 @@ async function exigerUnAutreQueLOuvreur(tx: Tx, apporteurId: string, acteurId: s
 /** Le premier regard : vérifier hors bande un RIB à vérifier. Le statut ne change pas. */
 export async function verifierUnRib(
   prisma: PrismaClient,
-  d: { acteur: ActeurDuDossier; pieceId: string; maintenant: Date }
+  d: {
+    acteur: ActeurDuDossier;
+    pieceId: string;
+    maintenant: Date;
+    ecrireUnFait?: EcrireUnEvenement;
+  }
 ): Promise<void> {
   exigerLeDroit(d.acteur);
+  const ecrire = d.ecrireUnFait ?? ajouterEvenement;
   await prisma.$transaction(async (tx) => {
     const piece = await lireLaPiece(tx, d.pieceId);
     if (piece === null) throw new ErreurRibQuatreYeux('introuvable');
@@ -119,6 +125,14 @@ export async function verifierUnRib(
       data: { ribVerifieParId: d.acteur.id, ribVerifieAt: d.maintenant },
     });
     if (count === 0) throw new ErreurRibQuatreYeux('deja_verifie');
+    // SEC-69 : le premier regard entre au journal chaîné, dans la MÊME transaction que la ligne.
+    await ecrire(tx, {
+      type: 'piece_kyc_rib_verifie',
+      agregat: 'piece_kyc',
+      agregatId: piece.id,
+      survenuAt: d.maintenant,
+      charge: { type: 'rib', acteur: { par: 'utilisateur_console', id: d.acteur.id } },
+    });
   });
 }
 

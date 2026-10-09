@@ -18,25 +18,16 @@ export default defineConfig({
       'src/**/*.{test,spec}.{ts,tsx}',
       'tests/unit/**/*.{test,spec}.{ts,tsx}',
       'tests/schemas/**/*.{test,spec}.{ts,tsx}',
-      // `tests/gov/**` est declare par DEUX sources de verite — `docs/REGLES-MAISON.md:5`
-      // (`tests/gov/regles-maison.spec.ts`) et `docs/tasks.json` (quatre REQ de GOV-007 sur
-      // `tests/gov/charte-pr.spec.ts`). Sans cette ligne les deux existent sans jamais tourner.
-      'tests/gov/**/*.{test,spec}.{ts,tsx}',
       // Les tests en base réelle tournent DANS `pnpm test` : `gov:trace` lit include/exclude de CE fichier,
       // et un spec exclu y vaut « non exécuté ». Conséquence assumée : la suite exige le démon Docker
       // (partners/ADR-0015, décision 7 ; partners/ADR-0001). ⚠️ AUCUNE APOSTROPHE dans ce bloc :
       // `gates:prouvees` lit les motifs entre guillemets simples, et une apostrophe y ouvre un faux motif.
       'tests/integration/**/*.{test,spec}.{ts,tsx}',
-      // UX-P0-03 : les passes d accessibilite pilotent un vrai navigateur (Playwright, WebKit et
-      // Chromium) sur les surfaces du depot. Elles tournent DANS la suite, pour que `req:check` les
-      // voie vertes ; la suite exige donc aussi les navigateurs (`pnpm a11y:navigateurs`).
-      'tests/a11y/**/*.{test,spec}.{ts,tsx}',
     ],
-    exclude: ['node_modules', '.next', 'tests/e2e/**'],
+    // GOV-160 (#319, 6077512137) : les specs des gardes archivees sont sous tests/archive/, hors suite.
+    exclude: ['node_modules', '.next', 'tests/e2e/**', 'tests/archive/**'],
     // QA-T01 : chargé avant chaque fichier de test. Minimal — voir son en-tête.
     setupFiles: ['tests/setup.ts'],
-    // QA-T63 : la forge lue UNE fois par run (instantané temporaire, `GOV_ETAT_FORGE`) — voir son en-tête.
-    globalSetup: ['tests/setup-forge.ts'],
 
     /**
      * COUVERTURE DU DOMAINE — REQ-QA-002 : 100 % lignes et 100 % branches sur `src/domain/**`.
