@@ -7400,13 +7400,15 @@
       "deps": [
         "DM-11",
         "INT-T12",
-        "JUR-T02"
+        "JUR-T02",
+        "JUR-T68"
       ],
       "reqs": [
         "REQ-ARG-016",
         "REQ-ARG-025",
         "REQ-ARG-034",
-        "REQ-DM-027"
+        "REQ-DM-027",
+        "REQ-ARG-007"
       ],
       "hyp": [
         "HYP-D7"
@@ -7421,7 +7423,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "un seul module exporte `controlesVersement` ; il ne connaît que **trois** contrôles — SIREN valide et actif, coordonnées bancaires valides au nom de l'apporteur, attestation de vigilance **lorsque le cumul atteint `SEUIL_VIGILANCE`** (L.8222-1 et D.8222-5 C. trav.) ; sous le seuil, l'absence d'attestation **ne bloque rien** et lève une alerte. **Aucune autre pièce ne peut différer un versement** : `rc_pro` porte une échéance et un rappel mais **n'entre pas** dans la liste (A-10), et `commission_sup_ht`, `a_qualifier`, `non_resolue` sont des **alertes** qui ne peuvent différer au-delà de soixante jours (REQ-ARG-034, art. 5.4). Gate : toute comparaison à `SEUIL_VIGILANCE` hors de ce module rougit ; **tout ajout à la liste des pièces bloquantes rougit** (test-cliquet nominatif sur son contenu)."
+      "acceptance": "un seul module exporte `controlesVersement` ; il ne connaît que **trois** contrôles — SIREN valide et actif, coordonnées bancaires valides au nom de l'apporteur, attestation de vigilance **lorsque le cumul atteint `SEUIL_VIGILANCE`** (L.8222-1 et D.8222-5 C. trav.) ; sous le seuil, l'absence d'attestation **ne bloque rien** et lève une alerte. **Aucune autre pièce ne peut différer un versement** : `rc_pro` porte une échéance et un rappel mais **n'entre pas** dans la liste (A-10), et `commission_sup_ht`, `a_qualifier`, `non_resolue` sont des **alertes** qui ne peuvent différer au-delà de soixante jours (REQ-ARG-034, art. 5.4). Gate : toute comparaison à `SEUIL_VIGILANCE` hors de ce module rougit ; **tout ajout à la liste des pièces bloquantes rougit** (test-cliquet nominatif sur son contenu).\n\nRELUE le 2026-10-09 (gardien-spec) ; décision de Williams du 2026-10-09, #319, 6087917020, MOT POUR MOT : « Plafond : B » (REQ-ARG-007 : blocage + avenant ; HYP-ARG-007-AVENANT). `commission_sup_ht` n'est plus une alerte dans tous les cas : lorsque la version du contrat signée par l'apporteur porte la clause de l'avenant (JUR-T68), il diffère le versement de la ligne jusqu'à une décision journalisée. `controlesVersement` reçoit ce motif, conditionné à la version signée ; c'est l'ajout nommé et daté qu'admet le test-cliquet, et tout AUTRE ajout le fait toujours rougir. Sous une version sans la clause, `commission_sup_ht` reste une alerte. Témoins : ligne au-dessus du plafond, version avec clause → non versée sans décision, versée après ; version sans clause → versée à l'échéance, alerte."
     },
     {
       "id": "T-ARG-010",
@@ -8650,7 +8652,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "un indicateur **par relevé** affiche l'âge depuis l'établissement et depuis l'émission de la facture ; **alerte console à J+45** depuis l'émission ; tout relevé non payé à **J+60** est une anomalie de premier rang, nommée, quel que soit son motif ; **aucun motif de la liste « alertes » de REQ-ARG-017 (`commission_sup_ht`, `a_qualifier`, `non_resolue`) ne peut porter un relevé au-delà** ; les pénalités de retard et l'indemnité de 40 € sont dues de plein droit et figurent aux mentions de T-ARG-016."
+      "acceptance": "un indicateur **par relevé** affiche l'âge depuis l'établissement et depuis l'émission de la facture ; **alerte console à J+45** depuis l'émission ; tout relevé non payé à **J+60** est une anomalie de premier rang, nommée, quel que soit son motif ; **aucun motif de la liste « alertes » de REQ-ARG-017 (`commission_sup_ht`, `a_qualifier`, `non_resolue`) ne peut porter un relevé au-delà** ; les pénalités de retard et l'indemnité de 40 € sont dues de plein droit et figurent aux mentions de T-ARG-016.\n\nRELUE le 2026-10-09 (gardien-spec) ; décision de Williams du 2026-10-09, #319, 6087917020, MOT POUR MOT : « Plafond : B » (REQ-ARG-007 : blocage + avenant ; HYP-ARG-007-AVENANT). `commission_sup_ht` ne figure dans la liste des alertes qui ne peuvent porter un versement au-delà de J+60 que pour une version signée sans la clause de l'avenant ; sous une version qui la porte, la ligne reste bloquée jusqu'à la décision journalisée, et l'indicateur nomme ce blocage sans le compter comme un retard."
     },
     {
       "id": "QA-T25",
@@ -27460,6 +27462,40 @@
       "tests": {
         "REQ-JUR-003": [
           "tests/unit/contrat/gabarit-recopie-contrat-v2.spec.ts"
+        ]
+      }
+    },
+    {
+      "hyp": [
+        "HYP-ARG-007-AVENANT"
+      ],
+      "externe": null,
+      "statut": "a_faire",
+      "phase": 1,
+      "repo": "partners",
+      "schema": false,
+      "id": "JUR-T68",
+      "titre": "L'avenant de l'art. 5.4 : le dépassement du plafond de la commission diffère le versement jusqu'à une décision journalisée",
+      "zone": "juridique",
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "JUR-T66"
+      ],
+      "reqs": [
+        "REQ-ARG-007"
+      ],
+      "paths": [
+        "docs/contrat/CONTRAT-APPORTEUR-V1.md",
+        "tests/unit/contrat/gabarit-recopie-contrat-v2.spec.ts",
+        "tests/unit/contrat/plafond-commission-avenant.spec.ts"
+      ],
+      "estimateDays": 0.5,
+      "acceptance": "Versée le 2026-10-09 par le gardien-spec. SOURCE : décision de Williams du 2026-10-09, #319, 6087917020, MOT POUR MOT : « Plafond : B » ; portée publiée dans le même commentaire : « REQ-ARG-007 (B : blocage + avenant) ». Autrice : la juriste (A07) ; témoins écrits par A05. (1) La clause « Conditions du versement » du gabarit (art. 5.4) reçoit une phrase, rédigée par A07, qui nomme le dépassement du plafond de la commission (REQ-ARG-007) comme un motif qui diffère le versement de la ligne jusqu'à une décision journalisée de la Société ; la somme reste acquise à l'apporteur, et la décision la relève ou la corrige. La phrase « Aucune autre pièce et aucun autre motif ne peuvent différer un versement » est amendée en conséquence, et rien d'autre. (2) C'est une modification du contrat : elle passe par un avenant soumis à la signature (contrat v2, article « Modification ») ; tant qu'un apporteur ne l'a pas signé, sa version s'applique (HYP-ARG-007-AVENANT). (3) Le témoin de concordance de REQ-JUR-003 (`gabarit-recopie-contrat-v2.spec.ts`) reçoit cet écart, NOMMÉ et daté ; tout autre écart au v2 le fait toujours rougir. (4) Le texte est VALIDÉ PAR WILLIAMS avant tout envoi en signature : la tâche peut se coder, la PR attend sa validation. TÉMOINS : l'article porte la phrase ; la concordance rougit sur un écart non nommé ; aucune autre clause ne crée de motif de différer un versement.",
+      "tests": {
+        "REQ-ARG-007": [
+          "tests/unit/contrat/plafond-commission-avenant.spec.ts"
         ]
       }
     },
