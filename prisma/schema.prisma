@@ -252,6 +252,23 @@ enum ProfessionReglementee {
   @@map("profession_reglementee")
 }
 
+/// DM-56 (REQ-DM-065) : le statut juridique de l'apporteur, liste FERMÉE. Chaque statut se range dans
+/// UNE `QualiteExercice` : les six sociétés en `societe_commerciale`, les deux formes individuelles
+/// selon l'activité déclarée (CHECK `apporteurs_qualite_suit_le_statut`, SQL brut). Le portage
+/// salarial et l'entrepreneur-salarié de coopérative relèvent de la phase 2.
+enum StatutJuridique {
+  micro_entrepreneur
+  entrepreneur_individuel
+  sarl
+  eurl
+  sas
+  sasu
+  sa
+  snc
+
+  @@map("statut_juridique")
+}
+
 model Apporteur {
   id                    String                 @id @default(uuid()) @db.Uuid
   statut                StatutApporteur
@@ -266,6 +283,8 @@ model Apporteur {
   /// DM-50 : déclarées au KYC ; nulles tant que l'apporteur ne les a pas déclarées.
   qualiteExercice       QualiteExercice?       @map("qualite_exercice")
   professionReglementee ProfessionReglementee? @map("profession_reglementee")
+  /// DM-56 : déclaré au KYC, nul tant qu'il ne l'est pas ; lu par `{{APPORTEUR_STATUT}}`.
+  statutJuridique       StatutJuridique?       @map("statut_juridique")
 
   /// Surcharge manuelle du seuil de vérification prioritaire (REQ-DM-010). SEC-56 : aucun code ne la
   /// lit ni ne l'écrit plus, aucun palier ni seuil de dépôts n'existe par apporteur (REQ-JUR-032) ;

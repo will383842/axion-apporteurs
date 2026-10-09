@@ -403,7 +403,7 @@ export const CHAMPS_RENDUS = {
   // SEC-47 : ce que l'apporteur lit de sa propre fiche — son état, son code, ce qu'il a accepté.
   // DM-50 : sa qualité d'exercice et sa profession réglementée, telles qu'il les a DÉCLARÉES, à
   // relire et rectifier ; atteintes par sa session seule, jamais par une relation. Un verdict
-  // interne sur elles serait une autre colonne, classée TUE.
+  // interne sur elles serait une autre colonne, classée TUE. DM-56 : son statut juridique, de même.
   apporteur: [
     'id',
     'statut',
@@ -414,6 +414,7 @@ export const CHAMPS_RENDUS = {
     'confidentialiteVersion',
     'qualiteExercice',
     'professionReglementee',
+    'statutJuridique',
   ],
 } as const satisfies Record<ModeleRendu, readonly string[]>;
 
