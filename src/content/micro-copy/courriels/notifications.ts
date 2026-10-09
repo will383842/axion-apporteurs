@@ -65,9 +65,11 @@ export const TEXTES_DES_NOTIFICATIONS = {
   },
   suspension_declarations: {
     titre: "Vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA",
-    appel: 'Lire le courrier et répondre',
+    // JUR-T58 : la voie de contestation, phrase et action de la juriste, MOT POUR MOT (#474,
+    // 6037559862, précisée en 6038112933).
+    appel: 'Contester cette suspension par écrit',
     corps:
-      "{faits}. Cette suspension prend fin au plus tard le {dateLevee}. Rien ne change pour vos entreprises en cours, ni pour vos commissions, ni pour l'accès à votre espace.",
+      "{faits}. Cette suspension prend fin au plus tard le {dateLevee}. Rien ne change pour vos entreprises en cours, ni pour vos commissions, ni pour l'accès à votre espace. Vous pouvez contester cette suspension par écrit, en écrivant à Axion-IA depuis votre espace.",
   },
   rappel_rc_pro: {
     titre: "Votre attestation d'assurance arrive à échéance le {dateEcheance}",
