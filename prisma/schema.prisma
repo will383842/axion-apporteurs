@@ -990,6 +990,9 @@ model Attribution {
   /// Chiffrée (décision A02 du 2026-10-02) : la borne de 120 caractères porte sur le clair.
   fonctionContactChiffre      Bytes?            @map("fonction_contact_chiffre")
   contexteChiffre             Bytes?            @map("contexte_chiffre")
+  /// DM-49 (REQ-DM-064) : l'IDCC facultatif, quatre chiffres EN TEXTE (« 0044 »), en clair — il désigne une
+  /// convention collective, pas une personne ; saisi par l'apporteur, jamais accompagné d'un document (CHECK).
+  idccSaisi                   String?           @map("idcc_saisi") @db.Char(4)
   /// La personne déclarée qui a rencontré le contact (UX-P1-15).
   personneDeclareeId          String?           @map("personne_declaree_id") @db.Uuid
   personneDeclaree            PersonneDeclaree? @relation(fields: [personneDeclareeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
