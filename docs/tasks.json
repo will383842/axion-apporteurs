@@ -27608,6 +27608,34 @@
         "fusionneeAt": "2026-10-08T14:01:43Z"
       },
       "motif": null
+    },
+    {
+      "id": "GOV-159",
+      "titre": "L allègement des fiches d agents : lectures de démarrage réduites à la tâche, chemins absents et doublons retirés, fiches régénérées",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-010"
+      ],
+      "paths": [
+        ".claude/agents/",
+        "docs/agents.json",
+        "tests/unit/gouvernance/fiches-agents-allegees.spec.ts"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "Versée au rattrapage 132, sur la décision de Williams du 2026-10-08 publiée sur #319 (6061977043) : l allègement des fiches d agents, exception au gel de la phase 1. `docs/agents.json` est allégé, et lui seul est édité : (1) les lectures géantes au démarrage sont retirées des `documents` : `docs/tasks.json` entier pour le lead (A12), le critique-completude (A11) et le verificateur-rouge (A10), et `docs/requirements.json`, `docs/gates.json` et `docs/DECISIONS.md` lus en entier ; la fiche n inline plus que les REQ et les décisions citées par la tâche en cours. (2) Les chemins absents du disque et les doublons sont retirés. (3) La mission du release-manager (A04) ne dit plus « une PR à la fois » : elle décrit la fusion par paquets adaptatifs de GOV-158. (4) Le modèle reste Opus pour tous les postes. Les fiches `.claude/agents/` sont régénérées par le lot dédié de GOV-000/GOV-023, jamais à la main : `pnpm gov:agents:rendre`, puis `pnpm gov:agents:verifier` et `pnpm gov:agents`, tous trois verts. TÉMOIN (`tests/unit/gouvernance/fiches-agents-allegees.spec.ts`), rouge d abord : une fiche qui fait lire `docs/tasks.json`, `docs/requirements.json` ou `docs/gates.json` en entier au démarrage, un chemin de `documents` absent du disque ou cité deux fois, ou une mission d A04 qui dit encore « une PR à la fois » le font rougir.",
+      "tests": {
+        "REQ-GOV-010": [
+          "tests/unit/gouvernance/fiches-agents-allegees.spec.ts"
+        ]
+      }
     }
   ]
 }
