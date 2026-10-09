@@ -451,7 +451,7 @@ describe('REQ-JUR-015 — sans courriel parti le jour de la décision, aucune da
     await tache(new Date('2026-12-01T08:00:00.000Z'));
     expect(await statutDe(apporteurId)).toMatchObject({ statut: 'signe' });
     // La caducité se lit par l'absence de citation, sans colonne d'état.
-    expect(await passageQuiCiteLaDecision(base.prisma, apporteurId, r.decisionId)).toBeNull();
+    expect(await passageQuiCiteLaDecision(base.prisma, r.decisionId, apporteurId)).toBeNull();
   });
 });
 
@@ -494,11 +494,15 @@ describe('REQ-ARG-026 — une nouvelle notification est une nouvelle décision',
     expect(await statutDe(apporteurId)).toMatchObject({ statut: 'resilie' });
     // Seule la seconde est citée ; la première, supplantée, ne l'est par aucun passage.
     expect(await decisionCiteeAuJournal(apporteurId)).toBe(seconde.decisionId);
-    expect(await passageQuiCiteLaDecision(base.prisma, apporteurId, premiere.decisionId)).toBeNull();
+    expect(
+      await passageQuiCiteLaDecision(base.prisma, premiere.decisionId, apporteurId)
+    ).toBeNull();
     // Le filtre par apporteur : un autre apporteur ne lit jamais ce passage comme le sien.
     const autre = await unApporteur();
-    expect(await passageQuiCiteLaDecision(base.prisma, autre, seconde.decisionId)).toBeNull();
-    expect(await passageQuiCiteLaDecision(base.prisma, apporteurId, seconde.decisionId)).not.toBeNull();
+    expect(await passageQuiCiteLaDecision(base.prisma, seconde.decisionId, autre)).toBeNull();
+    expect(
+      await passageQuiCiteLaDecision(base.prisma, seconde.decisionId, apporteurId)
+    ).not.toBeNull();
   });
 });
 

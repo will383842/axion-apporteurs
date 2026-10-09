@@ -178,7 +178,7 @@ export async function purgerLesTextesDesDecisions(
       if (
         fait?.type === 'apporteur_statut_modifie' ||
         (fait?.type === 'apporteur_resiliation_notifiee' &&
-          (await passageQuiCiteLaDecision(prisma, r.apporteurId, r.id)) !== null)
+          (await passageQuiCiteLaDecision(prisma, r.id, r.apporteurId)) !== null)
       ) {
         resiliations.push(r);
       }

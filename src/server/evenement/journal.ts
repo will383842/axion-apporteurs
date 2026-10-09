@@ -193,27 +193,29 @@ export async function lireLaChargeDUnFait(
 
 /**
  * SEC-66 (A02, #561, 5988205180) — la trace DURABLE de l'opposabilité d'une résiliation par la
- * Société : le passage à `resilie` DE CET APPORTEUR qui CITE la ligne `decisions_de_contrat`
- * (`decisionContratId`), ou `null` s'il n'est cité par aucun passage — la décision est alors
- * caduque, sans aucune colonne d'état. Le filtre par apporteur ferme la citation croisée : un passage
- * d'un autre apporteur ne rend jamais opposable la décision de celui-ci. Le journal n'est jamais
- * purgé : la réponse survit à la purge de la notification et de son courriel. Lecteurs : la tâche de
- * la date d'effet (une décision n'est citée qu'une fois) et la purge des textes (DM-70, départ des
- * cinq ans d'une mise en demeure). Une lecture seule, par le module du journal.
+ * Société : le passage à `resilie` qui CITE la ligne `decisions_de_contrat` (`decisionContratId`),
+ * ou `null` s'il n'est cité par aucun passage — la décision est alors caduque, sans aucune colonne
+ * d'état. Le journal n'est jamais purgé : la réponse survit à la purge de la notification et de son
+ * courriel. Deux lecteurs : la tâche de la date d'effet, SANS filtre (une décision n'est citée qu'une
+ * fois, sur quelque apporteur que ce soit : `decision_deja_citee`) ; la purge des textes (DM-70,
+ * départ des cinq ans d'une mise en demeure), AVEC le filtre `apporteurId` : un passage d'un autre
+ * apporteur ne rend jamais opposable la décision de celui-ci. Une lecture seule, par le module du
+ * journal.
  */
 export async function passageQuiCiteLaDecision(
   client: PrismaClient | Prisma.TransactionClient,
-  apporteurId: string,
-  decisionContratId: string
+  decisionContratId: string,
+  apporteurId?: string
 ): Promise<string | null> {
-  if (!UUID_CANONIQUE.test(apporteurId)) {
+  if (apporteurId !== undefined && !UUID_CANONIQUE.test(apporteurId)) {
     throw new Error('lecture_du_journal_refusee : agrégat hors forme');
   }
   const l = await client.evenement.findFirst({
     where: {
       type: 'apporteur_statut_modifie',
-      agregat: 'apporteur',
-      agregatId: apporteurId,
+      ...(apporteurId === undefined
+        ? {}
+        : { agregat: 'apporteur' as const, agregatId: apporteurId }),
       charge: { path: ['decisionContratId'], equals: decisionContratId },
     },
     select: { id: true },

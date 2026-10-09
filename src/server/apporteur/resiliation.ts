@@ -629,7 +629,7 @@ export async function resilierALaDateDEffetUnApporteur(
   if (decision === null || !dateEffetAtteinte(decision.dateEffet, maintenant.getTime())) {
     return false;
   }
-  if ((await passageQuiCiteLaDecision(tx, apporteurId, decision.id)) !== null) {
+  if ((await passageQuiCiteLaDecision(tx, decision.id)) !== null) {
     throw new ErreurResiliation('decision_deja_citee', 'cette décision fonde déjà un passage');
   }
   const { statut: vers, resiliationMotif } = transitionner({
