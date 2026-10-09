@@ -26,6 +26,9 @@ import {
   finDuContratAvecPreavis,
   ouvreDroitALaCommission,
   sortieDeFinDeContrat,
+  attributionDeLaCommande,
+  finDuContratDeLaSortie,
+  laCommandeTardiveOuvreDroit,
 } from '../../../src/domain/apporteur/effets-de-la-fin';
 import { dateEffetAtteinte, minuitDeParisDuJour } from '../../../src/domain/apporteur/resiliation';
 
@@ -270,5 +273,71 @@ describe('SEC-66 — la FIN du contrat vaut `dateEffetAtteinte` (rattrapage 122,
       expect(dateEffetAtteinte(jour, fin)).toBe(true);
       expect(vi.mocked(finDuContratAvecPreavis)).toHaveBeenCalled();
     }
+  });
+});
+
+// @req REQ-DM-006
+describe('REQ-DM-006 — DM-73 : la commande va à l’occupant de sa date de signature (art. 4.4, 12.3)', () => {
+  const DEPOT = Date.UTC(2026, 9, 1, 8);
+  const SIGNE = Date.UTC(2026, 9, 5, 9);
+  const FIN = Date.UTC(2026, 9, 8, 10);
+  const SUIVANT = FIN + 60_000;
+
+  it('REQ-DM-006 : la fin vue de la sortie — l’instant de sortie, borné par la fin avec préavis', () => {
+    expect(finDuContratDeLaSortie({ sortieAt: FIN, jourDEffet: null })).toBe(FIN);
+    const jour = minuitDeParisDuJour('2026-10-08');
+    const tardive = finDuContratAvecPreavis(jour) + 3_600_000;
+    expect(finDuContratDeLaSortie({ sortieAt: tardive, jourDEffet: jour })).toBe(
+      finDuContratAvecPreavis(jour)
+    );
+    expect(finDuContratDeLaSortie({ sortieAt: FIN, jourDEffet: jour })).toBe(FIN);
+  });
+
+  it('REQ-DM-006 : le droit tardif exige la fin de contrat, l’occupation à la signature et la signature avant la fin', () => {
+    const c = { commandeSigneeAt: SIGNE, finDuContrat: FIN, occupeeDepuis: DEPOT };
+    expect(laCommandeTardiveOuvreDroit({ ...c, sortie: 'fin_de_contrat' })).toBe(true);
+    expect(laCommandeTardiveOuvreDroit({ ...c, sortie: 'fraude_etablie' })).toBe(false);
+    expect(
+      laCommandeTardiveOuvreDroit({ ...c, occupeeDepuis: SIGNE + 1, sortie: 'fin_de_contrat' })
+    ).toBe(false);
+    expect(
+      laCommandeTardiveOuvreDroit({ ...c, commandeSigneeAt: FIN, sortie: 'fin_de_contrat' })
+    ).toBe(false);
+  });
+
+  it('REQ-DM-006 : le résilié reçoit la commande signée avant la fin ; l’occupant suivant, jamais', () => {
+    const resilie = { attributionId: 'a', occupeeDepuis: DEPOT, finDuContrat: FIN } as const;
+    const suivant = {
+      attributionId: 'b',
+      occupeeDepuis: SUIVANT,
+      sortie: null,
+      finDuContrat: null,
+    };
+    expect(
+      attributionDeLaCommande(SIGNE, [{ ...resilie, sortie: 'fin_de_contrat' }, suivant])
+    ).toBe('a');
+    expect(attributionDeLaCommande(SIGNE, [{ ...resilie, sortie: 'figee' }, suivant])).toBe('a');
+    expect(
+      attributionDeLaCommande(SUIVANT + 1, [{ ...resilie, sortie: 'fin_de_contrat' }, suivant])
+    ).toBe('b');
+  });
+
+  it('REQ-DM-006 : aucune attribution n’y a droit après l’antériorité, la fraude, ou sans fin connue', () => {
+    expect(
+      attributionDeLaCommande(SIGNE, [
+        {
+          attributionId: 'a',
+          occupeeDepuis: DEPOT,
+          sortie: 'anteriorite_etablie',
+          finDuContrat: FIN,
+        },
+      ])
+    ).toBeNull();
+    expect(
+      attributionDeLaCommande(SIGNE, [
+        { attributionId: 'a', occupeeDepuis: DEPOT, sortie: 'perimee', finDuContrat: null },
+      ])
+    ).toBeNull();
+    expect(attributionDeLaCommande(SIGNE, [])).toBeNull();
   });
 });
