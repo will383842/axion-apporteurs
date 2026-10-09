@@ -25,96 +25,95 @@
  * Domaine pur : aucune I/O, aucune horloge.
  */
 import { createHash } from 'node:crypto';
-import { z } from 'zod';
 import { canonique } from '../evenement/canonique';
-import { HASH_HEX_64 } from '../evenement/charges';
+import {
+  BPS_MAX,
+  GENRES_DE_COMMISSION,
+  SCHEMAS_LISIBLES,
+  SCHEMA_PUBLICATION_GRILLE,
+  type ContenuGrille,
+  type GenreDeCommission,
+  type LigneCommissionPubliee,
+  type PublicationGrille,
+} from '../../../packages/contracts/grille';
 
-/** Le plafond d'un taux : 100 % en points de base. */
-export const BPS_MAX = 10_000;
+// La FORME vit dans le contrat (`packages/contracts/grille.ts`, INT-T47-P) : ce module la lit, il
+// n'en porte aucune copie. Ses noms restent exportés d'ici pour les appelants du domaine.
+export { BPS_MAX, SCHEMA_PUBLICATION_GRILLE, type ContenuGrille, type PublicationGrille };
 
-const ligneCommission = z
-  .object({
-    commissionId: z.string().min(1),
-    libelleFr: z.string().min(1),
-    kind: z.enum(['flat', 'percent', 'scale']),
-    montantCents: z.number().int().positive().nullable(),
-    tauxBps: z.number().int().min(1).max(BPS_MAX).nullable(),
-  })
-  .strict()
-  .superRefine((l, ctx) => {
-    const attendu = {
-      flat: { montantCents: true, tauxBps: false },
-      percent: { montantCents: false, tauxBps: true },
-      scale: { montantCents: false, tauxBps: false },
-    }[l.kind];
-    for (const champ of ['montantCents', 'tauxBps'] as const) {
-      if ((l[champ] !== null) !== attendu[champ]) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: [champ],
-          message: `commission « ${l.commissionId} » (${l.kind}) : ${champ} ${attendu[champ] ? 'requis' : 'interdit'}`,
-        });
-      }
-    }
-  });
+// ── La correspondance des types de commission (INT-T47-P, décision A02 du 2026-10-02) ──────────
 
-const lignePalier = z
-  .object({
-    tierId: z.string().min(1),
-    categorie: z.string().min(1),
-    commissionId: z.string().min(1).nullable(),
-    statut: z.enum(['taux', 'bareme_indefini']),
-    baremeIndefini: z
-      .object({
-        depuis: z
-          .string()
-          .regex(/^\d{4}-\d{2}-\d{2}$/)
-          .nullable(),
-        motif: z.enum([
-          'hors_perimetre_w6',
-          'bareme_non_publie',
-          'palier_sans_bareme',
-          'non_declare',
-        ]),
-      })
-      .strict()
-      .nullable(),
-  })
-  .strict()
-  .refine((p) => (p.statut === 'taux') === (p.baremeIndefini === null), {
-    message: 'un palier « taux » ne porte aucun barème indéfini, et inversement',
-    path: ['baremeIndefini'],
-  });
+/** Les trois types de ligne de Partners (`TypeLigneGrille`, docs/GLOSSAIRE.md §4). */
+export type TypeDeLigne = 'forfait' | 'pourcentage' | 'aucune';
 
-const contenuGrille = z
-  .object({
-    schema: z.literal(1),
-    unites: z
-      .object({ montant: z.literal('centimes_ht'), taux: z.literal('points_de_base') })
-      .strict(),
-    grilleVersionEvenement: z.string().regex(/^[0-9a-f]{12}$/),
-    commissions: z.array(ligneCommission).min(1),
-    paliers: z.array(lignePalier).min(1),
-  })
-  .strict();
+/**
+ * UN SEUL ENDROIT : le genre d'axion-ia vers le type de Partners. `scale` est un barème non publié
+ * (HYP-W6-BIS) : il n'est JAMAIS un montant, et devient `aucune`. Fermée par son type : une quatrième
+ * valeur ne compile pas, et à l'exécution elle lève (`typeDeLigne`).
+ */
+export const CORRESPONDANCE_DES_TYPES = {
+  flat: 'forfait',
+  percent: 'pourcentage',
+  scale: 'aucune',
+} as const satisfies Readonly<Record<GenreDeCommission, TypeDeLigne>>;
 
-const empreinte = z.string().regex(HASH_HEX_64);
+/** Le type de Partners d'un genre d'axion-ia ; un genre hors des trois LÈVE, nommé. */
+export function typeDeLigne(genre: string): TypeDeLigne {
+  const genres: readonly string[] = GENRES_DE_COMMISSION;
+  if (!genres.includes(genre)) {
+    throw new Error(`genre de commission inconnu : « ${genre} » — ni flat, ni percent, ni scale`);
+  }
+  return CORRESPONDANCE_DES_TYPES[genre as GenreDeCommission];
+}
 
-/** Le fichier `commissions.v<N>.json` publié par axionia. */
-export const SCHEMA_PUBLICATION_GRILLE = z
-  .object({
-    version: z.number().int().positive(),
-    publieeAt: z.string().datetime(),
-    hash: empreinte,
-    empreintesLignes: z
-      .object({ commissions: z.record(empreinte), paliers: z.record(empreinte) })
-      .strict(),
-    contenu: contenuGrille,
-  })
-  .strict();
+/** La commission telle qu'elle s'AFFICHE pour un palier : dérivée, jamais publiée. */
+export type CommissionPubliee =
+  | { readonly type: 'forfait'; readonly montantCents: number }
+  | { readonly type: 'pourcentage'; readonly tauxBps: number }
+  | { readonly type: 'aucune' };
 
-export type PublicationGrille = z.infer<typeof SCHEMA_PUBLICATION_GRILLE>;
-export type ContenuGrille = PublicationGrille['contenu'];
+/**
+ * La commission PUBLIÉE d'une ligne : DÉRIVÉE par la correspondance, à partir de la ligne de
+ * commission reçue — jamais lue dans la publication, qui ne la porte pas (contrat d'A02). C'est
+ * elle qui remplit `PUBLIEE_<palier>` de l'annexe.
+ */
+export function commissionPubliee(ligne: LigneCommissionPubliee): CommissionPubliee {
+  const type = typeDeLigne(ligne.kind);
+  if (type === 'forfait' && ligne.montantCents !== null) {
+    return { type, montantCents: ligne.montantCents };
+  }
+  if (type === 'pourcentage' && ligne.tauxBps !== null) return { type, tauxBps: ligne.tauxBps };
+  return { type: 'aucune' };
+}
+
+/** Ce que l'annexe lit d'un palier en schema 2 : l'éligibilité au CPF et le prix de référence. */
+export type ChampsDuSchema2 = {
+  readonly tierId: string;
+  readonly cpfEligible: boolean;
+  readonly prixReferenceHtCents: number | null;
+};
+
+/** Levée quand une publication en schema 1 est lue pour ce que seul le schema 2 porte. */
+export class ChampsDuSchema2Absents extends Error {
+  constructor(readonly version: number) {
+    super(`publication en schema 1, champs du schema 2 absents (v${version})`);
+    this.name = 'ChampsDuSchema2Absents';
+  }
+}
+
+/**
+ * Les champs du schema 2 de chaque palier, pour l'annexe du contrat (DM-23 l'appelle). Une
+ * publication en schema 1 REFUSE : jamais `false` ni un prix nul par défaut, qui feraient dire à
+ * l'annexe ce que la grille n'a pas publié.
+ */
+export function champsDuSchema2(pub: PublicationGrille): ChampsDuSchema2[] {
+  if (pub.contenu.schema !== 2) throw new ChampsDuSchema2Absents(pub.version);
+  return pub.contenu.paliers.map((p) => ({
+    tierId: p.tierId,
+    cpfEligible: p.cpfEligible,
+    prixReferenceHtCents: p.prixReferenceHtCents,
+  }));
+}
 
 /** Levée quand une publication n'a pas la forme du contrat : le chemin du champ est dans le message. */
 export class PublicationIllisible extends Error {
@@ -126,6 +125,17 @@ export class PublicationIllisible extends Error {
 
 /** Lit une publication brute, ou LÈVE en nommant chaque champ fautif. Rien n'est complété. */
 export function lirePublication(brut: unknown): PublicationGrille {
+  const schema: unknown =
+    typeof brut === 'object' && brut !== null
+      ? (brut as { contenu?: { schema?: unknown } }).contenu?.schema
+      : undefined;
+  const lisibles: readonly unknown[] = SCHEMAS_LISIBLES;
+  if (schema !== undefined && !lisibles.includes(schema)) {
+    // INT-T47-P : une forme que Partners ne connaît pas est REFUSÉE, nommée — échec fermé.
+    throw new PublicationIllisible([
+      `contenu.schema : schema ${String(schema)} inconnu — Partners lit ${SCHEMAS_LISIBLES.join(' et ')}`,
+    ]);
+  }
   const r = SCHEMA_PUBLICATION_GRILLE.safeParse(brut);
   if (!r.success) {
     throw new PublicationIllisible(
