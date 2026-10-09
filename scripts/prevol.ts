@@ -155,15 +155,9 @@ export type Ecarte = { nom: string; motif: string };
  * Les rendus, dans l'ordre, avec le fichier que CHACUN écrit. Le fichier n'est pas une copie du
  * nom de la commande : c'est ce que le contrôle de retour chariot doit relire juste après.
  */
-export const RENDUS: Etape[] = [
-  { nom: 'Vue : traçabilité', commande: 'pnpm gov:trace:render' },
-  { nom: 'Vue : backlog', commande: 'pnpm gov:tasks:render' },
-  { nom: 'Vue : index des ADR', commande: 'pnpm adr:index' },
-  {
-    nom: 'Vue : état vivant (EN DERNIER — il lit les trois autres)',
-    commande: 'pnpm plan-state:build',
-  },
-];
+// GOV-160 (#319, 6077512137) : les vues (traçabilité, backlog, index des ADR, état vivant) ne sont
+// plus rendues ni commitées dans les PR ; elles se génèrent à la demande, hors dépôt.
+export const RENDUS: Etape[] = [];
 export const VUES = [
   'docs/TRACABILITE.md',
   'docs/TASKS.md',

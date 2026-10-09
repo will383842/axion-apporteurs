@@ -75,6 +75,7 @@ Tenir le gabarit de contrat (clauses en variables, version figée à chaque sign
 
 - un écran, un e-mail ou une ressource destinés à un apporteur
 - la note d'analyse qui fonde les règles relationnelles — fournie avec sa tâche, jamais dans ce dépôt
+- les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier
 
 ### Sorties
 
@@ -90,9 +91,7 @@ Tenir le gabarit de contrat (clauses en variables, version figée à chaque sign
 
 ### Documents à lire
 
-- `docs/PLAN-STATE.md` — où en est le projet, ce qui est bloqué
 - `docs/REGLES-MAISON.md` — RM-10 : un seuil légal a une source et une date, jamais un littéral
-- `docs/DECISIONS.md` — les décisions `avenant`, à trancher avant le premier envoi DocuSeal
 - `docs/tiers/docuseal.md` — ce que le prestataire de signature accepte vraiment
 - `docs/GLOSSAIRE.md` — « relevé de commissions », « autofacture » : le mot légal, pas le mot d'usage
 

@@ -60,6 +60,7 @@ n'y est pas une bonne pratique : c'est la condition d'existence du produit.
 
 - une fin de phase, et l'espace apporteur tel qu'il est déployé en preview
 - les routes énumérées depuis le système de fichiers, jamais une liste écrite à la main
+- les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier
 
 ### Sorties
 
@@ -76,8 +77,6 @@ n'y est pas une bonne pratique : c'est la condition d'existence du produit.
 
 - `docs/REGLES-MAISON.md` — RM-05, droit porté par un rôle, défaut = refus, masquage qui échoue fermé
 - `docs/ESPACE-ROUTES.md` — les routes de l'espace, à énumérer et à éprouver une par une
-- `docs/REQUIREMENTS.md` — les REQ-SEC, qui disent ce qu'un refus doit répondre
-- `docs/GATES.md` — les gates de sécurité déjà armées, et ce qu'elles ne couvrent pas
 
 ### Outils et droit d’écriture
 

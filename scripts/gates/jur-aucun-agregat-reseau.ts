@@ -35,6 +35,7 @@
 import ts from 'typescript';
 import { readFileSync } from 'node:fs';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
+import { restreindreALaPr } from './fichiers-de-la-pr';
 
 export const ID_REGISTRE = 'jur:aucun-agregat-reseau';
 
@@ -270,7 +271,8 @@ function prouver(): { code: 0 | 1; lignes: string[] } {
 }
 
 function juger(): { code: 0 | 1; lignes: string[] } {
-  const chemins = fichiersSuivisOuRefus(ID_REGISTRE).filter(estDeLEspace);
+  // GOV-160 : sur une PR, seuls les fichiers de la PR sont jugés.
+  const chemins = restreindreALaPr(fichiersSuivisOuRefus(ID_REGISTRE).filter(estDeLEspace));
   const j = jugerLesDto(
     chemins.map((chemin) => ({ chemin, source: readFileSync(chemin, 'utf8') }))
   );

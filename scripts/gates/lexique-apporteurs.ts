@@ -114,6 +114,7 @@ import {
   type PorteeLexicale,
 } from '../../src/domain/lexique/lexique-interdit';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
+import { restreindreALaPr } from './fichiers-de-la-pr';
 
 // ── le périmètre (REQ-GOV-017 pour `depot`, REQ-JUR-037 pour `apporteur`) ─────
 
@@ -1983,7 +1984,14 @@ if (APPELE_DIRECTEMENT) {
     process.exit(0);
   }
 
-  const vueReelle = vueDuDepot();
+  const vueComplete = vueDuDepot();
+  // GOV-160 : sur une PR, seuls les fichiers de la PR sont jugés ; les comptes de motifs restent
+  // mesurés sur tout le dépôt suivi.
+  const retenus = new Set(restreindreALaPr(vueComplete.fichiers.map((f) => f.chemin)));
+  const vueReelle = {
+    ...vueComplete,
+    fichiers: vueComplete.fichiers.filter((f) => retenus.has(f.chemin)),
+  };
   const rapport = controler(vueReelle);
   const detail = vueReelle.comptes
     .map((c) => `${c.motif} : ${c.nombre}${c.attendu ? ' (attendu)' : ''}`)

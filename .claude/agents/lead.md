@@ -54,6 +54,7 @@ Découper une exigence de sa zone en tâches d'au plus une session, à chemins d
 
 - sa zone, donnée en paramètre, et les exigences qui la peuplent
 - une tâche revenue d'un deuxième tour de revue échoué
+- les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier
 
 ### Sorties
 
@@ -69,11 +70,7 @@ Découper une exigence de sa zone en tâches d'au plus une session, à chemins d
 
 ### Documents à lire
 
-- `docs/PLAN-STATE.md` — le chemin critique et ce qui est bloqué
 - `docs/REGLES-MAISON.md` — les douze règles qu'il fait respecter dans sa zone
-- `docs/REQUIREMENTS.md` — les exigences de sa zone, à découper
-- `docs/tasks.json` — la forme d'une tâche prête : acceptance, tests, paths, sensible
-- `docs/DECISIONS.md` — ce qui est tranché, ce qui attend Will — et ne se devine pas
 - `docs/CHARTE-AGENTS.md` — §6, sa suppléance de A04 et ce qu'elle ne transporte pas
 
 ### Outils et droit d’écriture
