@@ -187,7 +187,13 @@ describe('REQ-JUR-029 — JUR-T64 : la naissance et la forme du litige', () => {
     const d = await uneResiliation('2026-03-10');
     await ouvrir(d);
     expect(await refus(ouvrir(d))).toBe('deja_ouvert');
-    // L'index unique partiel tient la règle, même sans le geste.
+    // L'index unique partiel tient la règle, même sans le geste. Le message brut de Prisma ne porte que le
+    // code SQLSTATE et la clé, pas le nom de l'index : le nom et la clause se lisent dans `pg_indexes`.
+    const [index] = await base.prisma.$queryRaw<{ def: string }[]>`
+      SELECT indexdef AS def FROM pg_indexes
+      WHERE tablename = 'litiges_decisions_de_contrat'
+        AND indexname = 'litiges_decisions_de_contrat_un_ouvert'`;
+    expect(index?.def).toMatch(/CREATE UNIQUE INDEX .*\(decision_id\) WHERE \(clos_at IS NULL\)/);
     expect(
       await refus(
         app.$executeRawUnsafe(
@@ -198,7 +204,7 @@ describe('REQ-JUR-029 — JUR-T64 : la naissance et la forme du litige', () => {
           adminId
         )
       )
-    ).toContain('litiges_decisions_de_contrat_un_ouvert');
+    ).toMatch(/Code: `23505`[\s\S]*Key \(decision_id\)=/);
     await clore(d, '2028-02-01T10:00:00Z');
     await ouvrir(d, '2028-03-01T10:00:00Z');
     expect(await base.prisma.litigeDecisionDeContrat.count({ where: { decisionId: d } })).toBe(2);
