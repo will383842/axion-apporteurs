@@ -125,13 +125,14 @@ w('claude --continue     # reprend la dernière session de ce dossier');
 w('claude --resume       # propose la liste des sessions');
 w('```');
 w();
-w('Les transcrits vivent dans `~/.claude/projects/C--Users-willi-Documents-Projets-Axion-IA/`.');
+// SEC-48 : aucun chemin de poste dans ce qui s'écrit ici — le dépôt se désigne par lui-même.
+w(
+  'Les transcrits vivent dans `~/.claude/projects/`, sous le chemin du dossier de lancement, ses séparateurs changés en tirets.'
+);
 w(
   '⚠️ La compétence `/lot` et les 15 fiches de rôle n’existent que si la session est lancée **depuis'
 );
-w(
-  'ce dépôt** : `cd C:\\Users\\willi\\Documents\\Projets\\axion-apporteurs` avant de lancer `claude`.'
-);
+w('ce dépôt** : `cd "$(git rev-parse --show-toplevel)"` avant de lancer `claude`.');
 w();
 w('## L’état, en chiffres');
 w();
