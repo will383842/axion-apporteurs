@@ -15,8 +15,8 @@
  * worktree neuf, l'agent cherche un fichier absent, et il invente. La vérification se fait donc contre
  * `git ls-files`, pas contre le disque — un fichier non suivi n'est lu par aucune garde (RM-14).
  *
- * Enfin, la mission du release-manager (A04) disait encore « une PR à la fois » après GOV-158, qui
- * fusionne par paquets adaptatifs.
+ * Enfin, la mission du release-manager (A04) disait encore « une PR à la fois », alors que la fusion
+ * se fait désormais par paquets adaptatifs.
  *
  * TÉMOIN ET CONTRE-TÉMOIN. `defautsDAllegement` est exercée sur la source réelle (aucun défaut
  * attendu) et sur une copie à laquelle on réinjecte chaque défaut, un par un (chacun doit être vu).
