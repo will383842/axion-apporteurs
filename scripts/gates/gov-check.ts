@@ -93,6 +93,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { entreesSuiviesOuRefus } from '../lot/fichiers-suivis';
 import { blobsDe } from './gov-entite';
+import { restreindreALaPr } from './fichiers-de-la-pr';
 import {
   texteDeLaReq,
   RACINES_CODE,
@@ -1856,6 +1857,12 @@ const APPELE_DIRECTEMENT =
   process.argv[1] !== undefined &&
   sansExtension(resolve(process.argv[1])) === sansExtension(fileURLToPath(import.meta.url));
 
+/** GOV-160 : sur une PR, seuls les fichiers que la PR ajoute ou modifie sont jugés. */
+function vueDeLaPr(vue: Vue): Vue {
+  const retenus = new Set(restreindreALaPr(vue.fichiers.map((f) => f.chemin)));
+  return { ...vue, fichiers: vue.fichiers.filter((f) => retenus.has(f.chemin)) };
+}
+
 function lireLeRegistre(): string | Error {
   try {
     return readFileSync(CHEMIN_REGISTRE, 'utf8');
@@ -1865,9 +1872,25 @@ function lireLeRegistre(): string | Error {
 }
 
 if (APPELE_DIRECTEMENT) {
-  const decision = process.argv.includes('--prove')
+  const prouve = process.argv.includes('--prove');
+  const vueComplete = prouve ? undefined : vueDuDepot();
+  const vuePr = vueComplete === undefined ? undefined : vueDeLaPr(vueComplete);
+  // GOV-160 : une PR qui ne touche aucune racine du glossaire n'a rien à juger. Le périmètre vide
+  // reste un refus quand c'est le DÉPÔT qui est vide, jamais quand c'est la PR.
+  if (
+    vueComplete !== undefined &&
+    vuePr !== undefined &&
+    perimetreDeLaVue(vuePr).lus.length === 0 &&
+    perimetreDeLaVue(vueComplete).lus.length > 0
+  ) {
+    console.log(
+      `✅ ${ID_REGISTRE} — la PR ne modifie aucun fichier des racines du glossaire : rien de la PR à juger.`
+    );
+    process.exit(0);
+  }
+  const decision = prouve
     ? decisionDeLaPreuve(entreesDeLaPreuve(lireLeRegistre()))
-    : decisionDeLaGarde(vueDuDepot());
+    : decisionDeLaGarde(vuePr!);
   (decision.code === 0 ? console.log : console.error)(decision.lignes.join('\n'));
   process.exit(decision.code);
 }

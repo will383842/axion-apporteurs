@@ -496,7 +496,14 @@ describe('REQ-DM-003, REQ-INT-004 — la sortie compte les zones découpées, et
 // ── la garde lancée pour de vrai, sur des dépôts jetables ─────────────────────
 
 function lancerDans(depot: string): { code: number | null; sortie: string } {
-  const r = spawnSync(process.execPath, [TSX, SCRIPT], { cwd: depot, encoding: 'utf8' });
+  const r = spawnSync(process.execPath, [TSX, SCRIPT], {
+    cwd: depot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      GITHUB_EVENT_NAME: '',
+    } /* GOV-160 : balayage complet, même lancé dans une PR */,
+  });
   return { code: r.status, sortie: `${r.stdout ?? ''}${r.stderr ?? ''}` };
 }
 
@@ -614,7 +621,13 @@ describe('REQ-DM-003, REQ-INT-004 — le dépôt réel : zéro, avec le compte d
       0
     );
     expect(zones).toBeGreaterThan(0);
-    const r = spawnSync(process.execPath, [TSX, SCRIPT], { encoding: 'utf8' });
+    const r = spawnSync(process.execPath, [TSX, SCRIPT], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        GITHUB_EVENT_NAME: '',
+      } /* GOV-160 : balayage complet, même lancé dans une PR */,
+    });
     const sortie = `${r.stdout ?? ''}${r.stderr ?? ''}`;
     expect(r.status, sortie).toBe(0);
     expect(sortie).toContain(

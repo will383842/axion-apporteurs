@@ -67,7 +67,7 @@ describe('REQ-QA-027 — le nightly fournit la date, la garde décide', () => {
     expect(fautes(NIGHTLY.replace(`  ${JOB}:`, '  autre-job:'))).toEqual([`job ${JOB} absent`]);
   });
 
-  it('REQ-QA-027 : contre-témoin — gov:lecons garde son verdict daté, il n’est pas une condition de mise en service', () => {
-    expect(NIGHTLY).toContain('run: pnpm gov:lecons --now $(date -u +%F)');
+  it('REQ-QA-027 : gov:lecons est archivée (GOV-160, #319, 6077512137) et ne tourne plus en nightly', () => {
+    expect(NIGHTLY).not.toContain('pnpm gov:lecons');
   });
 });
