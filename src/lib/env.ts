@@ -126,6 +126,12 @@ export const schemaSecrets = z.object({
   // chez axionia (relecture, coordonnées d'un candidat) — la même valeur que le
   // `PARTNERS_RELECTURE_SECRET` d'axionia, distincte du secret des webhooks.
   AXIONIA_RELECTURE_SECRET: secret,
+  // SEC-63 (REQ-SEC-028 ; sécurité, #561, 5981077380) : la clé de PSEUDONYMISATION des porteurs, qui
+  // dérive `apporteurRef` transmise à axion-ia. Dans CETTE liste pour les règles de REQ-SEC-028 — au
+  // moins 32 octets, distincte de toutes les autres clés, préfixes refusés en production. Une clé à
+  // elle : jamais à signer ni à authentifier. HORS ROTATION : elle n'entre pas dans
+  // `NOMS_EN_ROTATION`, la référence devant rester stable pour axion-ia.
+  APPORTEUR_REF_KEY: secret,
 });
 
 export type Secrets = z.infer<typeof schemaSecrets>;
@@ -167,6 +173,11 @@ export const NOMS_DES_SECRETS_CONDITIONNELS: readonly string[] = Object.keys(
  */
 export type CleDesPersonnes = Pick<Secrets, 'PII_HASH_KEY'>;
 export type ClesDEmpreinte = CleDesPersonnes & Pick<Secrets, 'IP_HASH_SALT'>;
+/**
+ * SEC-63 : la clé des RÉFÉRENCES de porteurs, sous son type dédié ; seul le module qui dérive la
+ * référence (`src/server/integrations/axionia/attributions-dto.ts`) la reçoit.
+ */
+export type CleDesReferences = Pick<Secrets, 'APPORTEUR_REF_KEY'>;
 
 /** INT-T57 : ce que l'envoi réel exige au démarrage, quand il est allumé. */
 export const EXIGES_SI_ENVOI_ACTIF = ['ZEPTOMAIL_SEND_TOKEN', 'ZEPTOMAIL_API_URL'] as const;
@@ -565,6 +576,8 @@ const ROLES: Record<NomDeVariable, string> = {
     'authentifie les webhooks de rebonds du relais de courriel, en-tête `Producer-Signature`',
   AXIONIA_RELECTURE_SECRET:
     "signe les lectures de Partners chez axionia (coordonnées d'un candidat), en-tête `x-partners-signature`",
+  APPORTEUR_REF_KEY:
+    "dérive la référence pseudonyme d'un porteur transmise à axion-ia (`apporteurRef`) ; clé stable, hors rotation",
   DATABASE_URL:
     "la base Postgres, sous le rôle d'exécution du serveur (jamais superutilisateur, jamais membre de `partners_journal`) ; `readyz` la sonde",
   DATABASE_MIGRATION_URL:

@@ -365,8 +365,9 @@ describe('REQ-QA-030 — le module rechargé : les listes dérivées du schéma,
       // SEC-72 (REQ-SEC-021) : les plafonds de la vérification, hors dépôt.
       'PARTNERS_VERIFICATION_PLAFONDS',
     ]);
-    // Douze secrets toujours exigés, lus au schéma : leurs noms ne sont pas retapés ici.
-    expect(m.NOMS_DES_SECRETS).toHaveLength(12);
+    // Treize secrets toujours exigés (SEC-63 : APPORTEUR_REF_KEY), lus au schéma : leurs noms ne sont
+    // pas retapés ici.
+    expect(m.NOMS_DES_SECRETS).toHaveLength(13);
     expect(m.NOMS_DES_SECRETS).toContain(CLE_HEX);
     expect(m.NOMS_DES_VARIABLES).toHaveLength(29);
     expect(m.NOMS_DES_VARIABLES).toEqual([

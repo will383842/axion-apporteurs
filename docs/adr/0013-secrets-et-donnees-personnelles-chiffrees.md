@@ -116,6 +116,20 @@ le chiffrement ; elles lisent le dépôt, pas un brief : le format doit être é
     exactement l'usage que `MAGIC_LINK_SECRET` couvre, et le domaine séparé empêche qu'une signature de
     l'un vaille pour l'autre.
 
+### La clé de pseudonymisation des porteurs (ajoutée le 2026-10-07, SEC-63 ; sécurité, #561, 5981077380)
+
+16. **`APPORTEUR_REF_KEY` : clé de pseudonymisation stable, hors rotation.** Elle dérive la référence
+    opaque d'un porteur que Partners transmet à axion-ia (`apporteurRef`, API des attributions) :
+    `HMAC-SHA-256(APPORTEUR_REF_KEY, "partners.apporteur-ref.v1|" + population + "|" + id)`, mise en
+    forme d'UUID (version 8). C'est un secret de `schemaSecrets` comme les autres : au moins 32 octets,
+    distinct de toutes les autres clés, préfixes refusés en production, sans défaut ; seul le module qui
+    dérive la référence la reçoit, par le juge du démarrage (`CleDesReferences`). Une clé à elle :
+    jamais réutilisée depuis une autre, jamais à signer ni à authentifier. Elle est **hors rotation
+    courante** (absente de `NOMS_EN_ROTATION`) : axion-ia reconnaît un même porteur par sa référence,
+    qu'une rotation changerait entière sans aucun gain — la référence est un pseudonyme, pas un
+    authentifiant. Une compromission se traite par une **bascule datée**, coordonnée avec axion-ia, sur
+    décision écrite de Williams (`docs/runbooks/secret-desynchronise.md`).
+
 ## Conséquences
 
 - Le démarrage refuse un jeu de secrets incomplet, faible, préfixé en production ou dédoublé, avec un

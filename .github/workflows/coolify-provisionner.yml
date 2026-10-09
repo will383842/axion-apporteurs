@@ -60,6 +60,9 @@ jobs:
           PARTNERS_MCP_SHARED_SECRET: ${{ secrets.PARTNERS_MCP_SHARED_SECRET }}
           ZEPTOMAIL_WEBHOOK_SECRET: ${{ secrets.ZEPTOMAIL_WEBHOOK_SECRET }}
           AXIONIA_RELECTURE_SECRET: ${{ secrets.AXIONIA_RELECTURE_SECRET }}
+          # SEC-63 : la cle de pseudonymisation des porteurs, hors rotation ; absente, le
+          # provisionnement echoue en la nommant, avant que le serveur ne l exige.
+          APPORTEUR_REF_KEY: ${{ secrets.APPORTEUR_REF_KEY }}
           # INT-T57 : secret conditionnel, exige au demarrage seulement si l envoi reel est allume.
           ZEPTOMAIL_SEND_TOKEN: ${{ secrets.ZEPTOMAIL_SEND_TOKEN }}
           # INT-T54 : le canal d alerte du serveur, jamais exige au demarrage.

@@ -109,8 +109,17 @@
 
 ## 4. Les clés et l'entité, juste avant l'ouverture
 
-- [ ] Les **cinq clés du coffre** sont régénérées : `PII_HASH_KEY`, `PII_ENCRYPTION_KEY`,
-      `AXIONIA_WEBHOOK_SECRET`, `AXIONIA_API_TOKEN`, `AXIONIA_RELECTURE_SECRET`. Aucune valeur manipulée
+- [ ] **`APPORTEUR_REF_KEY` est posée dans les secrets de l'environnement `production` AVANT le
+      déploiement de la version qui l'exige** (SEC-63) : sans elle, le provisionnement échoue en la
+      nommant, et le serveur refuserait de démarrer. Ordre : poser APPORTEUR_REF_KEY par
+      AJOUTER-SECRETS-MANQUANTS.bat avant le déploiement (le secret absent, seul, au coffre), relancer
+      le provisionnement par REPROVISIONNER.bat, puis redéployer. _Porteur : Williams (`poser-secrets-production.ps1`)._
+
+- [ ] Les **six clés du coffre** sont régénérées : `PII_HASH_KEY`, `PII_ENCRYPTION_KEY`,
+      `AXIONIA_WEBHOOK_SECRET`, `AXIONIA_API_TOKEN`, `AXIONIA_RELECTURE_SECRET` et
+      `APPORTEUR_REF_KEY` (SEC-63 : la clé de pseudonymisation des porteurs, stable et hors rotation
+      ensuite ; la régénérer AVANT l'ouverture ne casse rien, puisqu'axion-ia ne garde encore aucune
+      référence). Aucune valeur manipulée
       pendant les exercices ne reste en service. Elles sont copiées dans le gestionnaire de mots de
       passe, puis le provisionnement est relancé et l'application redéployée. _Porteur : Williams
       (`poser-secrets-production.ps1`)._
