@@ -106,10 +106,14 @@ export function finDuContratDeLaSortie(sortie: {
 export interface OccupationDeLEntreprise {
   readonly attributionId: string;
   readonly occupeeDepuis: Instant;
-  /** Nulle tant que l'attribution occupe sans être sortie par la fin du contrat. */
-  readonly sortie: TransitionAttribution | null;
-  /** L'instant de fin du contrat, pour une sortie `figee` ou `fin_de_contrat` ; nul sinon. */
-  readonly finDuContrat: Instant | null;
+  /**
+   * Nulle tant que l'attribution occupe sans être sortie par la fin du contrat. Sinon, la transition de
+   * sortie et l'instant de fin du contrat (pour une autre sortie, l'instant de la sortie : il ne sert pas).
+   */
+  readonly sortie: {
+    readonly transition: TransitionAttribution;
+    readonly finDuContrat: Instant;
+  } | null;
 }
 
 /**
@@ -123,17 +127,16 @@ export function attributionDeLaCommande(
   commandeSigneeAt: Instant,
   occupations: readonly OccupationDeLEntreprise[]
 ): string | null {
-  const ayantDroit = occupations.filter((o) => {
-    if (o.occupeeDepuis > commandeSigneeAt) return false;
-    if (o.sortie === null) return true;
-    if (o.finDuContrat === null) return false;
-    return laCommandeTardiveOuvreDroit({
-      commandeSigneeAt,
-      finDuContrat: o.finDuContrat,
-      occupeeDepuis: o.occupeeDepuis,
-      // `figee` garde le droit des commandes signées avant la fin, comme `fin_de_contrat` (art. 12.3).
-      sortie: o.sortie === 'figee' ? 'fin_de_contrat' : o.sortie,
-    });
-  });
+  const ayantDroit = occupations.filter((o) =>
+    o.sortie === null
+      ? o.occupeeDepuis <= commandeSigneeAt
+      : laCommandeTardiveOuvreDroit({
+          commandeSigneeAt,
+          finDuContrat: o.sortie.finDuContrat,
+          occupeeDepuis: o.occupeeDepuis,
+          // `figee` garde le droit des commandes signées avant la fin, comme `fin_de_contrat` (12.3).
+          sortie: o.sortie.transition === 'figee' ? 'fin_de_contrat' : o.sortie.transition,
+        })
+  );
   return ayantDroit.length === 1 ? ayantDroit[0]!.attributionId : null;
 }

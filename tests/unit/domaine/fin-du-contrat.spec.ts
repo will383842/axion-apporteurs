@@ -296,6 +296,9 @@ describe('REQ-DM-006 — DM-73 : la commande va à l’occupant de sa date de si
   it('REQ-DM-006 : le droit tardif exige la fin de contrat, l’occupation à la signature et la signature avant la fin', () => {
     const c = { commandeSigneeAt: SIGNE, finDuContrat: FIN, occupeeDepuis: DEPOT };
     expect(laCommandeTardiveOuvreDroit({ ...c, sortie: 'fin_de_contrat' })).toBe(true);
+    expect(
+      laCommandeTardiveOuvreDroit({ ...c, occupeeDepuis: SIGNE, sortie: 'fin_de_contrat' })
+    ).toBe(true);
     expect(laCommandeTardiveOuvreDroit({ ...c, sortie: 'fraude_etablie' })).toBe(false);
     expect(
       laCommandeTardiveOuvreDroit({ ...c, occupeeDepuis: SIGNE + 1, sortie: 'fin_de_contrat' })
@@ -305,39 +308,27 @@ describe('REQ-DM-006 — DM-73 : la commande va à l’occupant de sa date de si
     ).toBe(false);
   });
 
+  const resilie = (transition: 'fin_de_contrat' | 'figee' | 'anteriorite_etablie') => ({
+    attributionId: 'a',
+    occupeeDepuis: DEPOT,
+    sortie: { transition, finDuContrat: FIN },
+  });
+  const suivant = { attributionId: 'b', occupeeDepuis: SUIVANT, sortie: null };
+
   it('REQ-DM-006 : le résilié reçoit la commande signée avant la fin ; l’occupant suivant, jamais', () => {
-    const resilie = { attributionId: 'a', occupeeDepuis: DEPOT, finDuContrat: FIN } as const;
-    const suivant = {
-      attributionId: 'b',
-      occupeeDepuis: SUIVANT,
-      sortie: null,
-      finDuContrat: null,
-    };
-    expect(
-      attributionDeLaCommande(SIGNE, [{ ...resilie, sortie: 'fin_de_contrat' }, suivant])
-    ).toBe('a');
-    expect(attributionDeLaCommande(SIGNE, [{ ...resilie, sortie: 'figee' }, suivant])).toBe('a');
-    expect(
-      attributionDeLaCommande(SUIVANT + 1, [{ ...resilie, sortie: 'fin_de_contrat' }, suivant])
-    ).toBe('b');
+    expect(attributionDeLaCommande(SIGNE, [resilie('fin_de_contrat'), suivant])).toBe('a');
+    expect(attributionDeLaCommande(SIGNE, [resilie('figee'), suivant])).toBe('a');
+    expect(attributionDeLaCommande(FIN, [resilie('figee'), suivant])).toBeNull();
+    expect(attributionDeLaCommande(SUIVANT, [resilie('fin_de_contrat'), suivant])).toBe('b');
+    expect(attributionDeLaCommande(SUIVANT - 1, [suivant])).toBeNull();
   });
 
-  it('REQ-DM-006 : aucune attribution n’y a droit après l’antériorité, la fraude, ou sans fin connue', () => {
-    expect(
-      attributionDeLaCommande(SIGNE, [
-        {
-          attributionId: 'a',
-          occupeeDepuis: DEPOT,
-          sortie: 'anteriorite_etablie',
-          finDuContrat: FIN,
-        },
-      ])
-    ).toBeNull();
-    expect(
-      attributionDeLaCommande(SIGNE, [
-        { attributionId: 'a', occupeeDepuis: DEPOT, sortie: 'perimee', finDuContrat: null },
-      ])
-    ).toBeNull();
+  it('REQ-DM-006 : aucune attribution n’y a droit après l’antériorité, ni sans occupation', () => {
+    expect(attributionDeLaCommande(SIGNE, [resilie('anteriorite_etablie')])).toBeNull();
     expect(attributionDeLaCommande(SIGNE, [])).toBeNull();
+    // Deux ayants droit ne se départagent pas : aucune désignation, plutôt qu'une double commission.
+    expect(
+      attributionDeLaCommande(SUIVANT, [suivant, { ...suivant, attributionId: 'c' }])
+    ).toBeNull();
   });
 });

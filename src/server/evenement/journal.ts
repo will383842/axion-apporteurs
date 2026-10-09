@@ -37,7 +37,7 @@
  */
 import type { Prisma, PrismaClient, TypeEvenementJournal, AgregatJournal } from '@prisma/client';
 import { CHARGES_PAR_TYPE, TRANSITIONS_DU_JOURNAL_APPORTEUR } from '../../domain/evenement/charges';
-import { ETATS_TERMINES } from '../../domain/attribution/machine';
+import { ETATS_TERMINES, type TransitionAttribution } from '../../domain/attribution/machine';
 import { calculerSelfHash, type LigneJournal } from '../../domain/evenement/journal';
 
 /**
@@ -353,19 +353,19 @@ export async function derniereFinSurLeSiren(
 
 /**
  * DM-73 — LECTEUR RÉSERVÉ de la chaîne des commissions : pour chaque attribution d'un SIREN, hors file,
- * la DERNIÈRE transition au journal et son instant, ou nuls s'il n'y en a pas. UNE requête, par les
- * attributions du SIREN (jointure latérale), comme `derniereFinSurLeSiren`. Seuls la transition et
- * l'instant sortent, jamais la charge. Chaque charge est jugée par SON schéma ; une charge illisible
- * LÈVE : la désignation d'un bénéficiaire échoue fermée, elle ne devine pas.
+ * la DERNIÈRE transition au journal et son instant ; une attribution sans fait n'y figure pas. UNE
+ * requête, par les attributions du SIREN (jointure latérale), comme `derniereFinSurLeSiren`. Seuls la
+ * transition et l'instant sortent, jamais la charge. Chaque charge est jugée par SON schéma ; une
+ * charge illisible LÈVE : la désignation d'un bénéficiaire échoue fermée, elle ne devine pas.
  */
 export async function dernieresTransitionsSurLeSiren(
   client: Pick<PrismaClient, '$queryRaw'> | Prisma.TransactionClient,
   siren: string
-): Promise<{ attributionId: string; transition: string | null; survenuAt: Date | null }[]> {
-  const lignes = await client.$queryRaw<{ id: string; survenu_at: Date | null; charge: unknown }[]>`
+): Promise<{ attributionId: string; transition: TransitionAttribution; survenuAt: Date }[]> {
+  const lignes = await client.$queryRaw<{ id: string; survenu_at: Date; charge: unknown }[]>`
     SELECT a.id::text AS id, d.survenu_at, d.charge
     FROM attributions a
-    LEFT JOIN LATERAL (
+    JOIN LATERAL (
       SELECT e.survenu_at, e.charge FROM evenements e
       WHERE e.type = 'attribution_etat_modifie' AND e.agregat = 'attribution' AND e.agregat_id = a.id
       ORDER BY e.id DESC
@@ -373,7 +373,6 @@ export async function dernieresTransitionsSurLeSiren(
     ) d ON true
     WHERE a.siren = ${siren} AND a.statut::text <> 'en_attente'`;
   return lignes.map((l) => {
-    if (l.charge === null) return { attributionId: l.id, transition: null, survenuAt: null };
     const lue = CHARGES_PAR_TYPE.attribution_etat_modifie.safeParse(l.charge);
     if (!lue.success) throw new Error('lecture_du_journal_refusee : charge hors schéma');
     return { attributionId: l.id, transition: lue.data.transition, survenuAt: l.survenu_at };

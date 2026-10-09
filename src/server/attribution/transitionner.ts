@@ -491,6 +491,17 @@ export async function enregistrerLaCommandeSignee(
   return { de, vers };
 }
 
+/** DM-73 : le jour d'effet de la dernière résiliation de l'apporteur, à minuit de Paris, ou nul. */
+async function jourDEffetDeLaResiliation(tx: Tx, apporteurId: string): Promise<number | null> {
+  const decision = await tx.decisionDeContrat.findFirst({
+    where: { apporteurId, geste: 'resiliation' },
+    orderBy: { creeAt: 'desc' },
+    select: { dateEffet: true },
+  });
+  const jour = decision?.dateEffet;
+  return jour ? minuitDeParisDuJour(jour.toISOString().slice(0, 10)) : null;
+}
+
 /**
  * DM-73, voie (b) (juriste, #824, 6043135877) : la chaîne des commissions DÉSIGNE l'attribution — et son
  * apporteur — à qui revient une commande signée, d'après les occupations de l'entreprise lues en base :
@@ -511,35 +522,23 @@ export async function attributionDUneCommandeSignee(
   const occupations: OccupationDeLEntreprise[] = [];
   for (const a of lignes) {
     const dernier = dernieres.get(a.id);
-    const transition = (dernier?.transition ?? undefined) as TransitionAttribution | undefined;
-    const finie = !occupe(a.statut) || transition === 'figee';
-    // Une attribution finie sans transition au journal n'a droit à rien.
-    if (finie && (transition === undefined || !dernier?.survenuAt)) continue;
-    const sortie = finie ? transition! : null;
-    let finDuContrat: number | null = null;
-    if (
-      dernier?.survenuAt &&
-      a.apporteurId !== null &&
-      (sortie === 'figee' || sortie === 'fin_de_contrat')
-    ) {
-      const decision = await tx.decisionDeContrat.findFirst({
-        where: { apporteurId: a.apporteurId, geste: 'resiliation' },
-        orderBy: { creeAt: 'desc' },
-        select: { dateEffet: true },
-      });
-      finDuContrat = finDuContratDeLaSortie({
-        sortieAt: dernier.survenuAt.getTime(),
-        jourDEffet:
-          decision?.dateEffet == null
-            ? null
-            : minuitDeParisDuJour(decision.dateEffet.toISOString().slice(0, 10)),
-      });
+    const occupeeDepuis = a.deposeeAt.getTime();
+    if (occupe(a.statut) && dernier?.transition !== 'figee') {
+      occupations.push({ attributionId: a.id, occupeeDepuis, sortie: null });
+      continue;
     }
+    // Une attribution finie sans fait au journal n'a droit à rien.
+    if (dernier === undefined) continue;
+    // `figee` et `fin_de_contrat` sont refusées au conseiller : l'attribution a un apporteur.
+    const deFin = dernier.transition === 'figee' || dernier.transition === 'fin_de_contrat';
+    const jourDEffet = deFin ? await jourDEffetDeLaResiliation(tx, a.apporteurId!) : null;
     occupations.push({
       attributionId: a.id,
-      occupeeDepuis: a.deposeeAt.getTime(),
-      sortie,
-      finDuContrat,
+      occupeeDepuis,
+      sortie: {
+        transition: dernier.transition,
+        finDuContrat: finDuContratDeLaSortie({ sortieAt: dernier.survenuAt.getTime(), jourDEffet }),
+      },
     });
   }
   const id = attributionDeLaCommande(commande.signeLe.getTime(), occupations);
