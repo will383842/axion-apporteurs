@@ -22,8 +22,13 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import type { PrismaClient } from '@prisma/client';
+import { NOMS_DES_SECRETS } from '../../../src/lib/env';
+import { clesPii, encryptPii } from '../../../src/server/securite/pii';
 import {
   RAISONS_DE_VERIFICATION,
+  faitsDeVerification,
+  lireLaVerification,
   raisonsDeVerification,
   trierLaListeDAppels,
   type FaitsDeVerification,
@@ -362,5 +367,256 @@ describe('REQ-SEC-060 REQ-JUR-031 — la vérification ne lit jamais le compte, 
     ['le secteur', 'if (apporteur.secteur !== entreprise.secteur) raisons.push(r);'],
   ])('REQ-SEC-060 : TÉMOIN — une raison qui lit %s rougit', (_cas, ligne) => {
     expect(sansCommentairesNiChaines(`${SOURCE}\n${ligne}\n`)).toMatch(LECTURES_INTERDITES);
+  });
+});
+
+describe('REQ-SEC-060 — les bords de la forme : une adresse ou un site mal formé ne fabrique aucune raison', () => {
+  it('REQ-SEC-060 : ce qui n’est pas une adresse, ou aucune adresse, ne porte aucune raison d’adresse', () => {
+    for (const adresseDuContact of [null, 'pas-une-adresse', '@gmail.com', 'contact@']) {
+      expect(raisonsDeVerification({ ...NEUTRES, adresseDuContact })).toEqual([]);
+    }
+  });
+
+  it('REQ-SEC-060 : l’adresse est lue sans ses blancs ni sa casse', () => {
+    expect(
+      raisonsDeVerification({ ...NEUTRES, adresseDuContact: '  Contact@Menuiserie-Martin.fr  ' })
+    ).toEqual(['adresse_generique']);
+    expect(raisonsDeVerification({ ...NEUTRES, adresseDuContact: 'a@b' })).toEqual([
+      'domaine_different_du_site',
+    ]);
+  });
+
+  it.each([
+    '  Menuiserie-Martin.fr  ',
+    'https://www.menuiserie-martin.fr/contact?x=1#haut',
+    'http://menuiserie-martin.fr:8080',
+    'menuiserie-martin.fr/',
+  ])('REQ-SEC-060 : le site « %s » est ramené à son domaine (négatif)', (domaineDuSite) => {
+    expect(raisonsDeVerification({ ...NEUTRES, domaineDuSite })).toEqual([]);
+  });
+
+  it('REQ-SEC-060 : seul le préfixe www. de TÊTE est retiré, et un site vide ne compare rien', () => {
+    expect(
+      raisonsDeVerification({
+        ...NEUTRES,
+        adresseDuContact: 'claire@awww.fr',
+        domaineDuSite: 'awww.fr',
+      })
+    ).toEqual([]);
+    expect(raisonsDeVerification({ ...NEUTRES, domaineDuSite: '' })).toEqual([]);
+    expect(raisonsDeVerification({ ...NEUTRES, domaineDuSite: 'https://' })).toEqual([]);
+  });
+
+  it('REQ-SEC-024 : une empreinte de contact face à une empreinte absente de l’apporteur ne s’égale pas', () => {
+    expect(
+      raisonsDeVerification({
+        ...NEUTRES,
+        empreintesDeLApporteur: { email: null, telephone: null },
+      })
+    ).toEqual([]);
+  });
+});
+
+/** Des clés de test, fabriquées à l'exécution (jamais un secret réel). */
+const CLES = clesPii({
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-sec-41-${n.toLowerCase()}-`.padEnd(48, '0')])
+  ),
+  PII_ENCRYPTION_KEY: 'b'.repeat(64),
+});
+
+type Donnees = {
+  attribution: Record<string, unknown>;
+  demande: Record<string, unknown> | null;
+  autre: { id: string } | null;
+  sessions: { ipHash: string | null }[];
+};
+
+/** Une base FACTICE : elle rend les données reçues et garde chaque requête, telle quelle. */
+function fausseBase(d: Donnees) {
+  const appels = {
+    unique: [] as unknown[],
+    demande: [] as unknown[],
+    autre: [] as unknown[],
+    sessions: [] as unknown[],
+  };
+  const prisma = {
+    attribution: {
+      findUniqueOrThrow: async (a: unknown) => (appels.unique.push(a), d.attribution),
+      findFirst: async (a: unknown) => (appels.autre.push(a), d.autre),
+    },
+    demandeConfirmation: {
+      findUnique: async (a: unknown) => (appels.demande.push(a), d.demande),
+    },
+    sessionEspace: {
+      findMany: async (a: unknown) => (appels.sessions.push(a), d.sessions),
+    },
+  } as unknown as PrismaClient;
+  return { prisma, appels };
+}
+
+const ADRESSE = 'contact@gmail.com';
+const PLEINE = (): Donnees => ({
+  attribution: {
+    id: 'att-1',
+    apporteurId: 'app-1',
+    siren: '732829320',
+    emailChiffre: encryptPii(
+      { modele: 'attribution', champ: 'emailChiffre', id: 'att-1' },
+      ADRESSE,
+      CLES
+    ),
+    emailHash: E1,
+    phoneHash: T1,
+    apporteur: { emailHash: E1, phoneHash: T2 },
+  },
+  demande: { etat: 'rebond', emissions: [{ clicIpHash: IP1 }] },
+  autre: { id: 'att-2' },
+  sessions: [{ ipHash: IP1 }, { ipHash: null }],
+});
+
+describe('REQ-SEC-060 REQ-SEC-024 — la lecture des faits : des empreintes, et la forme de l’adresse seulement', () => {
+  const p = { attributionId: 'att-1', domaineDuSite: 'menuiserie-martin.fr', cles: CLES };
+
+  it('REQ-SEC-024 : chaque fait vient de sa requête, et les comparaisons portent sur les empreintes', async () => {
+    const { prisma, appels } = fausseBase(PLEINE());
+    expect(await faitsDeVerification(prisma, p)).toEqual({
+      adresseDuContact: ADRESSE,
+      domaineDuSite: 'menuiserie-martin.fr',
+      empreintesDuContact: { email: E1, telephone: T1 },
+      empreintesDeLApporteur: { email: E1, telephone: T2 },
+      contactSurUneAutreEntreprise: true,
+      clicIpHash: IP1,
+      ipHashesDeLApporteur: [IP1],
+      etatDeLaDemande: 'rebond',
+    });
+    expect(appels.unique).toEqual([
+      {
+        where: { id: 'att-1' },
+        select: {
+          id: true,
+          apporteurId: true,
+          siren: true,
+          emailChiffre: true,
+          emailHash: true,
+          phoneHash: true,
+          apporteur: { select: { emailHash: true, phoneHash: true } },
+        },
+      },
+    ]);
+    expect(appels.demande).toEqual([
+      {
+        where: { attributionId: 'att-1' },
+        select: {
+          etat: true,
+          emissions: {
+            where: { clicIpHash: { not: null } },
+            select: { clicIpHash: true },
+            orderBy: { emiseAt: 'desc' },
+            take: 1,
+          },
+        },
+      },
+    ]);
+    expect(appels.autre).toEqual([
+      {
+        where: {
+          id: { not: 'att-1' },
+          siren: { not: '732829320' },
+          OR: [{ emailHash: E1 }, { phoneHash: T1 }],
+        },
+        select: { id: true },
+      },
+    ]);
+    expect(appels.sessions).toEqual([
+      { where: { apporteurId: 'app-1', ipHash: { not: null } }, select: { ipHash: true } },
+    ]);
+  });
+
+  it('REQ-SEC-060 : la console reçoit les raisons, et rien d’autre', async () => {
+    expect(await lireLaVerification(fausseBase(PLEINE()).prisma, p)).toEqual({
+      raisons: [
+        'adresse_webmail',
+        'adresse_generique',
+        'coordonnee_de_l_apporteur',
+        'contact_sur_plusieurs_entreprises',
+        'clic_depuis_l_ip_de_l_apporteur',
+        'rebond',
+      ],
+    });
+  });
+
+  it('REQ-SEC-024 : sans empreinte de contact, aucune recherche d’autre entreprise ; sans apporteur, aucune session lue', async () => {
+    const { prisma, appels } = fausseBase({
+      attribution: {
+        id: 'att-3',
+        apporteurId: null,
+        siren: '732829320',
+        emailChiffre: null,
+        emailHash: null,
+        phoneHash: null,
+        apporteur: null,
+      },
+      demande: null,
+      autre: { id: 'ne-doit-pas-etre-lu' },
+      sessions: [{ ipHash: IP1 }],
+    });
+    expect(
+      await faitsDeVerification(prisma, { attributionId: 'att-3', domaineDuSite: null, cles: CLES })
+    ).toEqual({
+      adresseDuContact: null,
+      domaineDuSite: null,
+      empreintesDuContact: { email: null, telephone: null },
+      empreintesDeLApporteur: { email: null, telephone: null },
+      contactSurUneAutreEntreprise: false,
+      clicIpHash: null,
+      ipHashesDeLApporteur: [],
+      etatDeLaDemande: null,
+    });
+    expect(appels.autre).toEqual([]);
+    expect(appels.sessions).toEqual([]);
+  });
+
+  it('REQ-SEC-024 : une seule empreinte de contact cherche sur elle seule ; le clic EN COURS remplace le clic stocké', async () => {
+    const base = (emailHash: string | null, phoneHash: string | null) =>
+      fausseBase({
+        attribution: {
+          id: 'att-4',
+          apporteurId: 'app-4',
+          siren: '732829320',
+          emailChiffre: null,
+          emailHash,
+          phoneHash,
+          apporteur: { emailHash: null, phoneHash: null },
+        },
+        demande: { etat: 'envoyee', emissions: [{ clicIpHash: IP1 }] },
+        autre: null,
+        sessions: [],
+      });
+    const q = { attributionId: 'att-4', domaineDuSite: null, cles: CLES };
+    const parTelephone = base(null, T1);
+    expect(await faitsDeVerification(parTelephone.prisma, { ...q, clicIpHash: IP2 })).toMatchObject(
+      { clicIpHash: IP2, contactSurUneAutreEntreprise: false }
+    );
+    expect(parTelephone.appels.autre).toMatchObject([{ where: { OR: [{ phoneHash: T1 }] } }]);
+    const parCourriel = base(E1, null);
+    expect(await faitsDeVerification(parCourriel.prisma, { ...q, clicIpHash: null })).toMatchObject(
+      { clicIpHash: null }
+    );
+    expect(parCourriel.appels.autre).toMatchObject([{ where: { OR: [{ emailHash: E1 }] } }]);
+    const sansClic = base(null, null);
+    expect(
+      await faitsDeVerification(
+        fausseBase({
+          attribution: PLEINE().attribution,
+          demande: { etat: 'envoyee', emissions: [] },
+          autre: null,
+          sessions: [],
+        }).prisma,
+        p
+      )
+    ).toMatchObject({ clicIpHash: null });
+    expect(await faitsDeVerification(sansClic.prisma, q)).toMatchObject({ clicIpHash: IP1 });
   });
 });
