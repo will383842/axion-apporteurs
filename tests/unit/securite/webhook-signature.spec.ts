@@ -96,6 +96,9 @@ const PAIEMENT = TYPES_EVENEMENT.find((t) => t.startsWith('paiement.'))!;
  * INT-T45 : la réception juge le payload contre le `$defs` fermé de son type. Les faces vertes
  * envoient donc la charge du PRODUCTEUR RÉEL (RM-03), en version 2 — le seul renommage de la v2
  * (`amountHtCents` → `montantHtCents` du paiement) appliqué, comme `contrat-hash.spec.ts` le nomme.
+ * Version 4 (INT-T76-P) : la fiche du client exige `opco`, que la fixture v1 ne porte pas encore ;
+ * elle part avec `opco: null`, la valeur d'un OPCO inconnu d'axion-ia (exemption de la v4 dans
+ * `contrat-hash.spec.ts`, levée dès que la fixture le porte).
  */
 const PRODUCTEUR = JSON.parse(
   readFileSync('tests/fixtures/axionia/fixtures-producteur.v1.json', 'utf8')
@@ -103,6 +106,7 @@ const PRODUCTEUR = JSON.parse(
 function chargeDuProducteur(type: string): Record<string, unknown> {
   const e = PRODUCTEUR.evenements.find((x) => x.event_type === type);
   if (e === undefined) throw new Error(`fixture du producteur : aucun ${type}`);
+  if (type === 'client.cree' || type === 'client.mis_a_jour') return { ...e.payload, opco: null };
   if (type !== 'paiement.recu') return { ...e.payload };
   const { amountHtCents, ...reste } = e.payload;
   return { ...reste, montantHtCents: amountHtCents };
@@ -141,6 +145,8 @@ function depotEnMemoire(): DepotDeReception & { lignes: EvenementAInscrire[] } {
   const lignes: EvenementAInscrire[] = [];
   return {
     lignes,
+    // INT-T76-P : aucune v4 reçue en mémoire, la fenêtre de bascule n'est pas ouverte.
+    premiereReceptionDeLaVersionCourante: async () => null,
     async inscrire(e) {
       const doublon = lignes.some(
         (l) =>

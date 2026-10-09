@@ -86,6 +86,7 @@ enum TypeEvenementJournal {
   /// SEC-15 : la pose et la levée du gel des dépôts (migration 004920), en fin d'enum comme en base.
   apporteur_gel_modifie
   acces_coordonnees_reservee
+  piece_kyc_rib_verifie
   decision_contrat_litige_modifie
 
   @@map("type_evenement_journal")
@@ -630,14 +631,15 @@ enum SourceEvenementRecu {
   @@map("source_evenement_recu")
 }
 
-/// Les types d'événements reçus : les douze de `TYPES_EVENEMENT` (`packages/contracts/events.ts`),
+/// Les types d'événements reçus : les treize de `TYPES_EVENEMENT` (`packages/contracts/events.ts`),
 /// dans leur ordre, chacun sous son identifiant snake_case — le nom de fil dont le point devient un
 /// souligné. La base porte le MÊME libellé : un nom de fil écrit ici en clair serait une recopie du
 /// contrat que `gov:termes-interdits` refuse hors de `packages/contracts`. La correspondance est
 /// DÉRIVÉE par `identifiantDuType` et confrontée à `pg_enum` par `tests/integration/webhook.spec.ts`.
 /// Les quatre derniers sont entrés en `schema_version` 2, par ajout en fin d'enum (migration
 /// `20260927000300_types_evenement_recu_v2`), le douzième en `schema_version` 3 (migration
-/// `20261003000900_type_evenement_recu_devis_emis`) ; INT-T12 y ajoutera les types DocuSeal.
+/// `20261003000900_type_evenement_recu_devis_emis`), le treizième en `schema_version` 4 (migration
+/// `20261003005090_type_evenement_recu_financement_etape`) ; INT-T12 y ajoutera les types DocuSeal.
 enum TypeEvenementRecu {
   client_cree
   client_mis_a_jour
@@ -651,6 +653,7 @@ enum TypeEvenementRecu {
   facture_annulee
   client_fusionne
   devis_emis
+  financement_etape
 
   @@map("type_evenement_recu")
 }
@@ -702,6 +705,9 @@ model EvenementRecu {
   @@unique([source, eventId])
   @@index([statut, receivedAt])
   @@index([sujetRef])
+  /// INT-T76-P (recommandation d'A02) : la première réception de la version courante, départ de la
+  /// fenêtre de bascule, se lit par cet index, jamais par un parcours de la table.
+  @@index([source, schemaVersion, receivedAt])
   @@map("evenements_recus")
 }
 

@@ -121,8 +121,15 @@ async function envoyer(
 const ligne = (eventId: string) => base.prisma.evenementRecu.findFirst({ where: { eventId } });
 
 describe('REQ-INT-004 — le « devis émis » entre dans la liste fermée, en version 3', () => {
-  it('REQ-INT-004 : le contrat publié est en version 3', () => {
-    expect(SCHEMA_VERSION).toBe(3);
+  it('REQ-INT-004 : le contrat publié en version 3 le déclare, et la version courante le garde', () => {
+    // Entré en v3 (INT-T46-P), repris tel quel par la v4 (INT-T76-P).
+    expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(3);
+    for (const v of [3, SCHEMA_VERSION]) {
+      const publie = JSON.parse(
+        readFileSync(`packages/contracts/contracts.v${v}.json`, 'utf8')
+      ) as { $defs: Record<string, unknown> };
+      expect(Object.keys(publie.$defs), `v${v}`).toContain('payload_devis_emis');
+    }
   });
 
   it('REQ-INT-004 : un `devis.emis` conforme est RANGÉ — 200, inscrit `recu` sous `devis_emis`', async () => {
@@ -134,7 +141,11 @@ describe('REQ-INT-004 — le « devis émis » entre dans la liste fermée, en v
     );
     expect(statut).toBe(200);
     const l = await ligne(eventId);
-    expect([l?.eventType, l?.statut, l?.schemaVersion]).toEqual(['devis_emis', 'recu', 3]);
+    expect([l?.eventType, l?.statut, l?.schemaVersion]).toEqual([
+      'devis_emis',
+      'recu',
+      SCHEMA_VERSION,
+    ]);
   });
 
   it('REQ-INT-004 : un `devis.emis` HORS SCHÉMA (un champ intrus) est refusé 422, et rien n’est inscrit', async () => {

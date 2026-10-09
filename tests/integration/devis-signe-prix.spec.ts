@@ -105,14 +105,16 @@ describe('REQ-INT-003 — le contrat publié : prixReferenceHtCents sur chaque l
     }
   });
 
-  it('REQ-QA-007 : un amendement de la version 3, pas une montée — l’artefact publié porte le champ, sous son empreinte', () => {
-    expect(SCHEMA_VERSION).toBe(3);
-    const publie = JSON.parse(readFileSync('packages/contracts/contracts.v3.json', 'utf8')) as {
-      $defs: Record<string, unknown>;
-    };
-    expect(JSON.stringify(publie.$defs[nomDefPayload('devis.signe')])).toContain(
-      '"prixReferenceHtCents"'
-    );
+  it('REQ-QA-007 : un amendement de la version 3, repris par la version courante — chaque artefact publié porte le champ', () => {
+    // Amendé en v3 (INT-T48-P), repris tel quel par la v4 (INT-T76-P).
+    for (const v of [3, SCHEMA_VERSION]) {
+      const publie = JSON.parse(
+        readFileSync(`packages/contracts/contracts.v${v}.json`, 'utf8')
+      ) as { $defs: Record<string, unknown> };
+      expect(JSON.stringify(publie.$defs[nomDefPayload('devis.signe')]), `v${v}`).toContain(
+        '"prixReferenceHtCents"'
+      );
+    }
   });
 });
 

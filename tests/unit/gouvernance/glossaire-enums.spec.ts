@@ -40,6 +40,7 @@ import {
   etatsDuGlossaire,
   enumsDuGlossaire,
   enumsDuSchema,
+  ENUMS_VISIBLES_DES_APPORTEURS,
   texteDeLaReq,
   FAMILLES,
   VUE_CONFORME,
@@ -121,13 +122,36 @@ describe('REQ-GOV-016 — le glossaire porte ce que l’acceptation de GOV-006 e
     expect(glossaire()).toContain('`qualificateur`');
   });
 
-  it('REQ-GOV-016 : toute valeur d’enum du schéma figure au glossaire', () => {
-    const auGlossaire = glossaire();
-    for (const [nom, valeurs] of enumsDuSchema(readFileSync('prisma/schema.prisma', 'utf8'))) {
-      for (const v of valeurs) {
-        expect(auGlossaire, nom + '.' + v + ' manque au glossaire').toContain('`' + v + '`');
-      }
-    }
+  /**
+   * GOV-160 (décision de Williams, #319) : le glossaire est réduit aux mots des apporteurs. Seules
+   * les énumérations de `ENUMS_VISIBLES_DES_APPORTEURS` y sont exigées — la liste est LUE dans
+   * `schema-enums.ts`, jamais recopiée ici.
+   */
+  const manquantes = (schema: string, auGlossaire: string): string[] =>
+    [...enumsDuSchema(schema)]
+      .filter(([nom]) => ENUMS_VISIBLES_DES_APPORTEURS.has(nom))
+      .flatMap(([nom, valeurs]) =>
+        valeurs.filter((v) => !auGlossaire.includes('`' + v + '`')).map((v) => nom + '.' + v)
+      );
+  const SCHEMA = () => readFileSync('prisma/schema.prisma', 'utf8');
+
+  it('REQ-GOV-016 : toute valeur d’une énumération VISIBLE DES APPORTEURS figure au glossaire', () => {
+    expect(manquantes(SCHEMA(), glossaire())).toEqual([]);
+  });
+
+  it('REQ-GOV-016 : chaque énumération visible des apporteurs existe au schéma — la règle mesure quelque chose', () => {
+    const auSchema = new Set(enumsDuSchema(SCHEMA()).keys());
+    for (const nom of ENUMS_VISIBLES_DES_APPORTEURS) expect(auSchema, nom).toContain(nom);
+  });
+
+  it('REQ-GOV-016 : TÉMOIN — une valeur visible des apporteurs retirée du glossaire est nommée', () => {
+    const ampute = glossaire().split('`fin_de_plein_droit`').join('');
+    expect(manquantes(SCHEMA(), ampute)).toContain('MotifResiliation.fin_de_plein_droit');
+  });
+
+  it('REQ-GOV-016 : CONTRE-TÉMOIN — une énumération interne n’a pas à figurer au glossaire (GOV-160)', () => {
+    const schema = SCHEMA() + '\nenum JournalInterneEssai {\n  valeur_interne_inconnue\n}\n';
+    expect(manquantes(schema, glossaire())).toEqual([]);
   });
 });
 
