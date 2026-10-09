@@ -61,6 +61,36 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: La garde du corps publie sait rougir
         run: pnpm gov:entite:corps:prove
+      # 7 bis. Ce que LIT un apporteur (GOV-160, #319) : textes, courriels, contrat, vocabulaire
+      # interdit de la charte. Chaque garde ne juge que les fichiers ajoutes ou modifies par la PR.
+      - name: Termes interdits du glossaire (messages, src, contrat d evenements)
+        run: pnpm gov:termes-interdits
+      - name: La garde des termes interdits sait rougir
+        run: pnpm gov:termes-interdits:prove
+      - name: Textes de l apporteur — liste noire de la charte (espace, courriels, micro-copie, contrat)
+        run: pnpm gov:lexique
+      - name: La garde des textes de l apporteur sait rougir
+        run: pnpm gov:lexique:prove
+      - name: Textes de l apporteur et documents remis — aucun terme du droit social
+        run: pnpm jur:lexique-social
+      - name: La garde du lexique social sait rougir
+        run: pnpm jur:lexique-social:prove
+      - name: Espace — aucun agregat du reseau
+        run: pnpm jur:aucun-agregat-reseau
+      - name: La garde des agregats sait rougir
+        run: pnpm jur:aucun-agregat-reseau:prove
+      - name: Espace — aucune progression ni objectif
+        run: pnpm jur:aucune-progression
+      - name: La garde de la progression sait rougir
+        run: pnpm jur:aucune-progression:prove
+      - name: Contenus — remuneration toujours indicative
+        run: pnpm jur:copy-indicative-partners
+      - name: La garde de la remuneration indicative sait rougir
+        run: pnpm jur:copy-indicative-partners:prove
+      - name: Contrat — annexe 1 chiffree
+        run: pnpm jur:grille-chiffree
+      - name: La garde de la grille chiffree sait rougir
+        run: pnpm jur:grille-chiffree:prove
       # 8. Secrets et matrice d'autonomie des agents.
       - name: Matrice d autonomie des agents et garde des secrets
         run: pnpm gov:autonomie

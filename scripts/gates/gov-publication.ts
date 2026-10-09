@@ -26,9 +26,9 @@
  * fait désormais échouer `--prove`.
  */
 
-import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
+import { restreindreALaPr } from './fichiers-de-la-pr';
 
 /** (a) L'analyse du risque. Ces mots n'ont rien à faire ici, sauf dans le gabarit de contrat. */
 const DOCTRINE = [
@@ -275,29 +275,7 @@ if (process.argv.includes('--prove')) {
  * local, elle balaie tout le dépôt suivi. Un diff illisible retombe sur le balayage complet.
  */
 function fichiersAJuger(): string[] {
-  const suivis = fichiersSuivis();
-  const base = process.env['GITHUB_BASE_REF'];
-  if (process.env['GITHUB_EVENT_NAME'] !== 'pull_request' || !base) return suivis;
-  try {
-    const diff = execFileSync(
-      'git',
-      [
-        '-c',
-        'core.quotePath=false',
-        'diff',
-        '--name-only',
-        '--diff-filter=AM',
-        `origin/${base}...HEAD`,
-      ],
-      { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }
-    )
-      .split('\n')
-      .filter(Boolean);
-    const ensemble = new Set(suivis);
-    return diff.filter((f) => ensemble.has(f));
-  } catch {
-    return suivis;
-  }
+  return restreindreALaPr(fichiersSuivis());
 }
 const fautes = analyser(fichiersAJuger());
 if (fautes.length === 0) {

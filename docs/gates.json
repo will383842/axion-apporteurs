@@ -27,8 +27,10 @@
       "verifie": "termes interdits dans TOUT fichier suivi sous les racines que l'en-tete de docs/GLOSSAIRE.md nomme (prisma/, src/, messages/, docs/adr/) plus packages/contracts/, quelle que soit son extension : Invoice, Refund, PaymentScheduleProfile, refund.issued, payment.received, invoice.issued, devis.signed, qualificateur ; aucun nom d'evenement litteral hors packages/contracts ; un fichier sous une racine que la garde ne lit pas en entier (octet NUL, UTF-8 invalide, octets refuses par le disque) est refuse en le nommant ; une ligne est ce que LF termine, CRLF compris : un fichier sous une racine, ou une source (REQ-INT-004, le glossaire), qui porte une autre fin de ligne qu'un consommateur coupe (CR seul, U+2028, U+2029) est refuse en la nommant, par la regle de partners:schema:enums ; l'exemption de citation se lit sur la DERNIERE extension du nom. Les listes litterales d'etats occupants ne sont PAS ici : partners:schema:enums en est la SEULE implementation depuis partners/ADR-0011, et elle lit tout fichier suivi sous src, prisma et scripts, quelle que soit son extension. Cette entree est aussi la POPULATION de --prove, jusqu'a l'identifiant de chaque temoin et a chaque extension qui accorde une exemption de citation : la preuve ne declare pas elle-meme ce qu'elle doit prouver. familles : source_illisible, perimetre_vide, contenu_illisible, fin_de_ligne_non_lf, terme_axionia_invalide, evenement_hors_nomenclature, evenement_litteral_hors_contrat, synonyme_interdit_du_glossaire ; refus de conclure : req_int_004_muette, contrat_sans_evenement, contrat_et_exigence_divergents, glossaire_sans_synonyme, racines_illisibles ; extensions qui citent : md, sql, prisma ; temoins : req_int_004_muette, contrat_sans_evenement, contrat_et_exigence_divergents, glossaire_sans_synonyme, racines_illisibles, perimetre_vide, contenu_octet_nul, contenu_utf8_invalide, contenu_refuse_par_le_disque, fin_de_ligne_cr_seul, fin_de_ligne_separateur_unicode, fin_de_ligne_dans_une_source, modele_dans_le_code, modele_en_qualification_pointee, modele_dans_le_paquet_de_contrats, anglais_dans_un_adr, json_guillemet_droit, prose_guillemet_droit, prose_accent_grave_pendant, prose_cloture_impaire, gabarit_de_chaine, extension_sans_grammaire, extension_composee, dossier_a_point, sql_accent_grave_hors_commentaire, sql_terme_nu_en_commentaire, prisma_accent_grave_hors_commentaire, prisma_terme_nu_en_commentaire, litteral_hors_contrat, synonyme_exerce, enveloppe_camelcase_hors_contrat",
       "fixtureRouge": "ajouter 'payment.received' dans un fichier suivi de docs/adr/, racine que l'en-tete du glossaire nomme ; ailleurs sous docs/, le fichier est hors perimetre et la garde sort en 0.",
       "preuveRouge": "pnpm gov:termes-interdits:prove — les 8 familles, les 5 refus et les 31 témoins que docs/gates.json énumère rougissent chacun ; les 17 contre-témoins restent verts (sortie relue le 2026-10-07, rattrapage 124)",
-      "statut": "archivee",
-      "decision": "#319, commentaire 6077512137 (Williams, 2026-10-09), GOV-160"
+      "statut": "gardee",
+      "decision": "#319, commentaire 6077512137 (Williams, 2026-10-09), GOV-160 : rétablie en porte A",
+      "ou": "porte A",
+      "pourquoi": "ce que lit un apporteur (textes, courriels, contrat, vocabulaire interdit de la charte) ; ne juge que les fichiers de la PR (scripts/gates/fichiers-de-la-pr.ts)"
     },
     {
       "id": "req:check",
@@ -289,8 +291,10 @@
       "verifie": "liste noire IMPORTEE de la SSOT lexique-interdit.ts (REQ-JUR-037), jamais recopiee dans la gate ni dans GATES.md ; perimetre src/app/(espace)/**, emails/apporteur/**, micro-copy/**, src/content/micro-copy/espace/** (portee apporteur) et src/content/micro-copy/console/** (portee depot), et les ressources diffusees ; les exclusions declarees par la SSOT sont importees avec elle (etendue par UX-P0-01, JUR-T13 et JUR-T26) ; etendue par JUR-T01 au gabarit de contrat docs/contrat/** (motif attendu), liste noire ABSOLUE LISTE_NOIRE_GABARIT de la meme SSOT — L.134-12, L.134-16, indemnite de fin de contrat, indemnite de clientele, renonce/renonciation et leurs flexions, kit de vente — sans exemption de negation ni de citation, sauf les deux chaines VERBATIM de l'art. 19 (titre et phrase) nommees par la SSOT. Périmètre de portée apporteur étendu (charte relationnelle, 2026-09-27), extensions lues par les MOTIFS de lexique-apporteurs.ts : src/app/(espace)/** (.ts, .tsx, .md, .mdx, .json), src/components/espace/** (.ts, .tsx), ressources diffusées ressources/**, src/content/ressources/**, public/ressources/** (.md, .mdx, .html, .txt, .json, .ts, .tsx), src/content/micro-copy/espace/** (.ts, .json).",
       "fixtureRouge": "libelle factice 'objectif du mois' dans micro-copy",
       "preuveRouge": "pnpm gov:lexique:prove — 13 familles rougissent chacune sur son temoin (dont gabarit_liste_noire, et jargon_interne, REQ-UX-003, ajoutee par UX-P0-01), 8 positions limites rougissent, 6 controles positifs rougissent (dont la phrase de l'art. 19 retouchee d'un mot et une renonciation NIEE dans le gabarit), 14 contre-temoins restent verts, dont la phrase de partners/ADR-0009 « valeurs du monde reel » verbatim et l'art. 19 du gabarit verbatim. Temoin du binaire sur le depot (JUR-T01, 2026-09-19) : « L'Apporteur renonce a toute indemnite. » ajoute en tete de l'art. 11.3 du gabarit -> EXIT=1, « [gabarit_liste_noire] docs/contrat/CONTRAT-APPORTEUR-V1.md:530 — « renonce » dans le gabarit de contrat »",
-      "statut": "archivee",
-      "decision": "#319, commentaire 6077512137 (Williams, 2026-10-09), GOV-160"
+      "statut": "gardee",
+      "decision": "#319, commentaire 6077512137 (Williams, 2026-10-09), GOV-160 : rétablie en porte A",
+      "ou": "porte A",
+      "pourquoi": "ce que lit un apporteur (textes, courriels, contrat, vocabulaire interdit de la charte) ; ne juge que les fichiers de la PR (scripts/gates/fichiers-de-la-pr.ts)"
     },
     {
       "id": "gate-a",
@@ -978,8 +982,10 @@
       "verifie": "AST des clés (type, interface, classe, objet littéral) de tout fichier suivi de l'espace — src/app/(espace)/, src/server/espace/, src/components/espace/ — découpées en segments : un segment d'agrégat (moyenne, médiane, rang, rank, percentile, centile, quartile, décile, classement, comparaison, podium, average, mean) ou « réseau » associé à une quantité (total, somme, cumul, nombre, part, volume) rougit en nommant la clé (agregat_reseau) ; un import d'un module de la console depuis l'espace rougit (import_console) ; source_illisible. CE QU'ELLE NE TIENT PAS : une valeur agrégée sous une clé neutre, une clé calculée.",
       "fixtureRouge": "DTO temoin portant moyenneReseau",
       "preuveRouge": "pnpm jur:aucun-agregat-reseau:prove — 3 familles sur 4 témoins, 2 contre-témoins verts. Binaire (2026-09-27) : src/app/(espace)/bac/temoin.tsx indexé portant moyenneReseau -> EXIT=1, « [agregat_reseau] … la clé « moyenneReseau » porte un agrégat (moyenne) » ; dépôt intact -> EXIT=0, 5 fichiers, 19 clés. charte-relationnelle.spec.ts vu ROUGE : Failed to load url ../../../scripts/gates/jur-aucun-agregat-reseau. Rouge constaté par: A05",
-      "statut": "archivee",
-      "decision": "#319, commentaire 6077512137 (Williams, 2026-10-09), GOV-160"
+      "statut": "gardee",
+      "decision": "#319, commentaire 6077512137 (Williams, 2026-10-09), GOV-160 : rétablie en porte A",
+      "ou": "porte A",
+      "pourquoi": "ce que lit un apporteur (textes, courriels, contrat, vocabulaire interdit de la charte) ; ne juge que les fichiers de la PR (scripts/gates/fichiers-de-la-pr.ts)"
     },
     {
       "id": "jur:aucune-progression",
@@ -989,8 +995,10 @@
       "verifie": "tout identifiant de l'espace (même périmètre) contenant une suite de segments de NOMS_DE_PROGRESSION — les six de REQ-JUR-035, relus au registre par le test, plus progression, progressbar, goal, les accords de restant, reste à faire, prochain palier, palier suivant — rougit (nom_de_progression) ; <progress>, <meter> et role=\"progressbar\" rougissent (element_de_progression) ; source_illisible. CE QU'ELLE NE TIENT PAS : une jauge dessinée sous des noms neutres.",
       "fixtureRouge": "composant temoin ProgressToNextTier",
       "preuveRouge": "pnpm jur:aucune-progression:prove — 3 familles sur 5 témoins, 2 contre-témoins verts. Binaire (2026-09-27) : temoin.tsx indexé portant ProgressToNextTier -> EXIT=1, « [nom_de_progression] … « ProgressToNextTier » nomme une progression (progress) » ; dépôt intact -> EXIT=0, 5 fichiers, 256 noms. Rouge constaté par: A05",
-      "statut": "archivee",
-      "decision": "#319, commentaire 6077512137 (Williams, 2026-10-09), GOV-160"
+      "statut": "gardee",
+      "decision": "#319, commentaire 6077512137 (Williams, 2026-10-09), GOV-160 : rétablie en porte A",
+      "ou": "porte A",
+      "pourquoi": "ce que lit un apporteur (textes, courriels, contrat, vocabulaire interdit de la charte) ; ne juge que les fichiers de la PR (scripts/gates/fichiers-de-la-pr.ts)"
     },
     {
       "id": "jur:suspension-motifs-fermes",
@@ -1033,8 +1041,10 @@
       "verifie": "refus de publier un gabarit dont l'annexe 1 contient les mots forfait, bareme ou pourcentage SANS valeur numerique dans la meme cellule ; regle unique dans src/domain/contrat/grille-chiffree.ts, appliquee au gabarit SOURCE par ce script (fil tendu : les montants y sont des variables) et au gabarit RENDU par exigerGabaritPubliable (src/domain/contrat/publication.ts), la ou elle protege ; gabarit absent ou sans annexe 1 -> rouge. Limite declaree : cellules de tableau de l'annexe 1 seulement, et un chiffre sans rapport la satisfait",
       "fixtureRouge": "annexe temoin portant 'forfait' seul",
       "preuveRouge": "npx tsx scripts/gates/jur-grille-chiffree.ts --prove — 4 temoins rougissent (forfait seul, bareme non publie, pourcentage du HT, gabarit sans annexe 1), 4 contre-temoins restent verts. Temoin du binaire sur le depot (JUR-T01, 2026-09-19) : cellule {{COM_AUDIT_FLASH}} remplacee par « forfait » -> EXIT=1, « [mot_sans_valeur] Annexe 1 — la cellule « forfait » nomme forfait sans valeur numerique »",
-      "statut": "archivee",
-      "decision": "#319, commentaire 6077512137 (Williams, 2026-10-09), GOV-160"
+      "statut": "gardee",
+      "decision": "#319, commentaire 6077512137 (Williams, 2026-10-09), GOV-160 : rétablie en porte A",
+      "ou": "porte A",
+      "pourquoi": "ce que lit un apporteur (textes, courriels, contrat, vocabulaire interdit de la charte) ; ne juge que les fichiers de la PR (scripts/gates/fichiers-de-la-pr.ts)"
     },
     {
       "id": "GATE-JUR-VOCAB-PUBLIC",
@@ -1297,8 +1307,10 @@
       "verifie": "dans la portée apporteur (dérivée) et src/server/pdf/**, les formes droit_social de la SSOT sont ABSOLUES, négation et citation comprises (terme_social) ; trois rubriques distinctes d'un bulletin de paie dans un fichier rougissent (rubriques_de_paie). CE QU'ELLE NE TIENT PAS : PDF binaire, image, texte assemblé à l'exécution.",
       "fixtureRouge": "intituler un gabarit « bulletin de commission »",
       "preuveRouge": "pnpm jur:lexique-social:prove — 2 familles sur 3 témoins (dont un terme NIÉ), 2 contre-témoins verts. Binaire (2026-09-27) : src/server/pdf/temoin.tsx « Bulletin de commission » -> EXIT=1, « [terme_social] … « Bulletin » : un terme du droit social » ; dépôt intact -> EXIT=0, 8 fichiers. Rouge constaté par: A05",
-      "statut": "archivee",
-      "decision": "#319, commentaire 6077512137 (Williams, 2026-10-09), GOV-160"
+      "statut": "gardee",
+      "decision": "#319, commentaire 6077512137 (Williams, 2026-10-09), GOV-160 : rétablie en porte A",
+      "ou": "porte A",
+      "pourquoi": "ce que lit un apporteur (textes, courriels, contrat, vocabulaire interdit de la charte) ; ne juge que les fichiers de la PR (scripts/gates/fichiers-de-la-pr.ts)"
     },
     {
       "id": "gov:publication",
@@ -1516,8 +1528,10 @@
       "verifie": "Transposée de la garde de la rémunération indicative d'axion-ia, motifs repris tels quels, sur les fichiers suivis de src/content/** et docs/maquettes/** (ligne lue telle qu'on la lit : balises retirées, entités décodées ; un commentaire n'est pas jugé) : une rémunération présentée comme ferme sans mention indicative dans la ligne ou ses deux voisines (remuneration_ferme : « vous touchez », « une commission chiffrée », un montant ou un taux près d'une commission), un revenu sans plafond (revenu_illimite), un rythme de ventes par mois (projection_mensuelle), une promesse sans risque, un kit de vente (REQ-JUR-041), un balisage de rémunération, une exception nommée périmée, aucun fichier lu (perimetre_vide). Lancée en porte A par `pnpm jur:copy-indicative-partners` et `pnpm jur:copy-indicative-partners:prove`. CE QU'ELLE NE TIENT PAS : une mention indicative à plus de deux lignes de la formule ferme n'est pas vue (limite de l'originale) ; la famille de l'originale sur l'AI Act n'est pas reprise, elle juge la communication commerciale d'Axion-IA.",
       "fixtureRouge": "l'ancienne phrase de l'état vide de l'accueil, « Si elle signe, vous touchez une commission. », dans src/content/micro-copy/espace/etats-vides.ts",
       "preuveRouge": "Mesuré par A06 le 2026-10-03 sur main 2cb0df48, où l'ancienne phrase de l'état vide de l'accueil (« Si elle signe, vous touchez une commission. ») est encore servie : EXIT=1, « ❌ jur:copy-indicative — 11 faute(s) » ([remuneration_ferme] src/content/micro-copy/espace/etats-vides.ts:24 « vous touchez », et dix autres « vous touchez » ou « Touchez » dans docs/maquettes et etats-vides.ts:36, réécrites par la micro-copy W20 et par les tournures d'A07 du 2026-10-03) ; --prove : 8 témoins rougissent chacun sur sa seule famille, 4 contre-témoins verts (dont la tournure d'A07 pour l'accueil). Rouge constaté par: A06",
-      "statut": "archivee",
-      "decision": "#319, commentaire 6077512137 (Williams, 2026-10-09), GOV-160"
+      "statut": "gardee",
+      "decision": "#319, commentaire 6077512137 (Williams, 2026-10-09), GOV-160 : rétablie en porte A",
+      "ou": "porte A",
+      "pourquoi": "ce que lit un apporteur (textes, courriels, contrat, vocabulaire interdit de la charte) ; ne juge que les fichiers de la PR (scripts/gates/fichiers-de-la-pr.ts)"
     },
     {
       "id": "notifications:lue-at-inerte",
