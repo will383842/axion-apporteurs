@@ -232,3 +232,20 @@ describe('REQ-GOV-021 — GOV-154 : la PR en cours se lit par --pr ou PR_COURANT
     expect(GARDE.prCourante([], { PR_COURANTE: '' })).toBeNull();
   });
 });
+
+describe('REQ-GOV-021 — GOV-154 : le début de la règle est la FUSION de la garde, jamais un commit de branche', () => {
+  it('REQ-GOV-021 — seuls les commits squashés « (#n) » qui ajoutent la garde datent le début', () => {
+    expect(
+      GARDE.debutDeLaRegle([
+        { date: '2026-10-07T20:00:00+02:00', sujet: 'wip: GOV-154 — la garde' },
+        { date: '2026-10-09T10:00:00+02:00', sujet: 'Merge abc into def' },
+      ])
+    ).toBeUndefined();
+    expect(
+      GARDE.debutDeLaRegle([
+        { date: '2026-10-10T10:00:00+02:00', sujet: 'feat(GOV-154): la garde (#860)' },
+        { date: '2026-10-07T20:00:00+02:00', sujet: 'wip: GOV-154 — la garde' },
+      ])
+    ).toBe('2026-10-10T10:00:00+02:00');
+  });
+});

@@ -177,15 +177,34 @@ function lireLesCommits(): CommitDeMain[] {
     });
 }
 
-/** L'instant du premier commit qui ajoute cette garde, ou `undefined` s'il n'est pas dans l'historique. */
+/**
+ * LE DÉBUT DE LA RÈGLE : l'instant du plus ancien commit SQUASHÉ « (#n) » qui ajoute cette garde —
+ * sa fusion sur main. Un commit de branche (`wip`, fusion de main dans la branche, commit de fusion
+ * de la CI) ne date rien : il rendrait relues des PR fusionnées pendant que la garde était en revue.
+ * `undefined` tant que la garde n'a pas fusionné : aucune fusion n'est alors relue.
+ */
+export function debutDeLaRegle(
+  ajouts: readonly { date: string; sujet: string }[]
+): string | undefined {
+  const squashs = ajouts.filter((a) => numeroDuSujet(a.sujet) !== null);
+  return squashs.length > 0 ? squashs[squashs.length - 1]!.date : undefined;
+}
+
 function lireLeDebut(): string | undefined {
   const brut = execFileSync(
     'git',
-    ['log', '--diff-filter=A', '--format=%cI', 'HEAD', '--', CHEMIN_DE_LA_GARDE],
+    ['log', '--diff-filter=A', '--format=%cI%x1f%s', 'HEAD', '--', CHEMIN_DE_LA_GARDE],
     { encoding: 'utf8' }
   ).trim();
-  const lignes = brut.split(/\r?\n/).filter((l) => l.trim() !== '');
-  return lignes.length > 0 ? lignes[lignes.length - 1] : undefined;
+  return debutDeLaRegle(
+    brut
+      .split(/\r?\n/)
+      .filter((l) => l.trim() !== '')
+      .map((l) => {
+        const [date = '', sujet = ''] = l.split('\x1f');
+        return { date, sujet };
+      })
+  );
 }
 
 // ── la preuve : chaque famille rougit sur son témoin ────────────────────────
