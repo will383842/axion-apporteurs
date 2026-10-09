@@ -1803,7 +1803,7 @@ describe('REQ-JUR-015 — SEC-66 : la date d’effet, pour un apporteur', () => 
       orderBy: { evenementId: 'desc' },
     });
     expect(journalSimule.lireLaChargeDUnFait).toHaveBeenCalledWith(m.tx, '41');
-    expect(journalSimule.passageQuiCiteLaDecision).toHaveBeenCalledWith(m.tx, 'd-1');
+    expect(journalSimule.passageQuiCiteLaDecision).toHaveBeenCalledWith(m.tx, ID, 'd-1');
     expect(m.mises).toStrictEqual([
       {
         where: { id: ID },

@@ -6,6 +6,7 @@
  * mises en demeure ; la résiliation pour manquement ne lit que celle de l'article en cause.
  */
 import { SEUILS } from '../seuils/ssot';
+import { finDuContratAvecPreavis } from './effets-de-la-fin';
 import { dateDepuisJours, joursDeLaDate } from '../temps/calendrier-civil';
 import type { Instant } from '../temps/horloge';
 import { depuisParis, versParis } from '../temps/paris';
@@ -119,9 +120,10 @@ export function minuitDeParisDuJour(jour: string): Instant {
 /**
  * La date d'effet est-elle ATTEINTE ? Elle l'est au minuit, heure de Paris, qui SUIT le jour de la date
  * d'effet (juriste, #762, 6032315865) : le contrat est en vigueur pendant TOUT ce jour, et le passage à
- * `resilie` comme les effets de l'art. 12 n'ont lieu qu'à partir du lendemain. Comparaison de jours
- * `AAAA-MM-JJ` (lexicographique) : STRICTEMENT après.
+ * `resilie` comme les effets de l'art. 12 n'ont lieu qu'à partir du lendemain. Cet instant est la FIN
+ * du contrat avec préavis : il se lit à sa source unique, `finDuContratAvecPreavis` (RM-01), jamais
+ * recalculé ici.
  */
 export function dateEffetAtteinte(dateEffet: string, maintenant: Instant): boolean {
-  return jourCivilDeParis(maintenant) > dateEffet;
+  return maintenant >= finDuContratAvecPreavis(minuitDeParisDuJour(dateEffet));
 }

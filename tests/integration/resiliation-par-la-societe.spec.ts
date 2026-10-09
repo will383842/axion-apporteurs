@@ -34,11 +34,7 @@ import {
   resilierUnApporteur,
 } from '../../src/server/apporteur/resiliation';
 import { resilierALaDateDEffet } from '../../src/server/taches/resilier-a-date-effet';
-import {
-  ajouterEvenement,
-  decisionOpposeeALApporteur,
-  passageQuiCiteLaDecision,
-} from '../../src/server/evenement/journal';
+import { ajouterEvenement, passageQuiCiteLaDecision } from '../../src/server/evenement/journal';
 import { niveauDAcces, routeOuverte } from '../../src/domain/apporteur/acces-espace';
 import { SEUILS } from '../../src/domain/seuils/ssot';
 import { NOMS_DES_SECRETS } from '../../src/lib/env';
@@ -202,6 +198,22 @@ const statutDe = async (apporteurId: string) =>
     where: { id: apporteurId },
     select: { statut: true, resiliationMotif: true, sessionVersion: true },
   });
+
+/** La décision que CITE le dernier passage à `resilie` (`ordinaire_axion`) de l'apporteur, lue au journal. */
+const decisionCiteeAuJournal = async (apporteurId: string): Promise<string | null> => {
+  const l = await base.prisma.evenement.findFirst({
+    where: {
+      type: 'apporteur_statut_modifie',
+      agregat: 'apporteur',
+      agregatId: apporteurId,
+      charge: { path: ['resiliationMotif'], equals: 'ordinaire_axion' },
+    },
+    select: { charge: true },
+    orderBy: { id: 'desc' },
+  });
+  const cite = (l?.charge as { decisionContratId?: unknown } | undefined)?.decisionContratId;
+  return typeof cite === 'string' ? cite : null;
+};
 
 const jour = (d: Date | null) => (d === null ? null : d.toISOString().slice(0, 10));
 
@@ -439,7 +451,7 @@ describe('REQ-JUR-015 — sans courriel parti le jour de la décision, aucune da
     await tache(new Date('2026-12-01T08:00:00.000Z'));
     expect(await statutDe(apporteurId)).toMatchObject({ statut: 'signe' });
     // La caducité se lit par l'absence de citation, sans colonne d'état.
-    expect(await passageQuiCiteLaDecision(base.prisma, r.decisionId)).toBeNull();
+    expect(await passageQuiCiteLaDecision(base.prisma, apporteurId, r.decisionId)).toBeNull();
   });
 });
 
@@ -481,8 +493,12 @@ describe('REQ-ARG-026 — une nouvelle notification est une nouvelle décision',
     await tache(new Date('2026-11-10T23:00:00.000Z'));
     expect(await statutDe(apporteurId)).toMatchObject({ statut: 'resilie' });
     // Seule la seconde est citée ; la première, supplantée, ne l'est par aucun passage.
-    expect(await decisionOpposeeALApporteur(base.prisma, apporteurId)).toBe(seconde.decisionId);
-    expect(await passageQuiCiteLaDecision(base.prisma, premiere.decisionId)).toBeNull();
+    expect(await decisionCiteeAuJournal(apporteurId)).toBe(seconde.decisionId);
+    expect(await passageQuiCiteLaDecision(base.prisma, apporteurId, premiere.decisionId)).toBeNull();
+    // Le filtre par apporteur : un autre apporteur ne lit jamais ce passage comme le sien.
+    const autre = await unApporteur();
+    expect(await passageQuiCiteLaDecision(base.prisma, autre, seconde.decisionId)).toBeNull();
+    expect(await passageQuiCiteLaDecision(base.prisma, apporteurId, seconde.decisionId)).not.toBeNull();
   });
 });
 
@@ -496,7 +512,7 @@ describe('REQ-JUR-015 — la trace durable de l’opposabilité, dans le journal
     // La purge de DM-61, simulée : la notification supprimée, le lien du courriel mis à nul.
     await base.prisma.notificationEspace.deleteMany({ where: { apporteurId } });
     expect(await base.prisma.notificationEspace.count({ where: { apporteurId } })).toBe(0);
-    const cite = await decisionOpposeeALApporteur(base.prisma, apporteurId);
+    const cite = await decisionCiteeAuJournal(apporteurId);
     expect(cite).toBe(r.decisionId);
     const d = await base.prisma.decisionDeContrat.findUniqueOrThrow({
       where: { id: cite! },

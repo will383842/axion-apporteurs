@@ -193,47 +193,33 @@ export async function lireLaChargeDUnFait(
 
 /**
  * SEC-66 (A02, #561, 5988205180) — la trace DURABLE de l'opposabilité d'une résiliation par la
- * Société : le passage à `resilie` qui CITE ce fait `apporteur_resiliation_notifiee`
+ * Société : le passage à `resilie` DE CET APPORTEUR qui CITE la ligne `decisions_de_contrat`
  * (`decisionContratId`), ou `null` s'il n'est cité par aucun passage — la décision est alors
- * caduque, sans aucune colonne d'état. Le journal n'est jamais purgé : la réponse survit à la purge
- * de la notification et de son courriel. Une lecture seule, par le module du journal.
+ * caduque, sans aucune colonne d'état. Le filtre par apporteur ferme la citation croisée : un passage
+ * d'un autre apporteur ne rend jamais opposable la décision de celui-ci. Le journal n'est jamais
+ * purgé : la réponse survit à la purge de la notification et de son courriel. Lecteurs : la tâche de
+ * la date d'effet (une décision n'est citée qu'une fois) et la purge des textes (DM-70, départ des
+ * cinq ans d'une mise en demeure). Une lecture seule, par le module du journal.
  */
 export async function passageQuiCiteLaDecision(
   client: PrismaClient | Prisma.TransactionClient,
+  apporteurId: string,
   decisionContratId: string
 ): Promise<string | null> {
+  if (!UUID_CANONIQUE.test(apporteurId)) {
+    throw new Error('lecture_du_journal_refusee : agrégat hors forme');
+  }
   const l = await client.evenement.findFirst({
     where: {
       type: 'apporteur_statut_modifie',
+      agregat: 'apporteur',
+      agregatId: apporteurId,
       charge: { path: ['decisionContratId'], equals: decisionContratId },
     },
     select: { id: true },
     orderBy: { id: 'asc' },
   });
   return l === null ? null : l.id.toString();
-}
-
-/**
- * SEC-66 — la décision OPPOSÉE à un apporteur résilié par la Société : le `decisionContratId` de son
- * passage à `resilie` pour `ordinaire_axion`, lu dans le journal (DM-70 en lit la date d'effet sur la
- * ligne `decisions_de_contrat` citée) ; `null` sinon.
- */
-export async function decisionOpposeeALApporteur(
-  client: PrismaClient | Prisma.TransactionClient,
-  apporteurId: string
-): Promise<string | null> {
-  const l = await client.evenement.findFirst({
-    where: {
-      type: 'apporteur_statut_modifie',
-      agregat: 'apporteur',
-      agregatId: apporteurId,
-      charge: { path: ['resiliationMotif'], equals: 'ordinaire_axion' },
-    },
-    select: { charge: true },
-    orderBy: { id: 'desc' },
-  });
-  const cite = (l?.charge as { decisionContratId?: unknown } | undefined)?.decisionContratId;
-  return typeof cite === 'string' ? cite : null;
 }
 
 /**
