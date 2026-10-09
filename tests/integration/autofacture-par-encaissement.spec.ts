@@ -211,6 +211,39 @@ describe('REQ-ARG-018 — la numérotation, posée par la base, sans trou', () =
     expect(af!.echeanceLe.toISOString().slice(0, 10)).toBe('2027-04-21');
   });
 
+  it('REQ-ARG-018 : TÉMOIN — la régularisation d’une ligne facturée est figée, même de nul vers une date', async () => {
+    const app = await unApporteur();
+    const nue = await uneLigne(app, 7, '2027-03-10');
+    const regularisee = await base.prisma.ligneCommission.create({
+      data: {
+        apporteurId: app,
+        type: 'commission',
+        statut: 'acquise',
+        commissionCents: 8,
+        encaissementIntegralLe: new Date('2027-03-01T00:00:00.000Z'),
+        constateLe: new Date('2027-03-01T00:00:00.000Z'),
+        regulariseLe: new Date('2027-03-22T00:00:00.000Z'),
+        commandeRef: `CMD-${randomUUID().slice(0, 8)}`,
+        prixFactureCents: 56,
+        prixPublicCents: 72,
+      },
+    });
+    await emettreAutofactures(depotAutofacturesPrisma(base.prisma), HORLOGE);
+    expect(await autofacturesDe(app)).toHaveLength(2);
+    const poser = (id: string, jour: string) =>
+      base.prisma
+        .$executeRaw`UPDATE "lignes_commission" SET "regularise_le" = ${jour}::date WHERE "id" = ${id}::uuid`;
+    await expect(poser(nue, '2027-03-25')).rejects.toThrow(
+      'lignes_commission_regularisation_figee'
+    );
+    await expect(poser(regularisee.id, '2027-03-29')).rejects.toThrow(
+      'lignes_commission_regularisation_figee'
+    );
+    // Une ligne encore libre reste régularisable.
+    const libre = await uneLigne(app, 9, '2027-03-10');
+    await expect(poser(libre, '2027-03-25')).resolves.toBe(1);
+  });
+
   it('REQ-ARG-018 : l’émission rend des dates d’émission et d’échéance justes, en jours civils', async () => {
     const app = await unApporteur();
     await uneLigne(app, 5, '2027-03-13'); // samedi → émise le lundi 15
