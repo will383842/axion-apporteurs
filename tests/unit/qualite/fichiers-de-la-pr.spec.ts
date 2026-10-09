@@ -167,6 +167,9 @@ describe('gov:pr — l’outillage qui juge ne s’allège pas lui-même', () =>
     for (const f of [
       'scripts/gates/fichiers-de-la-pr.ts',
       'scripts/lot/revues.ts',
+      'scripts/ci/attendre.ts',
+      'scripts/mutation/seuils.ts',
+      'scripts/nouveau-dossier/outil.ts',
       '.github/workflows/ci.yml',
       '.claude/agents/dev.md',
       'vitest.config.ts',
@@ -201,14 +204,21 @@ describe('gov:pr — aucune PR d’auteur n’écrit de statut dans docs/tasks.j
 
   it('un statut modifié rougit (statut_ecrit)', () => {
     expect(
-      fautesDeStatut(taches('a_faire'), taches('fusionnee'), 'feat(DM-01): x').map((f) => f.famille)
+      fautesDeStatut(taches('a_faire'), taches('fusionnee'), 900).map((f) => f.famille)
     ).toEqual(['statut_ecrit']);
   });
 
-  it('une définition modifiée sans statut touché reste verte ; GOV-160 est l’exception unique', () => {
+  it('une définition modifiée sans statut touché reste verte ; seule la PR 859 est exceptée, quel que soit le titre d’une autre', () => {
     const avant = JSON.stringify({ taches: [{ id: 'DM-01', statut: 'a_faire', titre: 'a' }] });
     const apres = JSON.stringify({ taches: [{ id: 'DM-01', statut: 'a_faire', titre: 'b' }] });
-    expect(fautesDeStatut(avant, apres, 'feat(DM-01): x')).toEqual([]);
-    expect(fautesDeStatut(taches('a_faire'), taches('annulee'), 'chore(GOV-160): x')).toEqual([]);
+    expect(fautesDeStatut(avant, apres, 900)).toEqual([]);
+    // L'exception se lit sur le NUMÉRO de la PR, jamais sur son titre : un titre se copie.
+    expect(fautesDeStatut(taches('a_faire'), taches('annulee'), 859)).toEqual([]);
+    expect(fautesDeStatut(taches('a_faire'), taches('annulee'), 901).map((f) => f.famille)).toEqual(
+      ['statut_ecrit']
+    );
+    expect(
+      fautesDeStatut(taches('a_faire'), taches('annulee'), null).map((f) => f.famille)
+    ).toEqual(['statut_ecrit']);
   });
 });

@@ -73,11 +73,12 @@ export const RACINES_CRITIQUES: readonly string[] = [
   '.claude/',
   'config/',
   'patches/',
-  'scripts/gates/',
+  // TOUT `scripts/` : l'outillage qui juge, mesure ou publie ne s'allège pas lui-même (refus de la
+  // lentille securite sur #859 — une liste de sous-dossiers laissait `scripts/ci` et
+  // `scripts/mutation` légers).
+  'scripts/',
   // L'outillage qui juge ne s'allège pas lui-même (refus des lentilles sur #859) : le lot lit
   // les verdicts (`scripts/lot/revues.ts`), `scripts/lib/` sert les gardes.
-  'scripts/lot/',
-  'scripts/lib/',
   'src/config/',
   'next.config.js',
   'next.config.mjs',
@@ -106,7 +107,6 @@ export const RACINES_LEGERES: readonly string[] = [
   'src/content/',
   'src/app/',
   'src/components/',
-  'scripts/',
   'README.md',
   'CHANGELOG.md',
   'CLAUDE.md',
@@ -325,8 +325,11 @@ export function fautesDesRevues(
 
 // ── le statut des tâches ─────────────────────────────────────────────────────
 
-/** L'exception unique : la PR qui a retiré l'écriture des statuts (décision #319, 6077512137). */
-export const PR_EXCEPTEE_DU_STATUT = 'GOV-160';
+/**
+ * L'exception unique : la PR qui a retiré l'écriture des statuts (GOV-160, décision #319,
+ * 6077512137). Liée à son NUMÉRO, jamais au titre : un titre se copie, un numéro de PR non.
+ */
+export const PR_EXCEPTEE_DU_STATUT = 859;
 
 function statutsDe(texte: string | null): Map<string, unknown> {
   if (texte === null) return new Map();
@@ -339,8 +342,12 @@ function statutsDe(texte: string | null): Map<string, unknown> {
  * PR fusionnées (`pnpm avancement`). Une tâche AJOUTÉE ou RETIRÉE n'est pas un statut écrit ; un
  * statut changé sur une tâche existante l'est.
  */
-export function fautesDeStatut(base: string | null, tete: string | null, titre: string): Faute[] {
-  if (MOTIF_TITRE.exec(titre)?.[2] === PR_EXCEPTEE_DU_STATUT) return [];
+export function fautesDeStatut(
+  base: string | null,
+  tete: string | null,
+  numero: number | null
+): Faute[] {
+  if (numero === PR_EXCEPTEE_DU_STATUT) return [];
   let avant: Map<string, unknown>;
   let apres: Map<string, unknown>;
   try {
@@ -429,7 +436,14 @@ function tacheDeLaBase(base: string, titre: string): TacheLue | null {
 const contenuALaTete = (f: string): string | null =>
   existsSync(f) ? readFileSync(f, 'utf8') : null;
 
-type PrLue = { titre: string; corps: string; base: string; tete: string; fichiers: string[] };
+type PrLue = {
+  numero: number | null;
+  titre: string;
+  corps: string;
+  base: string;
+  tete: string;
+  fichiers: string[];
+};
 
 function juger(pr: PrLue, revues: RevueLue[] | null): { niveau: Niveau; fautes: Faute[] } {
   const { niveau, raisons } = niveauDeLaPr({
@@ -452,7 +466,7 @@ function juger(pr: PrLue, revues: RevueLue[] | null): { niveau: Niveau; fautes: 
     ...fautesDuCorps(pr.corps, niveau, code),
     ...fautesDOrdre(migrationsDeLaBase(pr.base), migrationsAjoutees(pr.base, pr.tete)),
     ...(pr.fichiers.includes('docs/tasks.json')
-      ? fautesDeStatut(tasksA(pr.base), tasksA(pr.tete), pr.titre)
+      ? fautesDeStatut(tasksA(pr.base), tasksA(pr.tete), pr.numero)
       : []),
   ];
   if (revues !== null) fautes.push(...fautesDesRevues(revues, pr.tete, exigees, codesDePoste()));
@@ -475,6 +489,7 @@ function prParGh(numero: string): { pr: PrLue; revues: RevueLue[] } {
   ) as { author_association?: string; body?: string; commit_id?: string; submitted_at?: string }[];
   return {
     pr: {
+      numero: Number(numero),
       titre: v.title,
       corps: v.body ?? '',
       base,
@@ -495,6 +510,7 @@ function prParEvenement(): PrLue | null {
   if (process.env['GITHUB_EVENT_NAME'] !== 'pull_request' || !chemin) return null;
   const e = JSON.parse(readFileSync(chemin, 'utf8')) as {
     pull_request: {
+      number: number;
       title: string;
       body: string | null;
       base: { sha: string };
@@ -503,6 +519,7 @@ function prParEvenement(): PrLue | null {
   };
   const p = e.pull_request;
   return {
+    numero: typeof p.number === 'number' ? p.number : null,
     titre: p.title,
     corps: p.body ?? '',
     base: p.base.sha,
@@ -577,7 +594,7 @@ export const TEMOINS: { famille: (typeof FAMILLES)[number]; fautes: () => Faute[
       fautesDeStatut(
         JSON.stringify({ taches: [{ id: 'DM-01', statut: 'a_faire' }] }),
         JSON.stringify({ taches: [{ id: 'DM-01', statut: 'fusionnee' }] }),
-        'feat(DM-01): x'
+        900
       ),
   },
 ];
@@ -596,7 +613,7 @@ export const CONTRE_TEMOINS: { nom: string; fautes: () => Faute[] }[] = [
       fautesDeStatut(
         JSON.stringify({ taches: [{ id: 'DM-01', statut: 'a_faire', titre: 'a' }] }),
         JSON.stringify({ taches: [{ id: 'DM-01', statut: 'a_faire', titre: 'b' }] }),
-        'feat(DM-01): x'
+        900
       ),
   },
   {
