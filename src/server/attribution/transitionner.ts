@@ -121,6 +121,11 @@ export interface DemandeEcriture {
    * à la charge du journal (décision (d) de la juriste pour DM-12).
    */
   readonly anomalieId?: string;
+  /**
+   * DM-73 : l'instant de la SIGNATURE de la commande, exigé pour `confirmee_par_la_commande`, et pour
+   * elle seule. `confirmee_at` et la fenêtre courent de lui, jamais du passage.
+   */
+  readonly confirmeeLe?: Date;
 }
 
 /**
@@ -180,6 +185,12 @@ function jugerLeMotif(demande: DemandeEcriture): void {
     throw new ErreurTransitionAttribution(
       'motif_incoherent',
       `${transition} : le motif est exigé pour annulee_par_la_console seule, la catégorie pour l'article 3.3 bis seul`
+    );
+  }
+  if ((transition === 'confirmee_par_la_commande') !== (demande.confirmeeLe !== undefined)) {
+    throw new ErreurTransitionAttribution(
+      'motif_incoherent',
+      `${transition} : la date de signature est exigée pour confirmee_par_la_commande, et pour elle seule`
     );
   }
   if (fondeeSurUneAnomalie(transition) !== (anomalieId !== undefined)) {
@@ -302,7 +313,8 @@ export async function transitionnerUneAttribution(
     },
     transition,
     vers,
-    maintenant.getTime()
+    maintenant.getTime(),
+    (demande.confirmeeLe ?? maintenant).getTime()
   );
   await tx.attribution.update({
     where: { id: attributionId },
@@ -421,6 +433,30 @@ export async function confirmerUneAttribution(
   return {
     vers: (await transitionnerUneAttribution(tx, { ...demande, transition: 'devis_signe' })).vers,
   };
+}
+
+/**
+ * DM-73 (art. 3.2 et 12.3 du v2 ; juriste et A02, #824) : une commande SIGNÉE. Sur une `provisoire`,
+ * elle la confirme — `confirmee_par_la_commande`, datée de la signature — puis `devis_signe`, dans la
+ * MÊME transaction : deux faits, dans cet ordre, et aucune commande n'est refusée pour ce seul motif.
+ * Ailleurs, `devis_signe` seul, jugé par la matrice : une attribution terminée ne revient pas
+ * (voie (b) : le droit de la commande se juge à la chaîne des commissions, `laCommandeTardiveOuvreDroit`).
+ */
+export async function enregistrerLaCommandeSignee(
+  tx: Tx,
+  demande: Omit<DemandeEcriture, 'transition' | 'confirmeeLe'> & { signeLe: Date }
+): Promise<{ de: EtatAttribution; vers: EtatAttribution }> {
+  const { signeLe, ...reste } = demande;
+  const { statut: de } = await verrouiller(tx, demande.attributionId);
+  if (de === 'provisoire') {
+    await transitionnerUneAttribution(tx, {
+      ...reste,
+      transition: 'confirmee_par_la_commande',
+      confirmeeLe: signeLe,
+    });
+  }
+  const { vers } = await transitionnerUneAttribution(tx, { ...reste, transition: 'devis_signe' });
+  return { de, vers };
 }
 
 /**

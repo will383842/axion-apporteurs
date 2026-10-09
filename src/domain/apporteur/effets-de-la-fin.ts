@@ -16,6 +16,7 @@ import {
   ETATS_ATTRIBUTION,
   TRANSITIONS_ATTRIBUTION,
   type EtatAttribution,
+  type TransitionAttribution,
 } from '../attribution/machine';
 import { dateDepuisJours, joursDeLaDate } from '../temps/calendrier-civil';
 import type { Instant } from '../temps/horloge';
@@ -63,4 +64,19 @@ export function ouvreDroitALaCommission(commande: {
   readonly finDuContrat: Instant;
 }): boolean {
   return commande.commandeSigneeAt < commande.finDuContrat;
+}
+
+/**
+ * DM-73, voie (b) d'A02 (juriste, #824, 6043135877 ; coordination, 6043156854) : une commande signée
+ * AVANT la fin mais reçue APRÈS l'annulation de l'attribution ne la fait pas revenir (art. 12.1). Le
+ * droit, rattaché à la commande (art. 12.3), ne reste ouvert que si l'attribution est sortie par la FIN
+ * DU CONTRAT, jamais par l'antériorité, le démenti ou la fraude (art. 3.3, 3.7). La borne d'instant est
+ * celle d'`ouvreDroitALaCommission`, jamais recalculée.
+ */
+export function laCommandeTardiveOuvreDroit(commande: {
+  readonly commandeSigneeAt: Instant;
+  readonly finDuContrat: Instant;
+  readonly sortie: TransitionAttribution;
+}): boolean {
+  return commande.sortie === 'fin_de_contrat' && ouvreDroitALaCommission(commande);
 }
