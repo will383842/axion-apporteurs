@@ -592,6 +592,8 @@ export type Tache = {
     owner: string | null;
     branch: string | null;
     attestation: { pr: number; sha: string | null; fusionneeAt: string | null } | null;
+    lot: string | null;
+    motif: string | null;
   };
   /** `null` si le champ manque — GOV-096 : on ne déduit pas « livrée » d'une absence. */
   statut: string | null;
@@ -605,7 +607,12 @@ export type Tache = {
 export function clotureDansLaPrBienFormee(t: Tache, avant: Tache, numero: number | null): boolean {
   const c = t.cloture;
   if (!c || numero === null) return false;
-  if (avant.statut === 'fusionnee') return false;
+  // Veto sécurité (#856) : TOUT statut livré à la base refuse — `LIVREES`, dérivé de l'avancement,
+  // jamais une liste tapée ici — et un statut absent aussi (GOV-096 : une absence ne se lit pas
+  // « non livrée »). Rouvrir une tâche livrée effacerait son sha réel sous une attestation pendante.
+  if (avant.statut === null || LIVREES.has(avant.statut)) return false;
+  // `lot` ne se réécrit pas, et `motif` (réservé aux statuts sans PR) reste vide.
+  if (c.lot !== (avant.cloture?.lot ?? null) || c.motif !== null) return false;
   const a = c.attestation;
   return (
     c.statut === 'fusionnee' &&
@@ -1385,6 +1392,7 @@ type TacheBrute = TacheDeLaPr & {
   owner?: string | null;
   branch?: string | null;
   lot?: string | null;
+  motif?: string | null;
   attestation?: { pr: number; sha: string | null; fusionneeAt: string | null } | null;
 };
 
@@ -1434,6 +1442,8 @@ export function projeter(brutes: readonly TacheBrute[] | null): Tache[] | null {
       owner: t.owner ?? null,
       branch: t.branch ?? null,
       attestation: t.attestation ?? null,
+      lot: t.lot ?? null,
+      motif: t.motif ?? null,
     },
     // ⚠️ `statut` FAIT PARTIE DE LA PROJECTION (GOV-096) : sans lui, le refus « une PR ne rouvre
     // pas une tâche livrée » lirait `undefined` sur chaque tâche et ne tirerait JAMAIS — le même

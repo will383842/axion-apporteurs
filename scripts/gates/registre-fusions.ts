@@ -17,6 +17,8 @@
  *                                 ne nomment la tâche — la clôture ne correspond pas à la fusion ;
  *   — `fusion_sans_cloture`     : une PR fusionnée DEPUIS LE DÉBUT de cette règle nomme dans son sujet
  *                                 une tâche que le registre ne tient pas pour livrée ;
+ *   — `fusion_pr_divergente`    : la même PR nomme une tâche livrée, mais sous un AUTRE `pr` que le
+ *                                 sien — le registre et la fusion divergent ;
  *   — `registre_illisible`      : `docs/tasks.json` ou l'historique ne se lisent pas — la garde
  *                                 S'ARRÊTE (échec fermé, condition de la sécurité).
  *
@@ -147,6 +149,14 @@ export function ecartsDuRegistreEtDesFusions(e: {
             `La PR ${depot}#${n} a fusionné (${c.sha.slice(0, 7)}) et nomme ${id}, que le registre tient pour ` +
             `« ${t.statut ?? 'sans statut'} » : elle aurait dû se clore elle-même (\`lot:cloture --dans-la-pr\`).`,
         });
+      } else if (t.pr !== n) {
+        // Acceptance (3) : la tâche nommée est livrée PAR CETTE PR, `pr` = N — pas par une autre.
+        ecarts.push({
+          famille: 'fusion_pr_divergente',
+          message:
+            `La PR ${depot}#${n} a fusionné (${c.sha.slice(0, 7)}) et nomme ${id}, que le registre dit livrée ` +
+            `par ${t.pr == null ? 'aucune PR' : `${depot}#${t.pr}`} : le registre et la fusion divergent.`,
+        });
       }
     }
   }
@@ -239,6 +249,15 @@ export const TEMOINS: {
     cas: {
       taches: T,
       commits: [C(901, 'feat(X-1): x'), C(902, 'feat(X-2): y')],
+      prCourante: null,
+      debut: DEBUT_TEMOIN,
+    },
+  },
+  {
+    famille: 'fusion_pr_divergente',
+    cas: {
+      taches: T,
+      commits: [C(901, 'feat(X-1): x'), C(906, 'fix(X-1): encore')],
       prCourante: null,
       debut: DEBUT_TEMOIN,
     },

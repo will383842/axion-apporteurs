@@ -15,6 +15,7 @@ import * as PR from '../../../scripts/gates/gov-pr';
 import { cloturerDansLaPr, ErreurDeCloture } from '../../../scripts/lot/cloture';
 import { controlerAttestation, resoudreAttestations } from '../../../scripts/lot/attestation';
 import { risqueDeLaPr, tachesDeLaPr } from '../../../scripts/lot/revues';
+import { LIVREE } from '../../../scripts/lot/avancement';
 
 type TacheBrute = NonNullable<Parameters<typeof PR.projeter>[0]>[number] & Record<string, unknown>;
 const brute = (id: string, extra: Record<string, unknown> = {}): TacheBrute => ({
@@ -247,5 +248,58 @@ describe('REQ-GOV-021 — GOV-154 : le début de la règle est la FUSION de la g
         { date: '2026-10-07T20:00:00+02:00', sujet: 'wip: GOV-154 — la garde' },
       ])
     ).toBe('2026-10-10T10:00:00+02:00');
+  });
+});
+
+describe('REQ-GOV-021 — GOV-154 (veto sécurité #856) : une clôture dans la PR ne rouvre jamais une tâche livrée', () => {
+  const close = { statut: 'fusionnee', pr: 901, branch: 't/ux-p1-01', owner: 'A06' };
+  const pendante = { pr: 901, sha: null, fusionneeAt: null };
+  const juger = (base: Record<string, unknown>, tete: Record<string, unknown>): boolean => {
+    const [avant] = PR.projeter([brute('UX-P1-01', base)])!;
+    const [apres] = PR.projeter([brute('UX-P1-01', { ...base, ...close, ...tete })])!;
+    return PR.clotureDansLaPrBienFormee(apres!, avant!, 901);
+  };
+
+  it('REQ-GOV-021 — CONTRE-TÉMOIN : une tâche a_faire close à son numéro, attestation pendante', () => {
+    expect(juger({}, { attestation: pendante })).toBe(true);
+  });
+
+  it('REQ-GOV-021 — chaque statut livré du registre, à la base, refuse la clôture (le sha réel serait effacé)', () => {
+    const reel = { pr: 700, sha: 'd'.repeat(40), fusionneeAt: '2026-10-01T10:00:00Z' };
+    for (const statut of LIVREE) {
+      expect([
+        statut,
+        juger({ statut, pr: 700, attestation: reel }, { attestation: pendante }),
+      ]).toEqual([statut, false]);
+    }
+    expect(juger({ statut: null }, { attestation: pendante })).toBe(false);
+  });
+
+  it('REQ-GOV-021 — `lot` et `motif` ne se réécrivent pas par une clôture dans la PR', () => {
+    expect(juger({ lot: 'L1-01' }, { attestation: pendante, lot: 'L1-99' })).toBe(false);
+    expect(juger({}, { attestation: pendante, motif: 'un motif glissé' })).toBe(false);
+    expect(juger({ lot: 'L1-01' }, { attestation: pendante })).toBe(true);
+  });
+});
+
+describe('REQ-GOV-021 — GOV-154 (exactitude #856) : une PR fusionnée qui nomme une tâche exige `pr` = son numéro', () => {
+  it('REQ-GOV-021 — une tâche livrée sous un AUTRE numéro que la PR qui la nomme est un écart nommé', () => {
+    const familles = GARDE.ecartsDuRegistreEtDesFusions({
+      taches: [
+        {
+          id: 'X-3',
+          repo: 'partners',
+          statut: 'fusionnee',
+          pr: 700,
+          attestation: { pr: 700, sha: 'e'.repeat(40), fusionneeAt: '2026-10-01T10:00:00Z' },
+        },
+      ],
+      commits: [
+        { sha: 'f'.repeat(40), date: '2026-10-09T10:00:00Z', message: 'feat(X-3): x (#905)' },
+      ],
+      prCourante: null,
+      debut: '2026-10-08T00:00:00Z',
+    }).map((f) => f.famille);
+    expect(familles).toContain('fusion_pr_divergente');
   });
 });
