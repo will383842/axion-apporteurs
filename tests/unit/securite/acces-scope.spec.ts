@@ -453,11 +453,14 @@ describe('REQ-QA-011 → REQ-SEC-008 — la liste des modèles cloisonnés est c
     expect([...MODELES_CLOISONNES, ...MODELES_SANS_VUE_APPORTEUR].sort()).toEqual(portantApporteur);
   });
 
-  it('REQ-SEC-008 : TÉMOIN — les modèles sans vue sont EXACTEMENT l’anomalie (DM-12), l’appareil connu (SEC-55) et la décision de contrat (SEC-19)', () => {
+  it('REQ-SEC-008 : TÉMOIN — les modèles sans vue sont EXACTEMENT l’anomalie (DM-12), l’appareil connu (SEC-55), la décision de contrat (SEC-19), et la ligne de commission, l’autofacture et son compteur (T-ARG-045)', () => {
     expect([...MODELES_SANS_VUE_APPORTEUR]).toEqual([
       'anomalie',
       'appareilConnu',
+      'autofacture',
+      'compteurAutofacture',
       'decisionDeContrat',
+      'ligneCommission',
     ]);
   });
 
