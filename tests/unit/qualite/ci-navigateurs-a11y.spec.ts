@@ -21,6 +21,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
+import { DOSSIER_PAQUETS } from '../../../scripts/ci/navigateurs-bornes';
 
 const CI = '.github/workflows/ci.yml';
 const NOM = 'Navigateurs des passes d accessibilite';
@@ -122,7 +123,12 @@ describe('REQ-QA-016 — les navigateurs des passes d’accessibilité, bornés 
     expect(paquet.scripts['a11y:navigateurs']).toMatch(/^playwright install/);
     expect(paquet.scripts['a11y:navigateurs:bornes']).toBe(`tsx ${SCRIPT_BORNE}`);
     expect(existsSync(SCRIPT_BORNE)).toBe(true);
-    expect(readFileSync(SCRIPT_BORNE, 'utf8')).toMatch(/spawnSync\('pnpm', \['a11y:navigateurs'\]/);
+    // QA-T74 : le script borné ne lance plus `a11y:navigateurs` tel quel (son `--with-deps`, tué à
+    // son délai, laissait l'apt-get de sudo orphelin, verrou en main) : il DÉRIVE ses deux commandes
+    // de ce script de package.json, sans recopier la liste des navigateurs (RM-01).
+    const script = readFileSync(SCRIPT_BORNE, 'utf8');
+    expect(script).toMatch(/scripts\['a11y:navigateurs'\]/);
+    expect(script).not.toMatch(/'chromium'|'webkit'/);
   });
 
   it('REQ-QA-016 — TÉMOIN : sans timeout, sans le script borné, version en dur, cache après une commande, chacun rougit', () => {
@@ -169,5 +175,64 @@ describe('REQ-QA-016 — les navigateurs des passes d’accessibilité, bornés 
     expect(fautes(apresUneCommande)).toContain(
       'cache_apres_une_commande : l’action suit une commande du job'
     );
+  });
+});
+
+/**
+ * QA-T74 (runs 37761685272 et 37763717776) : sans verrou, les 181 paquets d'apt (126 Mo) des
+ * navigateurs sont venus du miroir à quelques dizaines de ko/s, et l'étape a dépassé ses 15 min.
+ * Les paquets .deb sont donc mis en cache, dans CHAQUE job qui installe les navigateurs : une
+ * action, avant toute commande, au chemin que le script donne à apt (`DOSSIER_PAQUETS`, une seule
+ * source), la clé dérivée du verrou (RM-01).
+ */
+function fautesDuCacheDesPaquets(yml: string): string[] {
+  const f: string[] = [];
+  const chemin = `~/${DOSSIER_PAQUETS}`;
+  const debuts: number[] = [];
+  for (let k = yml.indexOf(`- name: ${NOM}\n`); k >= 0; k = yml.indexOf(`- name: ${NOM}\n`, k + 1))
+    debuts.push(k);
+  if (debuts.length === 0) return [`étape « ${NOM} » introuvable`];
+  debuts.forEach((iEtape, n) => {
+    const job = yml.slice(yml.lastIndexOf('steps:', iEtape), iEtape);
+    const etapes = job.split('\n      - ');
+    const iCache = etapes.findIndex(
+      (e) =>
+        /uses: actions\/cache@/.test(e) && e.split('\n').some((l) => l.trim() === `path: ${chemin}`)
+    );
+    if (iCache < 0) {
+      f.push(`cache_des_paquets_absent : job ${n + 1}, aucun actions/cache de ${chemin}`);
+      return;
+    }
+    const iCommande = etapes.findIndex((e) => /^(?:- )?run:|\n\s+run:/.test(e));
+    if (iCommande >= 0 && iCommande < iCache)
+      f.push(`cache_des_paquets_apres_une_commande : job ${n + 1}`);
+    const cle = /key:\s*(.+)/.exec(etapes[iCache]!)?.[1] ?? '';
+    if (!/hashFiles\(\s*'pnpm-lock\.yaml'\s*\)/.test(cle))
+      f.push(`cache_des_paquets_cle_non_derivee : job ${n + 1}`);
+  });
+  return f;
+}
+
+describe('REQ-QA-016 — QA-T74 : les paquets d’apt des navigateurs, en cache dans chaque job', () => {
+  const yml = readFileSync(CI, 'utf8');
+
+  it('REQ-QA-016 — chaque job des navigateurs met en cache le dossier des paquets que le script donne à apt', () => {
+    expect(DOSSIER_PAQUETS).toMatch(/^\.cache\//);
+    expect(fautesDuCacheDesPaquets(yml)).toEqual([]);
+  });
+
+  it('REQ-QA-016 — TÉMOIN : le cache des paquets retiré d’un job, ou sa clé écrite en dur, rougit', () => {
+    const i = yml.indexOf(`path: ~/${DOSSIER_PAQUETS}`);
+    const debut = yml.lastIndexOf('\n      - ', i);
+    const fin = yml.indexOf('\n      - ', i);
+    const sansCache = yml.slice(0, debut) + yml.slice(fin);
+    expect(fautesDuCacheDesPaquets(sansCache)).toContain(
+      `cache_des_paquets_absent : job 1, aucun actions/cache de ~/${DOSSIER_PAQUETS}`
+    );
+    const enDur = yml.replace(
+      /(key:\s*paquets-navigateurs-.*)\$\{\{\s*hashFiles\([^)]*\)\s*\}\}/,
+      '$1 v1'
+    );
+    expect(fautesDuCacheDesPaquets(enDur)).toContain('cache_des_paquets_cle_non_derivee : job 1');
   });
 });

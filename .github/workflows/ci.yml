@@ -578,6 +578,16 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # QA-T74 (runs 37761685272 et 37763717776) : les 181 paquets d apt des navigateurs (126 Mo),
+      # venus du miroir a quelques dizaines de ko/s, ont depasse les 15 min de l etape. Le script
+      # borne range les .deb dans ce dossier (`DOSSIER_PAQUETS`), mis en cache ici, AVANT toute
+      # commande ; la cle derive du verrou, et `restore-keys` reprend les paquets d un verrou voisin.
+      - name: Cache des paquets d apt des navigateurs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/apt-navigateurs
+          key: paquets-navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: paquets-navigateurs-${{ runner.os }}-
       # GOV-142 : l instantane de la forge, lu UNE fois par le job `forge`, recu du run courant (ni
       # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
       - name: Reception de l instantane de la forge
@@ -601,8 +611,9 @@ jobs:
       # et pilotent un vrai navigateur : WebKit pour le profil iPhone, Chromium pour le bureau. Sans
       # eux, la suite rougirait sur une absence d outil, pas sur une faute. Avant `Tests`, donc.
       # QA-T59. Cette etape est restee bloquee plus de 25 min : un telechargement qui ne repond plus
-      # immobilisait toute la porte A. `scripts/ci/navigateurs-bornes.ts` tente trois fois au plus,
-      # chaque tentative tuee a quatre minutes ; si toutes echouent, l etape ECHOUE — une nouvelle
+      # immobilisait toute la porte A. `scripts/ci/navigateurs-bornes.ts` installe d abord les
+      # dependances d apt, jamais tuees (QA-T74), puis telecharge les navigateurs en trois tentatives
+      # au plus, chacune tuee a deux minutes ; si toutes echouent, l etape ECHOUE — une nouvelle
       # tentative, jamais un vert de complaisance ; `timeout-minutes` borne l etape entiere. Un script
       # du depot, sous une forme fermee (REQ-GOV-018) ; `pnpm pre-gate` le classe lent. Le cache des
       # navigateurs est en tete du job. Temoins : `tests/unit/qualite/ci-navigateurs-a11y.spec.ts` et
@@ -665,6 +676,16 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # QA-T74 (runs 37761685272 et 37763717776) : les 181 paquets d apt des navigateurs (126 Mo),
+      # venus du miroir a quelques dizaines de ko/s, ont depasse les 15 min de l etape. Le script
+      # borne range les .deb dans ce dossier (`DOSSIER_PAQUETS`), mis en cache ici, AVANT toute
+      # commande ; la cle derive du verrou, et `restore-keys` reprend les paquets d un verrou voisin.
+      - name: Cache des paquets d apt des navigateurs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/apt-navigateurs
+          key: paquets-navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: paquets-navigateurs-${{ runner.os }}-
       # GOV-142 : l instantane de la forge, lu UNE fois par le job `forge`, recu du run courant (ni
       # run-id ni jeton) et compare a l empreinte que ce job a publiee, avant tout usage.
       - name: Reception de l instantane de la forge
@@ -688,8 +709,9 @@ jobs:
       # et pilotent un vrai navigateur : WebKit pour le profil iPhone, Chromium pour le bureau. Sans
       # eux, la suite rougirait sur une absence d outil, pas sur une faute. Avant `Tests`, donc.
       # QA-T59. Cette etape est restee bloquee plus de 25 min : un telechargement qui ne repond plus
-      # immobilisait toute la porte A. `scripts/ci/navigateurs-bornes.ts` tente trois fois au plus,
-      # chaque tentative tuee a quatre minutes ; si toutes echouent, l etape ECHOUE — une nouvelle
+      # immobilisait toute la porte A. `scripts/ci/navigateurs-bornes.ts` installe d abord les
+      # dependances d apt, jamais tuees (QA-T74), puis telecharge les navigateurs en trois tentatives
+      # au plus, chacune tuee a deux minutes ; si toutes echouent, l etape ECHOUE — une nouvelle
       # tentative, jamais un vert de complaisance ; `timeout-minutes` borne l etape entiere. Un script
       # du depot, sous une forme fermee (REQ-GOV-018) ; `pnpm pre-gate` le classe lent. Le cache des
       # navigateurs est en tete du job. Temoins : `tests/unit/qualite/ci-navigateurs-a11y.spec.ts` et

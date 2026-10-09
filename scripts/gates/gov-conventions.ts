@@ -2658,6 +2658,19 @@ const ETAPES_FIGEES: readonly EtapeFigee[] = [
       },
     },
   },
+  // QA-T74 : les paquets .deb des navigateurs, que le script borné range dans ce dossier ; une
+  // action, AVANT toute commande (point 5), sa clé dérivée du verrou (point 6).
+  {
+    nom: 'Cache des paquets d apt des navigateurs',
+    uses: 'actions/cache@v4',
+    cles: {
+      with: {
+        path: '~/.cache/apt-navigateurs',
+        key: "paquets-navigateurs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}",
+        'restore-keys': 'paquets-navigateurs-${{ runner.os }}-',
+      },
+    },
+  },
   { nom: 'run: pnpm install --frozen-lockfile', run: 'pnpm install --frozen-lockfile' },
   // GOV-123 : les vues se rendent AVANT toute étape qui en lit une ; aucune ne revient sous git.
   {
@@ -3231,6 +3244,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
           'uses: actions/setup-node@v4',
           'Cache des moteurs de Prisma',
           'Cache des navigateurs des passes d accessibilite',
+          'Cache des paquets d apt des navigateurs',
           'Reception de l instantane de la forge',
           'run: pnpm install --frozen-lockfile',
           'Les vues derivees sont rendues, et le rendu est reproductible',
@@ -3256,6 +3270,7 @@ export const PORTE_A_FIGEE: PorteFigee = {
           'uses: actions/setup-node@v4',
           'Cache des moteurs de Prisma',
           'Cache des navigateurs des passes d accessibilite',
+          'Cache des paquets d apt des navigateurs',
           'Reception de l instantane de la forge',
           'run: pnpm install --frozen-lockfile',
           'Les vues derivees sont rendues, et le rendu est reproductible',
