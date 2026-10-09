@@ -1551,7 +1551,7 @@
     {
       "id": "REQ-ARG-007",
       "domaine": "argent",
-      "texte": "Plafond : si commissionTotaleCents > plafondPct × montantHtCents de la ligne (paramètre, défaut 100 %), la ligne est `bloquee` motif `commission_sup_ht` et ne peut être relevée sans décision journalisée. [Option B retenue le 2026-10-09 (décision de Williams du 2026-10-09, #319, 6087917020, MOT POUR MOT : « Plafond : B », soit blocage + avenant ; l'option A était alerte + avoir) ; HYP-ARG-007-AVENANT. (1) **Le blocage est maintenu** : une ligne au-dessus du plafond est `bloquee` motif `commission_sup_ht` ; elle n'est ni autofacturée ni versée tant qu'une décision journalisée ne l'a pas relevée (REQ-ARG-017). Ce n'est pas une alerte, et une correction par avoir ou par `LigneAjustement` après versement n'en tient pas lieu. (2) **Le contrat reçoit un avenant** : le contrat v2, art. 5.4, n'admet aucun autre motif de différer un versement ; la clause « Conditions du versement » du gabarit nomme donc le dépassement du plafond comme un motif qui diffère le versement jusqu'à la décision, et la somme reste acquise à l'apporteur (JUR-T68). (3) **Tant qu'un apporteur n'a pas signé cet avenant**, la version qu'il a signée continue de s'appliquer (contrat v2, article « Modification ») : sur ses lignes, `commission_sup_ht` reste une alerte qui ne diffère pas le versement au-delà de son échéance (REQ-ARG-017, REQ-ARG-034 ; hypothèse par défaut, propriétaire Williams). Tests : une ligne à un centime au-dessus du plafond, sous une version signée qui porte la clause → `bloquee` `commission_sup_ht`, aucune autofacture ni versement ; la même ligne relevée par une décision journalisée → autofacturée ; une levée sans décision journalisée → rouge ; la même ligne sous une version signée sans la clause → versée au montant établi au plus tard à l'échéance, avec une alerte de console.]",
+      "texte": "Plafond : si commissionTotaleCents > plafondPct × montantHtCents de la ligne (paramètre, défaut 100 %), la ligne est `bloquee` motif `commission_sup_ht` et ne peut être relevée sans décision journalisée. [Option B retenue le 2026-10-09 (décision de Williams du 2026-10-09, #319, 6087917020, MOT POUR MOT : « Plafond : B », soit blocage + avenant ; l'option A était alerte + avoir) ; HYP-ARG-007-AVENANT. (1) **Le blocage est maintenu sous une version signée qui porte la clause de l'avenant** (point 2) : une ligne au-dessus du plafond est `bloquee` motif `commission_sup_ht` ; elle n'est ni autofacturée ni versée tant qu'une décision journalisée ne l'a pas relevée (REQ-ARG-017). Sous cette version, ce n'est pas une alerte, et une correction par avoir ou par `LigneAjustement` après versement n'en tient pas lieu ; sous une version qui ne porte pas la clause, c'est le point (3) qui s'applique. (2) **Le contrat reçoit un avenant** : le contrat v2, art. 5.4, n'admet aucun autre motif de différer un versement ; la clause « Conditions du versement » du gabarit nomme donc le dépassement du plafond comme un motif qui diffère le versement jusqu'à la décision, et la somme reste acquise à l'apporteur (JUR-T68). (3) **Tant qu'un apporteur n'a pas signé cet avenant**, la version qu'il a signée continue de s'appliquer (contrat v2, article « Modification ») : sur ses lignes, `commission_sup_ht` reste une alerte qui ne diffère pas le versement au-delà de son échéance (REQ-ARG-017, REQ-ARG-034 ; hypothèse par défaut, propriétaire Williams). Tests : une ligne à un centime au-dessus du plafond, sous une version signée qui porte la clause → `bloquee` `commission_sup_ht`, aucune autofacture ni versement ; la même ligne relevée par une décision journalisée → autofacturée ; une levée sans décision journalisée → rouge ; la même ligne sous une version signée sans la clause → versée au montant établi au plus tard à l'échéance, avec une alerte de console.]",
       "source": "nouvelle (ARG-04)",
       "statut": "active",
       "remplaceePar": null,
@@ -1561,7 +1561,8 @@
       "taches": [
         "DM-04",
         "JUR-T16",
-        "JUR-T68"
+        "JUR-T68",
+        "T-ARG-039"
       ]
     },
     {
@@ -6503,6 +6504,7 @@
         "DM-59",
         "DM-60",
         "DM-68",
+        "DM-74",
         "JUR-T59",
         "UX-P1-48"
       ]
