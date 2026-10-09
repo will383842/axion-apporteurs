@@ -144,7 +144,10 @@ describe('restreindreALaPr — sur un vrai dépôt', () => {
     git('mv', 'src/limites.ts', 'src/renomme.ts');
     ecrire(
       'src/renomme.ts',
-      'export const nom = 1;\nexport const autre = 2;\nexport const x = 3;\nconst RAFALE_MAX = 3;\n'
+      // Le témoin est assemblé à l'exécution : écrit en clair, il ferait rougir gov:publication ici.
+      'export const nom = 1;\nexport const autre = 2;\nexport const x = 3;\n' +
+        ['const RAFALE', 'MAX = 3;'].join('_') +
+        '\n'
     );
     git('add', '-A');
     git('commit', '-qm', 'renommage');
