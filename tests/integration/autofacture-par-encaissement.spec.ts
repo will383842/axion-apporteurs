@@ -15,6 +15,10 @@ import { randomUUID } from 'node:crypto';
 import { demarrerBase, type Base } from './harnais';
 import { depotAutofacturesPrisma } from '../../src/server/commission/depot-autofactures-prisma';
 import { emettreAutofactures } from '../../src/server/commission/emission-autofactures';
+import { horlogeFigee } from '../../src/domain/temps/horloge';
+
+/** Le passage a lieu bien après toutes les dates des témoins. */
+const HORLOGE = horlogeFigee(Date.UTC(2027, 11, 31, 12));
 
 let base: Base;
 
@@ -93,7 +97,9 @@ describe('REQ-ARG-014 — en base, une ligne n’entre que dans une autofacture'
       },
       transaction: (fn) => vrai.transaction(fn),
     };
-    const rendus = await Promise.all(Array.from({ length: N }, () => emettreAutofactures(depot)));
+    const rendus = await Promise.all(
+      Array.from({ length: N }, () => emettreAutofactures(depot, HORLOGE))
+    );
     const afs = await autofacturesDe(app);
     expect(afs).toHaveLength(1);
     expect(afs[0]!.montantCents).toBe(123 + 456);
@@ -105,9 +111,31 @@ describe('REQ-ARG-014 — en base, une ligne n’entre que dans une autofacture'
     const app = await unApporteur();
     await uneLigne(app, 77);
     const depot = depotAutofacturesPrisma(base.prisma);
-    await emettreAutofactures(depot);
-    await emettreAutofactures(depot);
+    await emettreAutofactures(depot, HORLOGE);
+    await emettreAutofactures(depot, HORLOGE);
     expect(await autofacturesDe(app)).toHaveLength(1);
+  });
+
+  it('REQ-ARG-014 : TÉMOIN — une ligne bloquée entre la lecture et la transaction n’est pas facturée', async () => {
+    const app = await unApporteur();
+    const libre = await uneLigne(app, 31);
+    const bloquee = await uneLigne(app, 41);
+    const vrai = depotAutofacturesPrisma(base.prisma);
+    const depot: typeof vrai = {
+      async lignesLibres() {
+        const lues = await vrai.lignesLibres();
+        await base.prisma.ligneCommission.update({
+          where: { id: bloquee },
+          data: { statut: 'bloquee' },
+        });
+        return lues;
+      },
+      transaction: (fn) => vrai.transaction(fn),
+    };
+    await emettreAutofactures(depot, HORLOGE);
+    const afs = await autofacturesDe(app);
+    expect(afs.map((a) => a.lignes.map((l) => l.id))).toEqual([[libre]]);
+    expect(afs[0]!.montantCents).toBe(31);
   });
 });
 
@@ -118,7 +146,7 @@ describe('REQ-ARG-018 — la numérotation, posée par la base, sans trou', () =
     await uneLigne(app, 20, '2027-03-11');
     await uneLigne(app, 30, '2027-03-12');
     const depot = depotAutofacturesPrisma(base.prisma);
-    await Promise.all([emettreAutofactures(depot), emettreAutofactures(depot)]);
+    await Promise.all([emettreAutofactures(depot, HORLOGE), emettreAutofactures(depot, HORLOGE)]);
     const afs = await autofacturesDe(app);
     expect(afs.map((a) => a.numero)).toEqual([1, 2, 3]);
     const compteur = await base.prisma.compteurAutofacture.findUnique({
@@ -139,10 +167,10 @@ describe('REQ-ARG-018 — la numérotation, posée par la base, sans trou', () =
           throw new Error('panne simulée après l’insertion');
         }),
     };
-    await expect(emettreAutofactures(qui_echoue)).rejects.toThrow('panne simulée');
+    await expect(emettreAutofactures(qui_echoue, HORLOGE)).rejects.toThrow('panne simulée');
     expect(await autofacturesDe(app)).toHaveLength(0);
     await uneLigne(app, 22, '2027-03-11');
-    await emettreAutofactures(vrai);
+    await emettreAutofactures(vrai, HORLOGE);
     const afs = await autofacturesDe(app);
     expect(afs.map((a) => a.numero)).toEqual([1, 2]);
     expect(afs.map((a) => a.montantCents)).toEqual([11, 22]);
@@ -151,7 +179,7 @@ describe('REQ-ARG-018 — la numérotation, posée par la base, sans trou', () =
   it('REQ-ARG-018 : l’émission rend des dates d’émission et d’échéance justes, en jours civils', async () => {
     const app = await unApporteur();
     await uneLigne(app, 5, '2027-03-13'); // samedi → émise le lundi 15
-    await emettreAutofactures(depotAutofacturesPrisma(base.prisma));
+    await emettreAutofactures(depotAutofacturesPrisma(base.prisma), HORLOGE);
     const [af] = await autofacturesDe(app);
     expect(af!.emiseLe.toISOString().slice(0, 10)).toBe('2027-03-15');
     expect(af!.echeanceLe.toISOString().slice(0, 10)).toBe('2027-04-14');

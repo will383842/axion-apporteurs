@@ -22,6 +22,10 @@ import {
   type DepotAutofactures,
 } from '../../../src/server/commission/emission-autofactures';
 import type { DateCivile } from '../../../src/domain/temps/calendrier-civil';
+import { horlogeFigee } from '../../../src/domain/temps/horloge';
+
+/** Le passage a lieu bien après toutes les dates des témoins, sauf mention contraire. */
+const HORLOGE = horlogeFigee(Date.UTC(2027, 11, 31, 12));
 
 const D = (annee: number, mois: number, jour: number): DateCivile => ({ annee, mois, jour });
 // Le 2027-03-10 est un mercredi ; le 2027-03-13, un samedi.
@@ -181,15 +185,18 @@ function depotEnMemoire(lignes: LigneAcquise[]) {
 describe('REQ-ARG-018 — une ligne n’appartient qu’à une seule autofacture', () => {
   it('REQ-ARG-018 : TÉMOIN — passage rejoué → aucune seconde autofacture', async () => {
     const m = depotEnMemoire([commande('a', 100), commande('b', 200)]);
-    await emettreAutofactures(m.depot);
-    await emettreAutofactures(m.depot);
+    await emettreAutofactures(m.depot, HORLOGE);
+    await emettreAutofactures(m.depot, HORLOGE);
     expect(m.autofactures).toHaveLength(1);
     expect(m.autofactures[0]?.montantCents).toBe(300);
   });
 
   it('REQ-ARG-018 : TÉMOIN DE CONCURRENCE — deux passages simultanés n’affectent chaque ligne qu’une fois', async () => {
     const m = depotEnMemoire([commande('a', 100), commande('b', 200)]);
-    const rendus = await Promise.all([emettreAutofactures(m.depot), emettreAutofactures(m.depot)]);
+    const rendus = await Promise.all([
+      emettreAutofactures(m.depot, HORLOGE),
+      emettreAutofactures(m.depot, HORLOGE),
+    ]);
     const lignesFacturees = m.autofactures.flatMap((a) => a.ligneIds);
     expect(lignesFacturees.sort()).toEqual(['a', 'b']);
     expect(m.autofactures.reduce((s, a) => s + a.montantCents, 0)).toBe(300);
@@ -207,7 +214,7 @@ describe('REQ-ARG-018 — une ligne n’appartient qu’à une seule autofacture
       m.affectation.set('b', 'af-concurrente');
       return lues;
     };
-    const [af] = await emettreAutofactures(m.depot);
+    const [af] = await emettreAutofactures(m.depot, HORLOGE);
     expect(af?.ligneIds).toEqual(['a']);
     expect(af?.montantCents).toBe(100);
     expect(m.autofactures).toEqual([af]);
@@ -216,9 +223,48 @@ describe('REQ-ARG-018 — une ligne n’appartient qu’à une seule autofacture
   it('REQ-ARG-018 : une ligne régularisée plus tard a sa propre autofacture, même jour d’acquisition', async () => {
     const lignes = [commande('a', 100)];
     const m = depotEnMemoire(lignes);
-    await emettreAutofactures(m.depot);
+    await emettreAutofactures(m.depot, HORLOGE);
     lignes.push({ ...commande('b', 200), constateLe: D(2027, 3, 17) });
-    await emettreAutofactures(m.depot);
+    await emettreAutofactures(m.depot, HORLOGE);
     expect(m.autofactures.map((a) => a.ligneIds)).toEqual([['a'], ['b']]);
+  });
+});
+
+describe('REQ-ARG-014 — une autofacture par jour d’ACQUISITION, jamais une fusion de jours', () => {
+  it('REQ-ARG-014 : TÉMOIN — encaissements intégraux samedi et dimanche → DEUX autofactures, émises le lundi', () => {
+    const DIMANCHE = D(2027, 3, 14);
+    const afs = composerAutofactures([commande('a', 100, SAMEDI), commande('b', 200, DIMANCHE)]);
+    expect(afs).toHaveLength(2);
+    expect(afs.map((a) => a.emiseLe)).toEqual([D(2027, 3, 15), D(2027, 3, 15)]);
+    expect(afs.map((a) => a.acquiseLe)).toEqual([SAMEDI, DIMANCHE]);
+    expect(afs.map((a) => a.ligneIds)).toEqual([['a'], ['b']]);
+  });
+
+  it('REQ-ARG-014 : le rattrapage de trois jours manqués fait trois autofactures', () => {
+    const afs = composerAutofactures([
+      commande('a', 1, D(2027, 3, 8)),
+      commande('b', 2, D(2027, 3, 9)),
+      commande('c', 3, D(2027, 3, 10)),
+    ]);
+    expect(afs.map((a) => a.ligneIds)).toEqual([['a'], ['b'], ['c']]);
+  });
+});
+
+describe('REQ-ARG-014 — horloge injectée : aucune autofacture datée dans le futur', () => {
+  it('REQ-ARG-014 : TÉMOIN — le vendredi, une ligne acquise le samedi suivant n’est pas émise', async () => {
+    const vendredi = horlogeFigee(Date.UTC(2027, 2, 12, 10)); // 2027-03-12, 11 h à Paris
+    const m = depotEnMemoire([commande('a', 100), commande('b', 200, SAMEDI)]);
+    const rendues = await emettreAutofactures(m.depot, vendredi);
+    expect(rendues.map((a) => a.ligneIds)).toEqual([['a']]);
+    expect(m.affectation.has('b')).toBe(false);
+  });
+
+  it('REQ-ARG-014 : le jour d’établissement est lu à Paris — 23 h 30 UTC le 14 est déjà le 15', async () => {
+    const m = depotEnMemoire([commande('a', 100, SAMEDI)]);
+    expect(await emettreAutofactures(m.depot, horlogeFigee(Date.UTC(2027, 2, 14, 22, 30)))).toEqual(
+      []
+    );
+    const [af] = await emettreAutofactures(m.depot, horlogeFigee(Date.UTC(2027, 2, 14, 23, 30)));
+    expect(af?.emiseLe).toEqual(D(2027, 3, 15));
   });
 });

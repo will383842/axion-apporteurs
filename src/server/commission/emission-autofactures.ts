@@ -18,6 +18,9 @@ import {
   type AutofactureComposee,
   type LigneAcquise,
 } from '../../domain/commission/autofacture';
+import { joursDeLaDate } from '../../domain/temps/calendrier-civil';
+import type { Horloge } from '../../domain/temps/horloge';
+import { versParis } from '../../domain/temps/paris';
 
 export type AutofactureACreer = AutofactureComposee & { readonly id: string };
 
@@ -26,7 +29,8 @@ export interface TransactionAutofactures {
   nouvelId(): string;
   /**
    * Affecte à `autofactureId` celles des lignes `ids` dont `autofactureId` est encore nul, et rend
-   * les identifiants effectivement affectés (`WHERE autofactureId IS NULL`, atomique en base).
+   * les identifiants effectivement affectés (`WHERE autofactureId IS NULL`, atomique en base). La
+   * condition revérifie aussi, dans la transaction, que la ligne est toujours facturable.
    */
   affecterSiLibre(ids: readonly string[], autofactureId: string): Promise<readonly string[]>;
   creerAutofacture(af: AutofactureACreer): Promise<void>;
@@ -38,14 +42,22 @@ export interface DepotAutofactures {
   transaction<T>(fn: (tx: TransactionAutofactures) => Promise<T>): Promise<T>;
 }
 
-/** Émet les autofactures des lignes libres ; rend celles effectivement créées. */
+/**
+ * Le passage « tout ce qui est dû à l'instant t » (REQ-ARG-014), horloge injectée : il émet les
+ * autofactures des lignes libres dont le jour d'établissement est atteint À PARIS, et rend celles
+ * effectivement créées. Aucune autofacture n'est datée dans le futur : une ligne dont le jour
+ * d'établissement n'est pas encore venu reste libre pour un passage ultérieur.
+ */
 export async function emettreAutofactures(
-  depot: DepotAutofactures
+  depot: DepotAutofactures,
+  horloge: Horloge
 ): Promise<readonly AutofactureACreer[]> {
+  const aujourdhui = joursDeLaDate(versParis(horloge.maintenant()));
   const lignes = await depot.lignesLibres();
   const parId = new Map(lignes.map((l) => [l.id, l]));
   const creees: AutofactureACreer[] = [];
   for (const prevue of composerAutofactures(lignes)) {
+    if (joursDeLaDate(prevue.emiseLe) > aujourdhui) continue;
     const af = await depot.transaction(async (tx) => {
       const id = tx.nouvelId();
       const affectees = new Set(await tx.affecterSiLibre(prevue.ligneIds, id));
