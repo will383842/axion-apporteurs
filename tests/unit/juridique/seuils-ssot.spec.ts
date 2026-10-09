@@ -61,7 +61,6 @@ const ATTENDUES: readonly [string, number, Seuil['unite']][] = [
   ['IMPUTATION_MOIS', 12, 'mois'],
   ['VERSEMENT_JOURS_OUVRES', 2, 'jours_ouvres'],
   ['VERSEMENT_PLAFOND_JOURS', 30, 'jours'],
-  ['SEUIL_VERSEMENT', 5000, 'centimes'],
   ['SEUIL_VIGILANCE', 500000, 'centimes'],
   ['SEUIL_DAS2', 240000, 'centimes'],
   ['VIGILANCE_PERIODICITE_MOIS', 6, 'mois'],
@@ -440,9 +439,9 @@ describe('REQ-JUR-015 — un montant de seuil se reconnaît quel que soit son s�
     ["const libelle = 'seuil de 2,400';", '2,400', 'virgule entre groupes de trois'],
     ["const libelle = 'cumul de 240 000 centimes';", '240 000', 'centimes, espace'],
     [
-      "const libelle = 'versement dès 50,00 €';",
-      '50,00',
-      'petit montant en euros, décimales nulles',
+      "const libelle = 'vigilance dès 5000,00 €';",
+      '5000,00',
+      'montant en euros sans séparateur, décimales nulles',
     ],
     ["const libelle = 'seuil de 2 400,00 €';", '2 400', 'milliers et décimales nulles'],
   ])('REQ-JUR-015 — TÉMOIN : « %s » fait rougir et nomme %s (%s)', (ligne, litteral) => {

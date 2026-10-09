@@ -220,14 +220,6 @@ export const SEUILS = {
     renvois: art('4.5'),
     verifieLe: LE,
   },
-  SEUIL_VERSEMENT: {
-    valeur: 5_000,
-    unite: 'centimes',
-    source:
-      "REQ-ARG-015 — RÈGLE ABSENTE du contrat depuis JUR-T66 : art. 5.1, « aucun montant minimum n'est appliqué » (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi, décision du 2026-10-07, #474, 6032680253) ; à retirer du code avec T-ARG-045, qui n'a encore rien émis",
-    renvois: [],
-    verifieLe: LE,
-  },
   CONTESTATION_FACTURE_JOURS: {
     valeur: 30,
     unite: 'jours',

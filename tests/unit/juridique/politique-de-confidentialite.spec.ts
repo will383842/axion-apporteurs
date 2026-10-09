@@ -524,7 +524,7 @@ describe('REQ-JUR-025 — le lecteur du registre, pièce à pièce', () => {
       'CONFIRMATION_TACITE_JOURS',
       'ANTERIORITE_CLIENT_MOIS',
       'CONSERVATION_PIECES_ANS',
-      'SEUIL_VERSEMENT',
+      'SEUIL_VIGILANCE',
     ] as const;
     expect(noms.map((n) => SEUILS[n].unite)).toEqual([
       'jours_ouvres',
