@@ -70,6 +70,7 @@ Recevoir la tâche, le numéro de PR et sa lentille — `exactitude` ou `securit
 
 - la tâche, le numéro de PR et la lentille imposée
 - le diff complet et le corps de la PR (REQ annoncées, bloc ROUGE/VERT)
+- les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier
 
 ### Sorties
 
@@ -87,8 +88,6 @@ Recevoir la tâche, le numéro de PR et sa lentille — `exactitude` ou `securit
 ### Documents à lire
 
 - `docs/REGLES-MAISON.md` — la lentille `exactitude` tient RM-01 (dérivation depuis une source unique), la lentille `securite` est RM-05
-- `docs/REQUIREMENTS.md` — les REQ citées, une par une, confrontées au diff
-- `docs/DECISIONS.md` — un motif déjà arbitré au registre n'est plus un refus recevable
 - `docs/CHARTE-AGENTS.md` — §6, la forme de son avis et la portée de son veto
 
 ### Outils et droit d’écriture

@@ -61,6 +61,7 @@ règles des documents, sans lire l'implémentation TypeScript.
 
 - les règles de calcul telles que les documents les écrivent, jamais l'implémentation TypeScript
 - cinquante scénarios nommés, dont le résultat attendu est calculé à la main
+- les seules entrées de la tâche : les REQ et les décisions qu'elle cite, mot à mot — un registre se lit filtré par identifiant (`node -e` ou `jq`), jamais en entier
 
 ### Sorties
 
@@ -76,8 +77,6 @@ règles des documents, sans lire l'implémentation TypeScript.
 ### Documents à lire
 
 - `docs/REGLES-MAISON.md` — RM-01 la grille se dérive, RM-10 un seuil a une source et une date
-- `docs/REQUIREMENTS.md` — les REQ-ARG, seule base de son contre-calcul
-- `docs/DECISIONS.md` — les hypothèses de calcul encore ouvertes, qu'il ne tranche pas
 - `docs/GLOSSAIRE.md` — acquis, reprise, prorata, solde : les mots ont un sens fermé
 
 ### Outils et droit d’écriture

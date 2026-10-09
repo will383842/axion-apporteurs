@@ -252,7 +252,8 @@
     "GOV-156",
     "QA-T74",
     "GOV-157",
-    "GOV-158"
+    "GOV-158",
+    "GOV-159"
   ],
   "exceptions": {
     "GOV-152": "Exception au gel : garde bloquante de gov:pr, décision de la coordination sous délégation de Williams, #319, 6035611932.",
@@ -262,6 +263,7 @@
     "GOV-156": "Exception au gel : tâche de gouvernance prioritaire, décision de Williams du 2026-10-07 relayée par la coordination, #319, 6043631639.",
     "QA-T74": "Exception au gel : correctif express de la CI (le verrou d apt du runner fait tomber la moitié des runs), décision de la coordination sous délégation de Williams, #319, 6044754455.",
     "GOV-157": "Exception au gel : outillage de la chaîne de lots (deux lentilles, second tour ciblé, contexte réduit), décision de Williams du 2026-10-08, #319, 6053573062.",
-    "GOV-158": "Exception au gel : la fusion par paquets adaptatifs, décision de Williams du 2026-10-08, #319, 6059181319."
+    "GOV-158": "Exception au gel : la fusion par paquets adaptatifs, décision de Williams du 2026-10-08, #319, 6059181319.",
+    "GOV-159": "Exception au gel : l'allègement des fiches d'agents, décision de Williams du 2026-10-08, #319, 6061977043."
   }
 }
