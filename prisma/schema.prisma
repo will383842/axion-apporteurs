@@ -88,6 +88,7 @@ enum TypeEvenementJournal {
   acces_coordonnees_reservee
   piece_kyc_rib_verifie
   apporteur_resiliation_notifiee
+  decision_contrat_litige_modifie
 
   @@map("type_evenement_journal")
 }
@@ -487,9 +488,9 @@ model UtilisateurConsole {
 
   liensMagiques                LienMagique[]
   sessionsEspace               SessionEspace[]
-  attributions                 Attribution[]            @relation("AttributionsDuConseiller")
-  suspensionsDePeremption      Attribution[]            @relation("SuspensionsDePeremption")
-  annulationsApresConfirmation Attribution[]            @relation("AnnulationsApresConfirmation")
+  attributions                 Attribution[]             @relation("AttributionsDuConseiller")
+  suspensionsDePeremption      Attribution[]             @relation("SuspensionsDePeremption")
+  annulationsApresConfirmation Attribution[]             @relation("AnnulationsApresConfirmation")
   verifications                Verification[]
   anomaliesTraitees            Anomalie[]
   rattachementsDecides         RattachementManuel[]
@@ -497,19 +498,21 @@ model UtilisateurConsole {
   qualificationsSaisies        Qualification[]
   accesJournalises             JournalAccesConsole[]
   /// SEC-61 : les gels du journal des accès qui visent l'utilisateur, ceux qu'il a posés, levés.
-  gelsJournalVises             JournalAccesConsoleGel[] @relation("GelsJournalVises")
+  gelsJournalVises             JournalAccesConsoleGel[]  @relation("GelsJournalVises")
   /// SEC-15 : les gels des dépôts posés par cet administrateur, jusqu'à leur levée.
-  gelsPoses                    Apporteur[]              @relation("GelsPoses")
-  gelsJournalPoses             JournalAccesConsoleGel[] @relation("GelsJournalPoses")
-  gelsJournalLeves             JournalAccesConsoleGel[] @relation("GelsJournalLeves")
+  gelsPoses                    Apporteur[]               @relation("GelsPoses")
+  gelsJournalPoses             JournalAccesConsoleGel[]  @relation("GelsJournalPoses")
+  gelsJournalLeves             JournalAccesConsoleGel[]  @relation("GelsJournalLeves")
   sirensListeNoireAjoutes      SirenListeNoire[]
-  tracesListeNoireAjoutees     SirenListeNoireTrace[]   @relation("TracesListeNoireAjoutees")
-  tracesListeNoireRetirees     SirenListeNoireTrace[]   @relation("TracesListeNoireRetirees")
+  tracesListeNoireAjoutees     SirenListeNoireTrace[]    @relation("TracesListeNoireAjoutees")
+  tracesListeNoireRetirees     SirenListeNoireTrace[]    @relation("TracesListeNoireRetirees")
   /// CPL-T06 : les décisions de candidature dont l'utilisateur est l'auteur.
   decisionsCandidature         DecisionCandidature[]
   /// CPL-T24 : les RIB que l'utilisateur a vérifiés, et ceux qu'il a confirmés.
-  ribsVerifies                 PieceKyc[]               @relation("RibsVerifies")
-  ribsConfirmes                PieceKyc[]               @relation("RibsConfirmes")
+  ribsVerifies                 PieceKyc[]                @relation("RibsVerifies")
+  ribsConfirmes                PieceKyc[]                @relation("RibsConfirmes")
+  litigesOuverts               LitigeDecisionDeContrat[] @relation("LitigesOuverts")
+  litigesClos                  LitigeDecisionDeContrat[] @relation("LitigesClos")
 
   @@map("utilisateurs_console")
 }
@@ -1638,31 +1641,76 @@ enum GesteDecisionContrat {
 /// (`{motif}`), CHIFFRÉ, et ses dates ; jamais au journal chaîné. La ligne nue reste comme preuve du
 /// fait daté : seul le texte est purgé (garde `decisions_de_contrat_garde` et CHECK en SQL brut).
 model DecisionDeContrat {
-  id                  String               @id @default(uuid()) @db.Uuid
-  apporteurId         String               @map("apporteur_id") @db.Uuid
-  apporteur           Apporteur            @relation("DecisionsDeLApporteur", fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  id                  String                    @id @default(uuid()) @db.Uuid
+  apporteurId         String                    @map("apporteur_id") @db.Uuid
+  apporteur           Apporteur                 @relation("DecisionsDeLApporteur", fields: [apporteurId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   geste               GesteDecisionContrat
   /// La liste FERMÉE de l'art. 11.2, pour la mise en demeure seule (CHECK).
-  article             String?              @db.VarChar(4)
-  texteChiffre        Bytes?               @map("texte_chiffre")
+  article             String?                   @db.VarChar(4)
+  texteChiffre        Bytes?                    @map("texte_chiffre")
   /// Jours civils de Paris, pour la résiliation seule (CHECK).
-  dateReception       DateTime?            @map("date_reception") @db.Date
-  dateEffet           DateTime?            @map("date_effet") @db.Date
+  dateReception       DateTime?                 @map("date_reception") @db.Date
+  dateEffet           DateTime?                 @map("date_effet") @db.Date
   /// L'événement qui fonde la décision. Relation jamais employée par le code : on écrit `evenementId`.
-  evenementId         BigInt               @unique @map("evenement_id")
-  faitDuJournal       Evenement            @relation(fields: [evenementId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  creeAt              DateTime             @default(dbgenerated("clock_timestamp()")) @map("cree_at") @db.Timestamptz(3)
-  textePurgeAt        DateTime?            @map("texte_purge_at") @db.Timestamptz(3)
+  evenementId         BigInt                    @unique @map("evenement_id")
+  faitDuJournal       Evenement                 @relation(fields: [evenementId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creeAt              DateTime                  @default(dbgenerated("clock_timestamp()")) @map("cree_at") @db.Timestamptz(3)
+  textePurgeAt        DateTime?                 @map("texte_purge_at") @db.Timestamptz(3)
   /// La clé d'idempotence, tirée par le serveur au rendu du formulaire : UNIQUE, immuable, jamais
   /// purgée ; exigée pour une mise en demeure (CHECK).
-  cleIdempotence      String?              @unique @map("cle_idempotence") @db.Uuid
+  cleIdempotence      String?                   @unique @map("cle_idempotence") @db.Uuid
   /// L'empreinte HMAC des faits (`empreinteRecherche('faits_mise_en_demeure', …)`) : elle vit et meurt
   /// avec le texte (CHECK et garde) ; jamais de clair pour comparer.
-  faitsEmpreinte      String?              @map("faits_empreinte") @db.Char(64)
+  faitsEmpreinte      String?                   @map("faits_empreinte") @db.Char(64)
   notificationsEspace NotificationEspace[]
   /// SEC-15 : l'apporteur dont cette suspension fonde le gel, tant qu'il dure.
-  gelsDesDepots       Apporteur[]          @relation("GelParDecision")
+  gelsDesDepots       Apporteur[]               @relation("GelParDecision")
+  /// JUR-T64 : les litiges ouverts puis clos sur cette décision ; un litige OUVERT gèle la purge du texte.
+  litiges             LitigeDecisionDeContrat[]
 
   @@index([apporteurId])
   @@map("decisions_de_contrat")
+}
+
+/// JUR-T64 (juriste #703 6041829569 ; forme d'A02, #703 6041868006) : la nature du litige, liste FERMÉE.
+enum MotifOuvertureLitige {
+  contestation_ecrite
+  reclamation_formelle
+  mediation
+  action_en_justice
+
+  @@map("motif_ouverture_litige")
+}
+
+/// JUR-T64 : la fin du litige, liste FERMÉE.
+enum MotifClotureLitige {
+  reponse_donnee
+  accord
+  decision_definitive
+  desistement
+
+  @@map("motif_cloture_litige")
+}
+
+/// JUR-T64 (code civil art. 2241 et 2231) : un litige sur une décision de contrat. Tant qu'il est OUVERT,
+/// le texte de la décision n'est jamais purgé (filet `decisions_de_contrat_gel_litige`) ; à sa clôture, le
+/// départ de la conservation devient le plus tardif du départ ordinaire et du jour de la clôture. Ajout
+/// seul : seule la clôture s'écrit, une fois. Aucun texte libre. Un fait de la Société, jamais rendu à
+/// l'espace.
+model LitigeDecisionDeContrat {
+  id             String               @id @db.Uuid
+  decisionId     String               @map("decision_id") @db.Uuid
+  decision       DecisionDeContrat    @relation(fields: [decisionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  motifOuverture MotifOuvertureLitige @map("motif_ouverture")
+  /// L'heure de la BASE à l'insertion (garde de naissance).
+  ouvertAt       DateTime             @default(dbgenerated("clock_timestamp()")) @map("ouvert_at") @db.Timestamptz(3)
+  ouvertParId    String               @map("ouvert_par_id") @db.Uuid
+  ouvertPar      UtilisateurConsole   @relation("LitigesOuverts", fields: [ouvertParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  motifCloture   MotifClotureLitige?  @map("motif_cloture")
+  closAt         DateTime?            @map("clos_at") @db.Timestamptz(3)
+  closParId      String?              @map("clos_par_id") @db.Uuid
+  closPar        UtilisateurConsole?  @relation("LitigesClos", fields: [closParId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([decisionId, closAt], map: "litiges_decisions_de_contrat_decision_clos_idx")
+  @@map("litiges_decisions_de_contrat")
 }

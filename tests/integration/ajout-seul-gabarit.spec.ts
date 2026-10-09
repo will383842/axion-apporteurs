@@ -268,6 +268,7 @@ describe('REQ-DM-031 — chaque argument du gabarit nomme une colonne qui existe
       'demandes_droits_contact',
       'depots_refuses',
       'journal_acces_console',
+      'litiges_decisions_de_contrat',
       'personnes_declarees',
       'qualifications',
       'rattachements_manuels',

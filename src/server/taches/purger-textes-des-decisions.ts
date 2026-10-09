@@ -30,7 +30,14 @@
  * L'écriture est celle qu'admet la garde dédiée de SEC-19 : le texte ET `faits_empreinte` vidés,
  * `texte_purge_at` posé, dans la même instruction, une fois. La ligne nue (geste, article, dates,
  * événement) reste, et `rendreUneDecisionDeContrat` refuse ensuite de rendre le texte. Une résiliation
- * sans texte n'est jamais prise. Le gel pendant un litige (code civil art. 2241) relève de JUR-T64.
+ * sans texte n'est jamais prise.
+ *
+ * JUR-T64, LE GEL POUR LITIGE (code civil art. 2241 et 2231 ; juriste, #703 6041829569 ; forme d'A02,
+ * #703 6041868006) : tant qu'un litige est OUVERT sur une décision, son texte n'est JAMAIS purgé — le
+ * passage la saute en requête, à la lecture comme à l'écriture, et le filet de la base
+ * (`decisions_de_contrat_gel_litige`) ferme le contournement. À la clôture, le départ devient le PLUS
+ * TARDIF du départ ordinaire et du jour civil de Paris de la DERNIÈRE clôture ; l'échéance reste celle
+ * ci-dessous.
  *
  * Par lots bornés, en avançant sur l'identifiant : un texte gardé n'est pas relu dans le passage.
  * Idempotente : un texte purgé n'est plus sélectionné.
@@ -38,6 +45,7 @@
 import type { GesteDecisionContrat, PrismaClient } from '@prisma/client';
 import { SEUILS } from '../../domain/seuils/ssot';
 import { lireLaChargeDUnFait, passageQuiCiteLaDecision } from '../evenement/journal';
+import { creerJournal, type Journal } from '../../lib/logger';
 import { versParis } from '../../domain/temps/paris';
 import { MS_PAR_JOUR, joursDeLaDate, type DateCivile } from '../../domain/temps/calendrier-civil';
 
@@ -57,8 +65,15 @@ type Decision = {
   creeAt: Date;
 };
 
-/** Une ligne du lot : ce que la purge en lit, rien d'autre. */
-type Candidate = Decision & { id: string; apporteurId: string };
+/** Une ligne du lot : ce que la purge en lit, rien d'autre (JUR-T64 : sa DERNIÈRE clôture de litige). */
+type Candidate = Decision & {
+  id: string;
+  apporteurId: string;
+  litiges: { closAt: Date | null }[];
+};
+
+/** JUR-T64 : aucun litige OUVERT sur la décision. */
+const SANS_LITIGE_OUVERT = { litiges: { none: { closAt: null } } } as const;
 
 /** Une colonne DATE, telle que Prisma la rend (minuit UTC du jour civil). */
 const dateCivileDe = (d: Date): DateCivile => ({
@@ -104,6 +119,19 @@ export function departDuTexte(
   }
 }
 
+/**
+ * JUR-T64 (art. 2231) : après la clôture d'un litige, le départ est le PLUS TARDIF du départ ordinaire et
+ * du jour civil de Paris de la DERNIÈRE clôture. Un départ illisible reste illisible (texte gardé).
+ */
+export function departApresLesLitiges(
+  departOrdinaire: DateCivile | null,
+  derniereClotureAt: Date | null
+): DateCivile | null {
+  if (departOrdinaire === null || derniereClotureAt === null) return departOrdinaire;
+  const cloture = jourDeParis(derniereClotureAt);
+  return joursDeLaDate(cloture) > joursDeLaDate(departOrdinaire) ? cloture : departOrdinaire;
+}
+
 /** L'échéance : le départ plus la durée, en années civiles ; un jour absent devient le dernier du mois. */
 export function echeanceDuTexte(depart: DateCivile): DateCivile {
   const annee = depart.annee + SEUILS.DECISION_CONTRAT_TEXTE_CONSERVATION_ANS.valeur;
@@ -131,21 +159,64 @@ function bornePrealable(maintenant: Date): Date {
   return borne;
 }
 
+/**
+ * JUR-T64 — l'alerte d'exploitation (juriste, #703 6042136542 ; condition de la sécurité) : un litige
+ * OUVERT depuis `LITIGE_DECISION_OUVERT_ALERTE_JOURS` jours ou plus alerte à CHAQUE passage, tant qu'il
+ * reste ouvert (arbitrage de la coordination : sans schéma, sans trou si un passage manque ; l'alerte cesse
+ * à la clôture). Elle ne clôt rien, et ne nomme ni l'apporteur ni les faits : le nombre, puis la décision
+ * (son identifiant) et l'âge en jours.
+ */
+async function alerterLesLitigesAnciens(
+  prisma: PrismaClient,
+  maintenant: Date,
+  journal: Pick<Journal, 'warn'>
+): Promise<void> {
+  const periode = SEUILS.LITIGE_DECISION_OUVERT_ALERTE_JOURS.valeur;
+  const ouverts = await prisma.litigeDecisionDeContrat.findMany({
+    where: {
+      closAt: null,
+      ouvertAt: { lte: new Date(maintenant.getTime() - periode * MS_PAR_JOUR) },
+    },
+    select: { decisionId: true, ouvertAt: true },
+  });
+  const litiges = ouverts.map((l) => ({
+    decisionId: l.decisionId,
+    ageJours: Math.floor((maintenant.getTime() - l.ouvertAt.getTime()) / MS_PAR_JOUR),
+  }));
+  if (litiges.length > 0)
+    journal.warn('litiges_decisions_ouverts_anciens', { nombre: litiges.length, litiges });
+}
+
 export async function purgerLesTextesDesDecisions(
   prisma: PrismaClient,
-  maintenant: Date
+  maintenant: Date,
+  p: { journal?: Pick<Journal, 'warn'> } = {}
 ): Promise<{ textesPurges: number }> {
+  await alerterLesLitigesAnciens(prisma, maintenant, p.journal ?? creerJournal());
   const aPurger = {
     textePurgeAt: null,
     NOT: { texteChiffre: null },
     creeAt: { lte: bornePrealable(maintenant) },
+    ...SANS_LITIGE_OUVERT,
   };
   let textesPurges = 0;
   let apres: string | null = null;
   for (;;) {
     const lot: Candidate[] = await prisma.decisionDeContrat.findMany({
       where: apres === null ? aPurger : { ...aPurger, id: { gt: apres } },
-      select: { id: true, apporteurId: true, geste: true, dateEffet: true, creeAt: true },
+      select: {
+        id: true,
+        apporteurId: true,
+        geste: true,
+        dateEffet: true,
+        creeAt: true,
+        litiges: {
+          where: { NOT: { closAt: null } },
+          select: { closAt: true },
+          orderBy: { closAt: 'desc' },
+          take: 1,
+        },
+      },
       orderBy: { id: 'asc' },
       take: LOT_DE_PURGE_DES_DECISIONS,
     });
@@ -194,12 +265,20 @@ export async function purgerLesTextesDesDecisions(
                   joursDeLaDate(jourDeParis(r.creeAt)) >= joursDeLaDate(jourDeParis(d.creeAt))
               ) ?? null)
             : null;
-        return texteEchu(departDuTexte(d, suivante), maintenant);
+        return texteEchu(
+          departApresLesLitiges(departDuTexte(d, suivante), d.litiges[0]?.closAt ?? null),
+          maintenant
+        );
       })
       .map((d) => d.id);
     if (echus.length > 0) {
       const { count } = await prisma.decisionDeContrat.updateMany({
-        where: { id: { in: echus }, textePurgeAt: null, NOT: { texteChiffre: null } },
+        where: {
+          id: { in: echus },
+          textePurgeAt: null,
+          NOT: { texteChiffre: null },
+          ...SANS_LITIGE_OUVERT,
+        },
         data: { texteChiffre: null, faitsEmpreinte: null, textePurgeAt: maintenant },
       });
       textesPurges += count;

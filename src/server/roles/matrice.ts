@@ -118,6 +118,10 @@ export const MATRICE_DES_ROLES = {
   // DM-71 (art. 3.3 du v2) : l'annulation après la confirmation, pour erreur d'identification ou pour
   // fraude, est un geste humain de l'administrateur, sous step-up (sécurité, rattrapage 119).
   'action:annuler_apres_confirmation': { roles: ['admin'], stepUp: true },
+  // JUR-T64 (code civil art. 2241) : ouvrir et clore un litige sur une décision de contrat ; la clôture
+  // fait repartir la conservation du texte, l'ouverture la suspend : l'administrateur seul, sous step-up.
+  'action:ouvrir_litige_decision': { roles: ['admin'], stepUp: true },
+  'action:clore_litige_decision': { roles: ['admin'], stepUp: true },
 } as const satisfies Readonly<Record<`${'action' | 'ecran'}:${string}`, EntreeDeLaMatrice>>;
 
 /**

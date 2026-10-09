@@ -362,6 +362,14 @@ export const SEUILS = {
     renvois: [],
     verifieLe: LE,
   },
+  LITIGE_DECISION_OUVERT_ALERTE_JOURS: {
+    valeur: 180,
+    unite: 'jours',
+    source:
+      'RGPD art. 5.1 e) (limitation de la conservation) et 5.2 (responsabilité) : revue périodique d’un gel de conservation ; périodicité de la juriste, #703 6042136542',
+    renvois: [],
+    verifieLe: LE,
+  },
   CONSERVATION_PIECES_ANS: {
     valeur: 10,
     unite: 'ans',
