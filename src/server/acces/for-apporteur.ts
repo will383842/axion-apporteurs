@@ -140,6 +140,10 @@ export const CLES_REFUSEES = {
     'personneDeclaree',
     'peremptionSuspendueParId',
     'peremptionSuspenduePar',
+    // DM-71 : l'auteur de l'annulation après la confirmation, un employé de la console (le marqueur
+    // lui-même ne se pose qu'avec l'annulation, garde de la base).
+    'annulationParId',
+    'annulationPar',
     'courrielsEnvoyes',
     'demandeConfirmation',
     'demandesDroitsContact',
@@ -189,7 +193,17 @@ export const CLES_REFUSEES = {
     'lienMagique',
   ],
   personneDeclaree: ['id', 'apporteurId', 'apporteur', 'attributions'],
-  pieceKyc: ['id', 'apporteurId', 'apporteur', 'identitesFacturation'],
+  // Le RIB à quatre yeux (migration 004750) : les deux regards sont ceux de la console, jamais de l'espace.
+  pieceKyc: [
+    'id',
+    'apporteurId',
+    'apporteur',
+    'identitesFacturation',
+    'ribVerifieParId',
+    'ribVerifiePar',
+    'ribConfirmeParId',
+    'ribConfirmePar',
+  ],
   // UX-P1-10 : l'attribution d'une notification est une référence vérifiée ; la clé d'une
   // préférence s'écrit, et Zod la juge contre la table des notifications avant la couche.
   // DM-55 (sécurité) : le fait du journal, l'anomalie et les courriels d'une notification sont HORS DE L'ESPACE :
@@ -256,6 +270,7 @@ export const RELATIONS = {
     'jetonDepot',
     'personneDeclaree',
     'peremptionSuspenduePar',
+    'annulationPar',
     'courrielsEnvoyes',
     'demandeConfirmation',
     'demandesDroitsContact',
@@ -275,7 +290,7 @@ export const RELATIONS = {
   jetonDepot: ['apporteur', 'attributions'],
   lienMagique: ['apporteur', 'utilisateurConsole', 'session'],
   personneDeclaree: ['apporteur', 'attributions'],
-  pieceKyc: ['apporteur', 'identitesFacturation'],
+  pieceKyc: ['apporteur', 'identitesFacturation', 'ribVerifiePar', 'ribConfirmePar'],
   sessionEspace: ['apporteur', 'utilisateurConsole', 'lienMagique'],
   notificationEspace: [
     'apporteur',
@@ -457,6 +472,10 @@ export const CHAMPS_TUS = {
     'versionQualification',
     // DM-59 : l'empreinte du jeton de la page des droits du contact, jamais rendue à l'apporteur.
     'jetonDroitsHash',
+    // DM-71 : le marqueur de l'exception et son auteur (un employé de la console) ; l'apporteur
+    // apprend l'annulation et son motif par sa notification.
+    'annulationException',
+    'annulationParId',
   ],
   changementCourriel: ['apporteurId', 'emailChiffre', 'emailHash', 'tokenHash', 'kid'],
   courrielEnvoye: [
@@ -486,7 +505,19 @@ export const CHAMPS_TUS = {
   lienMagique: ['apporteurId', 'utilisateurConsoleId', 'tokenHash', 'kid', 'codeHash'],
   personneDeclaree: ['apporteurId', 'nomChiffre', 'prenomChiffre'],
   // DM-11 : le fichier (stockage privé, REQ-SEC-026), sa purge, et l'IBAN chiffré et empreint.
-  pieceKyc: ['apporteurId', 'fichierRef', 'fichierPurgeAt', 'ibanChiffre', 'ibanHash'],
+  // Le RIB à quatre yeux (migration 004750) : qui a vérifié et confirmé, et quand — un contrôle interne
+  // de la console, que l'espace ne rend pas.
+  pieceKyc: [
+    'apporteurId',
+    'fichierRef',
+    'fichierPurgeAt',
+    'ibanChiffre',
+    'ibanHash',
+    'ribVerifieParId',
+    'ribVerifieAt',
+    'ribConfirmeParId',
+    'ribConfirmeAt',
+  ],
   sessionEspace: [
     'apporteurId',
     'utilisateurConsoleId',
@@ -509,6 +540,14 @@ export const CHAMPS_TUS = {
   // SEC-47 : les secrets, le jugement de la candidature (seuil, score, parts, réponses, barème),
   // les traces d'acquisition et de parrainage, le marqueur de test, la version de session.
   apporteur: [
+    // SEC-15 : le gel est une mesure de la console. L'apporteur voit son statut `suspendu`, et les
+    // faits et la date de levée lui arrivent par la notification ; la nature du gel, l'anomalie,
+    // l'auteur et la décision citée restent tus (échec fermé).
+    'etatGel',
+    'depotsGelesDepuis',
+    'gelAnomalieId',
+    'gelPoseParId',
+    'gelDecisionContratId',
     'isTest',
     'seuilVerificationPrioritaire',
     'seuilVerificationPrioritaireAt',

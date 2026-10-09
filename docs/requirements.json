@@ -65,6 +65,7 @@
         "DM-08",
         "DM-13",
         "DM-55",
+        "DM-72",
         "JUR-T49"
       ]
     },
@@ -101,6 +102,7 @@
         "DM-41",
         "DM-55",
         "DM-67",
+        "DM-73",
         "UX-P1-54"
       ]
     },
@@ -116,7 +118,8 @@
       "phase": 1,
       "taches": [
         "DM-08",
-        "DM-13"
+        "DM-13",
+        "UX-P1-61"
       ]
     },
     {
@@ -188,7 +191,8 @@
         "DM-18",
         "DM-63",
         "DM-64",
-        "SEC-19"
+        "SEC-19",
+        "SEC-70"
       ]
     },
     {
@@ -278,8 +282,8 @@
     {
       "id": "REQ-DM-017",
       "domaine": "domaine-donnees",
-      "texte": "🔴 **Prorata — formule unique du dossier, en entiers, numérateur et dénominateur de MÊME nature.** La part acquise au ième encaissement vaut `floor(commissionTotaleCents × cumulEncaisseTtcCents_i / factureTtcNetCents) − Σ parts déjà acquises` ; aucune part n'est négative ; aucune part ne dépasse la commission totale ; à facture soldée, Σ des parts = `commissionTotaleCents` exactement (le dernier encaissement absorbe le reliquat d'arrondi par construction, sans traitement particulier). ⚠️ **Trois formules coexistaient dans le dossier** (contrat art. 4.3 « HT sur TTC », `REQ-ARG-004` « floor cumul TTC/TTC », l'ancien corps de cette exigence « round HT/HT ») ; le contrat a été corrigé le 2026-09-03 (A-1) et **cette formule est désormais la seule**, identique mot pour mot à `REQ-ARG-004` et à l'article 4.3. Un ratio dont le numérateur est HT et le dénominateur TTC ampute chaque part d'un sixième à 20 % de TVA et empêche la somme d'atteindre le total : un test frontière (facture 14 400 TTC / 12 000 HT en 3 × 4 800) le voit rougir avant correction.",
-      "source": "tableaux-de-bord §2.4, B1 ; arbitrage de contradiction l. 411 ; contrat art. 4.3 ; synthèse des cinq examens du 2026-09-03, A-1",
+      "texte": "🔴 **Commission acquise au paiement INTÉGRAL, sans prorata** (contrat v2, art. 4.2 et 4.3, MOT POUR MOT) : art. 4.2 « La commission est acquise lorsque la Société a encaissé l'intégralité du prix facturé au client au titre de la commande, tous payeurs confondus, y compris un opérateur de compétences ou tout autre financeur — jamais à la signature, jamais à l'émission de la facture. » ; art. 4.3 « Aucune part de commission n'est due au titre d'un paiement partiel. La commission est facturée et versée dans les conditions de l'article 5, à compter de l'encaissement complet. » Une ligne ne devient `acquise` qu'au jour où le cumul encaissé, tous payeurs confondus, atteint le prix facturé de la commande, net des avoirs (art. 4.0), les deux termes de MÊME nature, TTC — prix facturé TTC net des avoirs et cumul encaissé TTC ; un prix HT comparé à des encaissements TTC est une faute (auditeur argent, revue de #815, 5446397763) ; aucune part n'est acquise sur un paiement partiel. [gouvernance : RÉÉCRITE dans la PR de T-ARG-044 (#815), comme son acceptance le prévoit ; elle REMPLACE le texte du prorata, retiré par le v2, dont le début était « 🔴 **Prorata — formule unique du dossier, en entiers, numérateur et dé » ; citations du v2 extraites de la fiche ALN-02 de la juriste, #474, commentaire 6032703119.]",
+      "source": "tableaux-de-bord §2.4, B1 ; arbitrage de contradiction l. 411 ; contrat art. 4.3 ; synthèse des cinq examens du 2026-09-03, A-1 ; réécrite sur le contrat v2, art. 4.2 et 4.3, dans la PR de T-ARG-044 (#815 ; juriste, #474, 6032703119, ALN-02)",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -287,7 +291,8 @@
       "phase": 0,
       "taches": [
         "DM-04",
-        "DM-15"
+        "DM-15",
+        "T-ARG-044"
       ]
     },
     {
@@ -681,6 +686,7 @@
         "DM-13",
         "DM-24",
         "DM-41",
+        "DM-72",
         "JUR-T40"
       ]
     },
@@ -700,7 +706,9 @@
         "DM-53",
         "DM-62",
         "DM-69",
-        "UX-P1-51"
+        "DM-71",
+        "UX-P1-51",
+        "UX-P1-62"
       ]
     },
     {
@@ -753,6 +761,7 @@
         "SEC-55",
         "SEC-62",
         "SEC-65",
+        "SEC-71",
         "UX-P1-04"
       ]
     },
@@ -938,8 +947,8 @@
     {
       "id": "REQ-SEC-016",
       "domaine": "anti-abus-securite",
-      "texte": "Le dépôt est limité par DEUX compteurs : un compteur de SESSION, OBLIGATOIRE (clé : l'empreinte de la session ou du jetonDepotId, jamais l'apporteurId), et un compteur d'IP (hash IP) ; la fenêtre et les plafonds sont lus en SSOT, avec leur source ; `surPanne: refuser` ; tout compteur sous préfixe `magic:`, `depot:`, `verif:`, `webhook:`, `auth:` déclare sa conduite sur panne. [Amendée au rattrapage 108, arbitrage de la coordination du 2026-10-04 (sécurité, juriste) : remplace « limité à 20 / 10 min par hash IP (`surPanne: laisser-passer`) ; le compteur par identité déclare `surPanne: refuser` ».]",
-      "source": "nouvelle (patron `rate-limit.spec.ts` garde de famille) ; rattrapage 108 (arbitrage de la coordination du 2026-10-04, sécurité et juriste)",
+      "texte": "Le dépôt est limité par DEUX compteurs : un compteur de SESSION, OBLIGATOIRE (clé : l'empreinte de la session ou du jetonDepotId, jamais l'apporteurId), et un compteur d'IP (hash IP) ; la fenêtre et les plafonds sont lus en SSOT, avec leur source ; `surPanne: refuser` ; tout compteur sous préfixe `magic:`, `depot:`, `verif:`, `webhook:`, `auth:`, `ecrit:` déclare sa conduite sur panne ; l'écrit de l'apporteur est limité par session (`ecrit:session`) et par apporteur (`ecrit:apporteur`), limites et fenêtres lues en configuration privée, surPanne: refuser. [AMENDÉE au rattrapage 122 (coordination, #319, commentaire 6038679021, point 1).] [Amendée au rattrapage 108, arbitrage de la coordination du 2026-10-04 (sécurité, juriste) : remplace « limité à 20 / 10 min par hash IP (`surPanne: laisser-passer`) ; le compteur par identité déclare `surPanne: refuser` ».]",
+      "source": "nouvelle (patron `rate-limit.spec.ts` garde de famille) ; rattrapage 108 (arbitrage de la coordination du 2026-10-04, sécurité et juriste) ; famille `ecrit:` ajoutée au rattrapage 122 (coordination, #319, 6038679021)",
       "statut": "active",
       "remplaceePar": null,
       "module": 9,
@@ -951,7 +960,8 @@
         "QA-T68",
         "SEC-03",
         "SEC-10",
-        "SEC-12"
+        "SEC-12",
+        "UX-P1-62"
       ]
     },
     {
@@ -990,8 +1000,8 @@
     {
       "id": "REQ-SEC-019",
       "domaine": "anti-abus-securite",
-      "texte": "🔴 **Le gel est un enum à TROIS valeurs — `libre`, `gele_non_confirmation`, `gele_fraude`** — avec motif, date et auteur (réécrite le 2026-09-03, A-3 (c) : `gele_anomalie` est renommée `gele_fraude` pour porter le mot du contrat, et `gele_manuel` **est supprimée** — un gel « manuel » sans motif écrit est exactement le pouvoir discrétionnaire que l'article 3.7 exclut ; la valeur `gele_strikes` avait déjà été renommée, « strike » étant un synonyme interdit au glossaire). **Tous les chemins de gel passent par une fonction unique** dont l'entrée est typée sur ces deux motifs et que garde `jur:suspension-motifs-fermes` (REQ-SEC-038). 🔴 **Portée strictement limitée** (contrat art. 3.7 al. 3 réécrit) : le gel porte **exclusivement sur l'enregistrement de nouvelles déclarations**. Il est **sans effet** sur les attributions en cours, provisoires ou définitives, sur les commandes signées, sur les commissions acquises ou à venir, et **sur l'accès de l'apporteur à son espace** — aucun jeton n'est révoqué, `sessionVersion` n'est pas incrémenté, aucune attribution n'est annulée (c'est REQ-SEC-032 qui réserve ces effets à la **résiliation**). Les attributions `provisoire` non qualifiées **restent `provisoire`** (la valeur `suspendue` n'existe pas dans l'enum fermé de REQ-DM-006) et libèrent la file M2. La suspension de l'enregistrement des déclarations d'un apporteur ne change rien à ses attributions en cours : aucune n'est mise en vérification de ce seul fait. La Société peut placer leurs demandes de confirmation en tête de son ordre d'appel, sans effet sur elles. Une demande n'est mise en vérification que sur des éléments objectifs qui lui sont propres (art. 3.2 al. 4). 🔴 **Durée maximale de quinze jours** (`SUSPENSION_MAX_JOURS`, SSOT, contrat art. 3.7) : un cron quotidien **lève de plein droit** tout gel de plus de quinze jours à compter de sa notification, écrit l'événement et notifie l'apporteur ; la Société demeure libre de résilier selon l'article 11. Une levée avant terme reste réservée à un rôle habilité et journalisée. Tests : gel posé à J0 → levé par le cron à J+15, jamais avant ; **un gel qui survit à J+16 → rouge** ; gel posé → jeton toujours valide, session vivante, attributions inchangées, lignes de commission inchangées (quatre assertions, **vues rougir** sur l'ancien comportement) ; `gele_manuel` ou `gele_anomalie` présent dans l'enum → gate rouge.",
-      "source": "audit-outil §1.1 ; contrat art. 3.7 al. 3 ; synthèse du 2026-09-03, A-3 (c) et (e) ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84)",
+      "texte": "🔴 **Le gel est un enum à TROIS valeurs — `libre`, `gele_non_confirmation`, `gele_fraude`** — avec motif, date et auteur (réécrite le 2026-09-03, A-3 (c) : `gele_anomalie` est renommée `gele_fraude` pour porter le mot du contrat, et `gele_manuel` **est supprimée** — un gel « manuel » sans motif écrit est exactement le pouvoir discrétionnaire que l'article 3.7 exclut ; la valeur `gele_strikes` avait déjà été renommée, « strike » étant un synonyme interdit au glossaire). **Tous les chemins de gel passent par une fonction unique** dont l'entrée est typée sur ces deux motifs et que garde `jur:suspension-motifs-fermes` (REQ-SEC-038). 🔴 **Portée strictement limitée** (contrat art. 3.7 al. 3 réécrit) : le gel porte **exclusivement sur l'enregistrement de nouvelles déclarations**. Il est **sans effet** sur les attributions en cours, provisoires ou définitives, sur les commandes signées, sur les commissions acquises ou à venir, et **sur l'accès de l'apporteur à son espace** — aucun jeton n'est révoqué, `sessionVersion` n'est pas incrémenté, aucune attribution n'est annulée (c'est REQ-SEC-032 qui réserve ces effets à la **résiliation**). Les attributions `provisoire` non qualifiées **restent `provisoire`** (la valeur `suspendue` n'existe pas dans l'enum fermé de REQ-DM-006) et libèrent la file M2. [RETIRÉ au rattrapage 122 (coordination, #319, commentaire 6039223511, point 1) : les phrases de « mise en vérification », caduques avec le contrat v2.] 🔴 **Durée maximale de quinze jours** (`SUSPENSION_MAX_JOURS`, SSOT, contrat art. 3.7) : un cron quotidien **lève de plein droit** tout gel de plus de quinze jours à compter de sa notification, écrit l'événement et notifie l'apporteur ; la Société demeure libre de résilier selon l'article 11. Une levée avant terme reste réservée à un rôle habilité et journalisée. Tests : gel posé à J0 → levé par le cron à J+15, jamais avant ; **un gel qui survit à J+16 → rouge** ; gel posé → jeton toujours valide, session vivante, attributions inchangées, lignes de commission inchangées (quatre assertions, **vues rougir** sur l'ancien comportement) ; `gele_manuel` ou `gele_anomalie` présent dans l'enum → gate rouge.",
+      "source": "audit-outil §1.1 ; contrat art. 3.7 al. 3 ; synthèse du 2026-09-03, A-3 (c) et (e) ; amendée le 2026-10-03, texte de la juriste : décision de Williams du 2026-10-03 (« non pas pour le moment » : pas de limite des dépôts d'un apporteur selon son taux de confirmation) ; une réouverture exigerait un avenant au contrat (rattrapage 84) ; phrases de mise en vérification retirées au rattrapage 122 (coordination, #319, 6039223511, point 1)",
       "statut": "active",
       "remplaceePar": null,
       "module": 21,
@@ -1014,14 +1024,15 @@
       "phase": 1,
       "taches": [
         "SEC-12",
-        "SEC-14"
+        "SEC-14",
+        "SEC-73"
       ]
     },
     {
       "id": "REQ-SEC-021",
       "domaine": "anti-abus-securite",
-      "texte": "« Vérifier une entreprise » n'est accessible qu'en session authentifiée, limité par identité et par hash IP selon la configuration, journalisé (`verification_events` [REMPLACÉ au rattrapage 95 : la table s'appelle `verifications`, livrée par DM-12]) ; aucun rythme de dépôt ne pose de signal d'anomalie (REQ-SEC-017, REQ-JUR-031 : `TypeAnomalie` n'a pas de valeur de rythme) ; la date de libération est arrondie au mois [SUSPENDU au rattrapage 96, remarque de la juriste : aucune date n'est rendue, dans aucun état, tant que Williams n'a pas tranché (juriste : non ; sécurité : oui ; décision W19), voir SEC-16] ; l'identité de l'autre apporteur n'est jamais révélée.",
-      "source": "audit-outil §1.3 D5 (précisé) ; nom de la table aligné sur `verifications` (DM-12), rattrapage 95 ; date suspendue jusqu'à la décision de Williams, rattrapage 96",
+      "texte": "« Vérifier une entreprise » n'est accessible qu'en session authentifiée, limité par identité, sur deux fenêtres (`verif:identite-jour`, `verif:identite-court`), et par hash IP (`verif:ip-jour`), limites et fenêtres lues en configuration privée, surPanne: refuser [AMENDÉE au rattrapage 120 (coordination, #319, commentaire 6036979782, point 1, qui complète la sécurité, 6036696268, et la juriste, 6036671294), remplaçant « par identité et par hash IP selon la configuration » ; aucune valeur n'est écrite au registre (SEC-72) ; au rattrapage 122, le segment passe de la note au texte en vigueur, que lit `securite:rate-famille`], journalisé (`verification_events` [REMPLACÉ au rattrapage 95 : la table s'appelle `verifications`, livrée par DM-12]) ; aucun rythme de dépôt ne pose de signal d'anomalie (REQ-SEC-017, REQ-JUR-031 : `TypeAnomalie` n'a pas de valeur de rythme) ; la date de libération est arrondie au mois [SUSPENDU au rattrapage 96, remarque de la juriste : aucune date n'est rendue, dans aucun état, tant que Williams n'a pas tranché (juriste : non ; sécurité : oui ; décision W19), voir SEC-16] ; l'identité de l'autre apporteur n'est jamais révélée.",
+      "source": "audit-outil §1.3 D5 (précisé) ; nom de la table aligné sur `verifications` (DM-12), rattrapage 95 ; date suspendue jusqu'à la décision de Williams, rattrapage 96 ; amendée au rattrapage 120 (coordination, #319, 6036979782, point 1 ; sécurité 6036696268 ; juriste 6036671294)",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -1029,7 +1040,9 @@
       "phase": 1,
       "taches": [
         "SEC-16",
-        "SEC-41"
+        "SEC-41",
+        "SEC-72",
+        "SEC-73"
       ]
     },
     {
@@ -1069,6 +1082,7 @@
         "SEC-60",
         "UX-P1-53",
         "UX-P1-56",
+        "UX-P1-63",
         "UX-P2-03",
         "UX-P3-05"
       ]
@@ -1210,6 +1224,7 @@
         "SEC-12",
         "SEC-19",
         "SEC-43",
+        "SEC-70",
         "T-ARG-038"
       ]
     },
@@ -1487,8 +1502,8 @@
     {
       "id": "REQ-ARG-004",
       "domaine": "argent",
-      "texte": "Prorata : part acquise sur l'encaissement i = floor(commissionTotaleCents × cumulEncaisséTTC_i / factureTTCNetCents) − Σ parts précédentes ; à facture soldée, Σ parts = commissionTotaleCents exactement ; aucune part négative ; aucune part ne dépasse la commission totale.",
-      "source": "tableaux-de-bord §2.1, §2.4 ; nouvelle (ARG-02, ARG-03)",
+      "texte": "🔴 **Commission acquise au paiement INTÉGRAL, sans prorata** (contrat v2, art. 4.2 et 4.3, MOT POUR MOT) : art. 4.2 « La commission est acquise lorsque la Société a encaissé l'intégralité du prix facturé au client au titre de la commande, tous payeurs confondus, y compris un opérateur de compétences ou tout autre financeur — jamais à la signature, jamais à l'émission de la facture. » ; art. 4.3 « Aucune part de commission n'est due au titre d'un paiement partiel. La commission est facturée et versée dans les conditions de l'article 5, à compter de l'encaissement complet. » Une ligne ne devient `acquise` qu'au jour où le cumul encaissé, tous payeurs confondus, atteint le prix facturé de la commande, net des avoirs (art. 4.0), les deux termes de MÊME nature, TTC — prix facturé TTC net des avoirs et cumul encaissé TTC ; un prix HT comparé à des encaissements TTC est une faute (auditeur argent, revue de #815, 5446397763) ; aucune part n'est acquise sur un paiement partiel. [gouvernance : RÉÉCRITE dans la PR de T-ARG-044 (#815), comme son acceptance le prévoit ; elle REMPLACE le texte du prorata, retiré par le v2, dont le début était « Prorata : part acquise sur l'encaissement i = floor(commissionTotaleCe » ; citations du v2 extraites de la fiche ALN-02 de la juriste, #474, commentaire 6032703119.]",
+      "source": "tableaux-de-bord §2.1, §2.4 ; nouvelle (ARG-02, ARG-03) ; réécrite sur le contrat v2, art. 4.2 et 4.3, dans la PR de T-ARG-044 (#815 ; juriste, #474, 6032703119, ALN-02)",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -1497,7 +1512,9 @@
       "taches": [
         "DM-04",
         "T-ARG-036",
-        "T-ARG-037"
+        "T-ARG-037",
+        "T-ARG-044",
+        "T-ARG-047"
       ]
     },
     {
@@ -1610,7 +1627,8 @@
       "phase": 1,
       "taches": [
         "DM-16",
-        "SEC-18"
+        "SEC-18",
+        "T-ARG-046"
       ]
     },
     {
@@ -1650,11 +1668,12 @@
       "remplaceePar": null,
       "module": 15,
       "etape": 12,
-      "phase": 2,
+      "phase": 1,
       "taches": [
         "T-ARG-015",
         "T-ARG-033",
-        "T-ARG-038"
+        "T-ARG-038",
+        "T-ARG-045"
       ]
     },
     {
@@ -1707,7 +1726,8 @@
         "JUR-T01c",
         "T-ARG-016",
         "T-ARG-038",
-        "T-ARG-039"
+        "T-ARG-039",
+        "T-ARG-045"
       ]
     },
     {
@@ -2259,8 +2279,7 @@
       "phase": 0,
       "taches": [
         "INT-T03",
-        "INT-T07-A",
-        "INT-T07-P"
+        "INT-T07-A"
       ]
     },
     {
@@ -2551,7 +2570,9 @@
         "JUR-T31",
         "JUR-T40",
         "JUR-T46",
-        "JUR-T48"
+        "JUR-T48",
+        "JUR-T66",
+        "JUR-T67"
       ]
     },
     {
@@ -2613,6 +2634,7 @@
       "phase": 0,
       "taches": [
         "DM-25",
+        "DM-71",
         "JUR-T01",
         "JUR-T01b",
         "T-ARG-033"
@@ -2938,7 +2960,10 @@
         "INT-T56",
         "JUR-T02",
         "JUR-T64",
-        "T-ARG-033"
+        "T-ARG-033",
+        "UX-P1-65",
+        "UX-P2-20",
+        "UX-P2-21"
       ]
     },
     {
@@ -2976,7 +3001,7 @@
     {
       "id": "REQ-UX-002",
       "domaine": "produit-ux",
-      "texte": "Chaque issue possible d'un dépôt (enum `IssueDepot`) affiche un titre, un « pourquoi » et un « quoi faire », et dit explicitement si le dépôt est horodaté à son nom. 🔴 **L'enum est aligné un pour un sur les catégories des articles 3.3 et 3.3 bis** (réécrite le 2026-09-03, A-12, en miroir de `MotifRefusDepot` / REQ-SEC-022) : `enregistree`, `prioritaire`, `en_attente` (rang 1 ou 2), `file_complete` (art. 3.3 bis c), `anteriorite_client` et `anteriorite_devis` (art. 3.3, rendus à l'apporteur sous le libellé unique « déjà connue de la Société »), `etablissement_cesse` (a), `entreprise_hors_perimetre` (b), `opposition_demarchage` (d), `gele`, `captcha`, `brouillon_hors_ligne`. Les valeurs `fermee`, `financeur` et `deja_connue` sont **renommées** sur ces catégories : elles refusaient un droit pour un motif que le contrat n'écrivait pas. Le refus est notifié **avec sa catégorie**, sans révéler ni qui ni quand, et le texte dit qu'il **n'emporte aucune autre conséquence et n'est pas un manquement** ; chaque issue de refus porte en outre le lien vers la contestation écrite de REQ-DM-043. Tests : `Object.values(IssueDepot)` exhaustivement rendu ; une valeur sans base contractuelle → **gate rouge** ; snapshot des libellés sans date, sans nom, sans UUID.",
+      "texte": "Chaque issue possible d'un dépôt (enum `IssueDepot`) affiche un titre, un « pourquoi » et un « quoi faire », et dit explicitement si le dépôt est horodaté à son nom. 🔴 **L'enum est aligné un pour un sur les catégories des articles 3.3 et 3.3 bis** (réécrite le 2026-09-03, A-12, en miroir de `MotifRefusDepot` / REQ-SEC-022) : `enregistree`, `prioritaire`, `en_attente` (rang 1 ou 2), `file_complete` (art. 3.3 bis c), `anteriorite_client` et `anteriorite_devis` (art. 3.3, rendus à l'apporteur sous le libellé unique « déjà connue de la Société »), `etablissement_cesse` (a), `entreprise_hors_perimetre` (b), `opposition_demarchage` (d), `gele`, `captcha`, `brouillon_hors_ligne`. Les valeurs `fermee`, `financeur` et `deja_connue` sont **renommées** sur ces catégories : elles refusaient un droit pour un motif que le contrat n'écrivait pas. Le refus est notifié **avec sa catégorie**, sans révéler ni qui ni quand, et le texte dit qu'il **n'emporte aucune autre conséquence et n'est pas un manquement** ; chaque issue de refus porte en outre le lien vers la contestation écrite de REQ-DM-043. Tests : `Object.values(IssueDepot)` exhaustivement rendu ; une valeur sans base contractuelle → **gate rouge** ; snapshot des libellés sans date, sans nom, sans UUID. [AMENDÉE au rattrapage 121 (DM-13 ; juriste, #319, commentaire 6037169174) : l'issue de refus SANS ÉCRITURE de l'art. 3.4 bis, `nouveau_contact_requis`, ENTRE dans cette liste DANS LA PR DE DM-13, en même temps que le code (lockstep : `vocabulaire-et-micro-copy.spec.ts` compare la liste et `ISSUES_DEPOT` un pour un). Elle n'entre ni dans `MotifRefusDepot` ni dans REQ-SEC-022, puisqu'aucun refus n'est enregistré, et aucune migration n'est faite. Ces avis sont ceux d'A02 (#319, commentaire 6037259553).]",
       "source": "audit-outil §1.1, §1.3 ; anti-abus M2, M5 ; contrat art. 3.3 et 3.3 bis ; synthèse du 2026-09-03, A-12",
       "statut": "active",
       "remplaceePar": null,
@@ -3714,6 +3739,7 @@
         "GOV-083",
         "GOV-140",
         "GOV-142",
+        "GOV-155",
         "QA-T00",
         "QA-T01",
         "QA-T07",
@@ -3770,6 +3796,7 @@
         "QA-T16",
         "QA-T33",
         "QA-T59",
+        "QA-T74",
         "UX-P0-03"
       ]
     },
@@ -3901,7 +3928,7 @@
       "remplaceePar": null,
       "module": 9,
       "etape": 7,
-      "phase": 1,
+      "phase": 2,
       "taches": [
         "QA-T19"
       ]
@@ -4204,7 +4231,7 @@
     {
       "id": "REQ-GOV-010",
       "domaine": "gouvernance-agents",
-      "texte": "`docs/CHARTE-AGENTS.md` définit neuf droits exclusifs portés par les quinze postes de `docs/CHARTE-AGENTS.md` §4 : l'attribution des tâches et l'écriture de `docs/tasks.json` et de la vue `docs/PLAN-STATE.md` reviennent à A01 avec l'outillage de lot (`pnpm lot:cloture`, seul écrivain des LIVRAISONS — `statut`, `pr`, `branch`, `owner` — et le verbe hors dépôt `lever-attente` (outils de reprise, relu par les lentilles securite et exactitude le 2026-10-01), seul écrivain des LEVÉES d'attente — `attente_externe` → `a_faire` sur décision citée, jamais une livraison ; `pnpm plan-state:build`) — il n'existe pas de poste « orchestrateur » ; architecte (seul à accepter un ADR), gardien du spec (seul à modifier REQUIREMENTS/PRESEANCE/DECISIONS/GLOSSAIRE), leads de domaine (découpent, valident l'acceptation), développeurs (une tâche revendiquée à la fois), relecteurs adversariaux, vérificateurs de tests, release manager (seul à fusionner), documentaliste (LECONS.md). Gate : PR modifiant un fichier réservé sans le label du rôle → rouge.",
+      "texte": "`docs/CHARTE-AGENTS.md` définit neuf droits exclusifs portés par les quinze postes de `docs/CHARTE-AGENTS.md` §4 : l'attribution des tâches et l'écriture de `docs/tasks.json` et de la vue `docs/PLAN-STATE.md` reviennent à A01 avec l'outillage de lot (`pnpm lot:cloture`, seul écrivain des LIVRAISONS — `statut`, `pr`, `branch`, `owner` — et le verbe hors dépôt `lever-attente` (outils de reprise, relu par les lentilles securite et exactitude le 2026-10-01), seul écrivain des LEVÉES d'attente — `attente_externe` → `a_faire` sur décision citée, jamais une livraison ; `pnpm plan-state:build`); SAUF l'ajout, par la PR d'une tâche hors de la zone gouvernance, aux `paths` de ses propres tâches du chemin d'un fichier qu'elle touche, jugé par la lentille exactitude, sans label `role:gardien-spec` quand c'est sa seule écriture du registre (GOV-145 ; décision orale de Williams du 2026-10-04, confirmée sous délégation, #319, 6032352874 ; décision du 2026-10-05, #319, 5988252245, point 3) — il n'existe pas de poste « orchestrateur » ; architecte (seul à accepter un ADR), gardien du spec (seul à modifier REQUIREMENTS/PRESEANCE/DECISIONS/GLOSSAIRE), leads de domaine (découpent, valident l'acceptation), développeurs (une tâche revendiquée à la fois), relecteurs adversariaux, vérificateurs de tests, release manager (seul à fusionner), documentaliste (LECONS.md). Gate : PR modifiant un fichier réservé sans le label du rôle → rouge.",
       "source": "nouvelle",
       "statut": "active",
       "remplaceePar": null,
@@ -4217,7 +4244,12 @@
         "GOV-024",
         "GOV-062",
         "GOV-090",
-        "GOV-116"
+        "GOV-116",
+        "GOV-145",
+        "GOV-152",
+        "GOV-153",
+        "GOV-156",
+        "GOV-159"
       ]
     },
     {
@@ -4242,6 +4274,8 @@
         "GOV-101",
         "GOV-124",
         "GOV-126",
+        "GOV-145",
+        "GOV-157",
         "QA-T60"
       ]
     },
@@ -4286,7 +4320,8 @@
         "GOV-093",
         "GOV-095",
         "GOV-101",
-        "GOV-124"
+        "GOV-124",
+        "GOV-145"
       ]
     },
     {
@@ -4303,6 +4338,8 @@
         "GOV-000",
         "GOV-012",
         "GOV-057",
+        "GOV-151",
+        "GOV-158",
         "QA-T54",
         "QA-T55",
         "QA-T65",
@@ -4446,7 +4483,8 @@
         "GOV-118",
         "GOV-120",
         "GOV-121",
-        "GOV-134"
+        "GOV-134",
+        "GOV-154"
       ]
     },
     {
@@ -4570,7 +4608,9 @@
         "GOV-022",
         "GOV-131",
         "GOV-132",
-        "GOV-133"
+        "GOV-133",
+        "GOV-150",
+        "GOV-156"
       ]
     },
     {
@@ -5202,8 +5242,8 @@
     {
       "id": "REQ-UX-038",
       "domaine": "Annexe — passe de dédoublonnage (à appliquer par le Gardien du spec, GOV-001)",
-      "texte": "Tout dépôt reçoit un accusé immédiat ; à J+5 ouvrés sans qualification, un e-mail automatique non accusatoire part **une seule fois** (« nous n'avons pas encore pu joindre … »). Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : l'e-mail « nous n'avons pas encore pu joindre » part à J+5 ouvrés **sans confirmation**, par clic ou par appel, et non plus « sans qualification » (question 13).",
-      "source": "juges ; tableaux-de-bord §4.2 « le silence tue le réseau »",
+      "texte": "Tout dépôt reçoit un accusé immédiat ; à J+5 ouvrés sans qualification, un e-mail automatique non accusatoire part **une seule fois** (« nous n'avons pas encore pu joindre … »). Amendement W20 (décision de Will du 2026-09-29, docs/chantiers/W20-confirmation-par-email.md §3.2) : l'e-mail « nous n'avons pas encore pu joindre » part à J+5 ouvrés **sans confirmation**, par clic ou par appel, et non plus « sans qualification » (question 13). [RETIRÉ au rattrapage 121, sauf l'accusé immédiat : le courriel à J+5 ouvrés n'existe plus. Juriste, #319, commentaire 6037008645, point 2, MOT POUR MOT : **(2) Le courriel « J+5 ouvrés » (`depot_injoignable_j5`) : RETIRÉ, et non réécrit.** Il est défini par le régime du jeton (« sans confirmation par clic ou par appel »), que DM-72 supprime. Le v2 n'impose qu'une information : « Lorsque le message est retourné en erreur, la Société en informe l'Apporteur par courrier électronique, dès qu'elle le constate, afin qu'il puisse communiquer une adresse corrigée » (art. 3.2). C'est le courriel de DM-72, et lui seul. Il n'y a aucune relance à jour fixe : un rappel à J+5 ferait croire à une échéance que le contrat ne connaît pas.]",
+      "source": "juges ; tableaux-de-bord §4.2 « le silence tue le réseau » ; courriel J+5 retiré au rattrapage 121 (juriste, #319, 6037008645, point 2)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
@@ -5331,6 +5371,7 @@
         "EXT-T02b",
         "EXT-T04",
         "EXT-T05",
+        "EXT-T06",
         "EXT-T07",
         "EXT-T09",
         "EXT-T10",
@@ -5341,10 +5382,12 @@
         "JUR-T32",
         "JUR-T36",
         "JUR-T57",
+        "JUR-T58",
         "QA-T33",
         "QA-T58",
         "SEC-29",
         "SEC-30",
+        "SEC-71",
         "T-ARG-035",
         "UX-P1-01",
         "UX-P1-02",
@@ -5377,6 +5420,10 @@
         "UX-P1-58",
         "UX-P1-59",
         "UX-P1-60",
+        "UX-P1-61",
+        "UX-P1-62",
+        "UX-P1-63",
+        "UX-P1-65",
         "UX-P2-01",
         "UX-P2-02",
         "UX-P2-03",
@@ -5390,6 +5437,7 @@
         "UX-P2-12",
         "UX-P2-14",
         "UX-P2-15",
+        "UX-P2-20",
         "UX-P3-01",
         "UX-P3-02",
         "UX-P3-03",
@@ -5468,8 +5516,8 @@
     {
       "id": "REQ-UX-062",
       "domaine": "produit-ux",
-      "texte": "**Le badge d'état de la confirmation (exigence d'expérience de Williams, 2026-09-29).** L'apporteur n'a rien à retenir : dans « Mes entreprises » et sur la carte du dépôt, chaque dépôt en phase de confirmation porte **un seul** badge, avec sa date et au plus une action, dérivé serveur par une fonction pure exhaustive, horloge injectée (HYP-W20-BADGE) : 🟢 « Confirmée » ; 🟡 « En attente · confirmée automatiquement le <date> », date en toutes lettres dans le fuseau de l'apporteur, qui passe seul à 🟢 le jour affiché ; pour une demande signalée (REQ-SEC-060), 🟡 « En attente de confirmation — Axion-IA va appeler votre contact », sans date ni phrase d'aide, le dépôt étant appelé en priorité ; 🔴 « E-mail non reçu par le contact », action unique « Corriger l'adresse », après laquelle l'e-mail repart, le délai démarre et l'apporteur est notifié (UX-P1-10) ; ⚪ « Non confirmée par le contact » ; après une libération (REQ-DM-063), ⚪ « Réservation terminée · l'entreprise est de nouveau disponible », sans date, sans action ni phrase d'aide, qui ne dit ni la raison, ni la vérification, ni le nombre d'appels. Une seule phrase d'aide : « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » Textes dans la SSOT de micro-copy, garde lexicale verte (aucune consigne, aucun « obligatoire ») ; chaque badge a son libellé, la couleur n'est jamais seule porteuse du sens. Aucune raison de vérification, aucun tirage d'échantillon, aucun clic non retenu n'est lisible dans le badge : le libellé de la demande signalée dit seulement qu'un appel est attendu. Cinq états par écran. Tests : un cas par badge ; demande signalée → libellé d'appel attendu, sans date, et aucune bascule vers 🟢 à trente jours ; demande signalée libérée → ⚪ « Réservation terminée », sans date ni action ; bascule 🟡 → 🟢 à l'échéance, horloge figée, y compris une échéance à 23 h 59 ; date écrite identique au changement d'heure ; rebond → 🔴 ; correction → 🟡 avec la nouvelle date ; une valeur d'état sans badge fait échouer le typecheck. DÉCISION DE WILLIAMS (2026-10-01 soir, option A, REQ-UX-062 et HYP-W20-BADGE ; séquence hors dépôt `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISION-BADGE-W20-2026-10-01.md`) : « ok pour ca ▎ 🟡 En attente · confirmée automatiquement le 31 octobre. » Le badge jaune dit « En attente · confirmée automatiquement le <date> » (libellé choisi par Williams), PARTOUT : badge de « Mes entreprises » et carte du dépôt. La phrase d'aide « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » (le nombre lu dans la SSOT), sous 🟡 et sous 🔴, est PROPOSÉE et reste à valider par Williams en séance (point 7 de la séance du 2026-10-02) : elle ne lui a pas été montrée explicitement (note de la lentille exactitude). L'ancien libellé (« réservée pour vous jusqu'au… ») se lisait comme une fin de réservation, à contresens de l'art. 3.2 al. 5.",
-      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-UX-022",
+      "texte": "**Le badge d'état de la confirmation (exigence d'expérience de Williams, 2026-09-29).** L'apporteur n'a rien à retenir : dans « Mes entreprises » et sur la carte du dépôt, chaque dépôt en phase de confirmation porte **un seul** badge, avec sa date et au plus une action, dérivé serveur par une fonction pure exhaustive, horloge injectée (HYP-W20-BADGE) : 🟢 « Confirmée » ; 🟡 « En attente · confirmée automatiquement le <date> », date en toutes lettres dans le fuseau de l'apporteur, qui passe seul à 🟢 le jour affiché ; pour une demande signalée (REQ-SEC-060), 🟡 « En attente de confirmation — Axion-IA va appeler votre contact », sans date ni phrase d'aide, le dépôt étant appelé en priorité ; [RETIRÉ au rattrapage 120 : ce badge et ses tests sont retirés, puisque DM-72 retire l'appel de vérification annoncé ; voir l'amendement en fin de texte] 🔴 « E-mail non reçu par le contact », action unique « Corriger l'adresse », après laquelle l'e-mail repart, le délai démarre et l'apporteur est notifié (UX-P1-10) ; ⚪ « Non confirmée par le contact » ; après une libération (REQ-DM-063), ⚪ « Réservation terminée · l'entreprise est de nouveau disponible », sans date, sans action ni phrase d'aide, qui ne dit ni la raison, ni la vérification, ni le nombre d'appels. Une seule phrase d'aide : « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » Textes dans la SSOT de micro-copy, garde lexicale verte (aucune consigne, aucun « obligatoire ») ; chaque badge a son libellé, la couleur n'est jamais seule porteuse du sens. Aucune raison de vérification, aucun tirage d'échantillon, aucun clic non retenu n'est lisible dans le badge : le libellé de la demande signalée dit seulement qu'un appel est attendu. Cinq états par écran. Tests : un cas par badge ; demande signalée → libellé d'appel attendu, sans date, et aucune bascule vers 🟢 à trente jours ; demande signalée libérée → ⚪ « Réservation terminée », sans date ni action ; bascule 🟡 → 🟢 à l'échéance, horloge figée, y compris une échéance à 23 h 59 ; date écrite identique au changement d'heure ; rebond → 🔴 ; correction → 🟡 avec la nouvelle date ; une valeur d'état sans badge fait échouer le typecheck. DÉCISION DE WILLIAMS (2026-10-01 soir, option A, REQ-UX-062 et HYP-W20-BADGE ; séquence hors dépôt `_REPRISE-AXION-APPORTEURS/SEQUENCE-DECISION-BADGE-W20-2026-10-01.md`) : « ok pour ca ▎ 🟡 En attente · confirmée automatiquement le 31 octobre. » Le badge jaune dit « En attente · confirmée automatiquement le <date> » (libellé choisi par Williams), PARTOUT : badge de « Mes entreprises » et carte du dépôt. La phrase d'aide « Sans réponse de votre contact, votre dépôt est confirmé 30 jours après la réception de notre e-mail. » (le nombre lu dans la SSOT), sous 🟡 et sous 🔴, est PROPOSÉE et reste à valider par Williams en séance (point 7 de la séance du 2026-10-02) : elle ne lui a pas été montrée explicitement (note de la lentille exactitude). L'ancien libellé (« réservée pour vous jusqu'au… ») se lisait comme une fin de réservation, à contresens de l'art. 3.2 al. 5. AMENDÉE le 2026-10-07 (rattrapage 120 ; coordination, #319, commentaire 6035962185, point 4), MOT POUR MOT : 4. **REQ-UX-062 est amendée.** Le badge « Axion-IA va appeler votre contact » est retiré de la liste des libellés du badge, puisque DM-72 retire du code l'appel de vérification annoncé. Les trois maquettes concernées (deposer, mes-entreprises, confirmation-contact) sont retouchées en conséquence, dans la PR de DM-72, et soumises à la validation de Williams.",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-UX-022 ; amendée au rattrapage 120 (coordination, #319, 6035962185, point 4)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
@@ -5477,6 +5525,20 @@
       "phase": 1,
       "taches": [
         "UX-P1-05"
+      ]
+    },
+    {
+      "id": "REQ-UX-063",
+      "domaine": "produit-ux",
+      "texte": "Tous les e-mails de Partners reprennent le gabarit commun d'axion-ia, sans second système visuel. Exigence de Williams (#786, commentaire 6039806330), MOT POUR MOT :\n**EXIGENCE DE WILLIAMS (07/10/2026) : e-mails d'Axion Partners = même gabarit que le site axion-ia.com.**\n\nTous les e-mails envoyés par Axion Partners (apporteurs, entreprises, console) doivent reprendre **le gabarit commun d'axion-ia**, pour que toute la plateforme soit harmonisée :\n- même châssis que `src/lib/email/templates/_layout.tsx` d'axion-ia : fond crème `#f6f1e8`, logo `https://axion-ia.com/email/axion-ia-logo-pill.png`, boutons terracotta `#c24a1b`, carte blanche arrondie, et même pied légal (AXION IA SAS, SIREN, TVA, NDA, contact) ;\n- charte TERRACOTTA, jamais le bleu du site, sauf pour les liens ;\n- vouvoiement, signature de Williams, et les mêmes familles d'e-mails (pied d'opposition pour la famille B) ;\n- pas de second système visuel. Si le gabarit doit évoluer, il évolue des deux côtés.\n\nÀ intégrer au registre des exigences (REQ) et aux revues UX/rédaction avant tout envoi réel.",
+      "source": "exigence de Williams du 2026-10-07 (#786, 6039806330, relayée par la session axion-ia-a1) ; versée au rattrapage 124",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 12,
+      "etape": 8,
+      "phase": 1,
+      "taches": [
+        "UX-P1-64"
       ]
     },
     {
@@ -5615,8 +5677,8 @@
     {
       "id": "REQ-DM-063",
       "domaine": "domaine-donnees",
-      "texte": "**La libération d'une demande signalée et la carence de redépôt (réponse de Williams du 2026-09-29 à la question 19, arbitrages de -d7 sur sa délégation le même jour).** Une attribution `provisoire` dont la demande de confirmation est signalée (REQ-SEC-060) et qui n'a reçu aucune Qualification `confirme` ni `non_confirme` est libérée, par le passage « tout ce qui est dû à l'instant t » (REQ-QA-027), horloge injectée, au premier des deux termes : la `LIBERATION_SIGNALEE_INJOIGNABLE_MAX`-ième Qualification `injoignable` (= 3, SSOT) ou `LIBERATION_SIGNALEE_JOURS` (= 45, SSOT) jours après l'envoi effectif de la première demande de l'attribution, qu'une correction d'adresse ne fait pas repartir. Dans la même transaction : attribution `perimee` par l'événement `liberee_sans_confirmation`, distinct de la péremption de REQ-DM-007 (`peremptionAt` reste null) ; demande `expiree`, jetons révoqués ; entreprise de nouveau disponible, file d'attente comprise ; notification neutre à l'apporteur (table SSOT des notifications, `faitCourirUnDelai: false`, garde lexicale). **Aucune sanction** : aucune suspension, aucune Anomalie, aucune entrée dans le score de SEC-14, rien d'imputé à personne ; la notification ne dit ni la raison ni la vérification. **Carence** (HYP-W20-CARENCE-REDEPOT) : pendant `CARENCE_REDEPOT_APRES_LIBERATION_JOURS` (= 30, SSOT) jours après la libération, ou `CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS` (= 90, SSOT) jours après une deuxième libération du même couple, le même apporteur ne peut pas déposer la même entreprise (SIREN) ; le serveur refuse sans rien écrire ni horodater, par un prédicat pur dérivé des libérations, sans valeur nouvelle d'`IssueDepot` ni de `MotifRefusDepot` (présentation : question 20, tranchée (arbitrage -d7 du 2026-09-29), portée par UX-P1-02 et UX-P1-01) ; les autres apporteurs ne sont pas concernés ; aucune sanction, texte neutre. Passé la carence, un nouveau dépôt suit les règles ordinaires. Tests, horloge figée : deux `injoignable` → rien ; le troisième → libérée au passage suivant, une seule fois ; envoi à J sans appel : J+45 moins une minute → rien, J+45 → libérée ; `ne_se_souvient_pas` ×3 → rien ; appel `confirme` à J+40 → `active`, aucune libération ; demande non signalée, trois `injoignable` → aucune libération ; correction d'adresse à J+30 → libération toujours à J+45 ; libération → aucune Anomalie, aucune suspension, aucun signal, une seule notification ; deux passages → un seul événement ; redépôt du même apporteur à J+29 après la libération → refusé, rien d'écrit, aucun horodatage ; à J+30 → nouvelle attribution `provisoire` et nouvelle demande ; deuxième libération du même couple → refus à J+89, dépôt à J+90 ; un autre apporteur dépose la même entreprise le jour de la libération → accepté ; même apporteur, autre SIREN → accepté ; même SIREN, autre établissement → refusé pendant la carence ; le refus n'ouvre ni Anomalie, ni suspension, ni signal.",
-      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-DM-042",
+      "texte": "**La libération d'une demande signalée et la carence de redépôt (réponse de Williams du 2026-09-29 à la question 19, arbitrages de -d7 sur sa délégation le même jour).** Une attribution `provisoire` dont la demande de confirmation est signalée (REQ-SEC-060) et qui n'a reçu aucune Qualification `confirme` ni `non_confirme` est libérée, par le passage « tout ce qui est dû à l'instant t » (REQ-QA-027), horloge injectée, au premier des deux termes : la `LIBERATION_SIGNALEE_INJOIGNABLE_MAX`-ième Qualification `injoignable` (= 3, SSOT) ou `LIBERATION_SIGNALEE_JOURS` (= 45, SSOT) jours après l'envoi effectif de la première demande de l'attribution, qu'une correction d'adresse ne fait pas repartir. Dans la même transaction : attribution `perimee` par l'événement `liberee_sans_confirmation`, distinct de la péremption de REQ-DM-007 (`peremptionAt` reste null) ; demande `expiree`, jetons révoqués ; entreprise de nouveau disponible, file d'attente comprise ; notification neutre à l'apporteur (table SSOT des notifications, `faitCourirUnDelai: false`, garde lexicale). **Aucune sanction** : aucune suspension, aucune Anomalie, aucune entrée dans le score de SEC-14, rien d'imputé à personne ; la notification ne dit ni la raison ni la vérification. **Carence** (HYP-W20-CARENCE-REDEPOT) : pendant `CARENCE_REDEPOT_APRES_LIBERATION_JOURS` (= 30, SSOT) jours après la libération, ou `CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS` (= 90, SSOT) jours après une deuxième libération du même couple, le même apporteur ne peut pas déposer la même entreprise (SIREN) ; le serveur refuse sans rien écrire ni horodater, par un prédicat pur dérivé des libérations, sans valeur nouvelle d'`IssueDepot` ni de `MotifRefusDepot` (présentation : question 20, tranchée (arbitrage -d7 du 2026-09-29), portée par UX-P1-02 et UX-P1-01) ; les autres apporteurs ne sont pas concernés ; aucune sanction, texte neutre. Passé la carence, un nouveau dépôt suit les règles ordinaires. Tests, horloge figée : deux `injoignable` → rien ; le troisième → libérée au passage suivant, une seule fois ; envoi à J sans appel : J+45 moins une minute → rien, J+45 → libérée ; `ne_se_souvient_pas` ×3 → rien ; appel `confirme` à J+40 → `active`, aucune libération ; demande non signalée, trois `injoignable` → aucune libération ; correction d'adresse à J+30 → libération toujours à J+45 ; libération → aucune Anomalie, aucune suspension, aucun signal, une seule notification ; deux passages → un seul événement ; redépôt du même apporteur à J+29 après la libération → refusé, rien d'écrit, aucun horodatage ; à J+30 → nouvelle attribution `provisoire` et nouvelle demande ; deuxième libération du même couple → refus à J+89, dépôt à J+90 ; un autre apporteur dépose la même entreprise le jour de la libération → accepté ; même apporteur, autre SIREN → accepté ; même SIREN, autre établissement → refusé pendant la carence ; le refus n'ouvre ni Anomalie, ni suspension, ni signal. [REMPLACÉ au rattrapage 121 par le contrat v2 (coordination, #319, commentaire 6036991499) : la libération d'une demande signalée et la carence graduée sont RETIRÉES ; une seule carence de trente jours (`CARENCE_REDEPOT_APRES_LIBERATION_JOURS`) court après une fin faute d'adresse valide (art. 3.2), jugée au dépôt ; voir DM-13.]",
+      "source": "décision de Will du 2026-09-29, W20 (docs/chantiers/W20-confirmation-par-email.md §3.1), passe gardien-spec W20 portée par GOV-112 (8)(b) ; module et étape repris de REQ-DM-042 ; remplacée au rattrapage 121 (coordination, #319, 6036991499)",
       "statut": "active",
       "remplaceePar": null,
       "module": 12,
@@ -5955,6 +6017,8 @@
       "phase": 1,
       "taches": [
         "EXT-T07",
+        "INT-T82-A",
+        "INT-T82-P",
         "JUR-T54",
         "UX-P2-18",
         "UX-P2-19"
@@ -6448,7 +6512,7 @@
       "remplaceePar": null,
       "module": null,
       "etape": null,
-      "phase": 1,
+      "phase": 2,
       "taches": [
         "INT-T71-A"
       ]
@@ -6483,6 +6547,20 @@
         "JUR-T63",
         "JUR-T65",
         "SEC-65"
+      ]
+    },
+    {
+      "id": "REQ-JUR-069",
+      "domaine": "juridique",
+      "texte": "La Société révoque l'accès d'un apporteur, sans délai, sur son signalement d'un usage qu'il n'a pas autorisé, et peut révoquer et renouveler un moyen d'accès pour un motif de sécurité, sans effet sur les attributions ni sur les commissions (contrat v2, art. 3.8).",
+      "source": "nouvelle (rattrapage 119, coordination) ; contrat v2, art. 3.8, cité par la juriste (#474, 6034003544)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 21,
+      "etape": 12,
+      "phase": 1,
+      "taches": [
+        "SEC-71"
       ]
     },
     {

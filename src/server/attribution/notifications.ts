@@ -10,6 +10,7 @@
  * « anomalie » ou « sanction » (juriste) ; sans nom de tiers, ce que le texte de la mesure tient à sa
  * saisie. Une valeur vide est refusée. Un refus lève, nommé : la notification ne part pas à moitié.
  */
+import { fondeeSurUneAnomalie } from '../../domain/attribution/machine';
 import {
   ENTREPRISE_DE_REPLI,
   LIBELLES_DES_CATEGORIES,
@@ -17,6 +18,7 @@ import {
   MOTIFS_DES_DECISIONS,
   RAISONS_D_ANNULATION,
 } from '../../content/micro-copy/courriels/notifications';
+import { NOTIFICATIONS } from '../../content/micro-copy/espace/notifications';
 import {
   finDeLaFenetreDeRedeclaration,
   jourLimiteDeLaFenetre,
@@ -62,10 +64,21 @@ const ECHAPPEMENTS: Readonly<Record<string, string>> = {
  * `null` : aucun courriel, jamais une troncature —, puis le texte est échappé pour le HTML.
  */
 export function faitsPourLeCourriel(brut: string): string | null {
+  const propre = faitsPourLEcran(brut);
+  return propre === null ? null : propre.replace(/[&<>"']/g, (c) => ECHAPPEMENTS[c]!);
+}
+
+/**
+ * UX-P1-58 — {faits} pour l'ÉCRAN de l'espace (sécurité, #726, 5984213408, condition 2) : le même
+ * nettoyage et la même borne qu'à l'envoi, SANS l'échappement HTML du courriel — à l'écran, React
+ * échappe, et un double échappement afficherait `&amp;`. Au-delà de la borne, `null` : jamais une
+ * troncature. Une seule définition, que le courriel échappe ensuite (RM-01).
+ */
+export function faitsPourLEcran(brut: string): string | null {
   const propre = nettoyerUnTexteSaisi(brut);
   const longueur = [...propre].length;
   if (longueur === 0 || longueur > FAITS_ANOMALIE_CARACTERES_MAX.valeur) return null;
-  return propre.replace(/[&<>"']/g, (c) => ECHAPPEMENTS[c]!);
+  return propre;
 }
 
 const LIEN = /https?:\/\/|www\.|\b[\w-]+\.(?:fr|com|net|org|io|test|eu)\b/i;
@@ -124,7 +137,7 @@ export function motifDeLaDecision(d: Decision): string | null {
   if (!estUneDecision(transition)) {
     throw new MotifRefuse('motif_incoherent', `${transition} n'est pas une décision notifiée`);
   }
-  if ((transition === 'anomalie_confirmee') !== (faits !== undefined)) {
+  if (fondeeSurUneAnomalie(transition) !== (faits !== undefined)) {
     throw new MotifRefuse('motif_incoherent', `faits sur ${transition}`);
   }
   // Les paramètres fermés (arbitrage de la sécurité) : une raison ou une catégorie hors de leur liste
@@ -266,7 +279,7 @@ async function motifDuFait(
   if (!lue.success) return nonRendue('charge_illisible');
   const { transition, motifAnnulation, categorieRelation } = lue.data;
   let faits: string | undefined;
-  if (transition === 'anomalie_confirmee') {
+  if (fondeeSurUneAnomalie(transition)) {
     // Sans lien (vidé par la purge ou l'anonymisation), ou purgés : les faits ne sont plus conservés.
     if (n.anomalieId === null) return nonRendue('faits_non_conserves');
     const lus = await s.faitsDe(tx, {
@@ -333,6 +346,67 @@ export async function rendreDepuisLaBase(
     return s.composer(n.cle, rendreLaNotification(n.cle, parametres));
   } catch (e) {
     if (e instanceof NotificationRefusee) return nonRendue('parametre_refuse');
+    throw e;
+  }
+}
+
+/** La phrase du gabarit qui porte les faits ; purgés, la juriste la remplace (#619, 5984284097). */
+const PHRASE_DES_FAITS = 'Faits retenus : {faits}';
+
+/**
+ * UX-P1-58 — le texte de `decision_attribution` pour l'ESPACE : le MÊME gabarit que le courriel
+ * (juriste, #619, 5984284097, point (b)), par `motifDeLaDecision`, avec les mêmes paramètres ; une
+ * seule exception, les faits purgés d'une transition fondée sur une anomalie (`anomalie_confirmee`,
+ * DM-71 : `fraude_etablie`), dont la phrase devient le texte fermé de
+ * la juriste, posé ici par le serveur. Les faits viennent du lecteur dédié de l'espace ; ils sont
+ * nettoyés et bornés pour l'écran, jamais échappés. Tout manque rend `null` : la notification n'est
+ * pas affichée, jamais à moitié.
+ */
+export function texteDeLaDecisionDansLEspace(
+  entreprise: string,
+  chargeDuFait: unknown,
+  faits: { faits: string } | 'purgee' | 'refusee' | null
+): TexteRendu | null {
+  const lue = CHARGES_PAR_TYPE.attribution_etat_modifie.safeParse(chargeDuFait);
+  if (!lue.success) return null;
+  const { transition, motifAnnulation, categorieRelation } = lue.data;
+  let motif: string | null;
+  if (fondeeSurUneAnomalie(transition) && faits === 'purgee') {
+    const gabarit = MOTIFS_DES_DECISIONS[transition as 'anomalie_confirmee' | 'fraude_etablie'];
+    if (gabarit.split(PHRASE_DES_FAITS).length !== 2) return null;
+    motif = gabarit.replace(PHRASE_DES_FAITS, () => NOTIFICATIONS.faitsNonConserves);
+  } else {
+    let propres: string | undefined;
+    if (fondeeSurUneAnomalie(transition)) {
+      if (faits === null || faits === 'purgee' || faits === 'refusee') return null;
+      const f = faitsPourLEcran(faits.faits);
+      if (f === null) return null;
+      propres = f;
+    }
+    try {
+      motif = motifDeLaDecision({
+        transition,
+        ...(propres === undefined ? {} : { faits: propres }),
+        ...(motifAnnulation === undefined ? {} : { raison: motifAnnulation }),
+        ...(categorieRelation === undefined ? {} : { categorie: categorieRelation }),
+      });
+    } catch (e) {
+      if (e instanceof Error && e.name === 'MotifRefuse') return null;
+      throw e;
+    }
+  }
+  if (motif === null) return null;
+  try {
+    return rendreLaNotification(
+      'decision_attribution',
+      parametresDeLaNotification('decision_attribution', {
+        entreprise,
+        motif,
+        envoyeLe: new Date(0),
+      })
+    );
+  } catch (e) {
+    if (e instanceof NotificationRefusee) return null;
     throw e;
   }
 }

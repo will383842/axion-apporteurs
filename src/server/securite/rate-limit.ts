@@ -18,10 +18,21 @@
  *
  * LES LIMITES SONT CELLES DES EXIGENCES, avec leur source. Une limite qu'aucune exigence ne chiffre
  * ne s'invente pas : elle attend sa configuration, et en attendant le compteur refuse.
+ *
+ * SEC-72 (REQ-SEC-021) — LA CONFIGURATION PRIVÉE. Les trois compteurs `verif:` de « Vérifier une
+ * entreprise » servent à repérer un usage anormal : leurs limites et leurs fenêtres ne sont PAS au
+ * dépôt, qui est public. Ils portent la sentinelle `LIMITE_HORS_DEPOT`, et `limiter` lit leurs valeurs
+ * dans le secret `PARTNERS_VERIFICATION_PLAFONDS` (cinq clés fermées et bornées, `lirePlafondsHorsDepot`).
+ * Absent, illisible ou incohérent : `limite_non_configuree`, donc le REFUS (`surPanne: refuser`).
  */
 
 import { randomUUID } from 'node:crypto';
 import Redis, { type RedisOptions } from 'ioredis';
+import { SEUILS } from '../../domain/seuils/ssot';
+// La conversion d'une fenêtre lue en minutes dans la SSOT : la constante nommée de la table fermée
+// que lit la garde `rate-famille`, jamais un nombre tapé dans la déclaration d'un compteur.
+import { SECONDES_PAR_MINUTE } from '../../domain/seuils/conversions';
+import { MS_PAR_JOUR, MS_PAR_MINUTE } from '../../domain/temps/calendrier-civil';
 
 // ── Le vocabulaire fermé ────────────────────────────────────────────────────────────────────────
 
@@ -142,23 +153,25 @@ export const COMPTEURS = {
     ancre: 'par email au code de la console',
     verifieLe: '2026-10-03',
   },
+  // SEC-12 : deux compteurs, l'empreinte réseau et l'empreinte de session, sur la même fenêtre ; les
+  // valeurs vivent dans la SSOT (RM-10), confrontées par la garde au texte de REQ-SEC-016.
   'depot:ip': {
     prefixe: 'depot:',
-    limite: 20,
-    fenetreSecondes: 600,
-    surPanne: 'laisser-passer',
-    source: 'REQ-SEC-016',
-    ancre: 'par hash IP',
-    verifieLe: '2026-09-19',
-  },
-  'depot:identite': {
-    prefixe: 'depot:',
-    limite: LIMITE_HORS_DEPOT,
-    fenetreSecondes: LIMITE_HORS_DEPOT,
+    limite: SEUILS.DEPOT_PAR_IP_PAR_FENETRE.valeur,
+    fenetreSecondes: SEUILS.DEPOT_FENETRE_MINUTES.valeur * SECONDES_PAR_MINUTE,
     surPanne: 'refuser',
     source: 'REQ-SEC-016',
-    ancre: 'par identité',
-    verifieLe: '2026-09-19',
+    ancre: "compteur d'IP (hash IP)",
+    verifieLe: '2026-10-04',
+  },
+  'depot:session': {
+    prefixe: 'depot:',
+    limite: SEUILS.DEPOT_PAR_SESSION_PAR_FENETRE.valeur,
+    fenetreSecondes: SEUILS.DEPOT_FENETRE_MINUTES.valeur * SECONDES_PAR_MINUTE,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-016',
+    ancre: 'compteur de SESSION',
+    verifieLe: '2026-10-04',
   },
   // INT-T09 — le mandataire de recherche d'entreprises, un geste du dépôt.
   //
@@ -227,10 +240,157 @@ export const COMPTEURS = {
     ancre: 'par hash IP',
     verifieLe: '2026-10-02',
   },
+  // SEC-72 (REQ-SEC-021) : « Vérifier une entreprise », par identité sur deux fenêtres et par
+  // empreinte d'adresse. Limites et fenêtres HORS DÉPÔT, lues dans `PARTNERS_VERIFICATION_PLAFONDS` ;
+  // `refuser` sur panne : une vérification refusée n'empêche rien, le dépôt ne passe pas par elle.
+  'verif:identite-jour': {
+    prefixe: 'verif:',
+    limite: LIMITE_HORS_DEPOT,
+    fenetreSecondes: LIMITE_HORS_DEPOT,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-021',
+    ancre: 'verif:identite-jour',
+    verifieLe: '2026-10-07',
+  },
+  'verif:identite-court': {
+    prefixe: 'verif:',
+    limite: LIMITE_HORS_DEPOT,
+    fenetreSecondes: LIMITE_HORS_DEPOT,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-021',
+    ancre: 'verif:identite-court',
+    verifieLe: '2026-10-07',
+  },
+  'verif:ip-jour': {
+    prefixe: 'verif:',
+    limite: LIMITE_HORS_DEPOT,
+    fenetreSecondes: LIMITE_HORS_DEPOT,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-021',
+    ancre: 'verif:ip-jour',
+    verifieLe: '2026-10-07',
+  },
 } as const satisfies Readonly<Record<`${PrefixeDeFamille}${string}`, DeclarationDeCompteur>>;
 
 /** Une faute de frappe dans le nom d'un compteur ne compile pas. */
 export type NomDeCompteur = keyof typeof COMPTEURS;
+
+// ── La configuration privée (SEC-72) ────────────────────────────────────────────────────────────
+
+/** Le SECRET qui porte les plafonds de la vérification ; son nom seul est au dépôt. */
+export const VARIABLE_DES_PLAFONDS = 'PARTNERS_VERIFICATION_PLAFONDS' as const;
+
+/** Les cinq clés, FERMÉES : trois limites, deux fenêtres en minutes. */
+export const CLES_DES_PLAFONDS = [
+  'identite_jour',
+  'identite_court',
+  'ip_jour',
+  'fenetre_jour_minutes',
+  'fenetre_court_minutes',
+] as const;
+export type CleDePlafond = (typeof CLES_DES_PLAFONDS)[number];
+
+/** Les motifs, FERMÉS, d'un réglage refusé. Le refus nomme la clé et le motif, jamais la valeur. */
+export const MOTIFS_DE_PLAFONDS_REFUSES = [
+  'absent',
+  'forme',
+  'inconnue',
+  'en_double',
+  'absente',
+  'hors_bornes',
+  'incoherente',
+] as const;
+export type MotifDePlafondsRefuses = (typeof MOTIFS_DE_PLAFONDS_REFUSES)[number];
+
+/** Les bornes de FORME (sécurité) : une limite vaut au moins 1 ; une fenêtre, d'une minute à une semaine. */
+// Une semaine du CALENDRIER (une borne de forme, pas un délai du contrat : rien de la SSOT).
+const JOURS_PAR_SEMAINE = 7;
+const MINUTES_PAR_SEMAINE = (JOURS_PAR_SEMAINE * MS_PAR_JOUR) / MS_PAR_MINUTE;
+const BORNES_DES_PLAFONDS: Readonly<Record<CleDePlafond, readonly [number, number]>> = {
+  identite_jour: [1, 99_999],
+  identite_court: [1, 99_999],
+  ip_jour: [1, 99_999],
+  fenetre_jour_minutes: [1, MINUTES_PAR_SEMAINE],
+  fenetre_court_minutes: [1, MINUTES_PAR_SEMAINE],
+};
+
+/** Quelle clé porte la limite, et laquelle la fenêtre, de chaque compteur hors dépôt. */
+export const PLAFONDS_EN_CONFIGURATION = {
+  'verif:identite-jour': { limite: 'identite_jour', fenetreMinutes: 'fenetre_jour_minutes' },
+  'verif:identite-court': { limite: 'identite_court', fenetreMinutes: 'fenetre_court_minutes' },
+  'verif:ip-jour': { limite: 'ip_jour', fenetreMinutes: 'fenetre_jour_minutes' },
+} as const satisfies Readonly<
+  Partial<Record<NomDeCompteur, { limite: CleDePlafond; fenetreMinutes: CleDePlafond }>>
+>;
+
+export type LectureDesPlafonds =
+  | { readonly ok: true; readonly plafonds: Readonly<Record<CleDePlafond, number>> }
+  | {
+      readonly ok: false;
+      readonly cle: CleDePlafond | '(forme)';
+      readonly motif: MotifDePlafondsRefuses;
+    };
+
+const FORME_D_UNE_PAIRE = /^([a-z_]+)=(\d{1,5})$/;
+
+/**
+ * Le SEUL lecteur du secret des plafonds, en ÉCHEC FERMÉ : clés fermées, chacune une fois, bornées,
+ * et COHÉRENTES — la rafale sous le plafond journalier (limite ET fenêtre), le plafond par adresse au
+ * moins égal à celui par identité. Le refus ne recopie JAMAIS une valeur reçue.
+ */
+export function lirePlafondsHorsDepot(texte: string | undefined): LectureDesPlafonds {
+  if (texte === undefined || texte === '') return { ok: false, cle: '(forme)', motif: 'absent' };
+  const lues = new Map<CleDePlafond, number>();
+  for (const paire of texte.split(';')) {
+    const m = FORME_D_UNE_PAIRE.exec(paire);
+    if (m === null) return { ok: false, cle: '(forme)', motif: 'forme' };
+    const cle = m[1] as CleDePlafond;
+    if (!(CLES_DES_PLAFONDS as readonly string[]).includes(cle)) {
+      return { ok: false, cle: '(forme)', motif: 'inconnue' };
+    }
+    if (lues.has(cle)) return { ok: false, cle, motif: 'en_double' };
+    lues.set(cle, Number(m[2]));
+  }
+  for (const cle of CLES_DES_PLAFONDS) {
+    const v = lues.get(cle);
+    if (v === undefined) return { ok: false, cle, motif: 'absente' };
+    const [min, max] = BORNES_DES_PLAFONDS[cle];
+    if (v < min || v > max) return { ok: false, cle, motif: 'hors_bornes' };
+  }
+  const p = Object.fromEntries(lues) as Record<CleDePlafond, number>;
+  if (p.identite_court >= p.identite_jour) {
+    return { ok: false, cle: 'identite_court', motif: 'incoherente' };
+  }
+  if (p.fenetre_court_minutes >= p.fenetre_jour_minutes) {
+    return { ok: false, cle: 'fenetre_court_minutes', motif: 'incoherente' };
+  }
+  if (p.ip_jour < p.identite_jour) return { ok: false, cle: 'ip_jour', motif: 'incoherente' };
+  return { ok: true, plafonds: p };
+}
+
+/** La limite et la fenêtre d'un compteur hors dépôt, lues dans le secret ; `null` : non configuré. */
+function plafondsDuCompteur(
+  nom: NomDeCompteur
+): { limite: number; fenetreSecondes: number } | null {
+  const cles = (
+    PLAFONDS_EN_CONFIGURATION as Readonly<
+      Partial<Record<string, { limite: CleDePlafond; fenetreMinutes: CleDePlafond }>>
+    >
+  )[nom];
+  if (cles === undefined) return null;
+  const lecture = lirePlafondsHorsDepot(process.env[VARIABLE_DES_PLAFONDS]);
+  if (!lecture.ok) {
+    // Le refus se DIT : la clé et le motif fermé, jamais la valeur, jamais le secret.
+    process.stderr.write(
+      `${JSON.stringify({ signal: 'plafonds_verification_refuses', cle: lecture.cle, motif: lecture.motif })}\n`
+    );
+    return null;
+  }
+  return {
+    limite: lecture.plafonds[cles.limite],
+    fenetreSecondes: lecture.plafonds[cles.fenetreMinutes] * SECONDES_PAR_MINUTE,
+  };
+}
 
 // ── Le sujet : une empreinte, jamais une valeur ─────────────────────────────────────────────────
 
@@ -572,9 +732,12 @@ export async function limiter(
   const declaration: DeclarationDeCompteur = COMPTEURS[nom];
   // Revérifié à l'exécution : un cast ferait entrer n'importe quelle chaîne dans la clé.
   const empreinte = sujetDepuisEmpreinte(sujet);
-  const { limite, fenetreSecondes } = declaration;
+  let { limite, fenetreSecondes } = declaration;
   if (limite === LIMITE_HORS_DEPOT || fenetreSecondes === LIMITE_HORS_DEPOT) {
-    return enPanne(declaration, 'limite_non_configuree', signaler);
+    // SEC-72 : une limite hors dépôt se lit dans la configuration privée ; sinon, refus.
+    const lus = plafondsDuCompteur(nom);
+    if (lus === null) return enPanne(declaration, 'limite_non_configuree', signaler);
+    ({ limite, fenetreSecondes } = lus);
   }
   const fenetreMs = fenetreSecondes * 1000;
   const consommer = ECRIVAINS.get(magasin);

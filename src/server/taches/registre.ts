@@ -49,6 +49,8 @@ export const TACHES = {
   droits_contact_purger: { req: 'REQ-JUR-065' },
   /** DM-60 — l'anonymisation, cinq ans après sa clôture, de la trace d'une demande de droit du contact. */
   droits_contact_anonymiser: { req: 'REQ-JUR-065' },
+  /** SEC-15 — la levée de plein droit d'une suspension, quinze jours après sa notification. */
+  suspensions_lever: { req: 'REQ-SEC-019' },
   /** SEC-55 — la purge des appareils connus, une durée de session après leur dernière vue. */
   appareils_purger: { req: 'REQ-SEC-003' },
   /** SEC-58 — la purge, à échéance, du journal des accès à la console. */
@@ -57,6 +59,8 @@ export const TACHES = {
   sessions_purger: { req: 'REQ-SEC-003' },
   /** SEC-65 — l'effacement du nom et de l'adresse d'un accès désactivé de la console, cinq ans après. */
   utilisateurs_console_effacer: { req: 'REQ-JUR-068' },
+  /** DM-65 — l'effacement, cinq ans après le retrait, de la trace de la liste tenue par la Société. */
+  traces_liste_noire_purger: { req: 'REQ-DM-028' },
   /**
    * INT-T08-P — la réconciliation quotidienne avec axion-ia : relecture de sa file depuis la plus
    * haute séquence reçue, rejeu des trous (`src/server/jobs/reconciliation.ts`).
@@ -68,6 +72,11 @@ export const TACHES = {
    */
   auto_parrainage_ouvrir: { req: 'REQ-SEC-031' },
   /**
+   * SEC-14 — l'ouverture DIFFÉRÉE des anomalies de sincérité, jamais dans la transaction du dépôt
+   * (`ouvrirLesAnomaliesDeSincerite`, `src/server/anomalie/sincerite.ts`).
+   */
+  sincerite_ouvrir: { req: 'REQ-SEC-017' },
+  /**
    * DM-62 — l'anonymisation des anomalies à leur échéance, et le NOMBRE des mesures ouvertes au-delà
    * de `MESURE_OUVERTE_ALERTE_JOURS` (`anonymiserLesAnomalies`).
    */
@@ -76,6 +85,8 @@ export const TACHES = {
   contestations_purger: { req: 'REQ-DM-043' },
   /** DM-62 — la purge dédiée du démenti d'un contact, que la purge du contact excepte. */
   dementis_purger: { req: 'REQ-DM-043' },
+  /** DM-70 — la purge du texte d'une décision de contrat, cinq ans après son point de départ. */
+  decisions_contrat_purger: { req: 'REQ-JUR-029' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;

@@ -69,8 +69,10 @@ import * as VOCABULAIRE_DE_L_ESPACE from '../../src/content/micro-copy/espace/vo
 import * as TYPES_DE_LA_MICRO_COPIE from '../../src/content/micro-copy/types';
 import * as NOTIFICATIONS_DE_L_APPORTEUR from '../../src/content/micro-copy/courriels/notifications';
 import * as CONFIRMATION_DU_DEPOT from '../../src/content/micro-copy/espace/confirmation-du-depot';
+import * as INFORMATION_DES_TIERS from '../../src/content/micro-copy/espace/information-tiers';
 import * as ETATS_DES_DEPOTS from '../../src/content/micro-copy/espace/etats-attribution';
 import * as NOTIFICATIONS_DE_L_ESPACE from '../../src/content/micro-copy/espace/notifications';
+import * as VERIFICATION_DE_L_ESPACE from '../../src/content/micro-copy/espace/verification';
 import { ETATS_VIDES_CONSOLE } from '../../src/content/micro-copy/console/etats-vides';
 import { GABARITS } from '../../src/server/notifications/table-ssot';
 import type { ActionEcran, EtatVide, TexteIssue } from '../../src/content/micro-copy/types';
@@ -101,9 +103,12 @@ const MICRO_COPIE_DE_L_ESPACE: Readonly<Record<string, unknown>> = {
   'espace/etats-vides.ts': ETATS_VIDES_DE_L_ESPACE,
   'espace/vocabulaire.ts': VOCABULAIRE_DE_L_ESPACE,
   'espace/confirmation-du-depot.ts': CONFIRMATION_DU_DEPOT,
+  // SEC-12 (REQ-JUR-008) : la case que l'apporteur coche au dépôt.
+  'espace/information-tiers.ts': INFORMATION_DES_TIERS,
   'espace/etats-attribution.ts': ETATS_DES_DEPOTS,
   // UX-P1-54 : l'écran des notifications de l'espace.
   'espace/notifications.ts': NOTIFICATIONS_DE_L_ESPACE,
+  'espace/verification.ts': VERIFICATION_DE_L_ESPACE,
   // Hors d'`espace/`, mais importé par chaque module de l'espace : parcouru comme eux.
   'types.ts': TYPES_DE_LA_MICRO_COPIE,
   // UX-P1-10 : les notifications de l'apporteur (e-mail et espace), lues par lui : parcourues aussi.
@@ -127,6 +132,9 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
   'public/confirmation-contact.ts':
     'page publique du contact, hors de l’espace : couverte par le témoin confirmation-par-courriel',
   'console/a-appeler.ts': 'lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
+  // SEC-51 : les messages des refus de la console, lus par Axion-IA seul, jamais par l'apporteur.
+  'console/refus.ts':
+    'refus de la garde de la réserve, lus par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
   // SEC-30 : l'écran des utilisateurs de la console et ses courriels, lus par ses utilisateurs seuls.
   'console/utilisateurs.ts':
     'administration des utilisateurs de la console et ses courriels, lus par ses utilisateurs seuls (portée dépôt, REQ-GOV-017)',
@@ -134,6 +142,9 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
   // lira y sont celles de la juriste, mot pour mot, et repassent par l'espace quand il les affichera.
   'console/conformite.ts':
     'dossier de conformité, lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
+  // UX-P1-53 : l'écran des gels du journal des accès, lu par les administrateurs de la console seuls.
+  'console/gels-journal-acces.ts':
+    'gels du journal des accès, lus par les administrateurs de la console seuls (portée dépôt, REQ-GOV-017)',
   // JUR-T61 : la page publique des données de la console, lue par ses utilisateurs avant connexion.
   'console/vos-donnees.ts':
     'page « Vos données dans la console », lue par ses utilisateurs seuls : couverte par le témoin vos-donnees-console',
@@ -142,6 +153,10 @@ export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
     'connexion de la console et son courriel, lus par ses utilisateurs seuls (portée dépôt, REQ-GOV-017)',
   'console/navigation.ts':
     'le cadre de la console, lu par ses utilisateurs seuls (portée dépôt, REQ-GOV-017)',
+  // UX-P1-57 : le geste de mise en demeure, lu par Axion-IA seul ; le courriel que l'apporteur reçoit
+  // est celui de SEC-19, dans `courriels/notifications.ts`, parcouru avec l'espace.
+  'console/mise-en-demeure.ts':
+    'geste de mise en demeure, lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
 };
 
 /**
@@ -194,6 +209,12 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   'espace/vocabulaire.ts › FORMULES › droitACommissionJusquau': ['dateFin'],
   'espace/vocabulaire.ts › FORMULES › courrierDeSuspension': ['dateCourrier'],
   'espace/vocabulaire.ts › FORMULES › limiteDeVerification': ['limiteParJour'],
+  // UX-P1-51 : SA contestation — la réception de SON écrit, la date de la réponse qui LUI est faite, et
+  // l'échéance de cette réponse, dérivée de la réception ; le délai vient de la SSOT (RM-10).
+  'espace/vocabulaire.ts › CONTESTATION › votreEcrit': ['date'],
+  'espace/vocabulaire.ts › CONTESTATION › reponse': ['date'],
+  'espace/vocabulaire.ts › CONTESTATION › contestationRecue': ['date'],
+  'espace/vocabulaire.ts › CONTESTATION › attente › phrase': ['delaiReponse', 'dateLimite'],
   // UX-P1-10 : les notifications de l'apporteur, clé par clé (textes d'A07). Chaque paramètre dit
   // SON entreprise, SON contact, et la décision, le motif ou la date qui le concernent ; jamais un
   // autre apporteur ni l'occupant d'une entreprise (art. 3.5).
@@ -202,6 +223,13 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
     'contact',
   ],
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_liberee': ['entreprise'],
+  // UX-P1-59 : les textes fermés d'une décision de SON contrat dont le texte saisi est purgé (juriste,
+  // #752) — l'article de SA mise en demeure, la date de fin de SON contrat ; aucun autre apporteur.
+  'espace/notifications.ts › DECISIONS_PURGEES › mise_en_demeure': ['article'],
+  'espace/notifications.ts › DECISIONS_PURGEES › manquement_grave': ['dateEffet'],
+  // SEC-15 : la suspension purgée, du jour de SA notification à celui de SA fin (juriste, #794
+  // 6036374348 ; #474 6036797355), lus sur la ligne nue et au journal.
+  'espace/notifications.ts › DECISIONS_PURGEES › suspension': ['dateDebut', 'dateFin'],
   // DM-25 : l'annulation de SON dépôt pour antériorité de la Société (art. 3.3) — SON entreprise, et le
   // délai de réponse à SA contestation, venu de la SSOT. Aucun critère d'antériorité (règle de SEC-12).
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › attribution_annulee_anteriorite': [
@@ -243,6 +271,9 @@ export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
   // DM-55 : les faits retenus contre SON dépôt (art. 3.7), saisis par la console et lus au rendu ;
   // sans lien, sans nom de tiers, sans les mots refusés (sécurité, rattrapage 64).
   'courriels/notifications.ts › MOTIFS_DES_DECISIONS › anomalie_confirmee': ['faits'],
+  // DM-71 (art. 3.3 du v2) : la fraude établie annule SON attribution confirmée ; ses faits sont ceux de
+  // SON anomalie confirmée, saisis et lus comme ceux de `anomalie_confirmee` (juriste, 6039893112).
+  'courriels/notifications.ts › MOTIFS_DES_DECISIONS › fraude_etablie': ['faits'],
   // SEC-19 (juriste, #703) : SA mise en demeure — l'article de la liste fermée de l'art. 11.2, les
   // faits saisis par la console (règles de DM-55), le délai venu de la SSOT (RM-10).
   'courriels/notifications.ts › TEXTES_DES_NOTIFICATIONS › mise_en_demeure': [

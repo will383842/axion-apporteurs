@@ -83,23 +83,25 @@ export const SEUILS = {
     renvois: [],
     verifieLe: '2026-10-01',
   },
-  // JUR-T40 — la fin d'une demande vérifiée sans prise de contact concluante (HYP-W20-LIBERATION,
-  // tranchée par Williams le 2026-09-29) et la carence avant une nouvelle déclaration
-  // (HYP-W20-CARENCE-REDEPOT, arbitrage de -d7 sur délégation, même jour). L'art. 3.2 en est la
-  // source, et il les écrit par variables.
-  LIBERATION_SIGNALEE_INJOIGNABLE_MAX: {
-    valeur: 3,
-    unite: 'tentatives',
-    source: 'contrat art. 3.2 (HYP-W20-LIBERATION)',
-    renvois: art('3.2'),
-    verifieLe: '2026-10-01',
-  },
+  // JUR-T66 — la fin de l'attribution faute d'adresse valide et la carence unique qui la suit (art. 3.2
+  // du contrat v2, qui fait foi). La libération après N tentatives et la carence graduée de JUR-T40
+  // sont retirées : le contrat ne les connaît plus.
   LIBERATION_SIGNALEE_JOURS: {
     valeur: 45,
     unite: 'jours',
-    source: 'contrat art. 3.2 (HYP-W20-LIBERATION)',
+    source:
+      "contrat art. 3.2 (JUR-T66) : à défaut d'adresse valide dans ce délai à compter de la déclaration, l'attribution prend fin (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi, décision du 2026-10-07, #474, 6032680253) ; HYP-W20-LIBERATION",
     renvois: art('3.2'),
-    verifieLe: '2026-10-01',
+    verifieLe: '2026-10-07',
+  },
+  // JUR-T66 — le délai dans lequel la Société prend contact avec la personne déclarée (art. 3.2, v2).
+  PRISE_DE_CONTACT_SOCIETE_JOURS: {
+    valeur: 30,
+    unite: 'jours',
+    source:
+      "contrat art. 3.2 (JUR-T66) : la Société prend contact avec la personne déclarée dans ce délai à compter de l'enregistrement de la déclaration (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi, décision du 2026-10-07, #474, 6032680253)",
+    renvois: art('3.2'),
+    verifieLe: '2026-10-07',
   },
   CARENCE_REDEPOT_APRES_LIBERATION_JOURS: {
     valeur: 30,
@@ -118,13 +120,6 @@ export const SEUILS = {
       'deux protections pour l’apporteur ») et réponse « A. » au point 6, réserve de 30 jours gardée',
     renvois: art('3.5'),
     verifieLe: '2026-10-03',
-  },
-  CARENCE_REDEPOT_APRES_SECONDE_LIBERATION_JOURS: {
-    valeur: 90,
-    unite: 'jours',
-    source: 'contrat art. 3.2 (HYP-W20-CARENCE-REDEPOT)',
-    renvois: art('3.2'),
-    verifieLe: '2026-10-01',
   },
   ANTERIORITE_CLIENT_MOIS: {
     valeur: 24,
@@ -187,6 +182,16 @@ export const SEUILS = {
     renvois: art('3.4'),
     verifieLe: LE,
   },
+  // JUR-T54 — la condition (b) de la prolongation : un rendez-vous tenu ou un échange de la Société
+  // avec l'entreprise au cours de ces derniers jours (art. 3.4 al. 3, recopié du contrat v2 d'axion-ia).
+  PROLONGATION_FAITS_RECENTS_JOURS: {
+    valeur: 30,
+    unite: 'jours',
+    source:
+      "contrat art. 3.4 al. 3 ; contrat apporteur v2 d'axion-ia validé par Williams le 2026-10-05, recopié sur sa décision du 2026-10-07 (#474, 6032423244)",
+    renvois: art('3.4'),
+    verifieLe: '2026-10-07',
+  },
   FILE_FENETRE_REDECLARATION_JOURS: {
     valeur: 15,
     unite: 'jours',
@@ -218,8 +223,9 @@ export const SEUILS = {
   SEUIL_VERSEMENT: {
     valeur: 5_000,
     unite: 'centimes',
-    source: 'contrat art. 5.1 ; REQ-ARG-015',
-    renvois: art('5.1'),
+    source:
+      "REQ-ARG-015 — RÈGLE ABSENTE du contrat depuis JUR-T66 : art. 5.1, « aucun montant minimum n'est appliqué » (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi, décision du 2026-10-07, #474, 6032680253) ; à retirer du code avec T-ARG-045, qui n'a encore rien émis",
+    renvois: [],
     verifieLe: LE,
   },
   CONTESTATION_FACTURE_JOURS: {
@@ -230,18 +236,19 @@ export const SEUILS = {
     verifieLe: LE,
   },
   VERSEMENT_JOURS_OUVRES: {
-    valeur: 10,
+    valeur: 2,
     unite: 'jours_ouvres',
-    source: 'contrat art. 5.3',
-    renvois: art('5.3'),
+    source:
+      "contrat art. 5.3 (JUR-T66) : délai INDICATIF, ni échéance ni engagement (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi (décision du 2026-10-07, #474, 6032680253))",
+    renvois: art('5.3', '5.4'),
     verifieLe: LE,
   },
   VERSEMENT_PLAFOND_JOURS: {
-    valeur: 60,
+    valeur: 30,
     unite: 'jours',
     source:
-      'contrat art. 5.3 (valeur confrontée, renvoi vérifié) — À RELIRE, non encore confronté : C. com. L.441-10, I',
-    renvois: art('5.3'),
+      "contrat art. 5.3 (JUR-T66) : l'échéance de chaque autofacture est le trentième jour suivant son émission (contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi (décision du 2026-10-07, #474, 6032680253)) — À RELIRE, non encore confronté : C. com. L.441-10, I",
+    renvois: art('5.3', '5.4'),
     verifieLe: LE,
   },
   FORCLUSION_CONTESTATION_MOIS: {
@@ -252,9 +259,10 @@ export const SEUILS = {
     verifieLe: LE,
   },
   REPONSE_CONTESTATION_JOURS: {
-    valeur: 15,
+    valeur: 30,
     unite: 'jours',
-    source: 'contrat art. 3.3 et 5.6',
+    source:
+      "contrat art. 3.3 et 5.6 (JUR-T66, contrat apporteur v2 d'axion-ia, validé par Williams le 2026-10-05, qui fait foi (décision du 2026-10-07, #474, 6032680253))",
     renvois: art('3.3', '5.6'),
     verifieLe: LE,
   },
@@ -412,6 +420,32 @@ export const SEUILS = {
   },
   // DM-40 (REQ-DM-060, HYP-W20-REBOND) : au-delà, le dépôt reste dans la liste d'appels et l'action
   // « Corriger l'adresse » disparaît.
+  // SEC-12 (REQ-DM-009) : la limite de débit du dépôt, technique et identique pour tous, sur DEUX
+  // compteurs — l'empreinte réseau (`depot:ip`) et l'empreinte de la session (`depot:session`) —, sur
+  // une fenêtre « de l'ordre de la minute » (texte de la juriste, rattrapage 84). Les valeurs sont
+  // celles de l'arbitrage : le plafond réseau tient compte d'une adresse partagée ; la session est
+  // obligatoire, et dix dépôts à quinze secondes d'intervalle passent tous.
+  DEPOT_FENETRE_MINUTES: {
+    valeur: 1,
+    unite: 'minutes',
+    source: 'arbitrage coordination du 2026-10-04, juriste et sécurité ; REQ-DM-009',
+    renvois: [],
+    verifieLe: '2026-10-04',
+  },
+  DEPOT_PAR_IP_PAR_FENETRE: {
+    valeur: 10,
+    unite: 'tentatives',
+    source: 'arbitrage coordination du 2026-10-04, juriste et sécurité ; REQ-DM-009',
+    renvois: [],
+    verifieLe: '2026-10-04',
+  },
+  DEPOT_PAR_SESSION_PAR_FENETRE: {
+    valeur: 5,
+    unite: 'tentatives',
+    source: 'arbitrage coordination du 2026-10-04, juriste et sécurité ; REQ-DM-009',
+    renvois: [],
+    verifieLe: '2026-10-04',
+  },
   CORRECTIONS_ADRESSE_MAX: {
     valeur: 2,
     unite: 'tentatives',
@@ -628,4 +662,16 @@ export const CONTEXTE_DEPOT_CARACTERES_MAX = {
   unite: 'caracteres',
   source: 'docs/chantiers/W20-confirmation-par-email.md §2, HYP-W20-CONTEXTE',
   verifieLe: '2026-10-02',
+} as const;
+
+/**
+ * UX-P1-53 — le PLAFOND d'une page de la liste des gels du journal des accès, fixé par le serveur.
+ * Une taille demandée est ramenée sous ce plafond, jamais au-dessus ; la liste se pagine par curseur
+ * (keyset), jamais par décalage (condition de la sécurité).
+ */
+export const GELS_JOURNAL_ACCES_PAGE_MAX = {
+  valeur: 50,
+  unite: 'lignes',
+  source: 'décision de la coordination, avis conforme de la sécurité (#620)',
+  verifieLe: '2026-10-05',
 } as const;

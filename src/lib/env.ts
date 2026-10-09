@@ -86,6 +86,17 @@ const identifiantDeSalon = z.string().superRefine((v, ctx) => {
   if (presenteEtNette(v, ctx) && !IDENTIFIANT_DE_SALON.test(v)) refuser(ctx, 'format_invalide');
 });
 
+/**
+ * SEC-14 (REQ-SEC-017, REQ-GOV-031) : le réglage des signaux de sincérité — des paires `clé=entier`
+ * séparées par `;`. Sa FORME est jugée ici, au démarrage ; ses clés et leurs bornes, par
+ * `lireReglageDeSincerite` (`src/server/anomalie/sincerite.ts`), seul lecteur de la liste fermée.
+ */
+const FORME_DU_REGLAGE = /^[a-z_.]+=\d{1,5}(?:;[a-z_.]+=\d{1,5})*$/;
+const reglageHorsDepot = z.string().superRefine((v, ctx) => {
+  if (!presenteEtNette(v, ctx)) return;
+  if (!FORME_DU_REGLAGE.test(v)) refuser(ctx, 'format_invalide');
+});
+
 const cleHexadecimale = z.string().superRefine((v, ctx) => {
   if (presenteEtNette(v, ctx) && !CLE_HEXADECIMALE.test(v)) refuser(ctx, 'format_invalide');
 });
@@ -134,6 +145,13 @@ export const schemaSecretsConditionnels = z.object({
   // INT-T54 : le salon, classé là où il vit déjà (un secret de l'environnement `production`, lu par
   // backup.yml, deploy.yml et nightly.yml) : une seule source, aucune recopie.
   TELEGRAM_CHAT_ID: identifiantDeSalon.optional(),
+  // SEC-14 (REQ-GOV-031) : les poids, le seuil et les paramètres des signaux de sincérité. Un
+  // SECRET, et non une variable : le dépôt est public, et une variable s'imprime dans les journaux
+  // de la CI. Absent, aucun dépôt n'est jugé — le défaut est fermé.
+  PARTNERS_SINCERITE_REGLAGE: reglageHorsDepot.optional(),
+  // SEC-72 (REQ-SEC-021) : les plafonds de « Vérifier une entreprise ». Un SECRET, pour la même raison
+  // que le réglage de sincérité. Absent ou illisible, toute vérification est refusée — défaut fermé.
+  PARTNERS_VERIFICATION_PLAFONDS: reglageHorsDepot.optional(),
 });
 export type SecretsConditionnels = z.infer<typeof schemaSecretsConditionnels>;
 export const NOMS_DES_SECRETS_CONDITIONNELS: readonly string[] = Object.keys(
@@ -569,6 +587,10 @@ const ROLES: Record<NomDeVariable, string> = {
   TELEGRAM_BOT_TOKEN:
     "jeton du canal d'alerte du serveur ; une alerte due sans lui fait échouer le passage en le nommant",
   TELEGRAM_CHAT_ID: "salon du canal d'alerte du serveur ; voir TELEGRAM_BOT_TOKEN",
+  PARTNERS_SINCERITE_REGLAGE:
+    "réglage des signaux de sincérité (poids, seuil, paramètres), hors dépôt ; absent, aucun dépôt n'est jugé",
+  PARTNERS_VERIFICATION_PLAFONDS:
+    'plafonds de « Vérifier une entreprise » (limites et fenêtres), hors dépôt ; absent ou illisible, toute vérification est refusée',
   ZEPTOMAIL_API_URL:
     "URL d'envoi du relais de courriels, d'un hôte de la liste fermée ; exigée quand l'envoi réel est allumé",
 };
@@ -577,6 +599,12 @@ const ROLES: Record<NomDeVariable, string> = {
 function regleDe(nom: NomDeVariable): string {
   if (nom === 'PII_ENCRYPTION_KEY') return 'exactement 64 caractères hexadécimaux';
   if (nom === 'TELEGRAM_CHAT_ID') return 'entier signé, au plus 20 chiffres';
+  if (nom === 'PARTNERS_SINCERITE_REGLAGE') {
+    return 'paires `clé=entier` séparées par `;`, clés de la liste fermée de `src/server/anomalie/sincerite.ts`';
+  }
+  if (nom === 'PARTNERS_VERIFICATION_PLAFONDS') {
+    return 'paires `clé=entier` séparées par `;`, cinq clés fermées de `src/server/securite/rate-limit.ts`, fenêtres en minutes';
+  }
   if (NOMS_DES_SECRETS.includes(nom) || NOMS_DES_SECRETS_CONDITIONNELS.includes(nom)) {
     return 'au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production';
   }
