@@ -109,6 +109,8 @@ describe('DM-51 — le passage du rappel rc_pro, requête par requête', () => {
           type: 'rc_pro',
           statut: 'valide',
           remplaceeAt: null,
+          // Le contrat a pris fin : le statut d'arrivée de `resilier`, lu dans la matrice.
+          apporteur: { statut: { notIn: ['resilie'] } },
           expireAt: { gt: MAINTENANT, lte: new Date(MAINTENANT.getTime() + DELAI_MS) },
         },
         orderBy: [{ expireAt: 'asc' }, { id: 'asc' }],

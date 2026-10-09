@@ -64,7 +64,7 @@ const passage = () =>
   });
 
 let sequence = 0;
-async function apporteur(): Promise<{ id: string; adresse: string }> {
+async function apporteur(resilie = false): Promise<{ id: string; adresse: string }> {
   sequence += 1;
   const id = randomUUID();
   const adresse = `rc-pro-${sequence}@example.org`;
@@ -79,7 +79,9 @@ async function apporteur(): Promise<{ id: string; adresse: string }> {
       id,
       emailChiffre: Buffer.from(emailChiffre),
       emailHash,
-      statut: 'signe',
+      ...(resilie
+        ? { statut: 'resilie' as const, resiliationMotif: 'ordinaire_apporteur' as const }
+        : { statut: 'signe' as const }),
       codeParrainage: `AX5${String(sequence).padStart(5, '0')}`,
       isTest: true,
       candidatureId: randomUUID(),
@@ -111,6 +113,7 @@ let echue: { id: string; adresse: string };
 let dansLaFenetre: { id: string; adresse: string };
 let remplacee: { id: string; adresse: string };
 let rappeleLAnPasse: { id: string; adresse: string };
+let resilie: { id: string; adresse: string };
 const ECHEANCE = dans(10 * MS_PAR_JOUR);
 
 beforeAll(async () => {
@@ -126,6 +129,9 @@ beforeAll(async () => {
   await piece(remplacee.id, dans(365 * MS_PAR_JOUR));
   rappeleLAnPasse = await apporteur();
   await piece(rappeleLAnPasse.id, ECHEANCE);
+  // Le contrat a pris fin : l'attestation dans la fenêtre ne vaut plus aucun rappel.
+  resilie = await apporteur(true);
+  await piece(resilie.id, ECHEANCE);
   // Le rappel de l'échéance PRÉCÉDENTE : demandé avant la fenêtre de celle-ci.
   await base.prisma.courrielEnvoye.create({
     data: {
@@ -163,7 +169,7 @@ describe('DM-51 — le rappel d’échéance de l’attestation rc_pro', () => {
       [dansLaFenetre.id, rappeleLAnPasse.id].sort()
     );
     expect(courriels.every((c) => c.statut === 'envoye')).toBe(true);
-    for (const rien of [sousLeDelai, echue, remplacee]) {
+    for (const rien of [sousLeDelai, echue, remplacee, resilie]) {
       expect(
         await base.prisma.notificationEspace.count({
           where: { apporteurId: rien.id, cle: 'rappel_rc_pro' },

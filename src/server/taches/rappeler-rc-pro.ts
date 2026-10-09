@@ -16,6 +16,8 @@
  * notification, et ne lit ni ne touche `piecesBloquantPaiement()`.
  */
 import type { PrismaClient } from '@prisma/client';
+import { TRANSITIONS_APPORTEUR } from '../../domain/apporteur/matrice';
+import type { StatutApporteur } from '../../domain/apporteur/statut';
 import { SEUILS } from '../../domain/seuils/ssot';
 import { MS_PAR_JOUR } from '../../domain/temps/calendrier-civil';
 import { forApporteur } from '../acces/for-apporteur';
@@ -25,6 +27,18 @@ import { notifier, type DependancesDeLaNotification } from '../notifications/env
 import type { ClesPii } from '../securite/pii';
 
 const CLE = 'rappel_rc_pro';
+
+/**
+ * Le contrat a pris fin : le statut d'arrivée de `resilier`, DÉRIVÉ de la matrice de l'apporteur
+ * (RM-01), jamais recopié. Un apporteur résilié ne reçoit plus le rappel.
+ */
+const STATUTS_FIN_DE_CONTRAT: readonly StatutApporteur[] = [
+  ...new Set(
+    Object.values(TRANSITIONS_APPORTEUR).flatMap((t) =>
+      t.resilier === undefined ? [] : [t.resilier]
+    )
+  ),
+];
 
 export type DependancesDuRappel = {
   maintenant: () => Date;
@@ -46,6 +60,7 @@ export async function rappelerLesAttestationsRcPro(
       type: 'rc_pro',
       statut: 'valide',
       remplaceeAt: null,
+      apporteur: { statut: { notIn: [...STATUTS_FIN_DE_CONTRAT] } },
       expireAt: { gt: maintenant, lte: new Date(maintenant.getTime() + delaiMs) },
     },
     orderBy: [{ expireAt: 'asc' }, { id: 'asc' }],
