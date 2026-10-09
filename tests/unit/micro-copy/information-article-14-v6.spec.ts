@@ -5,16 +5,16 @@
  * commerciale, sa base, sa durée, et l'opposition à toute prospection, présentée à part.
  *
  * TEXTES D'A07, MOT POUR MOT (2026-10-04), PROPOSITION À VALIDER PAR WILLIAMS, NON EN VIGUEUR.
- * Le fichier porte le nom versé au registre (« v5 ») ; la version du bloc est la v6, tranchée par la
- * juriste : la v5 de main ne nommait pas l'outil de relation client.
+ * La version du bloc est la v6, tranchée par la juriste : la v5 de main ne nommait pas l'outil de
+ * relation client.
  *
  * CE QU'IL PROUVE.
  *   1. la version change, et elle est celle que l'envoi garde avec le dépôt ;
  *   2. la finalité nomme la conservation dans l'outil de relation client, pour la relation d'affaires ;
  *   3. la base nomme l'intérêt légitime commercial, au titre de la fonction, et l'opposition ;
  *   4. les destinataires comptent la présentation des prestations et le suivi des clients ;
- *   5. la durée de prospection est comptée depuis le dernier contact, en paramètre lu à la source
- *      (décision de Williams du 2026-10-09), et la phrase du démenti la suit ;
+ *   5. la durée de prospection est comptée depuis le dernier contact, en paramètre lu à son propre
+ *      seuil, dont la source cite la décision de Williams du 2026-10-09 ; la phrase du démenti suit ;
  *   6. aucune clé ne dit « relance » à tort : la seule relance niée est celle de la confirmation ;
  *   7. l'opposition vaut pour TOUT message et tout appel d'Axion-IA, et son lien le dit.
  */
@@ -24,6 +24,7 @@ import {
   LIEN_OPPOSITION,
   VERSION_INFORMATION_ARTICLE_14,
 } from '../../../src/content/micro-copy/courriels/information-article-14';
+import { SEUILS } from '../../../src/domain/seuils/ssot';
 
 describe('REQ-JUR-060 — le bloc de l’article 14 en version 6 (le CRM d’Axion-IA nommé)', () => {
   it('REQ-JUR-060 : TÉMOIN — la version est la v6', () => {
@@ -48,17 +49,31 @@ describe('REQ-JUR-060 — le bloc de l’article 14 en version 6 (le CRM d’Axi
     );
   });
 
-  it('REQ-JUR-062 : TÉMOIN — la durée de prospection est comptée depuis le dernier contact, en paramètre (décision de Williams du 2026-10-09), puis le démenti et sa durée en paramètre', () => {
+  it('REQ-JUR-062 : TÉMOIN — la durée de prospection est comptée depuis le dernier contact, en paramètre lu à son seuil, puis le démenti et sa durée en paramètre', () => {
     expect(INFORMATION_ARTICLE_14.duree).toBe(
-      "Axion-IA conserve les coordonnées de votre entreprise, ainsi que vos nom et coordonnées professionnelles, pour vous présenter ses prestations, pendant {dureeApresDernierContact} après le dernier contact. Vous pouvez à tout moment vous opposer à nos messages et appels, ou demander l'effacement de vos données ; nous les mettons à jour ou les effaçons dès que nous apprenons qu'elles ne sont plus exactes, par exemple si vous changez de fonction. Si vous indiquez n'avoir eu aucun échange avec {prenomApporteur} {nomApporteur}, votre réponse et votre nom sont conservés {dureeDementi}, pour pouvoir l'établir en cas de contestation."
+      "Axion-IA conserve les coordonnées de votre entreprise, ainsi que vos nom et coordonnées professionnelles, pour vous présenter ses prestations, pendant {dureeProspection} après le dernier contact. Vous pouvez à tout moment vous opposer à nos messages et appels, ou demander l'effacement de vos données ; nous les mettons à jour ou les effaçons dès que nous apprenons qu'elles ne sont plus exactes, par exemple si vous changez de fonction. Si vous indiquez n'avoir eu aucun échange avec {prenomApporteur} {nomApporteur}, votre réponse et votre nom sont conservés {dureeDementi}, pour pouvoir l'établir en cas de contestation."
     );
     // Deux durées, toutes deux en paramètre, jamais en clair (`ssot:seuils`, RM-10) : la prospection,
-    // comptée depuis le dernier contact (`CONTACT_PURGE_CONVERTIE_APRES_DERNIER_CONTACT_JOURS`), et
+    // comptée depuis le dernier contact (`CONTACT_DEMARCHE_CONSERVE_APRES_DERNIER_CONTACT_ANS`), et
     // le démenti (`DEMENTI_CONTACT_VIDE_APRES_ANS`).
     expect(INFORMATION_ARTICLE_14.duree.match(/\{duree\w*\}/g)).toEqual([
-      '{dureeApresDernierContact}',
+      '{dureeProspection}',
       '{dureeDementi}',
     ]);
+  });
+
+  it('REQ-JUR-062 : TEST HYP — la durée de prospection a son propre seuil, dont la source nomme la décision de Williams du 2026-10-09', () => {
+    // La décision, mot pour mot : « JUR-T51 : remplacer la durée par 3 ans après le dernier
+    // contact. » La source de `retention.ts` ne peut pas la recopier : `ssot:seuils` y refuse le
+    // chiffre (RM-10). Elle nomme le commentaire ; la valeur, elle, est vérifiée ici.
+    expect(SEUILS.CONTACT_DEMARCHE_CONSERVE_APRES_DERNIER_CONTACT_ANS).toMatchObject({
+      valeur: 3,
+      unite: 'ans',
+      verifieLe: '2026-10-09',
+    });
+    const { source } = SEUILS.CONTACT_DEMARCHE_CONSERVE_APRES_DERNIER_CONTACT_ANS;
+    expect(source).toContain('décision de Williams du 2026-10-09 (#319, commentaire 6087917020)');
+    expect(source).toContain('après le dernier contact');
   });
 
   it('REQ-JUR-060 : TÉMOIN — aucune clé ne dit « relance » à tort : seule la relance de la confirmation est niée', () => {

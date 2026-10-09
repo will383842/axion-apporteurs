@@ -145,6 +145,19 @@ export const DUREES_DE_RETENTION = {
     verifieLe: '2026-10-03',
   },
   /**
+   * JUR-T51 (REQ-JUR-062) : les coordonnées professionnelles d'un contact, gardées par Axion-IA pour
+   * lui présenter ses prestations, comptées depuis le dernier contact. Annoncée par le bloc de
+   * l'article 14 en v6 (`{dureeProspection}`) ; distincte de la purge du contact d'une attribution.
+   */
+  CONTACT_DEMARCHE_CONSERVE_APRES_DERNIER_CONTACT_ANS: {
+    valeur: 3,
+    unite: 'ans',
+    source:
+      'REQ-JUR-062, décision de Williams du 2026-10-09 (#319, commentaire 6087917020) : la durée de la v6 remplacée par la valeur ci-dessus, comptée « après le dernier contact » (la citation mot pour mot vit dans la décision : ssot:seuils refuse le chiffre ici)',
+    renvois: [],
+    verifieLe: '2026-10-09',
+  },
+  /**
    * SEC-58 : le journal des accès à la console (connexions, lectures de coordonnées), purgé à
    * l'échéance. Le gel d'une ligne liée à un incident ou à un litige est une tâche à part.
    */

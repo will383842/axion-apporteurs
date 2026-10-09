@@ -158,6 +158,7 @@ const VALEURS = {
   mentionTransfert: '',
   dureeSansSuite: 'trois ans',
   dureeApresDernierContact: 'trois ans',
+  dureeProspection: 'trois ans',
   dureeDementi: 'cinq ans',
   adresseDroits: 'Axion-IA, service des données, 1 rue du Témoin, 75000 Paris',
   prenomSignataire: 'Alex',
