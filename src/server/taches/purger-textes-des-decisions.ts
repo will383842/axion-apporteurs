@@ -17,14 +17,15 @@
  * anniversaire appartient encore au délai de cinq ans (code civil art. 2229, la prescription n'est
  * acquise que lorsque le dernier jour du terme est accompli) ; la veille et le jour même, rien.
  *
- * LIMITE NOMMÉE (arbitrage de la coordination, source publiée sur #766, commentaire 6033957822) :
- * seule compte, pour le départ d'une mise en demeure, une résiliation fondée sur
- * `apporteur_statut_modifie` — la coupure immédiate de SEC-19, opposable par construction. Toute
- * autre décision, dont la résiliation notifiée avec préavis de SEC-66, laisse la mise en demeure à
- * son `cree_at`, comme une décision caduque. La caducité de SEC-66 se dérivait de la notification et
- * de son courriel, que DM-61 supprime au bout de douze mois. A02 a depuis posé une trace DURABLE,
- * `decisionContratId` (#561, 5988205180) : sa lecture est portée par SEC-66, qui fusionne en second
- * (source 6033957822). Aucune purge ne peut survenir avant cinq ans.
+ * LA LECTURE PAR `decisionContratId` (SEC-66, #781 ; source publiée sur #766, 6033957822). Sont
+ * opposables, pour le départ d'une mise en demeure : la coupure immédiate de SEC-19 (un fait
+ * `apporteur_statut_modifie`, opposable par construction), et la résiliation notifiée de SEC-66 (un fait
+ * `apporteur_resiliation_notifiee`) QUE CITE un passage à `resilie` par `decisionContratId`, l'UUID de
+ * sa ligne : la trace DURABLE de l'opposabilité que A02 a posée au journal (#561, 5988205180). Une
+ * résiliation notifiée que nul passage ne cite est CADUQUE : elle ne compte pas, et la mise en demeure
+ * garde son `cree_at`. La caducité ne se lit donc plus sur la notification ni sur son courriel,
+ * supprimés à douze mois : le journal ne se purge jamais, et la limite nommée de DM-70 tombe. Toute
+ * autre décision ne compte pas. Aucune purge ne peut survenir avant cinq ans.
  *
  * L'écriture est celle qu'admet la garde dédiée de SEC-19 : le texte ET `faits_empreinte` vidés,
  * `texte_purge_at` posé, dans la même instruction, une fois. La ligne nue (geste, article, dates,
@@ -36,7 +37,7 @@
  */
 import type { GesteDecisionContrat, PrismaClient } from '@prisma/client';
 import { SEUILS } from '../../domain/seuils/ssot';
-import { lireLaChargeDUnFait } from '../evenement/journal';
+import { lireLaChargeDUnFait, passageQuiCiteLaDecision } from '../evenement/journal';
 import { versParis } from '../../domain/temps/paris';
 import { MS_PAR_JOUR, joursDeLaDate, type DateCivile } from '../../domain/temps/calendrier-civil';
 
@@ -159,16 +160,28 @@ export async function purgerLesTextesDesDecisions(
         ? []
         : await prisma.decisionDeContrat.findMany({
             where: { apporteurId: { in: apporteursMisEnDemeure }, geste: 'resiliation' },
-            select: { apporteurId: true, dateEffet: true, creeAt: true, evenementId: true },
+            select: {
+              id: true,
+              apporteurId: true,
+              dateEffet: true,
+              creeAt: true,
+              evenementId: true,
+            },
             orderBy: [{ creeAt: 'asc' }, { id: 'asc' }],
           });
-    // LIMITE NOMMÉE (en tête) : seule la résiliation fondée sur un changement de statut compte. Le
-    // type de son fait se lit par `evenementId`, au module du journal : la relation vers le journal
-    // n'est jamais employée par le code (condition d'A02).
+    // Seule une résiliation OPPOSABLE compte (en tête). Le type de son fait se lit par `evenementId`, au
+    // module du journal : la relation vers le journal n'est jamais employée par le code (condition
+    // d'A02). La notifiée de SEC-66 n'est opposable que si un passage à `resilie` la cite.
     const resiliations: typeof toutes = [];
     for (const r of toutes) {
       const fait = await lireLaChargeDUnFait(prisma, r.evenementId.toString());
-      if (fait?.type === 'apporteur_statut_modifie') resiliations.push(r);
+      if (
+        fait?.type === 'apporteur_statut_modifie' ||
+        (fait?.type === 'apporteur_resiliation_notifiee' &&
+          (await passageQuiCiteLaDecision(prisma, r.id, r.apporteurId)) !== null)
+      ) {
+        resiliations.push(r);
+      }
     }
 
     const echus = lot

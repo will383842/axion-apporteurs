@@ -2,6 +2,7 @@
 // @req REQ-DM-031
 // @req REQ-DM-027
 // @req REQ-SEC-058
+// @req REQ-JUR-015
 /**
  * `journal-charges.spec.ts` — les charges FERMÉES du journal (`src/domain/evenement/charges.ts`),
  * jugées valeur par valeur : la forme d'une empreinte, les constructeurs de formes, la charge de
@@ -51,6 +52,8 @@ describe('REQ-DM-024 — une charge par type, fermée', () => {
       'apporteur_gel_modifie',
       // SEC-19 (A02, #703) : la mise en demeure datée d'un apporteur, par article.
       'apporteur_mis_en_demeure',
+      // SEC-66 (A02, #703) : la décision de la Société de résilier, sans changement de statut.
+      'apporteur_resiliation_notifiee',
       'apporteur_statut_modifie',
       'attribution_contact_purge',
       'attribution_etat_modifie',
@@ -471,5 +474,67 @@ describe('REQ-DM-024 — chaque charge : la juste passe, l’incohérente est no
         intrus
       ).toHaveLength(1);
     }
+  });
+
+  it('REQ-JUR-015 : SEC-66 — la décision de la Société porte le motif ordinaire_axion, un horodatage de minuit et l’acteur de la console, rien d’autre', () => {
+    const juste = {
+      motif: 'ordinaire_axion',
+      dateEffet: '2026-11-02T23:00:00.000Z',
+      acteur: CONSOLE,
+    };
+    passe('apporteur_resiliation_notifiee', juste);
+    for (const motif of ['ordinaire_apporteur', 'manquement_grave', 'fin_de_plein_droit']) {
+      expect(refus('apporteur_resiliation_notifiee', { ...juste, motif }), motif).toHaveLength(1);
+    }
+    expect(
+      refus('apporteur_resiliation_notifiee', { ...juste, dateEffet: '2026-11-03' })
+    ).toHaveLength(1);
+    expect(refus('apporteur_resiliation_notifiee', { ...juste, texte: 'x' })).toHaveLength(1);
+    expect(
+      refus('apporteur_resiliation_notifiee', { ...juste, acteur: { par: 'systeme' } })
+    ).toEqual(['acteur:acteur_console_attendu']);
+  });
+
+  it('REQ-JUR-015 : SEC-66 — le passage à resilie pour ordinaire_axion CITE sa décision ; aucun autre passage ne cite', () => {
+    const resilie = {
+      de: 'signe',
+      vers: 'resilie',
+      transition: 'resilier',
+      resiliationMotif: 'ordinaire_axion',
+      acteur: CONSOLE,
+    };
+    passe('apporteur_statut_modifie', { ...resilie, decisionContratId: ID });
+    // Sans citation, refusé ; une citation hors forme aussi.
+    expect(refus('apporteur_statut_modifie', resilie)).toEqual([
+      'decisionContratId:citation_de_la_decision_incoherente',
+    ]);
+    expect(refus('apporteur_statut_modifie', { ...resilie, decisionContratId: '42' })[0]).toMatch(
+      /^decisionContratId:/
+    );
+    // Une citation sur un autre motif, ou sur un autre passage, refusée.
+    for (const resiliationMotif of [
+      'ordinaire_apporteur',
+      'manquement_grave',
+      'fin_de_plein_droit',
+    ]) {
+      passe('apporteur_statut_modifie', { ...resilie, resiliationMotif });
+      expect(
+        refus('apporteur_statut_modifie', {
+          ...resilie,
+          resiliationMotif,
+          decisionContratId: ID,
+        }),
+        resiliationMotif
+      ).toEqual(['decisionContratId:citation_de_la_decision_incoherente']);
+    }
+    expect(
+      refus('apporteur_statut_modifie', {
+        de: 'signe',
+        vers: 'suspendu',
+        transition: 'suspendre',
+        acteur: CONSOLE,
+        decisionContratId: ID,
+      })
+    ).toEqual(['decisionContratId:citation_de_la_decision_incoherente']);
   });
 });

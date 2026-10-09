@@ -30,8 +30,14 @@ import { transitionner } from '../../domain/apporteur/matrice';
 import type { MotifResiliation, StatutApporteur } from '../../domain/apporteur/statut';
 import {
   ARTICLES_MISE_EN_DEMEURE,
+  dateEffetAtteinte,
+  dateEffetDeLaResiliationParLaSociete,
   estSousContrat,
+  estUneResiliationOpposable,
+  jourCivilDeParis,
   jugerLaResiliationPourManquement,
+  minuitDeParisDuJour,
+  STATUTS_SOUS_CONTRAT,
   type ArticleMiseEnDemeure,
 } from '../../domain/apporteur/resiliation';
 import { versParis } from '../../domain/temps/paris';
@@ -39,7 +45,11 @@ import {
   ETATS_A_TRAITER_A_LA_FIN_DU_CONTRAT,
   sortieDeFinDeContrat,
 } from '../../domain/apporteur/effets-de-la-fin';
-import { ajouterEvenement, lireLaChargeDUnFait } from '../evenement/journal';
+import {
+  ajouterEvenement,
+  lireLaChargeDUnFait,
+  passageQuiCiteLaDecision,
+} from '../evenement/journal';
 import { revoquerJetonsALaResiliation } from '../auth/jeton-depot';
 import { transitionnerUneAttribution } from '../attribution/transitionner';
 import {
@@ -84,7 +94,8 @@ export class ErreurResiliation extends Error {
     | 'statut_sans_contrat'
     | 'preavis_non_notifie'
     | 'cle_idempotence_invalide'
-    | 'cle_deja_employee';
+    | 'cle_deja_employee'
+    | 'decision_deja_citee';
 
   constructor(code: ErreurResiliation['code'], detail: string) {
     super(`${code} : ${detail}`);
@@ -351,8 +362,8 @@ export async function resilierUnApporteur(
   }
   if (motifDeLaDecision !== undefined) exigerUnTexteAdmis(motifDeLaDecision);
   // La juriste (#703, 5982404858) : le préavis d'une résiliation par la Société court de l'ENVOI de
-  // l'écrit. Tant que le geste « notifier la résiliation par la Société » (tâche jumelle) n'existe pas,
-  // ce motif est REFUSÉ : un courriel parti à la date d'effet ne laisserait aucun préavis.
+  // l'écrit. Ce motif ne passe donc JAMAIS par ce geste à la main : il passe par
+  // `notifierLaResiliationParLaSociete` (SEC-66), puis par la tâche planifiée à la date d'effet.
   if (motif === 'ordinaire_axion') {
     throw new ErreurResiliation(
       'preavis_non_notifie',
@@ -386,22 +397,13 @@ export async function resilierUnApporteur(
       );
     }
   }
-  await tx.apporteur.update({
-    where: { id: apporteurId },
-    data: { statut: vers, resiliationMotif, sessionVersion: { increment: 1 } },
-  });
-  const inscrit = await ajouterEvenement(tx, {
-    type: 'apporteur_statut_modifie',
-    agregat: 'apporteur',
-    agregatId: apporteurId,
-    survenuAt: maintenant,
-    charge: {
-      de,
-      vers,
-      transition: 'resilier',
-      ...(resiliationMotif === null ? {} : { resiliationMotif }),
-      acteur,
-    },
+  const evenementId = await passerEnResilie(tx, {
+    apporteurId,
+    de,
+    vers,
+    resiliationMotif,
+    acteur,
+    maintenant,
   });
   // La décision et la notification de la fin du contrat (juriste et A02, #703). La date d'effet est le
   // jour du geste : le runbook place le geste à la date d'effet.
@@ -410,7 +412,7 @@ export async function resilierUnApporteur(
     {
       apporteurId,
       geste: 'resiliation',
-      evenementId: BigInt(inscrit.id),
+      evenementId,
       ...(motifDeLaDecision === undefined ? {} : { texte: motifDeLaDecision }),
       dates: {
         reception: jourDeParis(dateReception ?? maintenant),
@@ -419,6 +421,64 @@ export async function resilierUnApporteur(
     },
     cles
   );
+  const jetonsRevoques = await appliquerLesEffetsDeLArticle12(tx, apporteurId, acteur, maintenant);
+  return { de, vers, jetonsRevoques };
+}
+
+/**
+ * Le PASSAGE à `resilie` : le statut, le motif, `sessionVersion` incrémentée (toutes les sessions
+ * d'avant tombent) et l'événement `apporteur_statut_modifie`, par l'écrivain unique du journal. Pour
+ * `ordinaire_axion`, la charge CITE le fait de la décision opposable (`decisionContratId`). Rend
+ * l'identifiant de l'événement.
+ */
+async function passerEnResilie(
+  tx: Tx,
+  p: {
+    apporteurId: string;
+    de: StatutApporteur;
+    vers: StatutApporteur;
+    resiliationMotif: MotifResiliation | null;
+    acteur: ActeurDeResiliation;
+    maintenant: Date;
+    decisionContratId?: string;
+  }
+): Promise<bigint> {
+  await tx.apporteur.update({
+    where: { id: p.apporteurId },
+    data: {
+      statut: p.vers,
+      resiliationMotif: p.resiliationMotif,
+      sessionVersion: { increment: 1 },
+    },
+  });
+  const inscrit = await ajouterEvenement(tx, {
+    type: 'apporteur_statut_modifie',
+    agregat: 'apporteur',
+    agregatId: p.apporteurId,
+    survenuAt: p.maintenant,
+    charge: {
+      de: p.de,
+      vers: p.vers,
+      transition: 'resilier',
+      ...(p.resiliationMotif === null ? {} : { resiliationMotif: p.resiliationMotif }),
+      ...(p.decisionContratId === undefined ? {} : { decisionContratId: p.decisionContratId }),
+      acteur: p.acteur,
+    },
+  });
+  return BigInt(inscrit.id);
+}
+
+/**
+ * LES EFFETS DE L'ART. 12, après le passage à `resilie` : TOUTES les attributions de l'apporteur
+ * sont transitionnées, chacune avec son événement (`figee` avec commande, `fin_de_contrat` sans), et
+ * les jetons de dépôt sont révoqués. Rend le nombre de jetons révoqués.
+ */
+async function appliquerLesEffetsDeLArticle12(
+  tx: Tx,
+  apporteurId: string,
+  acteur: ActeurDeResiliation,
+  maintenant: Date
+): Promise<number> {
   const attributions = await tx.attribution.findMany({
     where: { apporteurId, statut: { in: [...ETATS_A_TRAITER_A_LA_FIN_DU_CONTRAT] } },
     select: { id: true, statut: true },
@@ -432,8 +492,162 @@ export async function resilierUnApporteur(
       maintenant,
     });
   }
-  const jetonsRevoques = await revoquerJetonsALaResiliation(tx, apporteurId, maintenant);
-  return { de, vers, jetonsRevoques };
+  return revoquerJetonsALaResiliation(tx, apporteurId, maintenant);
+}
+
+// ── SEC-66 : la résiliation par la Société (`ordinaire_axion`), forme (b) d'A02 ──────────────────
+
+export interface DemandeDeResiliationParLaSociete {
+  readonly apporteurId: string;
+  readonly acteur: ActeurDeResiliation;
+  readonly maintenant: Date;
+}
+
+/**
+ * LE GESTE « NOTIFIER LA RÉSILIATION PAR LA SOCIÉTÉ » (juriste, #703, 5982404858 ; forme (b) d'A02,
+ * #703, 5983008261), dans la transaction de l'appelant :
+ *   - un acte de la console, sur un apporteur SOUS CONTRAT, jugé sous le verrou de sa ligne ;
+ *   - l'événement `apporteur_resiliation_notifiee` `{ motif: 'ordinaire_axion', dateEffet, acteur }` ;
+ *   - la ligne `decisions_de_contrat` (`resiliation`) : `date_reception` = jour civil de Paris de la
+ *     décision, `date_effet` = ce jour + `PREAVIS_JOURS` ;
+ *   - la notification `resiliation`, qui porte l'événement et la décision ; le passage enverra le
+ *     courriel, qui n'est opposable que parti le jour de la décision.
+ * AUCUN changement de statut : l'apporteur reste `signe` pendant le préavis, garde son espace complet
+ * et peut déposer. Une nouvelle notification est une nouvelle décision.
+ */
+export async function notifierLaResiliationParLaSociete(
+  tx: Tx,
+  demande: DemandeDeResiliationParLaSociete,
+  cles: ClesPii
+): Promise<{ decisionId: string; evenementId: bigint; dateEffet: Date }> {
+  const { apporteurId, acteur, maintenant } = demande;
+  exigerUnActeurHumain(acteur);
+  const statut = await statutVerrouille(tx, apporteurId);
+  if (!estSousContrat(statut)) {
+    throw new ErreurResiliation('statut_sans_contrat', `statut ${statut}`);
+  }
+  const dateEffet = dateEffetDeLaResiliationParLaSociete(maintenant.getTime());
+  const inscrit = await ajouterEvenement(tx, {
+    type: 'apporteur_resiliation_notifiee',
+    agregat: 'apporteur',
+    agregatId: apporteurId,
+    survenuAt: maintenant,
+    charge: {
+      motif: 'ordinaire_axion',
+      dateEffet: new Date(minuitDeParisDuJour(dateEffet)).toISOString(),
+      acteur,
+    },
+  });
+  const evenementId = BigInt(inscrit.id);
+  const effet = new Date(`${dateEffet}T00:00:00.000Z`);
+  const decisionId = await deciderEtNotifier(
+    tx,
+    {
+      apporteurId,
+      geste: 'resiliation',
+      evenementId,
+      dates: { reception: jourDeParis(maintenant), effet },
+    },
+    cles
+  );
+  return { decisionId, evenementId, dateEffet: effet };
+}
+
+/** Une décision `resiliation` par la Société, telle que la tâche la juge. */
+type DecisionParLaSociete = {
+  id: string;
+  evenementId: bigint;
+  dateEffet: string;
+  acteur: ActeurDeResiliation;
+};
+
+/**
+ * La décision OPPOSABLE la plus récente de l'apporteur (forme (b), point 4) : parmi ses décisions
+ * `resiliation` fondées sur un fait `apporteur_resiliation_notifiee`, de la plus récente à la plus
+ * ancienne, la première dont le courriel est parti le jour de sa `date_reception`. `null` sinon.
+ */
+async function laDecisionOpposable(
+  tx: Tx,
+  apporteurId: string
+): Promise<DecisionParLaSociete | null> {
+  const decisions = await tx.decisionDeContrat.findMany({
+    where: { apporteurId, geste: 'resiliation' },
+    select: {
+      id: true,
+      evenementId: true,
+      dateReception: true,
+      dateEffet: true,
+      notificationsEspace: {
+        select: { courriels: { select: { statut: true, envoyeAt: true } } },
+      },
+    },
+    orderBy: { evenementId: 'desc' },
+  });
+  for (const d of decisions) {
+    if (d.dateReception === null || d.dateEffet === null) continue;
+    const fait = await lireLaChargeDUnFait(tx, d.evenementId.toString());
+    if (fait?.type !== 'apporteur_resiliation_notifiee') continue;
+    const charge = CHARGES_PAR_TYPE.apporteur_resiliation_notifiee.safeParse(fait.charge);
+    if (!charge.success) continue;
+    const opposable = estUneResiliationOpposable({
+      dateReception: d.dateReception.toISOString().slice(0, 10),
+      courriels: d.notificationsEspace.flatMap((n) =>
+        n.courriels.map((c) => ({
+          statut: c.statut,
+          envoyeAt: c.envoyeAt === null ? null : c.envoyeAt.getTime(),
+        }))
+      ),
+    });
+    if (!opposable) continue;
+    return {
+      id: d.id,
+      evenementId: d.evenementId,
+      dateEffet: d.dateEffet.toISOString().slice(0, 10),
+      acteur: { par: 'utilisateur_console', id: charge.data.acteur.id! },
+    };
+  }
+  return null;
+}
+
+/**
+ * LA DATE D'EFFET (forme (b), point 4), pour UN apporteur, dans la transaction de la tâche : sous le
+ * verrou de sa ligne, la décision opposable la plus récente est lue ; si sa date d'effet est atteinte,
+ * l'apporteur passe en `resilie` (`ordinaire_axion`), l'événement CITE la décision
+ * (`decisionContratId`, A02, 5988205180), et les effets de l'art. 12 s'appliquent. L'acteur est
+ * celui de la DÉCISION : la résiliation reste un acte humain, que la tâche exécute à sa date. Sans
+ * décision opposable, ou avant sa date, rien. Une décision ne se cite qu'UNE fois
+ * (`decision_deja_citee`). Rend vrai si l'apporteur a été résilié.
+ */
+export async function resilierALaDateDEffetUnApporteur(
+  tx: Tx,
+  apporteurId: string,
+  maintenant: Date
+): Promise<boolean> {
+  const de = await statutVerrouille(tx, apporteurId);
+  if (!(STATUTS_SOUS_CONTRAT as readonly string[]).includes(de)) return false;
+  const decision = await laDecisionOpposable(tx, apporteurId);
+  if (decision === null || !dateEffetAtteinte(decision.dateEffet, maintenant.getTime())) {
+    return false;
+  }
+  if ((await passageQuiCiteLaDecision(tx, decision.id)) !== null) {
+    throw new ErreurResiliation('decision_deja_citee', 'cette décision fonde déjà un passage');
+  }
+  const { statut: vers, resiliationMotif } = transitionner({
+    de,
+    evenementApporteur: 'resilier',
+    motif: 'ordinaire_axion',
+  });
+  await passerEnResilie(tx, {
+    apporteurId,
+    de,
+    vers,
+    resiliationMotif,
+    acteur: decision.acteur,
+    maintenant,
+    decisionContratId: decision.id,
+  });
+  await appliquerLesEffetsDeLArticle12(tx, apporteurId, decision.acteur, maintenant);
+  return true;
 }
 
 // ── le rendu par le passage ──────────────────────────────────────────────────────────────────────
@@ -468,7 +682,15 @@ const nonRendue = (motif: MotifDeNonRendu) => ({ nonRendue: motif });
 export async function rendreUneDecisionDeContrat(
   tx: Tx,
   n: NotificationDuContrat,
-  s: { cles: ClesPii; composer(cle: string, texte: TexteRendu): { sujet: string; corps: string } }
+  s: {
+    cles: ClesPii;
+    composer(cle: string, texte: TexteRendu): { sujet: string; corps: string };
+    /**
+     * SEC-66 : l'instant de l'envoi, celui du passage. Une résiliation par la Société ne se rend que
+     * le jour civil de Paris de sa `date_reception` (forme (b), point 2) ; absent, elle ne se rend pas.
+     */
+    envoyeLe?: Date;
+  }
 ): Promise<{ sujet: string; corps: string } | { nonRendue: MotifDeNonRendu }> {
   if (n.decisionContratId === null) return nonRendue('faits_non_conserves');
   const d = await tx.decisionDeContrat.findUnique({
@@ -523,13 +745,18 @@ export async function rendreUneDecisionDeContrat(
       return s.composer(n.cle, rendreLaNotification(n.cle, { article: d.article, faits: texte }));
     }
     const fait = await lireLaChargeDUnFait(tx, n.evenementId);
-    const charge = CHARGES_PAR_TYPE.apporteur_statut_modifie.safeParse(fait?.charge);
-    if (fait?.type !== 'apporteur_statut_modifie' || !charge.success) {
+    const motif = motifDeLaResiliation(fait);
+    if (motif === null || d.dateEffet === null || d.dateReception === null) {
       return nonRendue('charge_illisible');
     }
-    const motif = charge.data.resiliationMotif;
-    if (motif === undefined || d.dateEffet === null || d.dateReception === null) {
-      return nonRendue('charge_illisible');
+    // SEC-66 (forme (b), point 2) : la résiliation par la Société ne part que le jour de sa décision ;
+    // un autre jour, échec FERMÉ, sans courriel — la décision est caduque.
+    if (
+      fait?.type === 'apporteur_resiliation_notifiee' &&
+      (s.envoyeLe === undefined ||
+        jourCivilDeParis(s.envoyeLe.getTime()) !== d.dateReception.toISOString().slice(0, 10))
+    ) {
+      return nonRendue('decision_non_notifiee');
     }
     const candidats: Record<string, string | undefined> = {
       dateEffet: dateEnClair(d.dateEffet),
@@ -547,4 +774,21 @@ export async function rendreUneDecisionDeContrat(
     if (e instanceof NotificationRefusee) return nonRendue('parametre_refuse');
     throw e;
   }
+}
+
+/**
+ * Le motif d'une résiliation, lu dans la charge de SON fait : le passage à `resilie`
+ * (`apporteur_statut_modifie`), ou la décision de la Société (`apporteur_resiliation_notifiee`, SEC-66).
+ * `null` pour tout autre fait, ou une charge illisible.
+ */
+function motifDeLaResiliation(
+  fait: { type: string; charge: unknown } | null
+): MotifResiliation | null {
+  if (fait?.type === 'apporteur_resiliation_notifiee') {
+    const c = CHARGES_PAR_TYPE.apporteur_resiliation_notifiee.safeParse(fait.charge);
+    return c.success ? c.data.motif : null;
+  }
+  if (fait?.type !== 'apporteur_statut_modifie') return null;
+  const c = CHARGES_PAR_TYPE.apporteur_statut_modifie.safeParse(fait.charge);
+  return c.success ? (c.data.resiliationMotif ?? null) : null;
 }

@@ -25638,6 +25638,10 @@
         "tests/unit/domaine/journal-charges.spec.ts",
         "tests/unit/domaine/resiliation-acteur-humain.spec.ts",
         "tests/unit/securite/matrice-des-roles.spec.ts",
+        "src/server/taches/purger-textes-des-decisions.ts",
+        "tests/unit/integration/purge-decisions-de-contrat.spec.ts",
+        "tests/unit/domaine/fin-du-contrat.spec.ts",
+        "src/server/demarchage/actions-classees.ts",
         "docs/GLOSSAIRE.md"
       ],
       "schema": true,

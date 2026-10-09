@@ -115,7 +115,8 @@ export type TypeEvenementJournal =
   | 'apporteur_mis_en_demeure'
   | 'apporteur_gel_modifie'
   | 'acces_coordonnees_reservee'
-  | 'piece_kyc_rib_verifie';
+  | 'piece_kyc_rib_verifie'
+  | 'apporteur_resiliation_notifiee';
 
 /**
  * SEC-61 : le gel du journal des accès à la console — ses gestes, ses motifs (les valeurs de
@@ -150,15 +151,30 @@ export const CHARGES_PAR_TYPE = {
       vers: z.enum(STATUTS_APPORTEUR),
       transition: z.enum(TRANSITIONS_DU_JOURNAL_APPORTEUR),
       resiliationMotif: z.enum(MOTIFS_RESILIATION).optional(),
+      /**
+       * SEC-66 (A02, #561, 5988205180, voie 2) : l'UUID de la ligne `decisions_de_contrat` (geste
+       * `resiliation`) de la décision OPPOSABLE qui fonde le passage à `resilie` pour `ordinaire_axion`
+       * — et lui seul. Cette ligne est aussi permanente que le journal : il garde ainsi quelle décision
+       * a été opposée, après la purge de sa notification. Un UUID ne peut rien porter d'autre.
+       */
+      decisionContratId: FORMES.identifiant().optional(),
       acteur: FORMES.acteur(),
     })
     .strict()
-    .superRefine(({ de, transition }, ctx) => {
+    .superRefine(({ de, transition, vers, resiliationMotif, decisionContratId }, ctx) => {
       if ((de === null) !== (transition === 'creer')) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['de'],
           message: 'naissance_incoherente',
+        });
+      }
+      const exigee = vers === 'resilie' && resiliationMotif === 'ordinaire_axion';
+      if (exigee !== (decisionContratId !== undefined)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['decisionContratId'],
+          message: 'citation_de_la_decision_incoherente',
         });
       }
     }),
@@ -489,6 +505,22 @@ export const CHARGES_PAR_TYPE = {
   piece_kyc_rib_verifie: z
     .object({
       type: z.literal('rib'),
+      acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
+        message: 'acteur_console_attendu',
+      }),
+    })
+    .strict(),
+  /**
+   * SEC-66 (forme (b) d'A02, #703, 5983008261) : la DÉCISION de la Société de résilier le contrat
+   * (art. 11.1), agrégat `apporteur`. Ce n'est pas un changement de statut : l'apporteur reste `signe`
+   * pendant le préavis. Le motif, la date d'effet annoncée (jour civil de Paris de la décision plus
+   * `PREAVIS_JOURS`) et l'acteur de la console ; aucun texte libre.
+   */
+  apporteur_resiliation_notifiee: z
+    .object({
+      motif: z.literal('ordinaire_axion'),
+      /** Minuit, heure de Paris, du jour d'effet, en ISO 8601 UTC (A02, 5988205180). */
+      dateEffet: FORMES.horodatage(),
       acteur: FORMES.acteur().refine((a) => a.par === 'utilisateur_console', {
         message: 'acteur_console_attendu',
       }),
