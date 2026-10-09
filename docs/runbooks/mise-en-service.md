@@ -40,6 +40,14 @@
       (`tests/integration/devis-emis.spec.ts`). Côté axion-ia, la copie du contrat est la v3, à
       empreinte identique (INT-T46-A, lockstep). _Porteur : Williams (réception), après la fusion
       d'INT-T46-P._
+- [ ] **Contrat d'événements v4 en lockstep avec axion-ia** (INT-T76-P et INT-T76-A, lot OPCO) :
+      `packages/contracts/contracts.v4.json` est le contrat courant, et la copie d'axion-ia a la même
+      empreinte. La v4 n'est fusionnée qu'APRÈS l'adoption de la v3 par axion-ia (#1280). Partners
+      traite encore la v3 pendant `BASCULE_CONTRAT_V3_V4_JOURS` jours civils de Paris, comptés de la
+      réception du premier événement v4 ; au-delà, une v3 s'inscrit `held`, rejouable, jamais refusée.
+      Constat après la bascule : `SELECT min(received_at) FROM evenements_recus WHERE schema_version =
+      4` donne le départ de la fenêtre. _Porteur : Williams (réception), après la fusion des deux
+      tâches._
 - [ ] **Forge** : l'environnement `production` n'accepte que la branche `main` ; aucun secret ne reste au
       niveau du dépôt ; relecteurs requis sur `production` (recommandé). _Porteur : Williams
       (`poser-secrets-production.ps1 -Etape nettoyer`, réglages de la forge)._

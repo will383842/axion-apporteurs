@@ -463,6 +463,17 @@ export const SEUILS = {
     renvois: [],
     verifieLe: '2026-10-03',
   },
+  // INT-T76-P (forme d'A02, #737) : la fenêtre où la réception TRAITE encore la v3 du contrat, en
+  // jours civils de Paris, comptée du `received_at` du premier événement v4 reçu et accepté ; borne
+  // EXCLUSIVE au minuit de Paris qui suit le dernier jour. Au-delà, une v3 est inscrite `held`.
+  BASCULE_CONTRAT_V3_V4_JOURS: {
+    valeur: 7,
+    unite: 'jours',
+    source:
+      "arbitrage A02 (INT-T76-P, #737), par délégation : couvre le déploiement en lockstep des deux dépôts et les rejeux de l'outbox d'axion-ia ; au-delà, la v3 est `held` et rejouable, rien n'est perdu",
+    renvois: [],
+    verifieLe: '2026-10-05',
+  },
 } as const satisfies Record<string, Seuil>;
 
 /**
