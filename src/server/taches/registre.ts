@@ -89,6 +89,8 @@ export const TACHES = {
   dementis_purger: { req: 'REQ-DM-043' },
   /** DM-70 — la purge du texte d'une décision de contrat, cinq ans après son point de départ. */
   decisions_contrat_purger: { req: 'REQ-JUR-029' },
+  /** DM-51 — le rappel d'échéance de l'attestation `rc_pro`, une fois par échéance (`rappelerLesAttestationsRcPro`). */
+  rc_pro_rappeler: { req: 'REQ-DM-027' },
 } as const satisfies Readonly<Record<string, { req: `REQ-${string}` }>>;
 
 export type NomDeTache = keyof typeof TACHES;

@@ -79,6 +79,8 @@ export const CLASSEMENT_DES_ACTIONS: Readonly<Record<CleClassee, NatureDeLAction
   'tache:dementis_purger': 'sans_contact',
   // DM-70 : la purge du texte d'une décision de contrat n'est une prise de contact avec personne.
   'tache:decisions_contrat_purger': 'sans_contact',
+  // DM-51 : le rappel rc_pro écrit à l'apporteur lui-même, jamais à une entreprise.
+  'tache:rc_pro_rappeler': 'sans_contact',
   // SEC-66 : la résiliation par la Société à sa date d'effet ne contacte aucune entreprise.
   'tache:resiliations_a_date_effet': 'sans_contact',
   // DM-65 : tenir la liste des organismes (ajouter, retirer un SIREN) est un geste d'administration de la
